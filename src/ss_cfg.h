@@ -11,4 +11,9 @@
 #endif
 
 
+
+/* SDL */
+#define NO_STDIO_REDIRECT
+
+
 #endif /* SS_CFG_H_INCLUDED */

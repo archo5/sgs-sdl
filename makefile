@@ -23,13 +23,13 @@ CFLAGS=-D_DEBUG -g
 _DEPS = ss_main.h
 DEPS = $(patsubst %,$(SRCDIR)/%,$(_DEPS))
 
-_OBJ = ss_main.o
+_OBJ = ss_main.o ss_script.o ss_sdl.o
 OBJ = $(patsubst %,$(OBJDIR)/%,$(_OBJ))
 
 
 $(OUTDIR)/sgs-sdl: $(OBJ)
 	$(MAKE) -C sgscript
-	gcc -o $@ $(OBJ) -Lsdl/lib -Lsgscript/lib -lmingw32 -lSDLmain -lSDL -mwindows -lsgscript $(PLATFLAGS)
+	gcc -o $@ $(OBJ) -Lsdl/lib -Lsgscript/lib -lmingw32 -lSDLmain -lSDL -lsgscript -mwindows $(PLATFLAGS)
 	$(CP) $(call FixPath,sdl/bin/SDL.dll bin)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPS)
