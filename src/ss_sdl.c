@@ -95,13 +95,35 @@ int ss_present( SGS_CTX )
 	>> usage examples
 	draw({ shape = 'box', position = create_pos2d( 10, 10 ) }); // draws a white 1x1 box at position 10,10
 	>> available parameters (by category):
-	- geometry: type (enum) shape (enum), vertices (array), verts3d (array), vcolors (array), vtexcoords (array)
-	- instances: position, positions, transform, transforms, color, colors
+	- geometry: type (enum), shape (enum), vertices (array), verts3d (array), vcolors (array), vtexcoords (array)
+	- instances: position, positions, angle, angles, transform, transforms, color, colors
 	- misc.: texture
 	>> defaults (by category):
 	- geometry: 1x1 box shape
 	- instancing: !must have at least one position item known in advance
-	- misc.: the "white" 1x1 texture (only preserves color data)
+	- misc.: the "white" 1x1 texture (only preserves color data) or disabled texturing
+	>> order of operations:
+	- validate
+	- set texture
+	- for each instance
+		- set instance data
+		- draw call
+	>> evaluation of passed arguments
+	GEOMETRY:
+	- first look for verts3d, then vertices; if found - check for type (if not found, ERROR), vcolors, colors, color and vtexcoords too
+	- if none found, check for shape; if found - check for colors, then color
+	- if none found, ERROR
+	INSTANCE-TRANSFORM:
+	- first check for transforms, then transform; if found - EXIT EARLY
+	- if none found, check for positions, then position; if found - check for angles, then angle, then EXIT EARLY
+	MISC:
+	- check for texture
+	>> data objects
+	- texture is an OpenGL texture + some metadata // TODO
+	>> tech
+	- vertex arrays // TODO, currently get it out there with immediate mode
+	>> intermediate storages
+	- data loading functions will return additional values to specify if a buffer was created in the call
 */
 int ss_draw( SGS_CTX )
 {

@@ -123,6 +123,7 @@ int main( int argc, char* argv[] )
 		fprintf( stderr, "Failed to clean the application.\n" );
 		return 1;
 	}
+	sgs_DestroyEngine( C );
 	
 	return 0;
 }
