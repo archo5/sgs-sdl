@@ -1,0 +1,3 @@
+[submodule "sgscript"]
+	path = sgscript
+	url = https://github.com/snake5/sgscript.git

@@ -1,0 +1,1 @@
+#ifndef SS_MAIN_H_INCLUDED#define SS_MAIN_H_INCLUDED#include "ss_cfg.h"#include <SDL/SDL.h>#include "../sgscript/src/sgscript.h"#endif /* SS_MAIN_H_INCLUDED */
