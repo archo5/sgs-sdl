@@ -64,7 +64,7 @@ int main( int argc, char* argv[] )
 	
 	/* initialize SDL */
 	SDL_EnableUNICODE( 1 );
-	if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_AUDIO ) < 0 )
+	if( SDL_Init( SDL_INIT_VIDEO ) < 0 )
 	{
 		fprintf( stderr, "Couldn't initialize SDL: %s\n", SDL_GetError() );
 		return 1;
@@ -110,7 +110,7 @@ int main( int argc, char* argv[] )
 			break;
 	
 		/* advance the application exactly one frame */
-		if( sgs_GlobalCall( C, "looptick", 0, 0 ) )
+		if( sgs_GlobalCall( C, "update", 0, 0 ) )
 		{
 			fprintf( stderr, "Failed to clean the application.\n" );
 			return 1;

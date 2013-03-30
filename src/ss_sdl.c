@@ -20,15 +20,7 @@ int ss_sleep( SGS_CTX )
 
 flag_string_item_t setvideomode_flags[] =
 {
-	{ "swsurface", SDL_SWSURFACE },
-	{ "hwsurface", SDL_HWSURFACE },
-	{ "asyncblit", SDL_ASYNCBLIT },
-	{ "anyformat", SDL_ANYFORMAT },
-	{ "hwpalette", SDL_HWPALETTE },
-	{ "doublebuf", SDL_DOUBLEBUF },
 	{ "fullscreen", SDL_FULLSCREEN },
-	{ "opengl", SDL_OPENGL },
-	{ "openglblit", SDL_OPENGLBLIT },
 	{ "resizable", SDL_RESIZABLE },
 	{ "noframe", SDL_NOFRAME },
 	FSI_LAST
@@ -47,11 +39,78 @@ int ss_set_video_mode( SGS_CTX )
 		_WARN( "set_video_mode() - unexpected arguments; function expects 4 arguments: int, int, int, string" )
 	
 	f = sgs_GetFlagString( C, 3, setvideomode_flags );
+	f |= SDL_OPENGL;
 	
+    SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 8 );
+    SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 8 );
+    SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 8 );
+    SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 	scr = SDL_SetVideoMode( w, h, b, f );
+	glDisable( GL_DEPTH_TEST );
+	glMatrixMode( GL_MODELVIEW );
+	glLoadIdentity();
+	glTranslatef( 0, 0, -100 );
+	glMatrixMode( GL_PROJECTION );
+	glLoadIdentity();
+	glOrtho( 0, w, h, 0, 1, 1000 );
 	
 	sgs_PushBool( C, !!scr );
 	return 1;
+}
+
+int ss_set_caption( SGS_CTX )
+{
+	char* str;
+	sgs_Integer size;
+	
+	if( !stdlib_tostring( C, 0, &str, &size ) )
+		_WARN( "set_caption() - unexpected arguments; function expects 1 argument: string" );
+	
+	SDL_WM_SetCaption( str, NULL );
+}
+
+/*
+	the buffer control functions
+*/
+int ss_clear( SGS_CTX )
+{
+	sgs_Real col[ 4 ];
+	if( sgs_StackSize( C ) != 1 ||
+		!stdlib_tocolor4( C, 0, col ) )
+		_WARN( "clear(): function expects 1 argument: array of 1-4 real values" )
+	
+	glClearColor( col[0], col[1], col[2], col[3] );
+	glClear( GL_COLOR_BUFFER_BIT );
+	return 0;
+}
+int ss_present( SGS_CTX )
+{
+	SDL_GL_SwapBuffers();
+	return 0;
+}
+
+/*
+	the "draw" function
+	- draws
+	>> usage examples
+	draw({ shape = 'box', position = create_pos2d( 10, 10 ) }); // draws a white 1x1 box at position 10,10
+	>> available parameters (by category):
+	- geometry: type (enum) shape (enum), vertices (array), verts3d (array), vcolors (array), vtexcoords (array)
+	- instances: position, positions, transform, transforms, color, colors
+	- misc.: texture
+	>> defaults (by category):
+	- geometry: 1x1 box shape
+	- instancing: !must have at least one position item known in advance
+	- misc.: the "white" 1x1 texture (only preserves color data)
+*/
+int ss_draw( SGS_CTX )
+{
+	glBegin( GL_QUADS );
+	glVertex2d( 100, 100 );
+	glVertex2d( 200, 100 );
+	glVertex2d( 200, 200 );
+	glVertex2d( 100, 200 );
+	glEnd();
 }
 
 
@@ -72,9 +131,10 @@ sgs_RegIntConst sdl_ints[] =
 sgs_RegFuncConst sdl_funcs[] =
 {
 	FN( sleep ),
-	FN( set_video_mode ),
+	FN( set_video_mode ), FN( set_caption ),
+	FN( clear ), FN( present ),
+	FN( draw ),
 };
-
 
 int sgs_InitSDL( SGS_CTX )
 {
