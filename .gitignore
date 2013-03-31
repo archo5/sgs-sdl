@@ -12,3 +12,4 @@
 ipch
 *.user
 !output.dir
+!*.sgs

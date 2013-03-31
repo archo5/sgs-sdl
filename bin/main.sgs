@@ -1,0 +1,78 @@
+
+function configure()
+{
+	global sys_exit;
+	
+	foreach( i : sys_args )
+	{
+		var arg = sys_args[ i ];
+		if( arg == "-preexit" )
+		{
+			print( "PREEXIT\n" );
+			sys_exit = true;
+		}
+	}
+}
+
+function initialize()
+{
+	set_caption( "The SGS-SDL Game Framework" );
+	set_video_mode( 1024, 576, 32, "" );
+}
+
+global cmpos = [0,0], mpos = [0,0];
+
+global lasttime = ftime();
+global rotation = 0;
+global V =
+[
+	vec2d( sin( 0 ), cos( 0 ) ),
+	vec2d( sin( vPI*2/3 ), cos( vPI*2/3 ) ),
+	vec2d( sin( vPI*4/3 ), cos( vPI*4/3 ) )
+];
+global C = [ [1,0,0], [0,1,0], [0,0,1] ];
+global P = [];
+for( var i = 0; i < 576; ++i )
+	P.push( vec2d( randf() * 1200, i + randf() ) );
+function update()
+{
+	global lasttime, rotation, P;
+	var curtime = ftime();
+	var delta = curtime - lasttime;
+	if( delta > 1.0/15.0 )
+		delta = 1.0/15.0;
+	lasttime = curtime;
+	
+	var cc = [0.1+(cmpos[0]/1000.0),0.2+(cmpos[1]/1000.0),0.4];
+	clear( cc );
+	
+	for( var i = 0; i < P.size; ++i )
+	{
+		P[i].x += delta * 100;
+		if( P[i].x > 1100 )
+			P[i].x -= 1200 + randf() * 50;
+	}
+	
+	var vcol = [ [cc[0]+0.2,cc[1],cc[2]], [cc[0],cc[1]+0.2,cc[2]], [cc[0],cc[1],cc[2]+0.2] ];
+	draw({ mode = GL_TRIANGLES, vertices = V, vcolors = vcol, positions = P, scale = [16,16], angle = rotation * vPI });
+	
+	rotation += delta;
+	draw({ mode = GL_TRIANGLES, vertices = V, vcolors = C, position = mpos, scale = [32,32], angle = rotation * vPI });
+	
+	present();
+	sleep( 10 );
+}
+
+function on_event( e )
+{
+	if( e.type == SDL_QUIT )
+		global sys_exit = true;
+	if( e.type == SDL_MOUSEMOTION )
+		global mpos = [ e.x, e.y ];
+	if( ( e.type == SDL_MOUSEMOTION && e.button0 ) || e.type == SDL_MOUSEBUTTONDOWN )
+		global cmpos = [ e.x, e.y ];
+}
+
+function cleanup()
+{
+}
