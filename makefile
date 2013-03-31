@@ -4,11 +4,17 @@ ifdef SystemRoot
 	CP = copy
 	FixPath = $(subst /,\,$1)
 	PLATFLAGS = -lkernel32
+	LINKPATHS = -Lsdl-win/lib
+	COMPATHS = -Isdl-win/include
+	PLATPOST = $(CP) $(call FixPath,sdl-win/bin/SDL.dll bin)
 else
 	RM = rm -f
 	CP = cp
 	FixPath = $1
 	PLATFLAGS = 
+	LINKPATHS = 
+	COMPATHS = 
+	PLATPOST = 
 endif
 
 SRCDIR=src
@@ -29,11 +35,11 @@ OBJ = $(patsubst %,$(OBJDIR)/%,$(_OBJ))
 
 $(OUTDIR)/sgs-sdl: $(OBJ)
 	$(MAKE) -C sgscript
-	gcc -Wall -o $@ $(OBJ) -Lsdl/lib -Lsgscript/lib -lmingw32 -lOpenGL32 -lSDLmain -lSDL -lsgscript -mwindows $(PLATFLAGS)
-	$(CP) $(call FixPath,sdl/bin/SDL.dll bin)
+	gcc -Wall -o $@ $(OBJ) $(LINKPATHS) -Lsgscript/lib -lmingw32 -lOpenGL32 -lSDLmain -lSDL -lsgscript -mwindows $(PLATFLAGS)
+	$(PLATPOST)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPS)
-	$(CC) -c -o $@ $< -Isdl/include $(CFLAGS)
+	$(CC) -c -o $@ $< $(COMPATHS) $(CFLAGS)
 
 .PHONY: clean
 clean:
