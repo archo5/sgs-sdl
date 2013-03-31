@@ -29,7 +29,7 @@ CFLAGS=-D_DEBUG -g
 _DEPS = ss_main.h
 DEPS = $(patsubst %,$(SRCDIR)/%,$(_DEPS))
 
-_OBJ = ss_main.o ss_script.o ss_sdl.o
+_OBJ = ss_main.o ss_script.o ss_sdl.o ss_render.o
 OBJ = $(patsubst %,$(OBJDIR)/%,$(_OBJ))
 
 
