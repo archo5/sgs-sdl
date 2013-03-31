@@ -91,6 +91,18 @@ int ss_present( SGS_CTX )
 	return 0;
 }
 
+void _mtx_transpose( float* m )
+{
+	float tmp;
+#define MSWAP( a, b ) tmp = m[a]; m[a] = m[b]; m[b] = tmp
+	MSWAP( 1, 4 );
+	MSWAP( 2, 8 );
+	MSWAP( 3, 12 );
+	MSWAP( 6, 9 );
+	MSWAP( 7, 13 );
+	MSWAP( 11, 14 );
+#undef MSWAP
+}
 
 /*
 	the "draw" function
@@ -328,6 +340,65 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 		sgs_UnpackFree( C, gi );
 		_WARN( "draw(): preset not found" )
 	}
+	else if( gi[2].var )
+	{
+		sgs_Integer imode;
+		float defcomp[] = { 0, 0, 0, 0, 1, 1, 1, 1 };
+		floatbuf pdata = NFB, cdata = NFB, tdata = NFB;
+		const char* res = _parse_floatbuf( C, gi[2].var, &pdata, 2, defcomp, 1 );
+		if( res )
+		{
+			sgs_Printf( C, SGS_WARNING, -1, "draw(): failed to load vertices - %s", res );
+			goto cleanup;
+		}
+		
+		if( !gi[1].var )
+		{
+			sgs_Printf( C, SGS_WARNING, -1, "draw(): 'mode' not found" );
+			goto cleanup;
+		}
+		
+		sgs_PushVariable( C, gi[1].var );
+		if( !stdlib_toint( C, -1, &imode ) )
+		{
+			sgs_Pop( C, 1 );
+			goto cleanup;
+		}
+		sgs_Pop( C, 1 );
+		*outmode = imode;
+		
+		if( gi[3].var )
+		{
+			res = _parse_floatbuf( C, gi[3].var, &cdata, 4, defcomp+4, 1 );
+			if( res )
+			{
+				sgs_Printf( C, SGS_WARNING, -1, "draw(): failed to load vertex colors - %s", res );
+				goto cleanup;
+			}
+		}
+		
+		if( gi[4].var )
+		{
+			res = _parse_floatbuf( C, gi[4].var, &tdata, 4, defcomp, 1 );
+			if( res )
+			{
+				sgs_Printf( C, SGS_WARNING, -1, "draw(): failed to load vertex texcoords - %s", res );
+				goto cleanup;
+			}
+		}
+		
+		if( pdata.data ) *vert = pdata;
+		if( cdata.data ) *vcol = cdata;
+		if( tdata.data ) *vtex = tdata;
+		return 1;
+		
+cleanup:
+		sgs_UnpackFree( C, gi );
+		if( pdata.my ) sgs_Free( pdata.data );
+		if( cdata.my ) sgs_Free( cdata.data );
+		if( tdata.my ) sgs_Free( tdata.data );
+		return 0;
+	}
 	
 	sgs_UnpackFree( C, gi );
 	_WARN( "draw(): no geometry data found" )
@@ -362,8 +433,9 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 	
 	else
 	{
+		int ret = 1;
 		int32_t i;
-		float defcomp[] = { 0, 0 };
+		float defcomp[] = { 0, 0, 0, 0, 1, 1, 1, 1 };
 		float tmpfloats[ 5 ];
 		floatbuf posdata = NFB, angdata = NFB, scaledata = NFB;
 		posdata.data = tmpfloats;
@@ -403,7 +475,7 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 		}
 		else if( tfi[4].var ) /* found 'angle', one real */
 		{
-			const char* res = _parse_floatbuf( C, tfi[4].var, &angdata, 1, defcomp, 1 );
+			const char* res = _parse_floatbuf( C, tfi[4].var, &angdata, 1, defcomp, 0 );
 			if( res )
 			{
 				sgs_Printf( C, SGS_WARNING, -1, "draw(): failed to load angle - %s", res );
@@ -413,7 +485,7 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 		
 		if( tfi[7].var ) /* found 'scales', array of vec2d */
 		{
-			const char* res = _parse_floatbuf( C, tfi[7].var, &angdata, 1, defcomp, 1 );
+			const char* res = _parse_floatbuf( C, tfi[7].var, &scaledata, 2, defcomp+4, 1 );
 			if( res )
 			{
 				sgs_Printf( C, SGS_WARNING, -1, "draw(): failed to load scales - %s", res );
@@ -422,7 +494,7 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 		}
 		else if( tfi[6].var ) /* found 'scale', one vec2d */
 		{
-			const char* res = _parse_floatbuf( C, tfi[6].var, &angdata, 1, defcomp, 1 );
+			const char* res = _parse_floatbuf( C, tfi[6].var, &scaledata, 2, defcomp+4, 0 );
 			if( res )
 			{
 				sgs_Printf( C, SGS_WARNING, -1, "draw(): failed to load scale - %s", res );
@@ -470,17 +542,21 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 				mtx[ 10 ] = mtx[ 15 ] = 1;
 				mtx[ 2 ] = mtx[ 6 ] = mtx[ 8 ] = mtx[ 9 ] =
 					mtx[ 11 ] = mtx[ 12 ] = mtx[ 13 ] = mtx[ 14 ] = 0;
+				
+				_mtx_transpose( mtx );
 			}
 		}
 		
-		return 1;
-		
-cleanup:
+end:
 		sgs_UnpackFree( C, tfi );
 		if( posdata.my ) sgs_Free( posdata.data );
 		if( angdata.my ) sgs_Free( angdata.data );
 		if( scaledata.my ) sgs_Free( scaledata.data );
-		return 0;
+		return ret;
+		
+cleanup:
+		ret = 0;
+		goto end;
 	}
 	
 	return 0;
@@ -565,6 +641,15 @@ sgs_RegIntConst sdl_ints[] =
 	IC( SDL_QUIT ),
 	IC( SDL_VIDEORESIZE ),
 	IC( SDL_VIDEOEXPOSE ),
+	
+	/* GL draw modes */
+	IC( GL_POINTS ),
+	IC( GL_LINES ),
+	IC( GL_LINE_STRIP ),
+	IC( GL_TRIANGLES ),
+	IC( GL_TRIANGLE_FAN ),
+	IC( GL_TRIANGLE_STRIP ),
+	IC( GL_QUADS ),
 };
 
 sgs_RegFuncConst sdl_funcs[] =

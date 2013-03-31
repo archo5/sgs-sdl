@@ -169,8 +169,8 @@ static int sem_v2d_setprop( SGS_CTX, sgs_VarObj* data )
 		return SGS_EINVAL;
 	if( !stdlib_toreal( C, 1, &val ) )
 		return SGS_EINVAL;
-	if( !strcmp( str, "x" ) ) hdr[ 0 ] = val;
-	if( !strcmp( str, "y" ) ) hdr[ 1 ] = val;
+	if( !strcmp( str, "x" ) ){ hdr[ 0 ] = val; return SUC; }
+	if( !strcmp( str, "y" ) ){ hdr[ 1 ] = val; return SUC; }
 	return SGS_ENOTFND;
 }
 static int sem_v2d_tostring( SGS_CTX, sgs_VarObj* data )
@@ -332,14 +332,25 @@ int stdlib_tocolor4( SGS_CTX, int pos, sgs_Real* v4f )
 	return 0;
 }
 
+
+int sem_randf( SGS_CTX )
+{
+	sgs_PushReal( C, (sgs_Real) rand() / (sgs_Real) RAND_MAX );
+	return 1;
+}
+
 sgs_RegFuncConst em_fconsts[] =
 {
 	FN( vec2d ), FN( vec2d_dot ),
+	FN( randf ),
 };
 
 int sgs_InitExtMath( SGS_CTX )
 {
 	int ret;
+	ret = sgs_RegFuncConsts( C, em_fconsts, ARRAY_SIZE( em_fconsts ) );
+	if( ret != SGS_SUCCESS ) return ret;
+	
 	return SGS_SUCCESS;
 }
 

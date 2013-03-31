@@ -18,6 +18,7 @@ int main( int argc, char* argv[] )
 	sgs_LoadLib_Math( C );
 	sgs_LoadLib_String( C );
 	sgs_LoadLib_Type( C );
+	sgs_InitExtMath( C );
 	
 	/* run the main file */
 	ret = sgs_ExecFile( C, "main.sgs" );
