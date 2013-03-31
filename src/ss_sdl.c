@@ -387,6 +387,7 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 			}
 		}
 		
+		sgs_UnpackFree( C, gi );
 		if( pdata.data ) *vert = pdata;
 		if( cdata.data ) *vcol = cdata;
 		if( tdata.data ) *vtex = tdata;

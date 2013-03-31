@@ -278,10 +278,7 @@ static int sem_vec2d( SGS_CTX )
 			v[ 1 ] = v[ 0 ];
 	}
 	
-	sgs_Real* data = sgs_Alloc_n( sgs_Real, 2 );
-	data[ 0 ] = v[ 0 ];
-	data[ 1 ] = v[ 1 ];
-	return sgs_PushObject( C, data, vec2d_iface ) == SUC ? 1 : 0;
+	return _make_v2d( C, v[ 0 ], v[ 1 ] ) == SUC ? 1 : 0;
 }
 #undef V2DARGERR
 
@@ -349,6 +346,31 @@ int sgs_InitExtMath( SGS_CTX )
 {
 	int ret;
 	ret = sgs_RegFuncConsts( C, em_fconsts, ARRAY_SIZE( em_fconsts ) );
+	if( ret != SGS_SUCCESS ) return ret;
+	
+	return SGS_SUCCESS;
+}
+
+
+
+#undef FN
+#define FN( f ) { #f, ses_##f }
+
+int ses_sgs_objcount( SGS_CTX )
+{
+	sgs_PushInt( C, sgs_Stat( C, SGS_STAT_VARCOUNT ) );
+	return 1;
+}
+
+sgs_RegFuncConst es_fconsts[] =
+{
+	FN( sgs_objcount ),
+};
+
+int sgs_InitExtSys( SGS_CTX )
+{
+	int ret;
+	ret = sgs_RegFuncConsts( C, es_fconsts, ARRAY_SIZE( es_fconsts ) );
 	if( ret != SGS_SUCCESS ) return ret;
 	
 	return SGS_SUCCESS;

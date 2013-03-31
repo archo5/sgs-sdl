@@ -18,6 +18,7 @@ int main( int argc, char* argv[] )
 	sgs_LoadLib_Math( C );
 	sgs_LoadLib_String( C );
 	sgs_LoadLib_Type( C );
+	sgs_InitExtSys( C );
 	sgs_InitExtMath( C );
 	
 	/* run the main file */
@@ -124,7 +125,6 @@ int main( int argc, char* argv[] )
 		fprintf( stderr, "Failed to clean the application.\n" );
 		return 1;
 	}
-	sgs_GCExecute( C );
 	sgs_DestroyEngine( C );
 	
 	return 0;

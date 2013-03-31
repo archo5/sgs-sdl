@@ -35,7 +35,7 @@ OBJ = $(patsubst %,$(OBJDIR)/%,$(_OBJ))
 
 $(OUTDIR)/sgs-sdl: $(OBJ)
 	$(MAKE) -C sgscript
-	gcc -Wall -o $@ $(OBJ) $(LINKPATHS) -Lsgscript/lib -lSDLmain -lSDL -lsgscript -mwindows $(PLATFLAGS)
+	gcc -Wall -o $@ $(OBJ) $(LINKPATHS) $(PLATFLAGS) -Lsgscript/lib -lSDLmain -lSDL -lsgscript -mwindows
 	$(PLATPOST)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPS)
