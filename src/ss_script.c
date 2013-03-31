@@ -49,6 +49,44 @@ uint32_t sgs_GlobalFlagString( SGS_CTX, const char* name, flag_string_item_t* it
 	return flags;
 }
 
+int sgs_UnpackDict( SGS_CTX, int pos, dict_unpack_item_t* items )
+{
+	int ret = 0;
+	sgs_Variable obj, idx;
+	
+	obj = *sgs_StackItem( C, pos );
+	if( obj.type != SVT_OBJECT )
+		return ret;
+	
+	while( items->name )
+	{
+		sgs_PushString( C, items->name );
+		idx = *sgs_StackItem( C, -1 );
+		sgs_Acquire( C, &idx );
+		sgs_Pop( C, 1 );
+		
+		sgs_BreakIf( items->var == NULL );
+		if( sgs_GetIndex( C, items->var, &obj, &idx ) != SGS_SUCCESS )
+			items->var = NULL;
+		else
+			ret++;
+		
+		sgs_Release( C, &idx );
+		items++;
+	}
+	return ret;
+}
+
+void sgs_UnpackFree( SGS_CTX, dict_unpack_item_t* items )
+{
+	while( items->name )
+	{
+		if( items->var )
+			sgs_Release( C, items->var );
+		items++;
+	}
+}
+
 
 /* extended math utilities */
 /*
@@ -69,11 +107,11 @@ static void* vec2d_iface[];
 
 static int _make_v2d( SGS_CTX, sgs_Real x, sgs_Real y ){ sgs_Real* nv = sgs_Alloc_n( sgs_Real, 2 ); nv[ 0 ] = x; nv[ 1 ] = y; return sgs_PushObject( C, nv, vec2d_iface ); }
 
-int stdlib_tovec2d( SGS_CTX, int pos, sgs_Real* v2f )
+int stdlib_tovec2d( SGS_CTX, int pos, sgs_Real* v2f, int strict )
 {
 	sgs_VarObj* data;
 	int ty = sgs_ItemType( C, pos );
-	if( ty == SVT_INT || ty == SVT_REAL )
+	if( !strict && ( ty == SVT_INT || ty == SVT_REAL ) )
 	{
 		v2f[0] = v2f[1] = sgs_GetReal( C, pos );
 		return 1;
@@ -158,28 +196,28 @@ static int sem_v2d_compare( SGS_CTX, sgs_VarObj* data )
 static int sem_v2d_add( SGS_CTX, sgs_VarObj* data )
 {
 	sgs_Real v1[ 2 ], v2[ 2 ];
-	if( !stdlib_tovec2d( C, 0, v1 ) || !stdlib_tovec2d( C, 1, v2 ) )
+	if( !stdlib_tovec2d( C, 0, v1, 0 ) || !stdlib_tovec2d( C, 1, v2, 0 ) )
 		return SGS_EINVAL;
 	return _make_v2d( C, v1[0] + v2[0], v1[1] + v2[1] );
 }
 static int sem_v2d_sub( SGS_CTX, sgs_VarObj* data )
 {
 	sgs_Real v1[ 2 ], v2[ 2 ];
-	if( !stdlib_tovec2d( C, 0, v1 ) || !stdlib_tovec2d( C, 1, v2 ) )
+	if( !stdlib_tovec2d( C, 0, v1, 0 ) || !stdlib_tovec2d( C, 1, v2, 0 ) )
 		return SGS_EINVAL;
 	return _make_v2d( C, v1[0] - v2[0], v1[1] - v2[1] );
 }
 static int sem_v2d_mul( SGS_CTX, sgs_VarObj* data )
 {
 	sgs_Real v1[ 2 ], v2[ 2 ];
-	if( !stdlib_tovec2d( C, 0, v1 ) || !stdlib_tovec2d( C, 1, v2 ) )
+	if( !stdlib_tovec2d( C, 0, v1, 0 ) || !stdlib_tovec2d( C, 1, v2, 0 ) )
 		return SGS_EINVAL;
 	return _make_v2d( C, v1[0] * v2[0], v1[1] * v2[1] );
 }
 static int sem_v2d_div( SGS_CTX, sgs_VarObj* data )
 {
 	sgs_Real v1[ 2 ], v2[ 2 ];
-	if( !stdlib_tovec2d( C, 0, v1 ) || !stdlib_tovec2d( C, 1, v2 ) )
+	if( !stdlib_tovec2d( C, 0, v1, 0 ) || !stdlib_tovec2d( C, 1, v2, 0 ) )
 		return SGS_EINVAL;
 	if( v2[0] == 0 || v2[1] == 0 )
 	{
@@ -191,7 +229,7 @@ static int sem_v2d_div( SGS_CTX, sgs_VarObj* data )
 static int sem_v2d_mod( SGS_CTX, sgs_VarObj* data )
 {
 	sgs_Real v1[ 2 ], v2[ 2 ];
-	if( !stdlib_tovec2d( C, 0, v1 ) || !stdlib_tovec2d( C, 1, v2 ) )
+	if( !stdlib_tovec2d( C, 0, v1, 0 ) || !stdlib_tovec2d( C, 1, v2, 0 ) )
 		return SGS_EINVAL;
 	if( v2[0] == 0 || v2[1] == 0 )
 	{
@@ -251,7 +289,7 @@ static int sem_vec2d_dot( SGS_CTX )
 {
 	sgs_Real v1[2], v2[2];
 	
-	if( !stdlib_tovec2d( C, 0, v1 ) || !stdlib_tovec2d( C, 1, v2 ) )
+	if( !stdlib_tovec2d( C, 0, v1, 1 ) || !stdlib_tovec2d( C, 1, v2, 1 ) )
 		_WARN( "vec2d_dot(): unexpected arguments; function expects vec2d, vec2d" )
 	
 	return sgs_PushReal( C, v1[0] * v2[0] + v1[1] * v2[1] ) == SUC ? 1 : 0;
@@ -275,6 +313,7 @@ int stdlib_tocolor4( SGS_CTX, int pos, sgs_Real* v4f )
 			if( !stdlib_array_getval( C, var, i, &item ) )
 				return 0;
 			sgs_PushVariable( C, &item );
+			sgs_Release( C, &item );
 			if( !stdlib_toreal( C, -1, v4f + i ) )
 			{
 				sgs_Pop( C, 1 );
