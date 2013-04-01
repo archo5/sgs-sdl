@@ -23,7 +23,7 @@ function initialize()
 	set_video_mode( 1024, 576, 32, "" );
 	
 	global UI = ui_create_frame();
-	UI.add_child( ui_create_button( "action", 10, 10, 200, 50, function(this){ print( "HAY! (", this, ")\n" ); } ) );
+	UI.add_child( ui_create_button( "action", 10, 10, 200, 50, function(this){ print( "---\nHey! You clicked me!\n\n" ); } ) );
 	
 	print( "\n" );
 	global image = create_texture( "crosshair.png" );
@@ -75,7 +75,6 @@ function update()
 //	draw({ mode = GL_TRIANGLES, vertices = V, vcolors = C, position = mpos, scale = [32,32], angle = rotation * vPI });
 	draw({ preset = "box", texture = image, position = mpos, scale = [128,128], angle = rotation * vPI });
 	
-	UI.update();
 	UI.draw();
 	
 	present();
