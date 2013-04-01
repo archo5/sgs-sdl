@@ -25,7 +25,8 @@ int _make_image( SGS_CTX, int16_t w, int16_t h, const void* src )
 		memset( ii->data, 0, sizeof( uint32_t ) * w * h );
 	else
 		memcpy( ii->data, src, sizeof( uint32_t ) * w * h );
-	return sgs_PushObject( C, ii, image_iface );
+	sgs_PushObject( C, ii, image_iface );
+	return SGS_SUCCESS;
 }
 
 int ss_image_destruct( SGS_CTX, sgs_VarObj* data )
@@ -45,7 +46,8 @@ int ss_image_clone( SGS_CTX, sgs_VarObj* data )
 int ss_image_gettype( SGS_CTX, sgs_VarObj* data )
 {
 	UNUSED( data );
-	return sgs_PushString( C, "image" );
+	sgs_PushString( C, "image" );
+	return SGS_SUCCESS;
 }
 
 
@@ -103,9 +105,9 @@ int ss_image_getprop( SGS_CTX, sgs_VarObj* data )
 	if( !stdlib_tostring( C, 0, &str, &size ) )
 		return SGS_EINVAL;
 	
-	if( !strcmp( str, "width" ) ) return sgs_PushInt( C, img->width );
-	if( !strcmp( str, "height" ) ) return sgs_PushInt( C, img->height );
-	if( !strcmp( str, "resize" ) ) return sgs_PushCFunction( C, ss_image_resize );
+	if( !strcmp( str, "width" ) ){ sgs_PushInt( C, img->width ); return SGS_SUCCESS; }
+	if( !strcmp( str, "height" ) ){ sgs_PushInt( C, img->height ); return SGS_SUCCESS; }
+	if( !strcmp( str, "resize" ) ){ sgs_PushCFunction( C, ss_image_resize ); return SGS_SUCCESS; }
 	
 	return SGS_ENOTFND;
 }
@@ -116,7 +118,8 @@ int ss_image_tostring( SGS_CTX, sgs_VarObj* data )
 	char buf[ 32 ];
 	IMGHDR;
 	sprintf( buf, "Image (%d x %d)", (int) img->width, (int) img->height );
-	return sgs_PushString( C, buf );
+	sgs_PushString( C, buf );
+	return SGS_SUCCESS;
 }
 
 
@@ -146,7 +149,8 @@ int ss_create_image( SGS_CTX )
 	if( w < 1 || w > 4096 || h < 1 || h > 4096 )
 		_WARN( "create_image(): invalid image size; must be between 1 and 4096 in each dimension" )
 	
-	return _make_image( C, w, h, NULL ) == SGS_SUCCESS ? 1 : 0;
+	_make_image( C, w, h, NULL );
+	return 1;
 }
 
 

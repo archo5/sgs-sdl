@@ -105,7 +105,7 @@ void sgs_UnpackFree( SGS_CTX, dict_unpack_item_t* items )
 #define V2DHDR sgs_Real* hdr = (sgs_Real*) data->data;
 static void* vec2d_iface[];
 
-static int _make_v2d( SGS_CTX, sgs_Real x, sgs_Real y ){ sgs_Real* nv = sgs_Alloc_n( sgs_Real, 2 ); nv[ 0 ] = x; nv[ 1 ] = y; return sgs_PushObject( C, nv, vec2d_iface ); }
+static int _make_v2d( SGS_CTX, sgs_Real x, sgs_Real y ){ sgs_Real* nv = sgs_Alloc_n( sgs_Real, 2 ); nv[ 0 ] = x; nv[ 1 ] = y; sgs_PushObject( C, nv, vec2d_iface ); return SUC; }
 
 int stdlib_tovec2d( SGS_CTX, int pos, sgs_Real* v2f, int strict )
 {
@@ -130,7 +130,7 @@ int stdlib_tovec2d( SGS_CTX, int pos, sgs_Real* v2f, int strict )
 
 static int sem_v2d_destruct( SGS_CTX, sgs_VarObj* data ){ UNUSED( C ); sgs_Free( data->data ); return SUC; }
 static int sem_v2d_clone( SGS_CTX, sgs_VarObj* data ){ V2DHDR; return _make_v2d( C, hdr[0], hdr[1] ); }
-static int sem_v2d_gettype( SGS_CTX, sgs_VarObj* data ){ UNUSED( data ); return sgs_PushString( C, "vec2d" ); }
+static int sem_v2d_gettype( SGS_CTX, sgs_VarObj* data ){ UNUSED( data ); sgs_PushString( C, "vec2d" ); return SUC; }
 static int sem_v2d_getprop( SGS_CTX, sgs_VarObj* data )
 {
 	char* str;
@@ -139,10 +139,10 @@ static int sem_v2d_getprop( SGS_CTX, sgs_VarObj* data )
 	
 	if( !stdlib_tostring( C, 0, &str, &size ) )
 		return SGS_EINVAL;
-	if( !strcmp( str, "x" ) ) return sgs_PushReal( C, hdr[ 0 ] );
-	if( !strcmp( str, "y" ) ) return sgs_PushReal( C, hdr[ 1 ] );
-	if( !strcmp( str, "length" ) ) return sgs_PushReal( C, sqrt( hdr[0] * hdr[0] + hdr[1] * hdr[1] ) );
-	if( !strcmp( str, "length_squared" ) ) return sgs_PushReal( C, hdr[0] * hdr[0] + hdr[1] * hdr[1] );
+	if( !strcmp( str, "x" ) ){ sgs_PushReal( C, hdr[ 0 ] ); return SUC; }
+	if( !strcmp( str, "y" ) ){ sgs_PushReal( C, hdr[ 1 ] ); return SUC; }
+	if( !strcmp( str, "length" ) ){ sgs_PushReal( C, sqrt( hdr[0] * hdr[0] + hdr[1] * hdr[1] ) ); return SUC; }
+	if( !strcmp( str, "length_squared" ) ){ sgs_PushReal( C, hdr[0] * hdr[0] + hdr[1] * hdr[1] ); return SUC; }
 	if( !strcmp( str, "normalized" ) )
 	{
 		sgs_Real lensq = hdr[0] * hdr[0] + hdr[1] * hdr[1];
@@ -153,7 +153,7 @@ static int sem_v2d_getprop( SGS_CTX, sgs_VarObj* data )
 		}
 		return _make_v2d( C, 0, 0 );
 	}
-	if( !strcmp( str, "angle" ) ) return sgs_PushReal( C, atan2( hdr[0], hdr[1] ) );
+	if( !strcmp( str, "angle" ) ){ sgs_PushReal( C, atan2( hdr[0], hdr[1] ) ); return SUC; }
 	if( !strcmp( str, "perp" ) ) return _make_v2d( C, -hdr[1], hdr[0] );
 	if( !strcmp( str, "perp2" ) ) return _make_v2d( C, hdr[1], -hdr[0] );
 	return SGS_ENOTFND;
@@ -178,7 +178,8 @@ static int sem_v2d_tostring( SGS_CTX, sgs_VarObj* data )
 	char buf[ 48 ];
 	V2DHDR;
 	sprintf( buf, "vec2d(%g;%g)", hdr[0], hdr[1] );
-	return sgs_PushString( C, buf );
+	sgs_PushString( C, buf );
+	return SUC;
 }
 static int sem_v2d_compare( SGS_CTX, sgs_VarObj* data )
 {
@@ -289,7 +290,8 @@ static int sem_vec2d_dot( SGS_CTX )
 	if( !stdlib_tovec2d( C, 0, v1, 1 ) || !stdlib_tovec2d( C, 1, v2, 1 ) )
 		_WARN( "vec2d_dot(): unexpected arguments; function expects vec2d, vec2d" )
 	
-	return sgs_PushReal( C, v1[0] * v2[0] + v1[1] * v2[1] ) == SUC ? 1 : 0;
+	sgs_PushReal( C, v1[0] * v2[0] + v1[1] * v2[1] );
+	return 1;
 }
 
 /*

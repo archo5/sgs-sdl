@@ -36,7 +36,8 @@ int sstex_destruct( SGS_CTX, sgs_VarObj* data )
 int sstex_gettype( SGS_CTX, sgs_VarObj* data )
 {
 	UNUSED( data );
-	return sgs_PushString( C, "texture" );
+	sgs_PushString( C, "texture" );
+	return SGS_SUCCESS;
 }
 
 int sstex_getprop( SGS_CTX, sgs_VarObj* data )
@@ -48,8 +49,8 @@ int sstex_getprop( SGS_CTX, sgs_VarObj* data )
 	if( !stdlib_tostring( C, 0, &str, &size ) )
 		return SGS_EINVAL;
 	
-	if( !strcmp( str, "width" ) ) return sgs_PushInt( C, tex->width );
-	if( !strcmp( str, "height" ) ) return sgs_PushInt( C, tex->height );
+	if( !strcmp( str, "width" ) ){ sgs_PushInt( C, tex->width ); return SGS_SUCCESS; }
+	if( !strcmp( str, "height" ) ){ sgs_PushInt( C, tex->height ); return SGS_SUCCESS; }
 	
 	return SGS_ENOTFND;
 }
@@ -59,7 +60,8 @@ int sstex_tostring( SGS_CTX, sgs_VarObj* data )
 	char buf[ 48 ];
 	TEXHDR;
 	sprintf( buf, "Texture (%d x %d, type %d)", (int) tex->width, (int) tex->height, (int) tex->flags );
-	return sgs_PushString( C, buf );
+	sgs_PushString( C, buf );
+	return SGS_SUCCESS;
 }
 
 void* tex_iface[] =
@@ -95,7 +97,6 @@ int ss_create_texture( SGS_CTX )
 {
 	uint32_t flags;
 	sgs_Image* ii;
-	sgs_Variable var;
 	int argc = sgs_StackSize( C ), bystr = 0;
 	
 	static flag_string_item_t flagitems[] =
@@ -112,11 +113,12 @@ int ss_create_texture( SGS_CTX )
 	
 	flags = sgs_GetFlagString( C, 1, flagitems );
 	
-	var = *sgs_StackItem( C, 0 );
-	sgs_PushVariable( C, &var ); /* NAME [FLAGS] NAME */
+	sgs_PushItem( C, 0 ); /* NAME [FLAGS] NAME */
 	
 	if( sgs_ItemType( C, 0 ) == SVT_STRING )
 	{
+		sgs_Variable var;
+		
 		bystr = 1;
 		
 		/* check if image already loaded */
@@ -408,6 +410,7 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 	
 	if( gi[0].var )
 	{
+		int ret = 0;
 		char* str;
 		sgs_Integer size;
 		sgs_PushVariable( C, gi[0].var );
@@ -437,7 +440,7 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 			vtex->size = 8;
 			vtex->data = sgs_Alloc_n( float, 8 );
 			memcpy( vtex->data, boxbuf + 8, sizeof(float) * 8 );
-			return 1;
+			ret = 1;
 		}
 		if( !strcmp( str, "tile" ) )
 		{
@@ -456,11 +459,13 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 			vtex->size = 8;
 			vtex->data = sgs_Alloc_n( float, 8 );
 			memcpy( vtex->data, boxbuf, sizeof(float) * 8 );
-			return 1;
+			ret = 1;
 		}
 		
 		sgs_UnpackFree( C, gi );
-		_WARN( "draw(): preset not found" )
+		if( !ret )
+			_WARN( "draw(): preset not found" )
+		return ret;
 	}
 	else if( gi[2].var )
 	{
