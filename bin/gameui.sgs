@@ -1,0 +1,126 @@
+
+
+global _ui_control_iface =
+{
+	/* references */
+	parent = null,
+	
+	/* events */
+	onclick = null,
+	onenter = null,
+	onleave = null,
+	onhittest = function( this, x, y )
+	{
+		return this.x <= x && this.x + this.w >= x
+			&& this.y <= y && this.y + this.h >= y;
+	},
+	onenter = function( this ){ this.mouseon = true; },
+	onleave = function( this ){ this.mouseon = false; },
+	
+	/* states */
+	clicked = false,
+	mouseon = false,
+	
+	/* processing */
+	get_ctrl_at = function( this, x, y )
+	{
+		for( var i = this.children.size - 1; i >= 0; --i )
+		{
+			var sub = this.children[ i ].get_ctrl_at( x, y );
+			if( sub !== null )
+				return sub;
+		}
+		if( this.onhittest( x, y ) )
+			return this;
+		return null;
+	},
+	add_child = function( this, ch ){ ch.parent = this; this.children.push( ch ); },
+	on_event = function( this, type, data )
+	{
+	},
+	on_update = null,
+	on_draw = null,
+};
+
+function ui_create_control( name )
+{
+	return class
+	({
+		name = name,
+		children = [],
+	},
+	_ui_control_iface );
+}
+
+function ui_default_paint_button( this )
+{
+	var btnbgc = [ 0.1 + this.mouseon * 0.7, 0.1, 0.1, 0.5 ];
+	draw({ preset = 'tile', position = [this.x,this.y], scale = [this.w,this.h], color = btnbgc });
+}
+
+function ui_create_button( name, x, y, w, h, onclick )
+{
+	return class
+	(
+		{
+			x = x,
+			y = y,
+			w = w,
+			h = h,
+			onclick = onclick,
+			on_draw = ui_default_paint_button
+		},
+		ui_create_control( name )
+	);
+}
+
+
+global _ui_frame_iface = class
+(
+	{
+		x = 0,
+		y = 0,
+		w = 9999,
+		h = 9999,
+		
+		curhover = null,
+		
+		event = function( this, e )
+		{
+			if( e.type == SDL_MOUSEMOTION )
+			{
+				var ctrl = this.get_ctrl_at( e.x, e.y );
+				if( ctrl !== this.curhover )
+				{
+					if( this.curhover !== null )
+						this.curhover.onleave();
+					this.curhover = ctrl;
+					ctrl.onenter();
+				}
+			}
+		},
+		update = function( this )
+		{
+			foreach( idx : this.children )
+			{
+				if( this.children[ idx ].on_update )
+					this.children[ idx ].on_update();
+			}
+		},
+		draw = function( this )
+		{
+			foreach( idx : this.children )
+			{
+				if( this.children[ idx ].on_draw )
+					this.children[ idx ].on_draw();
+			}
+		}
+	},
+	ui_create_control()
+);
+
+function ui_create_frame()
+{
+	global _ui_frame_iface;
+	return class( {}, _ui_frame_iface );
+}

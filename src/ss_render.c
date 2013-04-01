@@ -439,6 +439,25 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 			memcpy( vtex->data, boxbuf + 8, sizeof(float) * 8 );
 			return 1;
 		}
+		if( !strcmp( str, "tile" ) )
+		{
+			*outmode = GL_QUADS;
+			static const float boxbuf[] =
+			{
+				0, 0, 1, 0, 1, 1, 0, 1,
+			};
+			vert->my = 1;
+			vert->cnt = 4;
+			vert->size = 8;
+			vert->data = sgs_Alloc_n( float, 8 );
+			memcpy( vert->data, boxbuf, sizeof(float) * 8 );
+			vtex->my = 1;
+			vtex->cnt = 4;
+			vtex->size = 8;
+			vtex->data = sgs_Alloc_n( float, 8 );
+			memcpy( vtex->data, boxbuf, sizeof(float) * 8 );
+			return 1;
+		}
 		
 		sgs_UnpackFree( C, gi );
 		_WARN( "draw(): preset not found" )
@@ -509,14 +528,15 @@ cleanup:
 }
 int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 {
-	sgs_Variable transform, transforms, position,
-		positions, angle, angles, scale, scales, *var;
+	sgs_Variable transform, transforms, position, positions,
+		angle, angles, scale, scales, color, colors, *var;
 	dict_unpack_item_t tfi[] =
 	{
 		{ "transform", &transform }, { "transforms", &transforms },
 		{ "position", &position }, { "positions", &positions },
 		{ "angle", &angle }, { "angles", &angles },
 		{ "scale", &scale }, { "scales", &scales },
+		{ "color", &color }, { "colors", &colors },
 		DUI_LAST,
 	};
 	
@@ -652,18 +672,48 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 		}
 		
 end:
-		sgs_UnpackFree( C, tfi );
 		if( posdata.my ) sgs_Free( posdata.data );
 		if( angdata.my ) sgs_Free( angdata.data );
 		if( scaledata.my ) sgs_Free( scaledata.data );
-		return ret;
+		if( !ret )
+		{
+			sgs_UnpackFree( C, tfi );
+			return 0;
+		}
+		goto colors;
 		
 cleanup:
 		ret = 0;
 		goto end;
 	}
 	
-	return 0;
+colors:
+	{
+		float defcomp[] = { 1, 1, 1, 1 };
+		if( tfi[9].var ) /* found 'colors', array of real4 */
+		{
+			const char* res = _parse_floatbuf( C, tfi[9].var, icol, 4, defcomp, 1 );
+			if( res )
+			{
+				sgs_Printf( C, SGS_WARNING, -1, "draw(): failed to load colors - %s", res );
+				sgs_UnpackFree( C, tfi );
+				return 0;
+			}
+		}
+		else if( tfi[8].var ) /* found 'colors', array of real4 */
+		{
+			const char* res = _parse_floatbuf( C, tfi[8].var, icol, 4, defcomp, 0 );
+			if( res )
+			{
+				sgs_Printf( C, SGS_WARNING, -1, "draw(): failed to load color - %s", res );
+				sgs_UnpackFree( C, tfi );
+				return 0;
+			}
+		}
+	}
+	
+	sgs_UnpackFree( C, tfi );
+	return 1;
 }
 int ss_draw( SGS_CTX )
 {
@@ -717,7 +767,8 @@ int ss_draw( SGS_CTX )
 		
 		if( cc < icol.data + icol.size )
 		{
-			/* TODO, materials */
+			/* TODO: color multiplication */
+			glColor4fv( cc );
 			cc += 4;
 		}
 		

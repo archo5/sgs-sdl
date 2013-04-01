@@ -1,4 +1,7 @@
 
+
+include_file( "gameui.sgs" );
+
 function configure()
 {
 	global sys_exit;
@@ -18,6 +21,9 @@ function initialize()
 {
 	set_caption( "The SGS-SDL Game Framework" );
 	set_video_mode( 1024, 576, 32, "" );
+	
+	global UI = ui_create_frame();
+	UI.add_child( ui_create_button( "action", 10, 10, 200, 50, function(this){ print( "HAY! (", this, ")\n" ); } ) );
 	
 	print( "\n" );
 	global image = create_texture( "crosshair.png" );
@@ -41,6 +47,7 @@ global C = [ [1,0,0], [0,1,0], [0,0,1] ];
 global P = [];
 for( var i = 0; i < 576; ++i )
 	P.push( vec2d( randf() * 1200, i + randf() ) );
+
 function update()
 {
 	global lasttime, rotation, P;
@@ -68,6 +75,9 @@ function update()
 //	draw({ mode = GL_TRIANGLES, vertices = V, vcolors = C, position = mpos, scale = [32,32], angle = rotation * vPI });
 	draw({ preset = "box", texture = image, position = mpos, scale = [128,128], angle = rotation * vPI });
 	
+	UI.update();
+	UI.draw();
+	
 	present();
 	sleep( 10 );
 }
@@ -80,6 +90,8 @@ function on_event( e )
 		global mpos = [ e.x, e.y ];
 	if( ( e.type == SDL_MOUSEMOTION && e.button0 ) || e.type == SDL_MOUSEBUTTONDOWN )
 		global cmpos = [ e.x, e.y ];
+	
+	UI.event( e );
 }
 
 function cleanup()
