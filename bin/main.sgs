@@ -18,6 +18,13 @@ function initialize()
 {
 	set_caption( "The SGS-SDL Game Framework" );
 	set_video_mode( 1024, 576, 32, "" );
+	
+	print( "\n" );
+	global image = create_texture( "crosshair.png" );
+	print( image );
+	print( "\n" );
+	print( _Gtex );
+	print( "\n" );
 }
 
 global cmpos = [0,0], mpos = [0,0];
@@ -58,7 +65,8 @@ function update()
 	var vcol = [ [cc[0]+0.2,cc[1],cc[2]], [cc[0],cc[1]+0.2,cc[2]], [cc[0],cc[1],cc[2]+0.2] ];
 	draw({ mode = GL_TRIANGLES, vertices = V, vcolors = vcol, positions = P, scale = [16,16], angle = rotation * vPI });
 	
-	draw({ mode = GL_TRIANGLES, vertices = V, vcolors = C, position = mpos, scale = [32,32], angle = rotation * vPI });
+//	draw({ mode = GL_TRIANGLES, vertices = V, vcolors = C, position = mpos, scale = [32,32], angle = rotation * vPI });
+	draw({ preset = "box", texture = image, position = mpos, scale = [128,128], angle = rotation * vPI });
 	
 	present();
 	sleep( 10 );

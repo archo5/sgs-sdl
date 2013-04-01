@@ -6,7 +6,7 @@
 
 #define FN( f ) { #f, ss_##f }
 #define IC( i ) { #i, i }
-#define _WARN( err ) { sgs_Printf( C, SGS_ERROR, -1, err ); return 0; }
+#define _WARN( err ) { sgs_Printf( C, SGS_WARNING, -1, err ); return 0; }
 
 
 int ss_sleep( SGS_CTX )
@@ -55,6 +55,9 @@ int ss_set_video_mode( SGS_CTX )
 	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity();
 	glOrtho( 0, w, h, 0, 1, 1000 );
+	
+	glEnable( GL_BLEND );
+	glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 	
 	sgs_PushBool( C, !!scr );
 	return 1;

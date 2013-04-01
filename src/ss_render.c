@@ -5,8 +5,71 @@
 
 #define FN( f ) { #f, ss_##f }
 #define IC( i ) { #i, i }
-#define _WARN( err ) { sgs_Printf( C, SGS_ERROR, -1, err ); return 0; }
+#define _WARN( err ) { sgs_Printf( C, SGS_WARNING, -1, err ); return 0; }
 
+
+
+#define CT_HREPEAT 1
+#define CT_VREPEAT 2
+#define CT_NOLERP 4
+#define CT_MIPMAPS 8
+
+typedef struct _sgs_Texture
+{
+	GLuint id;
+	int32_t flags;
+	int16_t width;
+	int16_t height;
+}
+sgs_Texture;
+
+#define TEXHDR sgs_Texture* tex = (sgs_Texture*) data->data
+
+int sstex_destruct( SGS_CTX, sgs_VarObj* data )
+{
+	TEXHDR;
+	glDeleteTextures( 1, &tex->id );
+	sgs_Free( tex );
+	return SGS_SUCCESS;
+}
+
+int sstex_gettype( SGS_CTX, sgs_VarObj* data )
+{
+	UNUSED( data );
+	return sgs_PushString( C, "texture" );
+}
+
+int sstex_getprop( SGS_CTX, sgs_VarObj* data )
+{
+	char* str;
+	sgs_Integer size;
+	TEXHDR;
+	
+	if( !stdlib_tostring( C, 0, &str, &size ) )
+		return SGS_EINVAL;
+	
+	if( !strcmp( str, "width" ) ) return sgs_PushInt( C, tex->width );
+	if( !strcmp( str, "height" ) ) return sgs_PushInt( C, tex->height );
+	
+	return SGS_ENOTFND;
+}
+
+int sstex_tostring( SGS_CTX, sgs_VarObj* data )
+{
+	char buf[ 48 ];
+	TEXHDR;
+	sprintf( buf, "Texture (%d x %d, type %d)", (int) tex->width, (int) tex->height, (int) tex->flags );
+	return sgs_PushString( C, buf );
+}
+
+void* tex_iface[] =
+{
+	SOP_DESTRUCT, sstex_destruct,
+	SOP_GETTYPE, sstex_gettype,
+	SOP_GETPROP, sstex_getprop,
+	SOP_TOSTRING, sstex_tostring,
+	SOP_END
+};
 
 /*
 	the "create_texture" function
@@ -28,23 +91,19 @@
 		- if function doesn't exist or it simply returns null, texture creation fails
 */
 
-#define CT_HREPEAT 1
-#define CT_VREPEAT 2
-#define CT_NOLERP 4
-#define CT_MIPMAPS 8
-
 int ss_create_texture( SGS_CTX )
 {
 	uint32_t flags;
+	sgs_Image* ii;
 	sgs_Variable var;
-	int argc = sgs_StackSize( C );
+	int argc = sgs_StackSize( C ), bystr = 0;
 	
 	static flag_string_item_t flagitems[] =
 	{
 		{ "hrepeat", CT_HREPEAT },
 		{ "vrepeat", CT_VREPEAT },
 		{ "nolerp", CT_NOLERP },
-		{ "mipmaps", CT_MIPMAPS },
+	/*	{ "mipmaps", CT_MIPMAPS }, TODO */
 		FSI_LAST
 	};
 	
@@ -54,65 +113,97 @@ int ss_create_texture( SGS_CTX )
 	flags = sgs_GetFlagString( C, 1, flagitems );
 	
 	var = *sgs_StackItem( C, 0 );
-	sgs_PushVariable( C, &var );
+	sgs_PushVariable( C, &var ); /* NAME [FLAGS] NAME */
 	
 	if( sgs_ItemType( C, 0 ) == SVT_STRING )
 	{
-		/* check if image already loaded */
-		sgs_PushStringBuf( C, "\0", 1 );
-		sgs_PushInt( C, flags );
-		sgs_StringMultiConcat( C, 3 );
+		bystr = 1;
 		
-		sgs_GetGlobal( C, "_Gtex" );
+		/* check if image already loaded */
+		sgs_PushString( C, "|" ); /* NAME [FLAGS] NAME "|" */
+		sgs_PushInt( C, flags ); /* NAME [FLAGS] NAME "\0" INT_FLAGS */
+		sgs_StringMultiConcat( C, 3 ); /* NAME [FLAGS] KEY */
+		
+		sgs_GetGlobal( C, "_Gtex" ); /* NAME [FLAGS] KEY _Gtex */
 		if( sgs_GetIndex( C, &var, sgs_StackItem( C, -1 ), sgs_StackItem( C, -2 ) ) == SGS_SUCCESS )
 		{
 			/* found it! */
-			sgs_PushVariable( C, &var );
+			sgs_PushVariable( C, &var ); /* NAME [FLAGS] KEY _Gtex TEXTURE */
 			sgs_Release( C, &var );
 			return 1;
 		}
+		sgs_Pop( C, 1 );
 		
 		/* convert string to image */
-		{
-			int size;
-			char *str, *ptr, buf[ 64 ];
-			str = sgs_GetStringPtr( C, 0 );
-			size = sgs_GetStringSize( C, 0 );
-			ptr = str + size;
-			while( str <-- ptr )
-			{
-				if( *ptr == '/' || *ptr == '\\' )
-					_WARN( "create_texture() - filename has no extension" );
-				if( *ptr == '.' )
-					break;
-			}
-			if( *ptr != '.' )
-				_WARN( "create_texture() - filename has no extension" );
-			
-			sprintf( buf, "ss_load_image_%.4s", ptr + 1 );
-			sgs_PushVariable( C, &var );
-			if( sgs_GetGlobal( C, buf ) != SGS_SUCCESS )
-			{
-				sprintf( buf, "create_texture() - unsupported format: '%.4s'", ptr + 1 );
-				_WARN( buf )
-			}
-			if( sgs_Call( C, 1, 1 ) != SGS_SUCCESS ) /* function is expected to provide detailed info on failure */
-				_WARN( "create_texture() - failed to load image file" )
-			
-			/* insert return value as argument #0 */
-			sgs_Release( C, sgs_StackItem( C, 0 ) );
-			*sgs_StackItem( C, 0 ) = *sgs_StackItem( C, -1 );
-			sgs_Acquire( C, sgs_StackItem( C, 0 ) );
-			sgs_Pop( C, 1 );
-		}
+		if( !sgs_LoadImageHelper( C, (char*) sgs_GetStringPtr( C, 0 ), sgs_GetStringSize( C, 0 ), "create_texture" ) )
+			return 0; /* error printed by LIH */
+		
+		/* NAME [FLAGS] KEY IMAGE */
+		
+		/* insert return value as argument #0 */
+		sgs_Release( C, sgs_StackItem( C, 0 ) );
+		*sgs_StackItem( C, 0 ) = *sgs_StackItem( C, -1 );
+		sgs_Acquire( C, sgs_StackItem( C, 0 ) );
+		sgs_Pop( C, 1 ); /* IMAGE [FLAGS] KEY */
+		
+		/* texture key must stay at position -1 */
 	}
 	
-	if( sgs_ItemType( C, 0 ) == SVT_OBJECT && sgs_GetObjectData( C, 0 )->data == NULL ) /* TODO */
+	/* IMAGE [FLAGS] [KEY](if bystr) */
+	
+	if( !stdlib_toimage( C, 0, &ii ) )
+		_WARN( "create_texture() - unexpected arguments; function expects 1-2 arguments: (image|string)[, string]" )
+	
 	{
-		/* create a texture from the image */
+		sgs_Texture* tt;
+		GLuint tex;
+		glGenTextures( 1, &tex );
+		glBindTexture( GL_TEXTURE_2D, tex );
+		
+		glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
+#ifndef GL_BGRA
+# define GL_BGRA 0x80E1
+#endif
+		glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, ii->width, ii->height, 0, GL_BGRA, GL_UNSIGNED_BYTE, ii->data );
+		
+		if( flags & CT_HREPEAT ) glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
+		if( flags & CT_VREPEAT ) glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, flags & CT_NOLERP ? GL_NEAREST : GL_LINEAR );
+		{
+			GLuint magf = flags & CT_MIPMAPS ?
+				( flags & CT_NOLERP ? GL_NEAREST_MIPMAP_NEAREST : GL_LINEAR_MIPMAP_LINEAR ) :
+				( flags & CT_NOLERP ? GL_NEAREST : GL_LINEAR );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magf );
+		}
+		
+		tt = sgs_Alloc( sgs_Texture );
+		tt->id = tex;
+		tt->flags = flags;
+		tt->width = ii->width;
+		tt->height = ii->height;
+		sgs_PushObject( C, tt, tex_iface );
 	}
 	
-	return 0;
+	/* IMAGE [FLAGS] [KEY](if bystr) TEXTURE */
+	
+	/* texture key at position -2 */
+	if( bystr )
+	{
+		sgs_GetGlobal( C, "_Gtex" ); /* IMAGE [FLAGS] KEY TEXTURE _Gtex */
+		sgs_SetIndex( C, sgs_StackItem( C, -1 ), sgs_StackItem( C, -3 ), sgs_StackItem( C, -2 ) );
+		sgs_Pop( C, 1 ); /* IMAGE [FLAGS] KEY TEXTURE */
+	}
+	
+	return 1;
+}
+
+
+GLuint sgs_GetTextureId( SGS_CTX, sgs_Variable* var )
+{
+	if( var->type != SVT_OBJECT || var->data.O->iface != tex_iface )
+		return 0;
+	
+	return ((sgs_Texture*) var->data.O->data)->id;
 }
 
 
@@ -578,18 +669,46 @@ int ss_draw( SGS_CTX )
 {
 	float *tf, *cc, *vp, *vt, *vc;
 	int mode = GL_TRIANGLES, ret = 1;
+	GLuint texid = 0;
 	floatbuf vert = NFB, vcol = NFB, vtex = NFB, xform = NFB, icol = NFB;
+	sgs_Variable texture;
+	dict_unpack_item_t mi[] =
+	{
+		{ "texture", &texture },
+		DUI_LAST,
+	};
 	
 	if( sgs_StackSize( C ) != 1 ||
 		sgs_ItemType( C, 0 ) != SVT_OBJECT )
 		_WARN( "draw(): expected one dictionary argument" )
+	
+	sgs_UnpackDict( C, 0, mi );
 	
 	if( !_draw_load_geom( C, &mode, &vert, &vcol, &vtex ) )
 		goto cleanup;
 	if( !_draw_load_inst( C, &xform, &icol ) )
 		goto cleanup;
 	
+	if( mi[0].var )
+	{
+		texid = sgs_GetTextureId( C, mi[0].var );
+		if( !texid )
+		{
+			sgs_Printf( C, SGS_WARNING, -1, "draw(): could not use texture" );
+		}
+	}
+	
+	if( texid )
+	{
+		glEnable( GL_TEXTURE_2D );
+		glBindTexture( GL_TEXTURE_2D, texid );
+	}
+	else
+		glDisable( GL_TEXTURE_2D );
+	
 	glMatrixMode( GL_MODELVIEW );
+	glColor4f( 1, 1, 1, 1 );
+	glTexCoord2f( 0, 0 );
 	cc = icol.data;
 	for( tf = xform.data; tf < xform.data + xform.size; tf += 16 )
 	{
@@ -632,6 +751,7 @@ end:
 	if( vtex.my ) sgs_Free( vtex.data );
 	if( xform.my ) sgs_Free( xform.data );
 	if( icol.my ) sgs_Free( icol.data );
+	sgs_UnpackFree( C, mi );
 	
 	sgs_PushBool( C, ret );
 	return 1;
@@ -661,12 +781,17 @@ sgs_RegFuncConst gl_funcs[] =
 	FN( draw ),
 };
 
+const char* gl_init = "global _Gtex = {};";
+
 int sgs_InitGL( SGS_CTX )
 {
 	int ret;
 	ret = sgs_RegIntConsts( C, gl_ints, ARRAY_SIZE( gl_ints ) );
 	if( ret != SGS_SUCCESS ) return ret;
 	ret = sgs_RegFuncConsts( C, gl_funcs, ARRAY_SIZE( gl_funcs ) );
+	if( ret != SGS_SUCCESS ) return ret;
+	
+	ret = sgs_ExecString( C, gl_init );
 	if( ret != SGS_SUCCESS ) return ret;
 	
 	return SGS_SUCCESS;

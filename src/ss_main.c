@@ -20,6 +20,7 @@ int main( int argc, char* argv[] )
 	sgs_LoadLib_Type( C );
 	sgs_InitExtSys( C );
 	sgs_InitExtMath( C );
+	sgs_InitImage( C );
 	
 	/* run the main file */
 	ret = sgs_ExecFile( C, "main.sgs" );

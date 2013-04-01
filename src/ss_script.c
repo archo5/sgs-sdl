@@ -4,7 +4,7 @@
 #include "ss_main.h"
 
 
-#define _WARN( err ) { sgs_Printf( C, SGS_ERROR, -1, err ); return 0; }
+#define _WARN( err ) { sgs_Printf( C, SGS_WARNING, -1, err ); return 0; }
 
 sgs_Integer sgs_GlobalInt( SGS_CTX, const char* name )
 {
