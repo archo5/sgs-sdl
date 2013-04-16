@@ -1,51 +1,57 @@
 
-
 global _efn = function(){};
 
-global _ui_control_iface =
+
+global UIControl =
 {
 	/* references */
 	parent = null,
-	
-	/* events */
-	onclick = _efn,
-	onhittest = function( x, y )
-	{
-		return this.x <= x && this.x + this.w >= x
-			&& this.y <= y && this.y + this.h >= y;
-	},
-	onenter = function(){ this.mouseon = true; },
-	onleave = function(){ this.mouseon = false; },
-	onmousedown = function(){ if( this.mouseon ) this.clicked = true; },
-	onmouseup = function(){ if( this.mouseon ) this.onclick(); this.clicked = false; },
 	
 	/* states */
 	clicked = false,
 	mouseon = false,
 	
 	/* processing */
-	get_ctrl_at = function( x, y )
-	{
-		for( var i = this.children.size - 1; i >= 0; --i )
-		{
-			var sub = this.children[ i ].get_ctrl_at( x, y );
-			if( sub !== null )
-				return sub;
-		}
-		if( this.onhittest( x, y ) )
-			return this;
-		return null;
-	},
-	add_child = function( ch ){ ch.parent = this; this.children.push( ch ); },
 	on_draw = null,
 };
+
+/* DEFAULT events */
+UIControl.onclick = _efn;
+function UIControl.onhittest( x, y )
+{
+	return this.x <= x && this.x + this.w >= x
+		&& this.y <= y && this.y + this.h >= y;
+}
+function UIControl.onenter(){ this.mouseon = true; }
+function UIControl.onleave(){ this.mouseon = false; }
+function UIControl.onmousedown(){ if( this.mouseon ) this.clicked = true; }
+function UIControl.onmouseup(){ if( this.mouseon ) this.onclick(); this.clicked = false; }
+
+/* PROCESSING */
+function UIControl.get_ctrl_at( x, y )
+{
+	for( var i = this.children.size - 1; i >= 0; --i )
+	{
+		var sub = this.children[ i ].get_ctrl_at( x, y );
+		if( sub !== null )
+			return sub;
+	}
+	if( this.onhittest( x, y ) )
+		return this;
+	return null;
+}
+function UIControl.add_child( ch )
+{
+	ch.parent = this;
+	this.children.push( ch );
+}
 
 function ui_create_control( override )
 {
 	var data = { children = [] };
 	foreach( i : override )
 		data[ i ] = override[ i ];
-	return class( data, _ui_control_iface );
+	return class( data, UIControl );
 }
 
 function ui_default_paint_button()
@@ -70,7 +76,7 @@ function ui_create_button( name, x, y, w, h, onclick )
 }
 
 
-global _ui_frame_iface =
+global UIFrame =
 {
 	name = "__frame__",
 	type = "frame",
@@ -81,48 +87,49 @@ global _ui_frame_iface =
 	
 	curhover = null,
 	curclick = null,
-	
-	event = function( e )
+};
+
+function UIFrame.event( e )
+{
+	if( e.type == SDL_MOUSEMOTION )
 	{
-		if( e.type == SDL_MOUSEMOTION )
+		var ctrl = this.get_ctrl_at( e.x, e.y );
+		if( ctrl !== this.curhover )
 		{
-			var ctrl = this.get_ctrl_at( e.x, e.y );
-			if( ctrl !== this.curhover )
-			{
-				if( this.curhover !== null )
-					this.curhover.onleave();
-				this.curhover = ctrl;
-				ctrl.onenter();
-			}
-		}
-		if( e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP )
-		{
-			var ctrl = this.get_ctrl_at( e.x, e.y );
-			if( e.type == SDL_MOUSEBUTTONDOWN )
-			{
-				ctrl.onmousedown( e.x, e.y, e.button );
-				this.curclick = ctrl;
-			}
-			else
-			{
-				ctrl.onmouseup( e.x, e.y, e.button );
-				if( this.curclick !== null && ctrl !== this.curclick )
-					this.curclick.onmouseup( e.x, e.y, e.button );
-				this.curclick = null;
-			}
-		}
-	},
-	draw = function()
-	{
-		foreach( idx : this.children )
-		{
-			if( this.children[ idx ].on_draw )
-				this.children[ idx ].on_draw();
+			if( this.curhover !== null )
+				this.curhover.onleave();
+			this.curhover = ctrl;
+			ctrl.onenter();
 		}
 	}
-};
+	if( e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP )
+	{
+		var ctrl = this.get_ctrl_at( e.x, e.y );
+		if( e.type == SDL_MOUSEBUTTONDOWN )
+		{
+			ctrl.onmousedown( e.x, e.y, e.button );
+			this.curclick = ctrl;
+		}
+		else
+		{
+			ctrl.onmouseup( e.x, e.y, e.button );
+			if( this.curclick !== null && ctrl !== this.curclick )
+				this.curclick.onmouseup( e.x, e.y, e.button );
+			this.curclick = null;
+		}
+	}
+}
+
+function UIFrame.draw()
+{
+	foreach( idx : this.children )
+	{
+		if( this.children[ idx ].on_draw )
+			this.children[ idx ].on_draw();
+	}
+}
 
 function ui_create_frame()
 {
-	return ui_create_control( _ui_frame_iface );
+	return ui_create_control( UIFrame );
 }
