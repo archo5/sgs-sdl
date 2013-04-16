@@ -29,7 +29,7 @@ int sstex_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	TEXHDR;
 	glDeleteTextures( 1, &tex->id );
-	sgs_Free( tex );
+	sgs_Dealloc( tex );
 	return SGS_SUCCESS;
 }
 
@@ -43,10 +43,10 @@ int sstex_gettype( SGS_CTX, sgs_VarObj* data )
 int sstex_getprop( SGS_CTX, sgs_VarObj* data )
 {
 	char* str;
-	sgs_Integer size;
+	sgs_SizeVal size;
 	TEXHDR;
 	
-	if( !stdlib_tostring( C, 0, &str, &size ) )
+	if( !sgs_ParseString( C, 0, &str, &size ) )
 		return SGS_EINVAL;
 	
 	if( !strcmp( str, "width" ) ){ sgs_PushInt( C, tex->width ); return SGS_SUCCESS; }
@@ -126,7 +126,7 @@ int ss_create_texture( SGS_CTX )
 		sgs_PushInt( C, flags ); /* NAME [FLAGS] NAME "\0" INT_FLAGS */
 		sgs_StringMultiConcat( C, 3 ); /* NAME [FLAGS] KEY */
 		
-		sgs_GetGlobal( C, "_Gtex" ); /* NAME [FLAGS] KEY _Gtex */
+		sgs_PushGlobal( C, "_Gtex" ); /* NAME [FLAGS] KEY _Gtex */
 		if( sgs_GetIndex( C, &var, sgs_StackItem( C, -1 ), sgs_StackItem( C, -2 ) ) == SGS_SUCCESS )
 		{
 			/* found it! */
@@ -191,7 +191,7 @@ int ss_create_texture( SGS_CTX )
 	/* texture key at position -2 */
 	if( bystr )
 	{
-		sgs_GetGlobal( C, "_Gtex" ); /* IMAGE [FLAGS] KEY TEXTURE _Gtex */
+		sgs_PushGlobal( C, "_Gtex" ); /* IMAGE [FLAGS] KEY TEXTURE _Gtex */
 		sgs_SetIndex( C, sgs_StackItem( C, -1 ), sgs_StackItem( C, -3 ), sgs_StackItem( C, -2 ) );
 		sgs_Pop( C, 1 ); /* IMAGE [FLAGS] KEY TEXTURE */
 	}
@@ -289,9 +289,9 @@ const char* _parse_floatvec( SGS_CTX, float* out, int numcomp )
 	}
 	
 	var = sgs_StackItem( C, -1 );
-	if( stdlib_is_array( C, var ) )
+	if( sgs_IsArray( C, var ) )
 	{
-		int32_t i, asz = stdlib_array_size( C, var );
+		int32_t i, asz = sgs_ArraySize( C, var );
 		if( asz > numcomp )
 			asz = numcomp;
 		
@@ -299,14 +299,14 @@ const char* _parse_floatvec( SGS_CTX, float* out, int numcomp )
 		{
 			sgs_Real real;
 			sgs_Variable item;
-			if( !stdlib_array_getval( C, var, i, &item ) )
+			if( !sgs_ArrayGet( C, var, i, &item ) )
 			{
 				return "could not read from array";
 			}
 			
 			sgs_PushVariable( C, &item );
 			sgs_Release( C, &item );
-			if( !stdlib_toreal( C, -1, &real ) )
+			if( !sgs_ParseReal( C, -1, &real ) )
 			{
 				sgs_Pop( C, 1 );
 				return "non-number value found";
@@ -342,16 +342,16 @@ const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, int numc
 		sgs_Pop( C, 1 );
 		if( res && out->my )
 		{
-			sgs_Free( out->data );
+			sgs_Dealloc( out->data );
 			out->my = 0;
 		}
 		return res;
 	}
 	
-	if( !stdlib_is_array( C, var ) )
+	if( !sgs_IsArray( C, var ) )
 		return "array expected";
 	
-	asz = stdlib_array_size( C, var );
+	asz = sgs_ArraySize( C, var );
 	out->cnt = asz;
 	out->size = asz * numcomp;
 	out->data = sgs_Alloc_n( float, out->size );
@@ -361,9 +361,9 @@ const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, int numc
 	{
 		const char* subres;
 		sgs_Variable item;
-		if( !stdlib_array_getval( C, var, i, &item ) || item.type != SVT_OBJECT )
+		if( !sgs_ArrayGet( C, var, i, &item ) || item.type != SVT_OBJECT )
 		{
-			sgs_Free( out->data );
+			sgs_Dealloc( out->data );
 			return "element was not an object";
 		}
 		
@@ -376,7 +376,7 @@ const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, int numc
 		
 		if( subres )
 		{
-			sgs_Free( out->data );
+			sgs_Dealloc( out->data );
 			return subres;
 		}
 		
@@ -412,9 +412,9 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 	{
 		int ret = 0;
 		char* str;
-		sgs_Integer size;
+		sgs_SizeVal size;
 		sgs_PushVariable( C, gi[0].var );
-		if( !stdlib_tostring( C, -1, &str, &size ) )
+		if( !sgs_ParseString( C, -1, &str, &size ) )
 		{
 			sgs_Pop( C, 1 );
 			sgs_UnpackFree( C, gi );
@@ -486,7 +486,7 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 		}
 		
 		sgs_PushVariable( C, gi[1].var );
-		if( !stdlib_toint( C, -1, &imode ) )
+		if( !sgs_ParseInt( C, -1, &imode ) )
 		{
 			sgs_Pop( C, 1 );
 			goto cleanup;
@@ -522,9 +522,9 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 		
 cleanup:
 		sgs_UnpackFree( C, gi );
-		if( pdata.my ) sgs_Free( pdata.data );
-		if( cdata.my ) sgs_Free( cdata.data );
-		if( tdata.my ) sgs_Free( tdata.data );
+		if( pdata.my ) sgs_Dealloc( pdata.data );
+		if( cdata.my ) sgs_Dealloc( cdata.data );
+		if( tdata.my ) sgs_Dealloc( tdata.data );
 		return 0;
 	}
 	
@@ -677,9 +677,9 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 		}
 		
 end:
-		if( posdata.my ) sgs_Free( posdata.data );
-		if( angdata.my ) sgs_Free( angdata.data );
-		if( scaledata.my ) sgs_Free( scaledata.data );
+		if( posdata.my ) sgs_Dealloc( posdata.data );
+		if( angdata.my ) sgs_Dealloc( angdata.data );
+		if( scaledata.my ) sgs_Dealloc( scaledata.data );
 		if( !ret )
 		{
 			sgs_UnpackFree( C, tfi );
@@ -802,11 +802,11 @@ int ss_draw( SGS_CTX )
 	}
 	
 end:
-	if( vert.my ) sgs_Free( vert.data );
-	if( vcol.my ) sgs_Free( vcol.data );
-	if( vtex.my ) sgs_Free( vtex.data );
-	if( xform.my ) sgs_Free( xform.data );
-	if( icol.my ) sgs_Free( icol.data );
+	if( vert.my ) sgs_Dealloc( vert.data );
+	if( vcol.my ) sgs_Dealloc( vcol.data );
+	if( vtex.my ) sgs_Dealloc( vtex.data );
+	if( xform.my ) sgs_Dealloc( xform.data );
+	if( icol.my ) sgs_Dealloc( icol.data );
 	sgs_UnpackFree( C, mi );
 	
 	sgs_PushBool( C, ret );

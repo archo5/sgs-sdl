@@ -13,7 +13,7 @@ int ss_sleep( SGS_CTX )
 {
 	sgs_Integer time;
 	if( sgs_StackSize( C ) != 1 ||
-		!stdlib_toint( C, 0, &time ) )
+		!sgs_ParseInt( C, 0, &time ) )
 		_WARN( "sleep() - unexpected arguments; function expects 1 argument: int" )
 	
 	SDL_Delay( time );
@@ -31,13 +31,14 @@ int ss_set_video_mode( SGS_CTX )
 {
 	char* ts;
 	SDL_Surface* scr;
-	sgs_Integer w, h, b, f, tss;
+	sgs_Integer w, h, b, f;
+	sgs_SizeVal tss;
 	
 	if( sgs_StackSize( C ) != 4 ||
-		!stdlib_toint( C, 0, &w ) ||
-		!stdlib_toint( C, 1, &h ) ||
-		!stdlib_toint( C, 2, &b ) ||
-		!stdlib_tostring( C, 3, &ts, &tss ) )
+		!sgs_ParseInt( C, 0, &w ) ||
+		!sgs_ParseInt( C, 1, &h ) ||
+		!sgs_ParseInt( C, 2, &b ) ||
+		!sgs_ParseString( C, 3, &ts, &tss ) )
 		_WARN( "set_video_mode() - unexpected arguments; function expects 4 arguments: int, int, int, string" )
 	
 	f = sgs_GetFlagString( C, 3, setvideomode_flags );
@@ -66,9 +67,9 @@ int ss_set_video_mode( SGS_CTX )
 int ss_set_caption( SGS_CTX )
 {
 	char* str;
-	sgs_Integer size;
+	sgs_SizeVal size;
 	
-	if( !stdlib_tostring( C, 0, &str, &size ) )
+	if( !sgs_ParseString( C, 0, &str, &size ) )
 		_WARN( "set_caption() - unexpected arguments; function expects 1 argument: string" );
 	
 	SDL_WM_SetCaption( str, NULL );

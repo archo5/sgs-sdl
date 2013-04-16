@@ -32,8 +32,8 @@ int _make_image( SGS_CTX, int16_t w, int16_t h, const void* src )
 int ss_image_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	IMGHDR;
-	sgs_Free( img->data );
-	sgs_Free( img );
+	sgs_Dealloc( img->data );
+	sgs_Dealloc( img );
 	return SGS_SUCCESS;
 }
 
@@ -62,7 +62,7 @@ int ss_image_resize( SGS_CTX )
 	if( !stdlib_toimage( C, 0, &ii ) )
 		_WARN( "image::resize(): 'this' is not an image" )
 	
-	if( sgs_StackSize( C ) != 3 || !stdlib_toint( C, 1, &w ) || !stdlib_toint( C, 2, &h ) )
+	if( sgs_StackSize( C ) != 3 || !sgs_ParseInt( C, 1, &w ) || !sgs_ParseInt( C, 2, &h ) )
 		_WARN( "image::resize(): unexpected arguments; function expects 2 arguments: int, int" )
 	
 	{
@@ -85,7 +85,7 @@ int ss_image_resize( SGS_CTX )
 		if( y < h )
 			memset( nbuf + y * w, 0, sizeof(uint32_t) * w * ( h - ch ) );
 		
-		sgs_Free( ii->data );
+		sgs_Dealloc( ii->data );
 		ii->data = nbuf;
 		ii->width = w;
 		ii->height = h;
@@ -99,10 +99,10 @@ end:
 int ss_image_getprop( SGS_CTX, sgs_VarObj* data )
 {
 	char* str;
-	sgs_Integer size;
+	sgs_SizeVal size;
 	IMGHDR;
 	
-	if( !stdlib_tostring( C, 0, &str, &size ) )
+	if( !sgs_ParseString( C, 0, &str, &size ) )
 		return SGS_EINVAL;
 	
 	if( !strcmp( str, "width" ) ){ sgs_PushInt( C, img->width ); return SGS_SUCCESS; }
@@ -139,8 +139,8 @@ int ss_create_image( SGS_CTX )
 	int argc = sgs_StackSize( C );
 	
 	if( argc < 1 || argc > 2 ||
-		!stdlib_toint( C, 0, &w ) ||
-		( argc >= 2 && !stdlib_toint( C, 1, &h ) ) )
+		!sgs_ParseInt( C, 0, &w ) ||
+		( argc >= 2 && !sgs_ParseInt( C, 1, &h ) ) )
 		_WARN( "create_image(): unexpected arguments; function expects 1-2 arguments: int[, int]" )
 	
 	if( argc != 2 )
@@ -182,7 +182,7 @@ int sgs_LoadImageHelper( SGS_CTX, char* str, int size, const char* func )
 		pp++;
 	}
 	sgs_PushStringBuf( C, str, size );
-	if( sgs_GetGlobal( C, buf ) != SGS_SUCCESS )
+	if( sgs_PushGlobal( C, buf ) != SGS_SUCCESS )
 	{
 		sprintf( buf, "%s() - unsupported format: '%.4s'", func, ptr + 1 );
 		_WARN( buf )
@@ -199,9 +199,9 @@ int sgs_LoadImageHelper( SGS_CTX, char* str, int size, const char* func )
 int ss_load_image( SGS_CTX )
 {
 	char *str;
-	sgs_Integer size;
+	sgs_SizeVal size;
 	
-	if( sgs_StackSize( C ) != 1 || !stdlib_tostring( C, 0, &str, &size ) )
+	if( sgs_StackSize( C ) != 1 || !sgs_ParseString( C, 0, &str, &size ) )
 		_WARN( "load_image(): unexpected arguments; function expects 1 argument: string" )
 	
 	return sgs_LoadImageHelper( C, str, size, "load_image" );
@@ -232,9 +232,9 @@ int sgs_CreateImageHelper( SGS_CTX, int16_t w, int16_t h, const void* bits, cons
 int ss_load_image_png( SGS_CTX )
 {
 	char *str;
-	sgs_Integer size;
+	sgs_SizeVal size;
 	
-	if( sgs_StackSize( C ) != 1 || !stdlib_tostring( C, 0, &str, &size ) )
+	if( sgs_StackSize( C ) != 1 || !sgs_ParseString( C, 0, &str, &size ) )
 		_WARN( "ss_load_image_*(): unexpected arguments; function expects 1 argument: string" )
 	
 	{

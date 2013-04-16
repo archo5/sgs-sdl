@@ -9,22 +9,22 @@ global _ui_control_iface =
 	
 	/* events */
 	onclick = _efn,
-	onhittest = function( this, x, y )
+	onhittest = function( x, y )
 	{
 		return this.x <= x && this.x + this.w >= x
 			&& this.y <= y && this.y + this.h >= y;
 	},
-	onenter = function( this ){ this.mouseon = true; },
-	onleave = function( this ){ this.mouseon = false; },
-	onmousedown = function( this ){ if( this.mouseon ) this.clicked = true; },
-	onmouseup = function( this ){ if( this.mouseon ) this.onclick(); this.clicked = false; },
+	onenter = function(){ this.mouseon = true; },
+	onleave = function(){ this.mouseon = false; },
+	onmousedown = function(){ if( this.mouseon ) this.clicked = true; },
+	onmouseup = function(){ if( this.mouseon ) this.onclick(); this.clicked = false; },
 	
 	/* states */
 	clicked = false,
 	mouseon = false,
 	
 	/* processing */
-	get_ctrl_at = function( this, x, y )
+	get_ctrl_at = function( x, y )
 	{
 		for( var i = this.children.size - 1; i >= 0; --i )
 		{
@@ -36,7 +36,7 @@ global _ui_control_iface =
 			return this;
 		return null;
 	},
-	add_child = function( this, ch ){ ch.parent = this; this.children.push( ch ); },
+	add_child = function( ch ){ ch.parent = this; this.children.push( ch ); },
 	on_draw = null,
 };
 
@@ -48,7 +48,7 @@ function ui_create_control( override )
 	return class( data, _ui_control_iface );
 }
 
-function ui_default_paint_button( this )
+function ui_default_paint_button()
 {
 	var btnbgc = [ 0.1 + this.mouseon * 0.7, 0.1 + this.clicked * 0.7, 0.1, 0.5 ];
 	draw({ preset = 'tile', position = [this.x,this.y], scale = [this.w,this.h], color = btnbgc });
@@ -82,7 +82,7 @@ global _ui_frame_iface =
 	curhover = null,
 	curclick = null,
 	
-	event = function( this, e )
+	event = function( e )
 	{
 		if( e.type == SDL_MOUSEMOTION )
 		{
@@ -112,7 +112,7 @@ global _ui_frame_iface =
 			}
 		}
 	},
-	draw = function( this )
+	draw = function()
 	{
 		foreach( idx : this.children )
 		{

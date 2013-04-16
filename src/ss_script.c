@@ -1,5 +1,6 @@
 
 #include <math.h>
+#include <assert.h>
 
 #include "ss_main.h"
 
@@ -9,7 +10,7 @@
 sgs_Integer sgs_GlobalInt( SGS_CTX, const char* name )
 {
 	sgs_Integer v;
-	if( sgs_GetGlobal( C, name ) != SGS_SUCCESS )
+	if( sgs_PushGlobal( C, name ) != SGS_SUCCESS )
 		return 0;
 	v = sgs_GetInt( C, -1 );
 	sgs_Pop( C, 1 );
@@ -42,7 +43,7 @@ uint32_t sgs_GlobalFlagString( SGS_CTX, const char* name, flag_string_item_t* it
 {
 	char* str;
 	uint32_t flags = 0;
-	if( sgs_GetGlobal( C, name ) != SGS_SUCCESS )
+	if( sgs_PushGlobal( C, name ) != SGS_SUCCESS )
 		return 0;
 	flags = sgs_GetFlagString( C, -1, items );
 	sgs_Pop( C, 1 );
@@ -65,7 +66,7 @@ int sgs_UnpackDict( SGS_CTX, int pos, dict_unpack_item_t* items )
 		sgs_Acquire( C, &idx );
 		sgs_Pop( C, 1 );
 		
-		sgs_BreakIf( items->var == NULL );
+		assert( items->var != NULL );
 		if( sgs_GetIndex( C, items->var, &obj, &idx ) != SGS_SUCCESS )
 			items->var = NULL;
 		else
@@ -128,16 +129,16 @@ int stdlib_tovec2d( SGS_CTX, int pos, sgs_Real* v2f, int strict )
 	return 1;
 }
 
-static int sem_v2d_destruct( SGS_CTX, sgs_VarObj* data ){ UNUSED( C ); sgs_Free( data->data ); return SUC; }
+static int sem_v2d_destruct( SGS_CTX, sgs_VarObj* data ){ sgs_Dealloc( data->data ); return SUC; }
 static int sem_v2d_clone( SGS_CTX, sgs_VarObj* data ){ V2DHDR; return _make_v2d( C, hdr[0], hdr[1] ); }
 static int sem_v2d_gettype( SGS_CTX, sgs_VarObj* data ){ UNUSED( data ); sgs_PushString( C, "vec2d" ); return SUC; }
 static int sem_v2d_getprop( SGS_CTX, sgs_VarObj* data )
 {
 	char* str;
-	sgs_Integer size;
+	sgs_SizeVal size;
 	V2DHDR;
 	
-	if( !stdlib_tostring( C, 0, &str, &size ) )
+	if( !sgs_ParseString( C, 0, &str, &size ) )
 		return SGS_EINVAL;
 	if( !strcmp( str, "x" ) ){ sgs_PushReal( C, hdr[ 0 ] ); return SUC; }
 	if( !strcmp( str, "y" ) ){ sgs_PushReal( C, hdr[ 1 ] ); return SUC; }
@@ -161,13 +162,13 @@ static int sem_v2d_getprop( SGS_CTX, sgs_VarObj* data )
 static int sem_v2d_setprop( SGS_CTX, sgs_VarObj* data )
 {
 	char* str;
-	sgs_Integer size;
+	sgs_SizeVal size;
 	sgs_Real val;
 	V2DHDR;
 	
-	if( !stdlib_tostring( C, 0, &str, &size ) )
+	if( !sgs_ParseString( C, 0, &str, &size ) )
 		return SGS_EINVAL;
-	if( !stdlib_toreal( C, 1, &val ) )
+	if( !sgs_ParseReal( C, 1, &val ) )
 		return SGS_EINVAL;
 	if( !strcmp( str, "x" ) ){ hdr[ 0 ] = val; return SUC; }
 	if( !strcmp( str, "y" ) ){ hdr[ 1 ] = val; return SUC; }
@@ -268,11 +269,11 @@ static int sem_vec2d( SGS_CTX )
 	if( argc > 2 ) _WARN( V2DARGERR )
 	if( argc >= 1 )
 	{
-		if( !stdlib_toreal( C, 0, v ) )
+		if( !sgs_ParseReal( C, 0, v ) )
 			_WARN( V2DARGERR )
 		if( argc > 1 )
 		{
-			if( !stdlib_toreal( C, 1, v + 1 ) )
+			if( !sgs_ParseReal( C, 1, v + 1 ) )
 				_WARN( V2DARGERR )
 		}
 		else
@@ -300,20 +301,20 @@ static int sem_vec2d_dot( SGS_CTX )
 int stdlib_tocolor4( SGS_CTX, int pos, sgs_Real* v4f )
 {
 	sgs_Variable* var = sgs_StackItem( C, pos );
-	if( stdlib_is_array( C, var ) )
+	if( sgs_IsArray( C, var ) )
 	{
 		int i;
-		int size = stdlib_array_size( C, var );
+		int size = sgs_ArraySize( C, var );
 		if( size < 1 || size > 4 )
 			return 0;
 		for( i = 0; i < size; ++i )
 		{
 			sgs_Variable item;
-			if( !stdlib_array_getval( C, var, i, &item ) )
+			if( !sgs_ArrayGet( C, var, i, &item ) )
 				return 0;
 			sgs_PushVariable( C, &item );
 			sgs_Release( C, &item );
-			if( !stdlib_toreal( C, -1, v4f + i ) )
+			if( !sgs_ParseReal( C, -1, v4f + i ) )
 			{
 				sgs_Pop( C, 1 );
 				return 0;

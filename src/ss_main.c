@@ -36,14 +36,14 @@ int main( int argc, char* argv[] )
 		int i;
 		
 		sgs_PushString( C, argv[ 0 ] );
-		sgs_SetGlobal( C, "sys_execname" );
+		sgs_StoreGlobal( C, "sys_execname" );
 		
 		for( i = 1; i < argc; ++i )
 		{
 			sgs_PushString( C, argv[ i ] );
 		}
 		sgs_GlobalCall( C, "array", argc - 1, 1 );
-		sgs_SetGlobal( C, "sys_args" );
+		sgs_StoreGlobal( C, "sys_args" );
 	}
 	
 	/* configure the framework (optional) */
@@ -56,7 +56,7 @@ int main( int argc, char* argv[] )
 	/* check if already required to exit */
 	{
 		int b;
-		sgs_GetGlobal( C, "sys_exit" );
+		sgs_PushGlobal( C, "sys_exit" );
 		b = sgs_GetBool( C, -1 );
 		if( b )
 			return 0;
