@@ -25,12 +25,12 @@ function initialize()
 	global UI = ui_create_frame();
 	UI.add_child( ui_create_button( "action", 10, 10, 200, 50, function(){ print( "---\nHey! You clicked me!\n\n" ); } ) );
 	
-	print( "\n" );
+	println();
 	global image = create_texture( "crosshair.png" );
 	print( image );
-	print( "\n" );
-	print( _Gtex );
-	print( "\n" );
+	println();
+	printvar( _Gtex );
+	println();
 }
 
 global cmpos = [0,0], mpos = [0,0];
@@ -40,8 +40,8 @@ global rotation = 0;
 global V =
 [
 	vec2d( sin( 0 ), cos( 0 ) ),
-	vec2d( sin( vPI*2/3 ), cos( vPI*2/3 ) ),
-	vec2d( sin( vPI*4/3 ), cos( vPI*4/3 ) )
+	vec2d( sin( M_PI*2/3 ), cos( M_PI*2/3 ) ),
+	vec2d( sin( M_PI*4/3 ), cos( M_PI*4/3 ) )
 ];
 global C = [ [1,0,0], [0,1,0], [0,0,1] ];
 global P = [];
@@ -70,15 +70,16 @@ function update()
 	}
 	
 	var vcol = [ [cc[0]+0.2,cc[1],cc[2]], [cc[0],cc[1]+0.2,cc[2]], [cc[0],cc[1],cc[2]+0.2] ];
-	draw({ mode = GL_TRIANGLES, vertices = V, vcolors = vcol, positions = P, scale = [16,16], angle = rotation * vPI });
+	draw({ mode = GL_TRIANGLES, vertices = V, vcolors = vcol, positions = P, scale = [16,16], angle = rotation * M_PI });
 	
-//	draw({ mode = GL_TRIANGLES, vertices = V, vcolors = C, position = mpos, scale = [32,32], angle = rotation * vPI });
-	draw({ preset = "box", texture = image, position = mpos, scale = [128,128], angle = rotation * vPI });
+//	draw({ mode = GL_TRIANGLES, vertices = V, vcolors = C, position = mpos, scale = [32,32], angle = rotation * M_PI });
+	draw({ preset = "box", texture = image, position = mpos, scale = [128,128], angle = rotation * M_PI });
 	
 	UI.draw();
 	
 	present();
 	sleep( 10 );
+//	println( "memory usage: ", sys_stat( 2 ) / 1024, " kB" );
 }
 
 function on_event( e )

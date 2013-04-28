@@ -2,6 +2,8 @@
 #include <math.h>
 #include <assert.h>
 
+#define SGS_INTERNAL
+
 #include "ss_main.h"
 
 
@@ -55,14 +57,13 @@ int sgs_UnpackDict( SGS_CTX, int pos, dict_unpack_item_t* items )
 	int ret = 0;
 	sgs_Variable obj, idx;
 	
-	obj = *sgs_StackItem( C, pos );
-	if( obj.type != SVT_OBJECT )
+	if( !sgs_GetStackItem( C, pos, &obj ) || obj.type != SVT_OBJECT )
 		return ret;
 	
 	while( items->name )
 	{
 		sgs_PushString( C, items->name );
-		idx = *sgs_StackItem( C, -1 );
+		sgs_GetStackItem( C, -1, &idx );
 		sgs_Acquire( C, &idx );
 		sgs_Pop( C, 1 );
 		
@@ -251,12 +252,12 @@ static void* vec2d_iface[] =
 	SOP_SETPROP, sem_v2d_setprop,
 	SOP_TOSTRING, sem_v2d_tostring,
 	SOP_COMPARE, sem_v2d_compare,
-	SOP_OP_ADD, sem_v2d_add,
-	SOP_OP_SUB, sem_v2d_sub,
-	SOP_OP_MUL, sem_v2d_mul,
-	SOP_OP_DIV, sem_v2d_div,
-	SOP_OP_MOD, sem_v2d_mod,
-	SOP_OP_NEGATE, sem_v2d_negate,
+	SOP_ADD, sem_v2d_add,
+	SOP_SUB, sem_v2d_sub,
+	SOP_MUL, sem_v2d_mul,
+	SOP_DIV, sem_v2d_div,
+	SOP_MOD, sem_v2d_mod,
+	SOP_NEGATE, sem_v2d_negate,
 	SOP_END
 };
 
@@ -300,17 +301,17 @@ static int sem_vec2d_dot( SGS_CTX )
 */
 int stdlib_tocolor4( SGS_CTX, int pos, sgs_Real* v4f )
 {
-	sgs_Variable* var = sgs_StackItem( C, pos );
-	if( sgs_IsArray( C, var ) )
+	sgs_Variable var;
+	if( sgs_GetStackItem( C, pos, &var ) && sgs_IsArray( C, &var ) )
 	{
 		int i;
-		int size = sgs_ArraySize( C, var );
+		int size = sgs_ArraySize( C, &var );
 		if( size < 1 || size > 4 )
 			return 0;
 		for( i = 0; i < size; ++i )
 		{
 			sgs_Variable item;
-			if( !sgs_ArrayGet( C, var, i, &item ) )
+			if( !sgs_ArrayGet( C, &var, i, &item ) )
 				return 0;
 			sgs_PushVariable( C, &item );
 			sgs_Release( C, &item );

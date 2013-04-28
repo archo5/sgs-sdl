@@ -1,6 +1,8 @@
 
 #include <math.h>
 
+#define SGS_INTERNAL
+
 #include "ss_main.h"
 
 #define FN( f ) { #f, ss_##f }
@@ -117,7 +119,7 @@ int ss_create_texture( SGS_CTX )
 	
 	if( sgs_ItemType( C, 0 ) == SVT_STRING )
 	{
-		sgs_Variable var;
+		sgs_Variable var, obj, idx;
 		
 		bystr = 1;
 		
@@ -127,7 +129,7 @@ int ss_create_texture( SGS_CTX )
 		sgs_StringMultiConcat( C, 3 ); /* NAME [FLAGS] KEY */
 		
 		sgs_PushGlobal( C, "_Gtex" ); /* NAME [FLAGS] KEY _Gtex */
-		if( sgs_GetIndex( C, &var, sgs_StackItem( C, -1 ), sgs_StackItem( C, -2 ) ) == SGS_SUCCESS )
+		if( sgs_GetStackItem( C, -1, &obj ) && sgs_GetStackItem( C, -2, &idx ) && sgs_GetIndex( C, &var, &obj, &idx ) == SGS_SUCCESS )
 		{
 			/* found it! */
 			sgs_PushVariable( C, &var ); /* NAME [FLAGS] KEY _Gtex TEXTURE */
@@ -143,10 +145,8 @@ int ss_create_texture( SGS_CTX )
 		/* NAME [FLAGS] KEY IMAGE */
 		
 		/* insert return value as argument #0 */
-		sgs_Release( C, sgs_StackItem( C, 0 ) );
-		*sgs_StackItem( C, 0 ) = *sgs_StackItem( C, -1 );
-		sgs_Acquire( C, sgs_StackItem( C, 0 ) );
-		sgs_Pop( C, 1 ); /* IMAGE [FLAGS] KEY */
+		sgs_StoreItem( C, 0 );
+		/* IMAGE [FLAGS] KEY */
 		
 		/* texture key must stay at position -1 */
 	}
@@ -191,8 +191,12 @@ int ss_create_texture( SGS_CTX )
 	/* texture key at position -2 */
 	if( bystr )
 	{
+		sgs_Variable obj, idx, val;
+		sgs_GetStackItem( C, -1, &obj );
+		sgs_GetStackItem( C, -3, &idx );
+		sgs_GetStackItem( C, -2, &val );
 		sgs_PushGlobal( C, "_Gtex" ); /* IMAGE [FLAGS] KEY TEXTURE _Gtex */
-		sgs_SetIndex( C, sgs_StackItem( C, -1 ), sgs_StackItem( C, -3 ), sgs_StackItem( C, -2 ) );
+		sgs_SetIndex( C, &obj, &idx, &val );
 		sgs_Pop( C, 1 ); /* IMAGE [FLAGS] KEY TEXTURE */
 	}
 	
@@ -278,7 +282,7 @@ floatbuf;
 const char* _parse_floatvec( SGS_CTX, float* out, int numcomp )
 {
 	sgs_Real data[ 2 ];
-	sgs_Variable* var;
+	sgs_Variable var;
 	
 	if( stdlib_tovec2d( C, -1, data, 0 ) )
 	{
@@ -288,10 +292,10 @@ const char* _parse_floatvec( SGS_CTX, float* out, int numcomp )
 		return NULL;
 	}
 	
-	var = sgs_StackItem( C, -1 );
-	if( sgs_IsArray( C, var ) )
+	sgs_GetStackItem( C, -1, &var );
+	if( sgs_IsArray( C, &var ) )
 	{
-		int32_t i, asz = sgs_ArraySize( C, var );
+		int32_t i, asz = sgs_ArraySize( C, &var );
 		if( asz > numcomp )
 			asz = numcomp;
 		
@@ -299,7 +303,7 @@ const char* _parse_floatvec( SGS_CTX, float* out, int numcomp )
 		{
 			sgs_Real real;
 			sgs_Variable item;
-			if( !sgs_ArrayGet( C, var, i, &item ) )
+			if( !sgs_ArrayGet( C, &var, i, &item ) )
 			{
 				return "could not read from array";
 			}

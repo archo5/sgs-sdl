@@ -49,8 +49,8 @@ function UIControl.add_child( ch )
 function ui_create_control( override )
 {
 	var data = { children = [] };
-	foreach( i : override )
-		data[ i ] = override[ i ];
+	foreach( k, v : override )
+		data[ k ] = v;
 	return class( data, UIControl );
 }
 
