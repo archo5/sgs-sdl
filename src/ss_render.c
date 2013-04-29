@@ -1,13 +1,24 @@
 
 #include <math.h>
 
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
 #define SGS_INTERNAL
+
+#include "../sgscript/src/sgs_util.h"
+#undef ARRAY_SIZE
 
 #include "ss_main.h"
 
 #define FN( f ) { #f, ss_##f }
 #define IC( i ) { #i, i }
 #define _WARN( err ) { sgs_Printf( C, SGS_WARNING, -1, err ); return 0; }
+
+
+
+
+FT_Library g_ftlib;
 
 
 
@@ -822,6 +833,312 @@ cleanup:
 }
 
 
+/*
+	The font system
+*/
+
+typedef
+struct _ss_glyph
+{
+	int texwidth;
+	int texheight;
+	int bmoffx;
+	int bmoffy;
+	int advx;
+	GLuint texture;
+	double usagetime;
+	float sortQ;
+}
+ss_glyph;
+
+typedef
+struct _ss_font
+{
+	int loaded;
+	FT_Face face;
+	int size;
+	HashTable glyphs;
+}
+ss_font;
+
+int ss_font_init( ss_font* font, SGS_CTX, const char* filename, int size )
+{
+	font->loaded = 0;
+	if( FT_New_Face( g_ftlib, filename, 0, &font->face ) )
+		return 0;
+	font->size = size;
+	FT_Set_Pixel_Sizes( font->face, size, 0 );
+	ht_init( &font->glyphs, C, 4 );
+	font->loaded = 1;
+	return 1;
+}
+
+void ss_font_free( ss_font* font, SGS_CTX )
+{
+	if( font->loaded )
+	{
+		FT_Done_Face( font->face );
+		ht_free( &font->glyphs, C );
+	}
+	font->loaded = 0;
+}
+
+#define FONTHDR ss_font* font = (ss_font*) data
+
+int ss_font_destruct( SGS_CTX, sgs_VarObj* data )
+{
+	FONTHDR;
+	ss_font_free( font, C );
+	return SGS_SUCCESS;
+}
+
+int ss_font_gettype( SGS_CTX, sgs_VarObj* data )
+{
+	UNUSED( data );
+	sgs_PushString( C, "font" );
+	return SGS_SUCCESS;
+}
+
+void* font_iface[] =
+{
+	SOP_DESTRUCT, ss_font_destruct,
+	SOP_GETTYPE, ss_font_gettype,
+};
+
+int ss_create_font( SGS_CTX )
+{
+	char* fontname;
+	sgs_SizeVal fnsize;
+	sgs_Integer fontsize;
+
+	if( sgs_StackSize( C ) != 2 ||
+		!sgs_ParseString( C, 0, &fontname, &fnsize ) ||
+		!sgs_ParseInt( C, 1, &fontsize ) )
+		_WARN( "create_font(): unexpected arguments; function expects 2 arguments: string, int" )
+
+	/* make key */
+	sgs_PushItem( C, 0 );
+	sgs_PushString( C, ":" );
+	sgs_PushItem( C, 1 );
+	sgs_StringMultiConcat( C, 3 );
+
+	/* check if dict has the font */
+	sgs_PushGlobal( C, "_Gfonts" );
+	{
+		sgs_Variable obj, idx;
+		sgs_GetStackItem( C, -1, &obj );
+		sgs_GetStackItem( C, -2, &idx );
+		if( sgs_PushIndex( C, &obj, &idx ) == SGS_SUCCESS )
+			return 1;
+	}
+
+	/* attempt to load font with different base paths */
+	{
+		MemBuf fpath = membuf_create();
+		ss_font* fn = sgs_Alloc( ss_font );
+		fn->loaded = 0;
+		const char* basepaths[] =
+		{
+			"./",
+#ifdef _WIN32
+			"C:/Windows/Fonts/",
+#endif
+		};
+		const char** bp = basepaths;
+		const char** bpend = bp + ARRAY_SIZE( basepaths );
+		while( bp < bpend )
+		{
+			membuf_resize( &fpath, C, 0 );
+			membuf_appbuf( &fpath, C, *bp, strlen( *bp ) );
+			membuf_appbuf( &fpath, C, fontname, fnsize );
+			membuf_appchr( &fpath, C, 0 );
+			if( ss_font_init( fn, C, fpath.ptr, fontsize ) )
+				break;
+			bp++;
+		}
+		membuf_destroy( &fpath, C );
+		if( !fn->loaded )
+		{
+			sgs_Dealloc( fn );
+			sgs_Printf( C, SGS_WARNING, -1, "create_font(): could not find font '%.*s'", fnsize, fontname );
+			return 0;
+		}
+		sgs_PushObject( C, fn, font_iface );
+	}
+
+	/* save and return the font object */
+	{
+		sgs_Variable obj, idx, val;
+		sgs_GetStackItem( C, -2, &obj );
+		sgs_GetStackItem( C, -3, &idx );
+		sgs_GetStackItem( C, -1, &val );
+		sgs_SetIndex( C, &obj, &idx, &val );
+		return 1;
+	}
+}
+
+
+ss_glyph* ss_font_create_glyph( ss_font* font, SGS_CTX, uint32_t cp )
+{
+	int x, y;
+	uint8_t* imgdata, *pp;
+	GLuint tex = 0;
+	FT_GlyphSlot glyph;
+	ss_glyph* G = sgs_Alloc( ss_glyph );
+
+	FT_Load_Char( font->face, cp, 0 );
+	glyph = font->face->glyph;
+	FT_Render_Glyph( glyph, FT_RENDER_MODE_NORMAL );
+	
+	glGenTextures( 1, &tex );
+	glBindTexture( GL_TEXTURE_2D, tex );
+	imgdata = sgs_Alloc_n( uint8_t, glyph->bitmap.width * glyph->bitmap.rows * 4 );
+	pp = glyph->bitmap.buffer;
+	for( y = 0; y < glyph->bitmap.rows; ++y )
+	{
+		for( x = 0; x < glyph->bitmap.width; ++x )
+		{
+			int off = y * glyph->bitmap.pitch * 4;
+			imgdata[ off + x * 4 ] = 0xff;
+			imgdata[ off + x * 4 + 1 ] = 0xff;
+			imgdata[ off + x * 4 + 2 ] = 0xff;
+			imgdata[ off + x * 4 + 3 ] = pp[ x ];
+		}
+		pp += glyph->bitmap.pitch;
+	}
+	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, glyph->bitmap.width, glyph->bitmap.rows, 0, GL_RGBA, GL_UNSIGNED_BYTE, imgdata );
+	sgs_Dealloc( imgdata );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+
+	G->texture = tex;
+	G->texwidth = glyph->bitmap.width;
+	G->texheight = glyph->bitmap.rows;
+	G->bmoffx = glyph->bitmap_left;
+	G->bmoffy = glyph->bitmap_top;
+	G->advx = glyph->advance.x >> 6;
+
+	return G;
+}
+
+ss_glyph* ss_font_get_glyph( ss_font* font, SGS_CTX, uint32_t cp )
+{
+	void* g = ht_get( &font->glyphs, (const char*) &cp, 4 );
+	if( !g )
+	{
+		ss_glyph* ng = ss_font_create_glyph( font, C, cp );
+		ht_set( &font->glyphs, C, (const char*) &cp, 4, ng );
+		return ng;
+	}
+	else
+		return (ss_glyph*) g;
+}
+
+int ss_int_drawtext_line( ss_font* font, SGS_CTX, char* str,
+	sgs_SizeVal size, int x, int y, int xto, sgs_Real* color )
+{
+	int W, H, mx, my, xadv = 0, ret, use_kerning;
+	uint32_t previous = 0;
+	ss_glyph* G;
+	FT_UInt glyph_id;
+
+	glEnable( GL_TEXTURE_2D );
+	glColor4f( color[0], color[1], color[2], color[3] );
+
+	use_kerning = FT_HAS_KERNING( font->face );
+
+	while( size > 0 )
+	{
+		uint32_t cp = SGS_UNICODE_INVCHAR;
+		ret = sgs_utf8_decode( str, size, &cp );
+		ret = abs( ret );
+		str += ret;
+		size -= ret;
+
+		G = ss_font_get_glyph( font, C, cp );
+		if( !G )
+			continue;
+
+		glyph_id = FT_Get_Char_Index( font->face, cp );
+		if( use_kerning && previous && glyph_id )
+		{
+			FT_Vector delta;
+			FT_Get_Kerning( font->face, previous, glyph_id, FT_KERNING_DEFAULT, &delta );
+			xadv += delta.x >> 6;
+		}
+		previous = glyph_id;
+		x += xadv;
+
+		if( x > xto )
+			break;
+		
+		W = G->texwidth;
+		H = G->texheight;
+		
+		mx = x + G->bmoffx;
+		my = y + font->size - G->bmoffy;
+		
+		glBindTexture( GL_TEXTURE_2D, G->texture );
+		glBegin( GL_QUADS );
+		glTexCoord2f( 0, 0 );
+		glVertex2f( mx, my );
+		glTexCoord2f( 0, 1 );
+		glVertex2f( mx, my+H );
+		glTexCoord2f( 1, 1 );
+		glVertex2f( mx+W, my+H );
+		glTexCoord2f( 1, 0 );
+		glVertex2f( mx+W, my );
+		glEnd();
+
+		xadv = G->advx;
+	}
+}
+
+int ss_draw_text_line( SGS_CTX )
+{
+	int ret = 1;
+	char* str;
+	sgs_SizeVal strsize;
+	sgs_Variable fontvar;
+	sgs_Integer X, Y;
+	sgs_Real color[ 4 ];
+	ss_font* ssfont;
+	
+	if( sgs_StackSize( C ) != 5 )
+		_WARN( "draw_text_line(): unexpected arguments; function expects 5 arguments" )
+
+	if( !sgs_ParseString( C, 0, &str, &strsize ) )
+		_WARN( "draw_text_line(): argument 1 (text) must be 'string'" )
+	if( sgs_ItemType( C, 1 ) != SVT_OBJECT || !sgs_GetStackItem( C, 1, &fontvar )
+		|| fontvar.data.O->iface != font_iface )
+		_WARN( "draw_text_line(): argument 2 (font) has wrong type (must be 'font')" )
+	if( !sgs_ParseInt( C, 2, &X ) )
+		_WARN( "draw_text_line(): could not parse argument 3 (X position)" )
+	if( !sgs_ParseInt( C, 3, &Y ) )
+		_WARN( "draw_text_line(): could not parse argument 4 (Y position)" )
+	if( !stdlib_tocolor4( C, 4, color ) )
+		_WARN( "draw_text_line(): could not parse argument 5 (color)" )
+	
+	ssfont = (ss_font*) fontvar.data.O->data;
+	if( !ssfont->loaded )
+	{
+		sgs_Printf( C, SGS_WARNING, -1, "draw_text(): unloaded font detected" );
+		goto cleanup;
+	}
+	ss_int_drawtext_line( ssfont, C, str, strsize, X, Y, 0x7fffffff, color );
+
+end:
+	sgs_PushBool( C, ret );
+	return 1;
+cleanup:
+	ret = 0;
+	goto end;
+}
+
+
+
+
+
 
 sgs_RegIntConst gl_ints[] =
 {
@@ -839,13 +1156,18 @@ sgs_RegFuncConst gl_funcs[] =
 {
 	FN( create_texture ),
 	FN( draw ),
+	FN( create_font ),
+	FN( draw_text_line ),
 };
 
-const char* gl_init = "global _Gtex = {};";
+const char* gl_init = "global _Gtex = {}, _Gfonts = {};";
 
 int sgs_InitGL( SGS_CTX )
 {
 	int ret;
+
+	FT_Init_FreeType( &g_ftlib );
+
 	ret = sgs_RegIntConsts( C, gl_ints, ARRAY_SIZE( gl_ints ) );
 	if( ret != SGS_SUCCESS ) return ret;
 	ret = sgs_RegFuncConsts( C, gl_funcs, ARRAY_SIZE( gl_funcs ) );

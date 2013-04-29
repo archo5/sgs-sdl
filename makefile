@@ -4,9 +4,11 @@ ifdef SystemRoot
 	CP = copy
 	FixPath = $(subst /,\,$1)
 	PLATFLAGS = -lkernel32 -lOpenGL32 -lmingw32
-	LINKPATHS = -Lsdl-win/lib -Lfreeimage
-	COMPATHS = -Isdl-win/include
-	PLATPOST = $(CP) $(call FixPath,sdl-win/bin/SDL.dll bin) & $(CP) $(call FixPath,freeimage/FreeImage.dll bin)
+	LINKPATHS = -Lsdl-win/lib -Lfreeimage -Lfreetype
+	COMPATHS = -Isdl-win/include -Ifreetype/include
+	PLATPOST = $(CP) $(call FixPath,sdl-win/bin/SDL.dll bin) & \
+	           $(CP) $(call FixPath,freeimage/FreeImage.dll bin) & \
+	           $(CP) $(call FixPath,freetype/libfreetype-6.dll bin)
 else
 	RM = rm -f
 	CP = cp
@@ -35,7 +37,8 @@ OBJ = $(patsubst %,$(OBJDIR)/%,$(_OBJ))
 
 $(OUTDIR)/sgs-sdl: $(OBJ)
 	$(MAKE) -C sgscript
-	gcc -Wall -o $@ $(OBJ) -Lsgscript/lib $(LINKPATHS) $(PLATFLAGS) -lSDLmain -lSDL -lsgscript -lfreeimage -mwindows
+	gcc -Wall -o $@ $(OBJ) -Lsgscript/lib $(LINKPATHS) $(PLATFLAGS) \
+		-lSDLmain -lSDL -lsgscript -lfreeimage -lfreetype.dll -mwindows
 	$(PLATPOST)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPS)

@@ -1,9 +1,11 @@
 
 #include <math.h>
 
-#include "../freeimage/FreeImage.h"
+#define SGS_INTERNAL
 
 #include "ss_main.h"
+
+#include "../freeimage/FreeImage.h"
 
 
 #define FN( f ) { #f, ss_##f }
