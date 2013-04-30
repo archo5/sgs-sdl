@@ -9,6 +9,7 @@ ifdef SystemRoot
 	PLATPOST = $(CP) $(call FixPath,sdl-win/bin/SDL.dll bin) & \
 	           $(CP) $(call FixPath,freeimage/FreeImage.dll bin) & \
 	           $(CP) $(call FixPath,freetype/libfreetype-6.dll bin)
+	BINEXT=.exe
 else
 	RM = rm -f
 	CP = cp
@@ -17,6 +18,7 @@ else
 	LINKPATHS = 
 	COMPATHS = 
 	PLATPOST = 
+	BINEXT=
 endif
 
 SRCDIR=src
@@ -35,14 +37,14 @@ _OBJ = ss_main.o ss_script.o ss_sdl.o ss_render.o ss_image.o
 OBJ = $(patsubst %,$(OBJDIR)/%,$(_OBJ))
 
 
-$(OUTDIR)/sgs-sdl: $(OBJ)
+$(OUTDIR)/sgs-sdl$(BINEXT): $(OBJ)
 	$(MAKE) -C sgscript
 	gcc -Wall -o $@ $(OBJ) -Lsgscript/lib $(LINKPATHS) $(PLATFLAGS) \
-		-lSDLmain -lSDL -lsgscript -lfreeimage -lfreetype.dll -mwindows
+		-lSDLmain -lSDL -lsgscript -lfreeimage -lfreetype.dll
 	$(PLATPOST)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPS)
-	$(CC) -c -o $@ $< $(COMPATHS) $(CFLAGS)
+	$(CC) -c -o $@ $< $(COMPATHS) -Isgscript/src $(CFLAGS)
 
 .PHONY: clean
 clean:

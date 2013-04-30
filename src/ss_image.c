@@ -11,7 +11,7 @@
 #define FN( f ) { #f, ss_##f }
 #define FNP( f ) { #f, f }
 #define IC( i ) { #i, i }
-#define _WARN( err ) { sgs_Printf( C, SGS_WARNING, -1, err ); return 0; }
+#define _WARN( err ) { sgs_Printf( C, SGS_WARNING, err ); return 0; }
 
 
 void* image_iface[];

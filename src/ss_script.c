@@ -6,8 +6,13 @@
 
 #include "ss_main.h"
 
+#undef ARRAY_SIZE
+#include "../sgscript/ext/sgs_idbg.c"
+#undef ARRAY_SIZE
+#define ARRAY_SIZE( x ) (sizeof(x)/sizeof(x[0]))
 
-#define _WARN( err ) { sgs_Printf( C, SGS_WARNING, -1, err ); return 0; }
+
+#define _WARN( err ) { sgs_Printf( C, SGS_WARNING, err ); return 0; }
 
 sgs_Integer sgs_GlobalInt( SGS_CTX, const char* name )
 {
@@ -224,7 +229,7 @@ static int sem_v2d_div( SGS_CTX, sgs_VarObj* data )
 		return SGS_EINVAL;
 	if( v2[0] == 0 || v2[1] == 0 )
 	{
-		sgs_Printf( C, SGS_ERROR, -1, "vec2d operator '/' - division by zero" );
+		sgs_Printf( C, SGS_ERROR, "vec2d operator '/' - division by zero" );
 		return SGS_EINPROC;
 	}
 	return _make_v2d( C, v1[0] / v2[0], v1[1] / v2[1] );
@@ -236,7 +241,7 @@ static int sem_v2d_mod( SGS_CTX, sgs_VarObj* data )
 		return SGS_EINVAL;
 	if( v2[0] == 0 || v2[1] == 0 )
 	{
-		sgs_Printf( C, SGS_ERROR, -1, "vec2d operator '%' - modulo by zero" );
+		sgs_Printf( C, SGS_ERROR, "vec2d operator '%' - modulo by zero" );
 		return SGS_EINPROC;
 	}
 	return _make_v2d( C, fmod( v1[0], v2[0] ), fmod( v1[1], v2[1] ) );

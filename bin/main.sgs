@@ -48,6 +48,8 @@ global P = [];
 for( var i = 0; i < 576; ++i )
 	P.push( vec2d( randf() * 1200, i + randf() ) );
 
+global uchar = "";
+
 function update()
 {
 	global lasttime, rotation, P;
@@ -79,10 +81,18 @@ function update()
 
 	font = create_font( "verdana.ttf", 32 );
 	draw_text_line( "AAVV Yuņīкод...", font, 20, 20, [0.9,0.5,0.1] );
+
+	tx = "memory usage: " $ sys_stat( 2 ) / 1024 $ " kB";
+	f2 = create_font( "arial.ttf", 12 );
+	draw_text_line( tx, f2, 1, 1, [0.9,0.1,0.1,0.9] );
+	draw_text_line( tx, f2, 0, 0, [0.9] );
+
+	f3 = create_font( "arial.ttf", 400 );
+	draw_text_line( uchar, f3, 420, 20, [0,1] );
+	draw_text_line( uchar, f3, 400, 0, cc );
 	
 	present();
 	sleep( 10 );
-	println( "memory usage: ", sys_stat( 2 ) / 1024, " kB" );
 }
 
 function on_event( e )
@@ -93,6 +103,8 @@ function on_event( e )
 		global mpos = [ e.x, e.y ];
 	if( ( e.type == SDL_MOUSEMOTION && e.button0 ) || e.type == SDL_MOUSEBUTTONDOWN )
 		global cmpos = [ e.x, e.y ];
+	if( e.type == SDL_KEYDOWN )
+		global uchar = string_utf8_encode([ e.unicode ]);
 	
 	UI.event( e );
 }

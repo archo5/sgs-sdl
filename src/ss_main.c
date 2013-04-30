@@ -1,18 +1,22 @@
 
 #include "ss_main.h"
 
+#include "../sgscript/ext/sgs_idbg.h"
+
 
 const char* scr_globalvars = "global \
 sys_exit = false;\
 ";
 
-
+#undef main
 int main( int argc, char* argv[] )
 {
 	int ret;
 	sgs_Context* C;
+	sgs_IDbg D;
 	
 	C = sgs_CreateEngine();
+	sgs_InitIDbg( C, &D );
 	
 	/* preinit first-use libs */
 	sgs_LoadLib_Math( C );
@@ -66,12 +70,12 @@ int main( int argc, char* argv[] )
 	printf( "\n\n-- sgs-sdl framework --\n\n" );
 	
 	/* initialize SDL */
-	SDL_EnableUNICODE( 1 );
 	if( SDL_Init( SDL_INIT_VIDEO ) < 0 )
 	{
 		fprintf( stderr, "Couldn't initialize SDL: %s\n", SDL_GetError() );
 		return 1;
 	}
+	SDL_EnableUNICODE( 1 );
 	printf( "\ninitialized...\n" );
 	
 	/* initialize script-space SDL API */
@@ -134,6 +138,7 @@ int main( int argc, char* argv[] )
 		fprintf( stderr, "Failed to clean the application.\n" );
 		return 1;
 	}
+	sgs_CloseIDbg( C, &D );
 	sgs_DestroyEngine( C );
 	
 	return 0;

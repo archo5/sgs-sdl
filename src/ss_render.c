@@ -13,7 +13,7 @@
 
 #define FN( f ) { #f, ss_##f }
 #define IC( i ) { #i, i }
-#define _WARN( err ) { sgs_Printf( C, SGS_WARNING, -1, err ); return 0; }
+#define _WARN( err ) { sgs_Printf( C, SGS_WARNING, err ); return 0; }
 
 
 
@@ -203,10 +203,10 @@ int ss_create_texture( SGS_CTX )
 	if( bystr )
 	{
 		sgs_Variable obj, idx, val;
+		sgs_PushGlobal( C, "_Gtex" ); /* IMAGE [FLAGS] KEY TEXTURE _Gtex */
 		sgs_GetStackItem( C, -1, &obj );
 		sgs_GetStackItem( C, -3, &idx );
 		sgs_GetStackItem( C, -2, &val );
-		sgs_PushGlobal( C, "_Gtex" ); /* IMAGE [FLAGS] KEY TEXTURE _Gtex */
 		sgs_SetIndex( C, &obj, &idx, &val );
 		sgs_Pop( C, 1 ); /* IMAGE [FLAGS] KEY TEXTURE */
 	}
@@ -490,13 +490,13 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 		const char* res = _parse_floatbuf( C, gi[2].var, &pdata, 2, defcomp, 1 );
 		if( res )
 		{
-			sgs_Printf( C, SGS_WARNING, -1, "draw(): failed to load vertices - %s", res );
+			sgs_Printf( C, SGS_WARNING, "draw(): failed to load vertices - %s", res );
 			goto cleanup;
 		}
 		
 		if( !gi[1].var )
 		{
-			sgs_Printf( C, SGS_WARNING, -1, "draw(): 'mode' not found" );
+			sgs_Printf( C, SGS_WARNING, "draw(): 'mode' not found" );
 			goto cleanup;
 		}
 		
@@ -514,7 +514,7 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 			res = _parse_floatbuf( C, gi[3].var, &cdata, 4, defcomp+4, 1 );
 			if( res )
 			{
-				sgs_Printf( C, SGS_WARNING, -1, "draw(): failed to load vertex colors - %s", res );
+				sgs_Printf( C, SGS_WARNING, "draw(): failed to load vertex colors - %s", res );
 				goto cleanup;
 			}
 		}
@@ -524,7 +524,7 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 			res = _parse_floatbuf( C, gi[4].var, &tdata, 4, defcomp, 1 );
 			if( res )
 			{
-				sgs_Printf( C, SGS_WARNING, -1, "draw(): failed to load vertex texcoords - %s", res );
+				sgs_Printf( C, SGS_WARNING, "draw(): failed to load vertex texcoords - %s", res );
 				goto cleanup;
 			}
 		}
@@ -590,7 +590,7 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 			const char* res = _parse_floatbuf( C, tfi[3].var, &posdata, 2, defcomp, 1 );
 			if( res )
 			{
-				sgs_Printf( C, SGS_WARNING, -1, "draw(): failed to load positions - %s", res );
+				sgs_Printf( C, SGS_WARNING, "draw(): failed to load positions - %s", res );
 				goto cleanup;
 			}
 		}
@@ -599,13 +599,13 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 			const char* res = _parse_floatbuf( C, tfi[2].var, &posdata, 2, defcomp, 0 );
 			if( res )
 			{
-				sgs_Printf( C, SGS_WARNING, -1, "draw(): failed to load position - %s", res );
+				sgs_Printf( C, SGS_WARNING, "draw(): failed to load position - %s", res );
 				goto cleanup;
 			}
 		}
 		else
 		{
-			sgs_Printf( C, SGS_WARNING, -1, "draw(): no instance position data found" );
+			sgs_Printf( C, SGS_WARNING, "draw(): no instance position data found" );
 		}
 		
 		if( tfi[5].var ) /* found 'angles', array of real */
@@ -613,7 +613,7 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 			const char* res = _parse_floatbuf( C, tfi[5].var, &angdata, 1, defcomp, 1 );
 			if( res )
 			{
-				sgs_Printf( C, SGS_WARNING, -1, "draw(): failed to load angles - %s", res );
+				sgs_Printf( C, SGS_WARNING, "draw(): failed to load angles - %s", res );
 				goto cleanup;
 			}
 		}
@@ -622,7 +622,7 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 			const char* res = _parse_floatbuf( C, tfi[4].var, &angdata, 1, defcomp, 0 );
 			if( res )
 			{
-				sgs_Printf( C, SGS_WARNING, -1, "draw(): failed to load angle - %s", res );
+				sgs_Printf( C, SGS_WARNING, "draw(): failed to load angle - %s", res );
 				goto cleanup;
 			}
 		}
@@ -632,7 +632,7 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 			const char* res = _parse_floatbuf( C, tfi[7].var, &scaledata, 2, defcomp+4, 1 );
 			if( res )
 			{
-				sgs_Printf( C, SGS_WARNING, -1, "draw(): failed to load scales - %s", res );
+				sgs_Printf( C, SGS_WARNING, "draw(): failed to load scales - %s", res );
 				goto cleanup;
 			}
 		}
@@ -641,7 +641,7 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 			const char* res = _parse_floatbuf( C, tfi[6].var, &scaledata, 2, defcomp+4, 0 );
 			if( res )
 			{
-				sgs_Printf( C, SGS_WARNING, -1, "draw(): failed to load scale - %s", res );
+				sgs_Printf( C, SGS_WARNING, "draw(): failed to load scale - %s", res );
 				goto cleanup;
 			}
 		}
@@ -715,7 +715,7 @@ colors:
 			const char* res = _parse_floatbuf( C, tfi[9].var, icol, 4, defcomp, 1 );
 			if( res )
 			{
-				sgs_Printf( C, SGS_WARNING, -1, "draw(): failed to load colors - %s", res );
+				sgs_Printf( C, SGS_WARNING, "draw(): failed to load colors - %s", res );
 				sgs_UnpackFree( C, tfi );
 				return 0;
 			}
@@ -725,7 +725,7 @@ colors:
 			const char* res = _parse_floatbuf( C, tfi[8].var, icol, 4, defcomp, 0 );
 			if( res )
 			{
-				sgs_Printf( C, SGS_WARNING, -1, "draw(): failed to load color - %s", res );
+				sgs_Printf( C, SGS_WARNING, "draw(): failed to load color - %s", res );
 				sgs_UnpackFree( C, tfi );
 				return 0;
 			}
@@ -764,7 +764,7 @@ int ss_draw( SGS_CTX )
 		texid = sgs_GetTextureId( C, mi[0].var );
 		if( !texid )
 		{
-			sgs_Printf( C, SGS_WARNING, -1, "draw(): could not use texture" );
+			sgs_Printf( C, SGS_WARNING, "draw(): could not use texture" );
 		}
 	}
 	
@@ -960,7 +960,7 @@ int ss_create_font( SGS_CTX )
 		if( !fn->loaded )
 		{
 			sgs_Dealloc( fn );
-			sgs_Printf( C, SGS_WARNING, -1, "create_font(): could not find font '%.*s'", fnsize, fontname );
+			sgs_Printf( C, SGS_WARNING, "create_font(): could not find font '%.*s'", fnsize, fontname );
 			return 0;
 		}
 		sgs_PushObject( C, fn, font_iface );
@@ -1122,7 +1122,7 @@ int ss_draw_text_line( SGS_CTX )
 	ssfont = (ss_font*) fontvar.data.O->data;
 	if( !ssfont->loaded )
 	{
-		sgs_Printf( C, SGS_WARNING, -1, "draw_text(): unloaded font detected" );
+		sgs_Printf( C, SGS_WARNING, "draw_text(): unloaded font detected" );
 		goto cleanup;
 	}
 	ss_int_drawtext_line( ssfont, C, str, strsize, X, Y, 0x7fffffff, color );

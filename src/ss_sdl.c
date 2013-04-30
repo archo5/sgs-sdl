@@ -6,7 +6,7 @@
 
 #define FN( f ) { #f, ss_##f }
 #define IC( i ) { #i, i }
-#define _WARN( err ) { sgs_Printf( C, SGS_WARNING, -1, err ); return 0; }
+#define _WARN( err ) { sgs_Printf( C, SGS_WARNING, err ); return 0; }
 
 
 int ss_sleep( SGS_CTX )
