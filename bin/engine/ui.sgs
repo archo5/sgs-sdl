@@ -28,7 +28,7 @@ function UIControl.onhittest( x, y )
 }
 function UIControl.onenter(){ this.mouseon = true; }
 function UIControl.onleave(){ this.mouseon = false; }
-function UIControl.onmousedown(){ if( this.mouseon ) this.clicked = true; }
+function UIControl.onmousedown( x, y, bid ){ if( this.mouseon && bid == 1 ) this.clicked = true; }
 function UIControl.onmouseup(){ if( this.clicked && this.mouseon ) this.onclick(); this.clicked = false; }
 
 /* PROCESSING */

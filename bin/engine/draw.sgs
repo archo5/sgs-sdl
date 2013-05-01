@@ -1,10 +1,38 @@
 
+function set_camera_2d( x, y, size, aspect, angle )
+{
+	size = 1.0/size;
+	x *= size;
+	y *= size;
+	mtx = 
+	[
+		size/aspect, 0, 0, -x,
+		0, -size, 0, y,
+		0, 0, 1, -0.5,
+		0, 0, 0, 1,
+	];
+	set_camera( mtx );
+}
+
+function set_camera_ui( x1, x2, y1, y2 )
+{
+	w = x2 - x1;
+	h = y2 - y1;
+	mtx =
+	[
+		2.0/w, 0, 0, -1-x1/w,
+		0, -2.0/h, 0, 1+y1/w,
+		0, 0, 1, 0,
+		0, 0, 0, 1,
+	];
+	set_camera( mtx );
+}
 
 function draw_button( tex, left, right, top, bottom, off, texoff )
 {
 	off ||= 8;
 	texoff ||= off;
-	
+
 	tox = texoff / tex.width;
 	toy = texoff / tex.height;
 	x1 = left + off;

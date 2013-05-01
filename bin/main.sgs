@@ -1,4 +1,5 @@
 
+include_file( "engine/draw.sgs" );
 include_file( "engine/tilemap.sgs" );
 include_file( "engine/ui.sgs" );
 
@@ -26,10 +27,10 @@ function initialize()
 	global UI = UIFrame.create();
 	UI.add_child( UIControl.createButton( "Make it rain!", 10, 10, 120, 40, rain_start ) );
 
-	global TM = Tilemap.create( create_texture( "ntset.png" ), 32, 32 );
+	global TM = Tilemap.create( create_texture( "ntset.png", "nolerp" ), 32, 32 );
 	for( y = 0; y < 16; ++y )
 	{
-		for( x = 0; x < 32; ++x )
+		for( x = 0; x < 24; ++x )
 		{
 			TM.set( x, y, floor( randf() * 3.99 ), floor( randf() * 3.99 ), [1,1,1] );
 		}
@@ -42,7 +43,7 @@ function initialize()
 	println();
 }
 
-global cmpos = [0,0], mpos = [0,0];
+global mpos = [0,0];
 
 global lasttime = ftime();
 global rotation = 0;
@@ -63,7 +64,7 @@ global rands = []; for( i = 0; i < 500; ++i ) rands.push( randf() );
 function rain_start()
 {
 	global rain;
-	for( i = 0; i < 1000; ++i )
+	for( i = 0; i < 100; ++i )
 		rain.push( vec2d( randf() * 1024, -10 - 800 * randf() ) );
 }
 
@@ -90,8 +91,10 @@ function update()
 	
 	rotation += delta;
 	
-	var cc = [0.1+(cmpos[0]/1000.0),0.2+(cmpos[1]/1000.0),0.4];
+	var cc = [0.1,0.2,0.4];
 	clear( cc );
+
+	set_camera_2d( 232, 232, 200, 1024/576, 0 );
 
 	TM.render();
 	
@@ -103,11 +106,14 @@ function update()
 	}
 	
 	var vcol = [ [cc[0]+0.2,cc[1],cc[2]], [cc[0],cc[1]+0.2,cc[2]], [cc[0],cc[1],cc[2]+0.2] ];
-	draw({ mode = GL_TRIANGLES, vertices = V, vcolors = vcol, positions = P, scale = [16,16], angle = rotation * M_PI });
+//	draw({ mode = GL_TRIANGLES, vertices = V, vcolors = vcol, positions = P, scale = [16,16], angle = rotation * M_PI });
 
 	rain_do( delta );
 	
 //	draw({ mode = GL_TRIANGLES, vertices = V, vcolors = C, position = mpos, scale = [32,32], angle = rotation * M_PI });
+
+	set_camera_ui( 0, 1024, 0, 576 );
+
 	draw({ preset = "box", texture = image, position = mpos, scale = [128,128], angle = rotation * M_PI });
 	
 	UI.draw();
@@ -119,8 +125,7 @@ function update()
 	present();
 
 	sleeptime = 15 - delta * 1000;
-	if( sleeptime > 0 )
-		sleep( sleeptime );
+	if( sleeptime > 0 ) sleep( sleeptime );
 }
 
 function on_event( e )
@@ -128,12 +133,8 @@ function on_event( e )
 	if( e.type == SDL_QUIT )
 		global sys_exit = true;
 	if( e.type == SDL_MOUSEMOTION )
-		global mpos = [ e.x, e.y ];
-	if( ( e.type == SDL_MOUSEMOTION && e.button0 ) || e.type == SDL_MOUSEBUTTONDOWN )
-		global cmpos = [ e.x, e.y ];
-	if( e.type == SDL_KEYDOWN )
-		global uchar = string_utf8_encode([ e.unicode ]);
-	
+		global mpos = [e.x,e.y];
+
 	UI.event( e );
 }
 

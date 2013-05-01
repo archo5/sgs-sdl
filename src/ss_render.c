@@ -848,6 +848,22 @@ cleanup:
 	goto end;
 }
 
+int ss_set_camera( SGS_CTX )
+{
+	float mtx[ 16 ] = {0};
+
+	if( sgs_StackSize( C ) != 1 ||
+		_parse_floatvec( C, mtx, 16 ) )
+		_WARN( "set_camera(): expected an array of 16 'real' values" )
+
+	glMatrixMode( GL_PROJECTION );
+	glLoadIdentity();
+	glMatrixMode( GL_MODELVIEW );
+	_mtx_transpose( mtx );
+	glLoadMatrixf( mtx );
+	return 0;
+}
+
 
 /*
 	The font system
@@ -1260,6 +1276,7 @@ sgs_RegFuncConst gl_funcs[] =
 	FN( create_font ),
 	FN( draw_text_line ),
 	FN( is_font ),
+	FN( set_camera ),
 };
 
 const char* gl_init = "global _Gtex = {}, _Gfonts = {};";
