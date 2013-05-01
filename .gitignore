@@ -1,6 +1,8 @@
 *.depend
 *.layout
-/bin/*
+/bin/*.exe
+/bin/*.dll
+/bin/sgs*
 /obj/*
 /lib/*
 *.idb

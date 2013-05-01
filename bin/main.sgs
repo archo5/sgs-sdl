@@ -1,6 +1,6 @@
 
+include_file( "engine/ui.sgs" );
 
-include_file( "gameui.sgs" );
 
 function configure()
 {
@@ -22,8 +22,9 @@ function initialize()
 	set_caption( "The SGS-SDL Game Framework" );
 	set_video_mode( 1024, 576, 32, "" );
 	
-	global UI = ui_create_frame();
-	UI.add_child( ui_create_button( "action", 10, 10, 200, 50, function(){ print( "---\nHey! You clicked me!\n\n" ); } ) );
+	global UI = UIFrame.create();
+	UI.add_child( UIControl.createButton( "This button does something that I don't want to tell much about... žāš!",
+		10, 10, 200, 50, function(){ print( "---\nHey! You clicked me!\n\n" ); } ) );
 	
 	println();
 	global image = create_texture( "crosshair.png" );
@@ -78,18 +79,6 @@ function update()
 	draw({ preset = "box", texture = image, position = mpos, scale = [128,128], angle = rotation * M_PI });
 	
 	UI.draw();
-
-	font = create_font( "verdana.ttf", 32 );
-	draw_text_line( "AAVV Yuņīкод...", font, 20, 20, [0.9,0.5,0.1] );
-
-	tx = "memory usage: " $ sys_stat( 2 ) / 1024 $ " kB";
-	f2 = create_font( "arial.ttf", 12 );
-	draw_text_line( tx, f2, 1, 1, [0.9,0.1,0.1,0.9] );
-	draw_text_line( tx, f2, 0, 0, [0.9] );
-
-	f3 = create_font( "arial.ttf", 400 );
-	draw_text_line( uchar, f3, 420, 20, [0,1] );
-	draw_text_line( uchar, f3, 400, 0, cc );
 	
 	present();
 	sleep( 10 );

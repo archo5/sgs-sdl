@@ -485,7 +485,7 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 	else if( gi[2].var )
 	{
 		sgs_Integer imode;
-		float defcomp[] = { 0, 0, 0, 0, 1, 1, 1, 1 };
+		float defcomp[] = { 0, 0, 0, 0, 1, 1, 1, 1, 0.5f, 0.5f, 0.5f, 0.5f };
 		floatbuf pdata = NFB, cdata = NFB, tdata = NFB;
 		const char* res = _parse_floatbuf( C, gi[2].var, &pdata, 2, defcomp, 1 );
 		if( res )
@@ -521,7 +521,7 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 		
 		if( gi[4].var )
 		{
-			res = _parse_floatbuf( C, gi[4].var, &tdata, 4, defcomp, 1 );
+			res = _parse_floatbuf( C, gi[4].var, &tdata, 2, defcomp+8, 1 );
 			if( res )
 			{
 				sgs_Printf( C, SGS_WARNING, "draw(): failed to load vertex texcoords - %s", res );
@@ -800,7 +800,7 @@ int ss_draw( SGS_CTX )
 		{
 			if( vt < vtex.data + vtex.size )
 			{
-				glTexCoord2fv( vt );
+				glTexCoord2f( 1-vt[0], 1-vt[1] );
 				vt += 2;
 			}
 			if( vc < vcol.data + vcol.size )
@@ -837,9 +837,12 @@ cleanup:
 	The font system
 */
 
+void* font_iface[];
+
 typedef
 struct _ss_glyph
 {
+	FT_UInt glyph_id;
 	int texwidth;
 	int texheight;
 	int bmoffx;
@@ -883,7 +886,7 @@ void ss_font_free( ss_font* font, SGS_CTX )
 	font->loaded = 0;
 }
 
-#define FONTHDR ss_font* font = (ss_font*) data
+#define FONTHDR ss_font* font = (ss_font*) data->data
 
 int ss_font_destruct( SGS_CTX, sgs_VarObj* data )
 {
@@ -899,10 +902,57 @@ int ss_font_gettype( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
+ss_glyph* ss_font_get_glyph( ss_font* font, SGS_CTX, uint32_t cp );
+int ss_fontI_get_advance( SGS_CTX )
+{
+	int adv = 0;
+	sgs_Integer a = 0, b = 0;
+	ss_font* font;
+
+	if( !sgs_Method( C ) ||
+		sgs_StackSize( C ) != 3 ||
+		sgs_ItemType( C, 0 ) != SVT_OBJECT ||
+		sgs_GetObjectData( C, 0 )->iface != font_iface ||
+		!( sgs_ItemType( C, 1 ) == SVT_NULL || sgs_ParseInt( C, 1, &a ) ) ||
+		!sgs_ParseInt( C, 2, &b ) )
+		_WARN( "font::get_advance(): unexpected arguments; "
+			"method expects this=font and 2 arguments: int|null, int" )
+
+	font = (ss_font*) sgs_GetObjectData( C, 0 )->data;
+
+	if( b )
+	{
+		ss_glyph* G = ss_font_get_glyph( font, C, (uint32_t) b ), *G2;
+		if( G )
+			adv += G->advx;
+		if( FT_HAS_KERNING( font->face ) && a && ( G2 = ss_font_get_glyph( font, C, (uint32_t) a ) ) )
+		{
+			FT_Vector delta;
+			FT_Get_Kerning( font->face, G2->glyph_id, G->glyph_id, FT_KERNING_DEFAULT, &delta );
+			adv += delta.x >> 6;
+		}
+	}
+	sgs_PushInt( C, adv );
+	return 1;
+}
+
+int ss_font_getprop( SGS_CTX, sgs_VarObj* data )
+{
+	char* str = sgs_ToString( C, 0 );
+	FONTHDR;
+
+	if( 0 == strcmp( str, "size" ) ){ sgs_PushInt( C, font->size ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "get_advance" ) ){ sgs_PushCFunction( C, ss_fontI_get_advance ); return SGS_SUCCESS; }
+
+	return SGS_ENOTFND;
+}
+
 void* font_iface[] =
 {
 	SOP_DESTRUCT, ss_font_destruct,
 	SOP_GETTYPE, ss_font_gettype,
+	SOP_GETPROP, ss_font_getprop,
+	SOP_END,
 };
 
 int ss_create_font( SGS_CTX )
@@ -1011,6 +1061,7 @@ ss_glyph* ss_font_create_glyph( ss_font* font, SGS_CTX, uint32_t cp )
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 
+	G->glyph_id = FT_Get_Char_Index( font->face, cp );
 	G->texture = tex;
 	G->texwidth = glyph->bitmap.width;
 	G->texheight = glyph->bitmap.rows;
@@ -1059,14 +1110,13 @@ int ss_int_drawtext_line( ss_font* font, SGS_CTX, char* str,
 		if( !G )
 			continue;
 
-		glyph_id = FT_Get_Char_Index( font->face, cp );
-		if( use_kerning && previous && glyph_id )
+		if( use_kerning && previous && G->glyph_id )
 		{
 			FT_Vector delta;
-			FT_Get_Kerning( font->face, previous, glyph_id, FT_KERNING_DEFAULT, &delta );
+			FT_Get_Kerning( font->face, previous, G->glyph_id, FT_KERNING_DEFAULT, &delta );
 			xadv += delta.x >> 6;
 		}
-		previous = glyph_id;
+		previous = G->glyph_id;
 		x += xadv;
 
 		if( x > xto )
@@ -1092,6 +1142,16 @@ int ss_int_drawtext_line( ss_font* font, SGS_CTX, char* str,
 
 		xadv = G->advx;
 	}
+}
+
+int ss_is_font( SGS_CTX )
+{
+	if( sgs_StackSize( C ) != 1 )
+		_WARN( "is_font(): unexpected arguments; function expects 1 argument" )
+
+	sgs_PushBool( C, sgs_ItemType( C, 0 ) == SVT_OBJECT &&
+		sgs_GetObjectData( C, 0 )->iface == font_iface );
+	return 1;
 }
 
 int ss_draw_text_line( SGS_CTX )
@@ -1158,6 +1218,7 @@ sgs_RegFuncConst gl_funcs[] =
 	FN( draw ),
 	FN( create_font ),
 	FN( draw_text_line ),
+	FN( is_font ),
 };
 
 const char* gl_init = "global _Gtex = {}, _Gfonts = {};";

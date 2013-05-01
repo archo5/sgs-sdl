@@ -1,0 +1,46 @@
+
+
+function draw_button( tex, left, right, top, bottom, off, texoff )
+{
+	off = off || 8;
+	texoff = texoff || off;
+	tox = texoff / tex.width;
+	toy = texoff / tex.height;
+	x1 = left + off;
+	x2 = right - off;
+	y1 = top + off;
+	y2 = bottom - off;
+
+	V =
+	[
+		[left, top], [x1, top], [x1, y1], [left, y1],
+		[x1, top], [x2, top], [x2, y1], [x1, y1],
+		[x2, top], [right, top], [right, y1], [x2, y1],
+
+		[left, y1], [x1, y1], [x1, y2], [left, y2],
+		[x1, y1], [x2, y1], [x2, y2], [x1, y2],
+		[x2, y1], [right, y1], [right, y2], [x2, y2],
+
+		[left, y2], [x1, y2], [x1, bottom], [left, bottom],
+		[x1, y2], [x2, y2], [x2, bottom], [x1, bottom],
+		[x2, y2], [right, y2], [right, bottom], [x2, bottom],
+	];
+
+	T =
+	[
+		[0, 0], [tox, 0], [tox, toy], [0, toy],
+		[tox, 0], [1-tox, 0], [1-tox, toy], [tox, toy],
+		[1-tox, 0], [1, 0], [1, toy], [1-tox, toy],
+
+		[0, toy], [tox, toy], [tox, 1-toy], [0, 1-toy],
+		[tox, toy], [1-tox, toy], [1-tox, 1-toy], [tox, 1-toy],
+		[1-tox, toy], [1, toy], [1, 1-toy], [1-tox, 1-toy],
+
+		[0, 1-toy], [tox, 1-toy], [tox, 1], [0, 1],
+		[tox, 1-toy], [1-tox, 1-toy], [1-tox, 1], [tox, 1],
+		[1-tox, 1-toy], [1, 1-toy], [1, 1], [1-tox, 1],
+	];
+
+	draw({ texture = tex, mode = GL_QUADS, vertices = V, vtexcoords = T, position=[0,0] });
+}
+

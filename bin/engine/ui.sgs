@@ -1,4 +1,8 @@
 
+include_file( "engine/font.sgs" );
+include_file( "engine/draw.sgs" );
+
+
 global _efn = function(){};
 
 
@@ -25,7 +29,7 @@ function UIControl.onhittest( x, y )
 function UIControl.onenter(){ this.mouseon = true; }
 function UIControl.onleave(){ this.mouseon = false; }
 function UIControl.onmousedown(){ if( this.mouseon ) this.clicked = true; }
-function UIControl.onmouseup(){ if( this.mouseon ) this.onclick(); this.clicked = false; }
+function UIControl.onmouseup(){ if( this.clicked && this.mouseon ) this.onclick(); this.clicked = false; }
 
 /* PROCESSING */
 function UIControl.get_ctrl_at( x, y )
@@ -46,9 +50,10 @@ function UIControl.add_child( ch )
 	this.children.push( ch );
 }
 
-function ui_create_control( override )
+function UIControl.create( override )
 {
 	var data = { children = [] };
+	data.font = create_font( "verdana.ttf", 12 );
 	foreach( k, v : override )
 		data[ k ] = v;
 	return class( data, UIControl );
@@ -56,13 +61,19 @@ function ui_create_control( override )
 
 function ui_default_paint_button()
 {
-	var btnbgc = [ 0.1 + this.mouseon * 0.7, 0.1 + this.clicked * 0.7, 0.1, 0.5 ];
-	draw({ preset = 'tile', position = [this.x,this.y], scale = [this.w,this.h], color = btnbgc });
+	mon = this.mouseon; if( this.clicked ) mon = 0;
+	tex = this.textures[ mon + this.clicked * 2 ];
+	draw_button( tex, this.x, this.x + this.w, this.y, this.y + this.h );
+
+	draw_text_rect( this.name, this.font, [0.9,1], DT_CENTER | DT_VCENTER,
+		this.x + 8, this.x + this.w - 8, this.y + 9, this.y + this.h - 7 );
+	draw_text_rect( this.name, this.font, [0.1,1], DT_CENTER | DT_VCENTER,
+		this.x + 8, this.x + this.w - 8, this.y + 8, this.y + this.h - 8 );
 }
 
-function ui_create_button( name, x, y, w, h, onclick )
+function UIControl.createButton( name, x, y, w, h, onclick )
 {
-	return ui_create_control
+	return UIControl.create
 	({
 		name = name,
 		type = "button",
@@ -71,7 +82,13 @@ function ui_create_button( name, x, y, w, h, onclick )
 		w = w,
 		h = h,
 		onclick = onclick,
-		on_draw = ui_default_paint_button
+		on_draw = ui_default_paint_button,
+		textures =
+		[
+			create_texture( "engine/img/buttonN.png" ),
+			create_texture( "engine/img/buttonH.png" ),
+			create_texture( "engine/img/buttonC.png" ),
+		],
 	});
 }
 
@@ -129,7 +146,7 @@ function UIFrame.draw()
 	}
 }
 
-function ui_create_frame()
+function UIFrame.create()
 {
-	return ui_create_control( UIFrame );
+	return UIControl.create( UIFrame );
 }

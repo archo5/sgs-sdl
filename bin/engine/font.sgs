@@ -1,0 +1,159 @@
+
+include_library( "string" );
+
+
+global
+	DT_LEFT    = 0b00000001,
+	DT_CENTER  = 0b00000010,
+	DT_RIGHT   = 0b00000100,
+	DT_JUSTIFY = 0b00001000,
+	DT_TOP     = 0b00010000,
+	DT_VCENTER = 0b00100000,
+	DT_BOTTOM  = 0b01000000;
+
+
+function calc_text_layout( text_ucp, font, width, height )
+{
+	lines = [];
+	lineheight = font.size;
+
+	SP = string_charcode( " " );
+	NL = string_charcode( "\n" );
+
+	from = 0;
+	eol = 0;
+	curline = 0;
+	curword = 0;
+	numwords = 1;
+	pcpos = null;
+	for( i = 0; i < text_ucp.size; ++i )
+	{
+		c = text_ucp[ i ];
+		prevchar = null;
+		if( pcpos != null )
+			prevchar = text_ucp[ pcpos ];
+		cw = font.get_advance( prevchar, text_ucp[ i ] );
+
+		if( c == NL )
+		{
+			curline += curword;
+			if( prevchar == SP )
+				numwords--;
+			lines.push({ from = from, to = i, width = curline, numwords = numwords });
+			curline = 0;
+			curword = 0;
+			numwords = 1;
+			if( ( lines.size + 1 ) * lineheight > height )
+				break;
+			pcpos = null;
+			i++;
+			while( i < text_ucp.size && text_ucp[ i ] == SP )
+				i++;
+			from = i--;
+			continue;
+		}
+		if( c == SP )
+		{
+			curline += curword;
+			if( prevchar !== null && prevchar != SP )
+				numwords++;
+			eol = i;
+			curword = 0;
+		}
+		if( curline + curword + cw < width )
+		{
+			// still within line
+			curword += cw;
+			pcpos = i;
+			continue;
+		}
+		else
+		{
+			// over the limit
+			if( curline )
+			{
+				// if not first word, commit line and restart the word
+				curword = 0;
+				numwords--;
+				i = eol;
+			}
+			curline += curword;
+			lines.push({ from = from, to = i, width = curline, numwords = numwords });
+			curline = 0;
+			curword = 0;
+			numwords = 1;
+			if( ( lines.size + 1 ) * lineheight > height )
+				break;
+			pcpos = null;
+			while( i < text_ucp.size && text_ucp[ i ] == SP )
+				i++;
+			from = i--;
+			continue;
+		}
+	}
+
+	curline += curword;
+	if( curline )
+	{
+		lines.push({ from = from, to = text_ucp.size, width = curline, numwords = numwords });
+	}
+
+	return lines;
+}
+
+function array_part( arr, from, to )
+{
+	out = [];
+	for( i = from; i < to; ++i )
+		out.push( arr[ i ] );
+	return out;
+}
+
+function draw_text_rect( text, font, color, placement, left, right, top, bottom )
+{
+	// validation
+	if( !is_font( font ) )
+	{
+		sys_print( SGS_WARNING, "draw_text(): invalid value for 'font'" );
+		return false;
+	}
+	hfc = !!( placement & DT_LEFT ) + !!( placement & DT_CENTER )
+		+ !!( placement & DT_RIGHT ) + !!( placement & DT_JUSTIFY );
+	vfc = !!( placement & DT_TOP ) + !!( placement & DT_VCENTER )
+		+ !!( placement & DT_BOTTOM );
+	if( hfc != 1 || vfc != 1 )
+	{
+		sys_print( SGS_WARNING, "draw_text(): invalid placement flag combo" );
+		return false;
+	}
+
+	// sizing
+	width = right - left;
+	height = bottom - top;
+
+	lineheight = font.size;
+	if( height < lineheight )
+		return true;
+
+	text_ucp = string_utf8_decode( text );
+
+	// preparations
+	hlindex = !!( placement & DT_CENTER ) + !!( placement & DT_RIGHT ) * 2;
+	vlindex = !!( placement & DT_VCENTER ) + !!( placement & DT_BOTTOM ) * 2;
+
+	lines = calc_text_layout( text_ucp, font, width, height );
+
+	vspace = height - lines.size * lineheight;
+	y = top + [ 0, vspace/2, vspace ][ vlindex ];
+	foreach( lnum, line : lines )
+	{
+		hspace = width - line.width;
+		x = left + [ 0, hspace/2, hspace ][ hlindex ];
+
+		ucppart = array_part( text_ucp, line.from, line.to );
+		utf8part = string_utf8_encode( ucppart );
+
+		draw_text_line( utf8part, font, x, y, color );
+		y += lineheight;
+	}
+}
