@@ -896,7 +896,7 @@ void ss_font_free( ss_font* font, SGS_CTX )
 {
 	if( font->loaded )
 	{
-		HTPair *p = font->glyphs.pairs, *pend = font->glyphs.pairs + font->glyphs.load;
+		HTPair *p = font->glyphs.pairs, *pend = font->glyphs.pairs + font->glyphs.size;
 		while( p < pend )
 		{
 			if( p->str && p->ptr )
