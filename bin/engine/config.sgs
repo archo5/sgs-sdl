@@ -12,6 +12,7 @@ global ss_font_search_paths = function()
 		paths.push( home $ "/.fonts" );
 		paths.push( "/usr/share/fonts" );
 		paths.push( "/usr/share/fonts/truetype" );
+		paths.push( "/usr/share/fonts/truetype/msttcorefonts" );
 	}
 
 	return string_implode( paths, ";" );
