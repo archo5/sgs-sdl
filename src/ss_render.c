@@ -896,6 +896,18 @@ void ss_font_free( ss_font* font, SGS_CTX )
 {
 	if( font->loaded )
 	{
+		HTPair *p = font->glyphs.pairs, *pend = font->glyphs.pairs + font->glyphs.load;
+		while( p < pend )
+		{
+			if( p->str && p->ptr )
+			{
+				ss_glyph* G = (ss_glyph*) p->ptr;
+				if( G->texture )
+					glDeleteTextures( 1, &G->texture );
+				sgs_Dealloc( G );
+			}
+			p++;
+		}
 		FT_Done_Face( font->face );
 		ht_free( &font->glyphs, C );
 	}
@@ -908,6 +920,7 @@ int ss_font_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	FONTHDR;
 	ss_font_free( font, C );
+	sgs_Dealloc( font );
 	return SGS_SUCCESS;
 }
 
@@ -1062,26 +1075,30 @@ ss_glyph* ss_font_create_glyph( ss_font* font, SGS_CTX, uint32_t cp )
 	glyph = font->face->glyph;
 	FT_Render_Glyph( glyph, FT_RENDER_MODE_NORMAL );
 	
-	glGenTextures( 1, &tex );
-	glBindTexture( GL_TEXTURE_2D, tex );
-	imgdata = sgs_Alloc_n( uint8_t, glyph->bitmap.width * glyph->bitmap.rows * 4 );
-	pp = glyph->bitmap.buffer;
-	for( y = 0; y < glyph->bitmap.rows; ++y )
+	if( glyph->bitmap.width * glyph->bitmap.rows )
 	{
-		for( x = 0; x < glyph->bitmap.width; ++x )
+		glGenTextures( 1, &tex );
+		glBindTexture( GL_TEXTURE_2D, tex );
+		imgdata = sgs_Alloc_n( uint8_t, glyph->bitmap.width * glyph->bitmap.rows * 4 );
+		pp = glyph->bitmap.buffer;
+		for( y = 0; y < glyph->bitmap.rows; ++y )
 		{
-			int off = y * glyph->bitmap.pitch * 4;
-			imgdata[ off + x * 4 ] = 0xff;
-			imgdata[ off + x * 4 + 1 ] = 0xff;
-			imgdata[ off + x * 4 + 2 ] = 0xff;
-			imgdata[ off + x * 4 + 3 ] = pp[ x ];
+			for( x = 0; x < glyph->bitmap.width; ++x )
+			{
+				int off = y * glyph->bitmap.pitch * 4;
+				imgdata[ off + x * 4 ] = 0xff;
+				imgdata[ off + x * 4 + 1 ] = 0xff;
+				imgdata[ off + x * 4 + 2 ] = 0xff;
+				imgdata[ off + x * 4 + 3 ] = pp[ x ];
+			}
+			pp += glyph->bitmap.pitch;
 		}
-		pp += glyph->bitmap.pitch;
+		glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, glyph->bitmap.width, glyph->bitmap.rows,
+			0, GL_RGBA, GL_UNSIGNED_BYTE, imgdata );
+		sgs_Dealloc( imgdata );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 	}
-	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, glyph->bitmap.width, glyph->bitmap.rows, 0, GL_RGBA, GL_UNSIGNED_BYTE, imgdata );
-	sgs_Dealloc( imgdata );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 
 	G->glyph_id = FT_Get_Char_Index( font->face, cp );
 	G->texture = tex;
@@ -1143,23 +1160,26 @@ void ss_int_drawtext_line( ss_font* font, SGS_CTX, char* str,
 		if( x > xto )
 			break;
 		
-		W = G->texwidth;
-		H = G->texheight;
-		
-		mx = x + G->bmoffx;
-		my = y + font->size - G->bmoffy;
-		
-		glBindTexture( GL_TEXTURE_2D, G->texture );
-		glBegin( GL_QUADS );
-		glTexCoord2f( 0, 0 );
-		glVertex2f( mx, my );
-		glTexCoord2f( 0, 1 );
-		glVertex2f( mx, my+H );
-		glTexCoord2f( 1, 1 );
-		glVertex2f( mx+W, my+H );
-		glTexCoord2f( 1, 0 );
-		glVertex2f( mx+W, my );
-		glEnd();
+		if( G->texture )
+		{
+			W = G->texwidth;
+			H = G->texheight;
+			
+			mx = x + G->bmoffx;
+			my = y + font->size - G->bmoffy;
+			
+			glBindTexture( GL_TEXTURE_2D, G->texture );
+			glBegin( GL_QUADS );
+			glTexCoord2f( 0, 0 );
+			glVertex2f( mx, my );
+			glTexCoord2f( 0, 1 );
+			glVertex2f( mx, my+H );
+			glTexCoord2f( 1, 1 );
+			glVertex2f( mx+W, my+H );
+			glTexCoord2f( 1, 0 );
+			glVertex2f( mx+W, my );
+			glEnd();
+		}
 
 		xadv = G->advx;
 	}
