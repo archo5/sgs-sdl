@@ -22,6 +22,22 @@ FT_Library g_ftlib;
 
 
 
+
+void _mtx_transpose( float* m )
+{
+	float tmp;
+#define MSWAP( a, b ) tmp = m[a]; m[a] = m[b]; m[b] = tmp
+	MSWAP( 1, 4 );
+	MSWAP( 2, 8 );
+	MSWAP( 3, 12 );
+	MSWAP( 6, 9 );
+	MSWAP( 7, 13 );
+	MSWAP( 11, 14 );
+#undef MSWAP
+}
+
+
+
 #define CT_HREPEAT 1
 #define CT_VREPEAT 2
 #define CT_NOLERP 4
@@ -549,7 +565,7 @@ cleanup:
 int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 {
 	sgs_Variable transform, transforms, position, positions,
-		angle, angles, scale, scales, color, colors, *var;
+		angle, angles, scale, scales, color, colors;
 	dict_unpack_item_t tfi[] =
 	{
 		{ "transform", &transform }, { "transforms", &transforms },
@@ -984,36 +1000,42 @@ int ss_create_font( SGS_CTX )
 
 	/* attempt to load font with different base paths */
 	{
+		char* paths = NULL;
 		MemBuf fpath = membuf_create();
 		ss_font* fn = sgs_Alloc( ss_font );
 		fn->loaded = 0;
-		const char* basepaths[] =
+		sgs_PushObject( C, fn, font_iface );
+
+		if( sgs_PushGlobal( C, "ss_font_search_paths" ) ||
+			!sgs_ParseString( C, -1, &paths, NULL ) )
+			_WARN( "create_font(): could not load search paths" )
+		sgs_Pop( C, 1 );
+
+		char* bp = paths, *bps = paths;
+		for(;;)
 		{
-			"./",
-#ifdef _WIN32
-			"C:/Windows/Fonts/",
-#endif
-		};
-		const char** bp = basepaths;
-		const char** bpend = bp + ARRAY_SIZE( basepaths );
-		while( bp < bpend )
-		{
-			membuf_resize( &fpath, C, 0 );
-			membuf_appbuf( &fpath, C, *bp, strlen( *bp ) );
-			membuf_appbuf( &fpath, C, fontname, fnsize );
-			membuf_appchr( &fpath, C, 0 );
-			if( ss_font_init( fn, C, fpath.ptr, fontsize ) )
-				break;
+			if( *bp == '\0' || *bp == ';' )
+			{
+				membuf_resize( &fpath, C, 0 );
+				membuf_appbuf( &fpath, C, bps, bp - bps );
+				membuf_appchr( &fpath, C, '/' );
+				membuf_appbuf( &fpath, C, fontname, fnsize );
+				membuf_appchr( &fpath, C, 0 );
+				if( ss_font_init( fn, C, fpath.ptr, fontsize ) )
+					break;
+				if( !*bp )
+					break;
+				bps = ++bp;
+			}
 			bp++;
 		}
 		membuf_destroy( &fpath, C );
 		if( !fn->loaded )
 		{
-			sgs_Dealloc( fn );
-			sgs_Printf( C, SGS_WARNING, "create_font(): could not find font '%.*s'", fnsize, fontname );
+			sgs_Printf( C, SGS_WARNING, "create_font(): "
+				"could not find font '%.*s', paths: %s", fnsize, fontname, paths );
 			return 0;
 		}
-		sgs_PushObject( C, fn, font_iface );
 	}
 
 	/* save and return the font object */
@@ -1085,13 +1107,12 @@ ss_glyph* ss_font_get_glyph( ss_font* font, SGS_CTX, uint32_t cp )
 		return (ss_glyph*) g;
 }
 
-int ss_int_drawtext_line( ss_font* font, SGS_CTX, char* str,
+void ss_int_drawtext_line( ss_font* font, SGS_CTX, char* str,
 	sgs_SizeVal size, int x, int y, int xto, sgs_Real* color )
 {
 	int W, H, mx, my, xadv = 0, ret, use_kerning;
 	uint32_t previous = 0;
 	ss_glyph* G;
-	FT_UInt glyph_id;
 
 	glEnable( GL_TEXTURE_2D );
 	glColor4f( color[0], color[1], color[2], color[3] );

@@ -241,7 +241,6 @@ int ss_load_image_png( SGS_CTX )
 	
 	{
 		int ret;
-		sgs_Image* img;
 		FIBITMAP* dib;
 		BITMAPINFOHEADER* bih;
 		int16_t w, h;

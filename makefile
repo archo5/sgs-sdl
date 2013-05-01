@@ -28,7 +28,12 @@ OUTDIR=bin
 OBJDIR=obj
 
 CC=gcc
-CFLAGS=-D_DEBUG -g
+ifeq ($(mode),release)
+	CFLAGS = -O3 -Wall
+else
+	mode = debug
+	CFLAGS = -D_DEBUG -g -Wall
+endif
 
 _DEPS = ss_main.h
 DEPS = $(patsubst %,$(SRCDIR)/%,$(_DEPS))

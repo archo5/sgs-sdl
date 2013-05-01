@@ -73,6 +73,7 @@ int ss_set_caption( SGS_CTX )
 		_WARN( "set_caption() - unexpected arguments; function expects 1 argument: string" );
 	
 	SDL_WM_SetCaption( str, NULL );
+	return 0;
 }
 
 /*
@@ -93,19 +94,6 @@ int ss_present( SGS_CTX )
 {
 	SDL_GL_SwapBuffers();
 	return 0;
-}
-
-void _mtx_transpose( float* m )
-{
-	float tmp;
-#define MSWAP( a, b ) tmp = m[a]; m[a] = m[b]; m[b] = tmp
-	MSWAP( 1, 4 );
-	MSWAP( 2, 8 );
-	MSWAP( 3, 12 );
-	MSWAP( 6, 9 );
-	MSWAP( 7, 13 );
-	MSWAP( 11, 14 );
-#undef MSWAP
 }
 
 

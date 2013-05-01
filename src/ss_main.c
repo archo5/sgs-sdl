@@ -19,12 +19,22 @@ int main( int argc, char* argv[] )
 	sgs_InitIDbg( C, &D );
 	
 	/* preinit first-use libs */
+	sgs_LoadLib_IO( C );
 	sgs_LoadLib_Math( C );
+	sgs_LoadLib_OS( C );
 	sgs_LoadLib_String( C );
 	sgs_LoadLib_Type( C );
 	sgs_InitExtSys( C );
 	sgs_InitExtMath( C );
 	sgs_InitImage( C );
+
+	/* run the config file */
+	ret = sgs_ExecFile( C, "engine/config.sgs" );
+	if( ret != SGS_SUCCESS )
+	{
+		fprintf( stderr, "Could not execute 'engine/config.sgs', error %d.\n", ret );
+		return 1;
+	}
 	
 	/* run the main file */
 	ret = sgs_ExecFile( C, "main.sgs" );

@@ -1,0 +1,18 @@
+
+global ss_font_search_paths = function()
+{
+	paths = ["."];
+
+	windir = os_getenv( "WINDIR" );
+	if( windir !== null )
+		paths.push( windir $ "/Fonts" );
+	home = os_getenv( "HOME" );
+	if( home !== null )
+	{
+		paths.push( home $ "/.fonts" );
+		paths.push( "/usr/share/fonts" );
+		paths.push( "/usr/share/fonts/truetype" );
+	}
+
+	return string_implode( paths, ";" );
+}();

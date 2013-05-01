@@ -48,7 +48,6 @@ uint32_t sgs_GetFlagString( SGS_CTX, int pos, flag_string_item_t* items )
 
 uint32_t sgs_GlobalFlagString( SGS_CTX, const char* name, flag_string_item_t* items )
 {
-	char* str;
 	uint32_t flags = 0;
 	if( sgs_PushGlobal( C, name ) != SGS_SUCCESS )
 		return 0;

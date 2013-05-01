@@ -2,8 +2,9 @@
 
 function draw_button( tex, left, right, top, bottom, off, texoff )
 {
-	off = off || 8;
-	texoff = texoff || off;
+	off ||= 8;
+	texoff ||= off;
+	
 	tox = texoff / tex.width;
 	toy = texoff / tex.height;
 	x1 = left + off;
