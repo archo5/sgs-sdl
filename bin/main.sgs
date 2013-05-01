@@ -1,4 +1,5 @@
 
+include_file( "engine/tilemap.sgs" );
 include_file( "engine/ui.sgs" );
 
 
@@ -24,11 +25,19 @@ function initialize()
 	
 	global UI = UIFrame.create();
 	UI.add_child( UIControl.createButton( "Make it rain!", 10, 10, 120, 40, rain_start ) );
+
+	global TM = Tilemap.create( create_texture( "ntset.png" ), 32, 32 );
+	for( y = 0; y < 16; ++y )
+	{
+		for( x = 0; x < 32; ++x )
+		{
+			TM.set( x, y, floor( randf() * 3.99 ), floor( randf() * 3.99 ), [1,1,1] );
+		}
+	}
 	
 	println();
 	global image = create_texture( "crosshair.png" );
-	print( image );
-	println();
+	println( image );
 	printvar( _Gtex );
 	println();
 }
@@ -83,6 +92,8 @@ function update()
 	
 	var cc = [0.1+(cmpos[0]/1000.0),0.2+(cmpos[1]/1000.0),0.4];
 	clear( cc );
+
+	TM.render();
 	
 	for( var i = 0; i < P.size; ++i )
 	{
@@ -98,12 +109,12 @@ function update()
 	
 //	draw({ mode = GL_TRIANGLES, vertices = V, vcolors = C, position = mpos, scale = [32,32], angle = rotation * M_PI });
 	draw({ preset = "box", texture = image, position = mpos, scale = [128,128], angle = rotation * M_PI });
+	
+	UI.draw();
 
 	nrpt = rain.size * 2 + P.size;
 	fn = create_font( "verdana.ttf", 16 );
 	draw_text_line( "particle count: " $ rain.size+P.size $ "   particle tris: " $ nrpt, fn, 300, 0, [1] );
-	
-	UI.draw();
 	
 	present();
 

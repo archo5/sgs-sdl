@@ -1,0 +1,18 @@
+
+function expand_col4( color )
+{
+	c0 = color[ 0 ];
+	out = [c0,c0,c0,c0];
+	if( color.size == 2 )
+		out[3] = color[1];
+	else if( color.size >= 3 )
+	{
+		out[1] = color[1];
+		out[2] = color[2];
+		if( color.size >= 4 )
+			out[3] = color[3];
+		else
+			out[3] = 1;
+	}
+	return out;
+}

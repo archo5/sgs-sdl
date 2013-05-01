@@ -1,0 +1,91 @@
+
+include_file( "engine/utils.sgs" );
+
+
+global Tilemap = {};
+
+function Tilemap.create( texture, tileWidth, tileHeight )
+{
+	return class
+	({
+		texture = texture,
+		tileW = tileWidth,
+		tileH = tileHeight,
+		tiles = {},
+		mesh = null,
+		revid = 1,
+	},
+	Tilemap );
+}
+
+function Tilemap.get( x, y )
+{
+	key = x + y * 0xffff;
+	if( isset( this.tiles, key ) )
+		return this.tiles[ key ];
+	return null;
+}
+
+function Tilemap.set( x, y, tx, ty, col3or4 )
+{
+	key = x + y * 0xffff;
+	this.tiles[ key ] = [ x, y, tx, ty, col3or4 ];
+	this.revid++;
+}
+
+function Tilemap.checkCache()
+{
+	if( !this.revid )
+		return;
+
+	P = [], T = [], C = [];
+	tw = this.tileW;
+	th = this.tileH;
+	itw = 1.0 / this.texture.width;
+	ith = 1.0 / this.texture.height;
+	foreach( tile : this.tiles )
+	{
+		x = tile[0] * tw;
+		y = tile[1] * th;
+		tx = tile[2] * tw;
+		ty = tile[3] * th;
+		tx1 = tx + tw;
+		ty1 = ty + th;
+		col = tile[4];
+		P.push
+		(
+			vec2d( x, y ),
+			vec2d( x+tw, y ),
+			vec2d( x+tw, y+th ),
+			vec2d( x, y+th )
+		);
+		T.push
+		(
+			vec2d( tx*itw, ty*ith ),
+			vec2d( tx1*itw, ty*ith ),
+			vec2d( tx1*itw, ty1*ith ),
+			vec2d( tx*itw, ty1*ith )
+		);
+		C.push
+		(
+			col, col, col, col
+		);
+	}
+	this.mesh = [ P, T, C ];
+	this.revid = 0;
+}
+
+function Tilemap.render( /*opt*/ xform )
+{
+	this.checkCache();
+
+	if( !xform )
+		xform = { position = [0,0] };
+	xform.mode = GL_QUADS;
+	xform.texture = this.texture;
+	xform.vertices = this.mesh[ 0 ];
+	xform.vtexcoords = this.mesh[ 1 ];
+	xform.vcolors = this.mesh[ 2 ];
+
+	draw( xform );
+}
