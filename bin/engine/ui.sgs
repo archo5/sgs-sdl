@@ -44,10 +44,11 @@ function UIControl.get_ctrl_at( x, y )
 		return this;
 	return null;
 }
-function UIControl.add_child( ch )
+function UIControl.addChild( ch )
 {
 	ch.parent = this;
 	this.children.push( ch );
+	return ch;
 }
 
 function UIControl.create( override )
@@ -58,6 +59,7 @@ function UIControl.create( override )
 		data[ k ] = v;
 	return class( data, UIControl );
 }
+
 
 function ui_default_paint_button()
 {
@@ -89,6 +91,41 @@ function UIControl.createButton( name, x, y, w, h, onclick )
 			create_texture( "engine/img/buttonH.png" ),
 			create_texture( "engine/img/buttonC.png" ),
 		],
+	});
+}
+
+
+
+function ui_default_paint_menu()
+{
+	draw({ preset = "tile", position = [ this.x, this.y ],
+		scale = [ this.w, this.h ], color = [ 0.8, 0.8, 0.8 ] });
+	
+	foreach( ch : this.children )
+	{
+		if( ch.on_draw )
+			ch.on_draw();
+	}
+}
+
+function UIControl.createMenu( x, y, w, h )
+{
+	function menuAddChild( ch )
+	{
+		UIControl.addChild.thiscall( this, ch );
+		return ch;
+	}
+
+	return UIControl.create
+	({
+		type = "button",
+		x = x,
+		y = y,
+		w = w,
+		h = h,
+		on_draw = ui_default_paint_menu,
+
+		addChild = menuAddChild,
 	});
 }
 
@@ -139,10 +176,10 @@ function UIFrame.event( e )
 
 function UIFrame.draw()
 {
-	foreach( idx : this.children )
+	foreach( ch : this.children )
 	{
-		if( this.children[ idx ].on_draw )
-			this.children[ idx ].on_draw();
+		if( ch.on_draw )
+			ch.on_draw();
 	}
 }
 

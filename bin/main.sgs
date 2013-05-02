@@ -1,7 +1,5 @@
 
-include_file( "engine/draw.sgs" );
-include_file( "engine/tilemap.sgs" );
-include_file( "engine/ui.sgs" );
+include_file( "engine/all.sgs" );
 
 
 function configure()
@@ -16,6 +14,12 @@ function configure()
 			print( "PREEXIT\n" );
 			sys_exit = true;
 		}
+		else if( arg == "-editor" )
+		{
+			include_file( "editor/main.sgs" );
+			configure();
+			return;
+		}
 	}
 }
 
@@ -25,7 +29,7 @@ function initialize()
 	set_video_mode( 1024, 576, 32, "" );
 	
 	global UI = UIFrame.create();
-	UI.add_child( UIControl.createButton( "Make it rain!", 10, 10, 120, 40, rain_start ) );
+	UI.addChild( UIControl.createButton( "Make it rain!", 10, 10, 120, 40, rain_start ) );
 
 	global TM = Tilemap.create( create_texture( "ntset.png", "nolerp" ), 32, 32 );
 	for( y = 0; y < 16; ++y )

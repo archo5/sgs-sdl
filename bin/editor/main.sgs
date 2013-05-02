@@ -1,0 +1,62 @@
+
+include_file( "engine/all.sgs" );
+
+
+
+function topmenu_file()
+{
+}
+
+
+
+function configure()
+{
+}
+
+function initialize()
+{
+	set_caption( "Level Editor" );
+	set_video_mode( 1024, 576, 32, "resizable" );
+
+	global lasttime = ftime();
+	
+	global UITopMenu, UI = UIFrame.create();
+	UI.addChild( UITopMenu = UIControl.createMenu( 0, 0, 1024, 24 ) );
+	UITopMenu.addChild( UIControl.createButton( "File", 0, 0, 100, 30, topmenu_file ) );
+	UITopMenu.addChild( UIControl.createButton( "Edit", 100, 0, 100, 30, topmenu_file ) );
+}
+
+function update()
+{
+	global lasttime;
+	var curtime = ftime();
+	var delta = curtime - lasttime;
+	if( delta > 1.0/15.0 )
+		delta = 1.0/15.0;
+	lasttime = curtime;
+
+	var cc = [0.1,0.2,0.4];
+	clear( cc );
+
+	set_camera_2d( 232, 232, 200, 1024/576, 0 );
+
+	set_camera_ui( 0, 1024, 0, 576 );
+	UI.draw();
+	
+	present();
+
+	sleeptime = 15 - delta * 1000;
+	if( sleeptime > 0 ) sleep( sleeptime );
+}
+
+function on_event( e )
+{
+	if( e.type == SDL_QUIT )
+		global sys_exit = true;
+
+	UI.event( e );
+}
+
+function cleanup()
+{
+}
