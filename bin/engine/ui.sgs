@@ -21,6 +21,8 @@ global UIControl =
 
 /* DEFAULT events */
 UIControl.onclick = _efn;
+UIControl.onmousemove = _efn;
+UIControl.onattach = _efn;
 function UIControl.onhittest( x, y )
 {
 	return this.x <= x && this.x + this.w >= x
@@ -30,6 +32,9 @@ function UIControl.onenter(){ this.mouseon = true; }
 function UIControl.onleave(){ this.mouseon = false; }
 function UIControl.onmousedown( x, y, bid ){ if( this.mouseon && bid == 1 ) this.clicked = true; }
 function UIControl.onmouseup(){ if( this.clicked && this.mouseon ) this.onclick(); this.clicked = false; }
+function UIControl.onresize( w, h ){ foreach( c : this.children ) c.onresize( w, h ); }
+function UIControl.globalmousedown( x, y, bid ){ foreach( c : this.children ) c.globalmousedown( x, y, bid ); }
+function UIControl.globalmouseup( x, y, bid ){ foreach( c : this.children ) c.globalmouseup( x, y, bid ); }
 
 /* PROCESSING */
 function UIControl.get_ctrl_at( x, y )
@@ -48,6 +53,7 @@ function UIControl.addChild( ch )
 {
 	ch.parent = this;
 	this.children.push( ch );
+	ch.onattach();
 	return ch;
 }
 
@@ -101,32 +107,149 @@ function ui_default_paint_menu()
 	draw({ preset = "tile", position = [ this.x, this.y ],
 		scale = [ this.w, this.h ], color = [ 0.8, 0.8, 0.8 ] });
 	
-	foreach( ch : this.children )
+	foreach( iid, item : this.items )
 	{
-		if( ch.on_draw )
-			ch.on_draw();
+		if( item.visible && item.inview )
+		{
+			x = this.x + item.x;
+			y = this.y + 2;
+			w = item.width;
+			h = item.height;
+			tex = this.textures[ item.clicked ];
+			if( item.mouseon )
+				draw_button( tex, x, x + w, y, y + h, 4, 4 );
+			if( iid == this.open_item ) R = 0.9; else R = 0.1;
+			draw_text_rect( item.name, this.font, [R,0.1,0.1,1], DT_CENTER | DT_VCENTER, x, x + w, y - 2, y + h - 2 );
+		}
 	}
 }
 
-function UIControl.createMenu( x, y, w, h )
+function UICreateMenuItem( name, onclick, icon )
 {
-	function menuAddChild( ch )
-	{
-		UIControl.addChild.thiscall( this, ch );
-		return ch;
-	}
+	name ||= "<unnamed>";
 
-	return UIControl.create
-	({
+	return
+	{
+		ch = [],
+		icon = icon,
+		name = name,
+		onclick = onclick,
+		visible = true,
+		mouseon = false,
+		clicked = false,
+	};
+}
+
+function UIControl.createMenu()
+{
+	var UIMenu =
+	{
 		type = "button",
-		x = x,
-		y = y,
-		w = w,
-		h = h,
+		x = 0,
+		y = 0,
+		w = 9999,
+		h = 24,
 		on_draw = ui_default_paint_menu,
 
-		addChild = menuAddChild,
-	});
+		textures =
+		[
+			create_texture( "engine/img/menuitemH.png" ),
+			create_texture( "engine/img/menuitemC.png" ),
+		],
+
+		items = [],
+		open_item = -1,
+	};
+
+	function UIMenu.onattach()
+	{
+		this.w = this.parent.w;
+	}
+
+	function UIMenu.onresize( w, h )
+	{
+		this.w = this.parent.w;
+		this._super.onresize.thiscall( this, w, h );
+	}
+
+	function UIMenu.onmousemove( x, y )
+	{
+		foreach( iid, item : this.items )
+		{
+			x1 = item.x + this.x;
+			x2 = x1 + item.width;
+			item.mouseon = x >= x1 && x <= x2;
+			if( item.mouseon && this.open_item >= 0 )
+				this.open_item = iid;
+		}
+	}
+	function UIMenu.onmousedown( x, y, bid )
+	{
+		if( bid != 1 )
+			return;
+		foreach( iid, item : this.items )
+		{
+			if( item.mouseon )
+			{
+				item.clicked = true;
+				if( this.open_item == iid )
+					this.open_item = -1;
+				else
+					this.open_item = iid;
+			}
+		}
+	}
+	function UIMenu.onmouseup()
+	{
+		foreach( item : this.items )
+		{
+			if( item.clicked )
+			{
+				if( item.onclick )
+					item.onclick();
+				item.clicked = false;
+			}
+		}
+	}
+	function UIMenu.globalmousedown( x, y )
+	{
+		btnhit = false;
+		foreach( item : this.items )
+			btnhit ||= item.mouseon;
+		if( !btnhit || y < this.y || y > this.y + this.h )
+			this.open_item = -1;
+	}
+
+	function UIMenu.onleave()
+	{
+		foreach( item : this.items )
+			item.mouseon = false;
+	}
+
+	function UIMenu.recalcLayout()
+	{
+		x = 0;
+		xe = this.x + this.w;
+
+		foreach( item : this.items )
+		{
+			x += 2;
+			item.x = x;
+			item.width = get_text_length( item.name, this.font ) + 24;
+			item.height = this.font.size + 8;
+			x += item.width;
+			item.inview = x <= this.w;
+			item.open = false;
+		}
+	}
+
+	function UIMenu.addItem( item )
+	{
+		this.items.push( item );
+		return item;
+	}
+
+	return UIControl.create( UIMenu );
 }
 
 
@@ -145,6 +268,12 @@ global UIFrame =
 
 function UIFrame.event( e )
 {
+	if( e.type == SDL_VIDEORESIZE )
+	{
+		this.w = e.w;
+		this.h = e.h;
+		this.onresize( e.w, e.h );
+	}
 	if( e.type == SDL_MOUSEMOTION )
 	{
 		var ctrl = this.get_ctrl_at( e.x, e.y );
@@ -153,20 +282,27 @@ function UIFrame.event( e )
 			if( this.curhover !== null )
 				this.curhover.onleave();
 			this.curhover = ctrl;
-			ctrl.onenter();
+			if( ctrl !== null )
+				ctrl.onenter();
 		}
+		if( ctrl !== null )
+			ctrl.onmousemove( e.x, e.y );
 	}
 	if( e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP )
 	{
 		var ctrl = this.get_ctrl_at( e.x, e.y );
 		if( e.type == SDL_MOUSEBUTTONDOWN )
 		{
-			ctrl.onmousedown( e.x, e.y, e.button );
+			this.globalmousedown( e.x, e.y, e.button );
+			if( ctrl !== null )
+				ctrl.onmousedown( e.x, e.y, e.button );
 			this.curclick = ctrl;
 		}
 		else
 		{
-			ctrl.onmouseup( e.x, e.y, e.button );
+			this.globalmouseup( e.x, e.y, e.button );
+			if( ctrl !== null )
+				ctrl.onmouseup( e.x, e.y, e.button );
 			if( this.curclick !== null && ctrl !== this.curclick )
 				this.curclick.onmouseup( e.x, e.y, e.button );
 			this.curclick = null;
@@ -176,6 +312,7 @@ function UIFrame.event( e )
 
 function UIFrame.draw()
 {
+	set_camera_ui( this.x, this.x+this.w, this.y, this.y+this.h );
 	foreach( ch : this.children )
 	{
 		if( ch.on_draw )
@@ -183,7 +320,10 @@ function UIFrame.draw()
 	}
 }
 
-function UIFrame.create()
+function UIFrame.create( w, h )
 {
-	return UIControl.create( UIFrame );
+	var f = clone( UIFrame );
+	f.w = w;
+	f.h = h;
+	return UIControl.create( f );
 }

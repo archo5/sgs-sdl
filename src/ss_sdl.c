@@ -194,6 +194,7 @@ int sgs_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 		break;
 	
 	case SDL_VIDEORESIZE:
+		glViewport( 0, 0, event->resize.w, event->resize.h );
 		sgs_PushString( C, "w" );
 		sgs_PushInt( C, event->resize.w );
 		sgs_PushString( C, "h" );

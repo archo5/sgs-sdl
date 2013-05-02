@@ -20,10 +20,20 @@ function initialize()
 
 	global lasttime = ftime();
 	
-	global UITopMenu, UI = UIFrame.create();
-	UI.addChild( UITopMenu = UIControl.createMenu( 0, 0, 1024, 24 ) );
-	UITopMenu.addChild( UIControl.createButton( "File", 0, 0, 100, 30, topmenu_file ) );
-	UITopMenu.addChild( UIControl.createButton( "Edit", 100, 0, 100, 30, topmenu_file ) );
+	global UITopMenu, UI = UIFrame.create( 1024, 576 );
+	UI.addChild( UITopMenu = UIControl.createMenu() );
+
+	// FILE //
+	mi_file = UICreateMenuItem( "File" );
+	mi_file.ch.push( UICreateMenuItem( "New" ) );
+	mi_file.ch.push( UICreateMenuItem( "Open" ) );
+	UITopMenu.addItem( mi_file );
+
+	// EDIT //
+	mi_edit = UICreateMenuItem( "Edit" );
+	UITopMenu.addItem( mi_edit );
+
+	UITopMenu.recalcLayout();
 }
 
 function update()
@@ -40,7 +50,6 @@ function update()
 
 	set_camera_2d( 232, 232, 200, 1024/576, 0 );
 
-	set_camera_ui( 0, 1024, 0, 576 );
 	UI.draw();
 	
 	present();

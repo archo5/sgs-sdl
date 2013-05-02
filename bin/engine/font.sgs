@@ -2,6 +2,20 @@
 include_library( "string" );
 
 
+function get_text_length( text, font )
+{
+	text_ucp = string_utf8_decode( text );
+	len = 0;
+	prevchar = null;
+	foreach( char : text_ucp )
+	{
+		len += font.get_advance( prevchar, char );
+		prevchar = char;
+	}
+	return len;
+}
+
+
 global
 	DT_LEFT    = 0b00000001,
 	DT_CENTER  = 0b00000010,
