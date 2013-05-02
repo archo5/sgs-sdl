@@ -104,6 +104,8 @@ function UIControl.createButton( name, x, y, w, h, onclick )
 
 function ui_default_paint_menu()
 {
+	var _scl = [ 200, 1 ];
+
 	draw({ preset = "tile", position = [ this.x, this.y ],
 		scale = [ this.w, this.h ], color = [ 0.8, 0.8, 0.8 ] });
 	
@@ -115,19 +117,43 @@ function ui_default_paint_menu()
 			y = this.y + 2;
 			w = item.width;
 			h = item.height;
-			tex = this.textures[ item.clicked ];
-			if( item.mouseon )
+			tex = this.textures[ this.open_item == iid ];
+			if( item.mouseon || iid == this.open_item )
 				draw_button( tex, x, x + w, y, y + h, 4, 4 );
-			if( iid == this.open_item ) R = 0.9; else R = 0.1;
-			draw_text_rect( item.name, this.font, [R,0.1,0.1,1], DT_CENTER | DT_VCENTER, x, x + w, y - 2, y + h - 2 );
+			draw_text_rect( item.name, this.font, [0.1,1], DT_CENTER | DT_VCENTER, x, x + w, y - 2, y + h - 2 );
+
+			if( iid == this.open_item )
+			{
+				draw({ preset = "tile", position = [ x, y + h ],
+					scale = [ 200, 24 * item.ch.size + 4 ], color = [ 0.7, 0.7, 0.7 ] });
+				foreach( siid, subitem : item.ch )
+				{
+					sx1 = x + 32;
+					sx2 = sx1 + 160;
+					sy1 = y + h + 2 + 24 * siid;
+					sy2 = sy1 + 20;
+					if( subitem.name )
+					{
+						if( siid == 1 )
+						{
+							tex = this.textures[ 0 ];
+							draw_button( tex, x, x + 200, sy1, sy1 + 24, 4, 4 );
+						}
+						draw_text_rect( subitem.name, this.font, [0.1,1], DT_LEFT | DT_VCENTER, sx1, sx2, sy1, sy2 );
+					}
+					else
+					{
+						draw({ preset = "tile", position = [ x, sy1 + 11 ], scale = _scl, color = [ 0.6, 0.6, 0.6 ] });
+						draw({ preset = "tile", position = [ x, sy1 + 12 ], scale = _scl, color = [ 0.8, 0.8, 0.8 ] });
+					}
+				}
+			}
 		}
 	}
 }
 
 function UICreateMenuItem( name, onclick, icon )
 {
-	name ||= "<unnamed>";
-
 	return
 	{
 		ch = [],
@@ -214,9 +240,20 @@ function UIControl.createMenu()
 	function UIMenu.globalmousedown( x, y )
 	{
 		btnhit = false;
-		foreach( item : this.items )
-			btnhit ||= item.mouseon;
-		if( !btnhit || y < this.y || y > this.y + this.h )
+		vhit = y >= this.y && y <= this.y + this.h;
+		foreach( iid, item : this.items )
+		{
+			btnhit ||= item.mouseon && vhit;
+			if( iid == this.open_item )
+			{
+				x1 = this.x + item.x;
+				x2 = x1 + 200;
+				y1 = this.y + 2 + item.height;
+				y2 = y1 + 24 * item.ch.size + 4;
+				btnhit ||= x >= x1 && x <= x2 && y >= y1 && y <= y2;
+			}
+		}
+		if( !btnhit )
 			this.open_item = -1;
 	}
 
@@ -239,7 +276,6 @@ function UIControl.createMenu()
 			item.height = this.font.size + 8;
 			x += item.width;
 			item.inview = x <= this.w;
-			item.open = false;
 		}
 	}
 

@@ -27,6 +27,8 @@ function initialize()
 	mi_file = UICreateMenuItem( "File" );
 	mi_file.ch.push( UICreateMenuItem( "New" ) );
 	mi_file.ch.push( UICreateMenuItem( "Open" ) );
+	mi_file.ch.push( UICreateMenuItem() );
+	mi_file.ch.push( UICreateMenuItem( "Quit", function(){ global sys_exit = true; } ) );
 	UITopMenu.addItem( mi_file );
 
 	// EDIT //
