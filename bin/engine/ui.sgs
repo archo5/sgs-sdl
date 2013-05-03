@@ -6,16 +6,21 @@ include_file( "engine/draw.sgs" );
 global _efn = function(){};
 
 
-global UIControl =
+global UIControlDefaults =
 {
 	/* references */
 	parent = null,
+	frame = null,
+	children = null,
 	
 	/* states */
 	clicked = false,
 	clicked3 = false,
 	mouseon = false,
-	
+};
+
+global UIControl =
+{
 	/* processing */
 	on_draw = null,
 };
@@ -46,6 +51,13 @@ function UIControl.globalmousedown( x, y, bid ){ foreach( c : this.children ) c.
 function UIControl.globalmouseup( x, y, bid ){ foreach( c : this.children ) c.globalmouseup( x, y, bid ); }
 
 /* PROCESSING */
+function UIControl.hasProperty( name )
+{
+	orig = sys_replevel( SGS_ERROR + 1 );
+	ret = this[ name ] !== null;
+	sys_replevel( orig );
+	return ret;
+}
 function UIControl.get_ctrl_at( x, y )
 {
 	for( var i = this.children.size - 1; i >= 0; --i )
@@ -61,6 +73,7 @@ function UIControl.get_ctrl_at( x, y )
 function UIControl.addChild( ch )
 {
 	ch.parent = this;
+	ch.frame = this.frame;
 	this.children.push( ch );
 	ch.onattach();
 	return ch;
@@ -68,7 +81,8 @@ function UIControl.addChild( ch )
 
 function UIControl.create( override )
 {
-	var data = { children = [] };
+	var data = clone( UIControlDefaults );
+	data.children = []; // this one doesn't get cloned otherwise
 	data.font = create_font( "verdana.ttf", 12 );
 	foreach( k, v : override )
 		data[ k ] = v;
@@ -130,10 +144,12 @@ function ui_default_paint_dropmenu()
 	if( !this.visible )
 		return;
 
+	var _fo = 3;
 	var _sepscl = [ this.w, 1 ];
 
-	draw({ preset = "tile", position = [ this.x, this.y ],
-		scale = [ this.w, this.h ], color = [ 0.7, 0.7, 0.7 ] });
+	draw_button( this.textures[2], this.x - _fo, this.x + this.w + _fo,
+		this.y - _fo, this.y + this.h + _fo, 4, 4 );
+
 	foreach( iid, item : this.items )
 	{
 		if( !item.visible )
@@ -144,9 +160,9 @@ function ui_default_paint_dropmenu()
 		y2 = y1 + item.height;
 		if( item.name )
 		{
-			if( iid == 1 )
+			if( item.mouseon )
 			{
-				tex = this.textures[ 0 ];
+				tex = this.textures[ item.clicked ];
 				draw_button( tex, x1, x2, y1, y2, 4, 4 );
 			}
 			draw_text_rect( item.name, this.font, [0.1,1], DT_LEFT | DT_VCENTER, x1 + 32, x2, y1, y2 - 4 );
@@ -174,12 +190,74 @@ function UIControl.createDropMenu()
 		[
 			create_texture( "engine/img/menuitemH.png" ),
 			create_texture( "engine/img/menuitemC.png" ),
+			create_texture( "engine/img/frame.png" ),
 		],
 
 		items = [],
 		open_item = -1,
 		visible = false,
 	};
+
+	function UIDropMenu.onhittest( x, y )
+	{
+		if( !this.visible )
+			return false;
+		return UIControl.onhittest.thiscall( this, x, y );
+	}
+	function UIDropMenu.globalmousedown( x, y )
+	{
+		if( this.visible )
+		{
+			x1 = this.x;
+			y1 = this.y;
+			x2 = x1 + this.w;
+			y2 = y1 + this.h;
+			if( x < x1 || x > x2 || y < y1 || y > y2 )
+				this.visible = false;
+		}
+	}
+	function UIDropMenu.onmousemove( x, y )
+	{
+		foreach( iid, item : this.items )
+		{
+			y1 = this.y + item.y;
+			y2 = y1 + item.height;
+			item.mouseon = y >= y1 && y < y2;
+			if( item.mouseon && this.open_item >= 0 )
+				this.open_item = iid;
+		}
+	}
+	function UIDropMenu.onmousedown( x, y, bid )
+	{
+		if( bid != 1 )
+			return;
+		foreach( iid, item : this.items )
+		{
+			if( item.mouseon )
+			{
+				item.clicked = true;
+				if( this.open_item == iid )
+					this.open_item = -1;
+				else
+					this.open_item = iid;
+			}
+		}
+	}
+	function UIDropMenu.onmouseup()
+	{
+		foreach( item : this.items )
+		{
+			if( item.clicked )
+			{
+				if( item.onclick )
+					item.onclick();
+				if( this.parent.hasProperty( "setOpenItem" ) )
+					this.parent.setOpenItem( -1 );
+				item.clicked = false;
+				this.close();
+			}
+		}
+	}
 
 	function UIDropMenu.open( x, y )
 	{
@@ -190,7 +268,10 @@ function UIControl.createDropMenu()
 
 		foreach( item : this.items )
 		{
+			item.clicked = false;
+			item.mouseon = false;
 			item.y = this.h - 2;
+			item.height = 0;
 			if( item.visible )
 			{
 				if( item.name !== null )
@@ -202,8 +283,17 @@ function UIControl.createDropMenu()
 		}
 
 		// TODO pull it out of corners and sides
+		if( this.x + this.w > this.frame.x + this.frame.w )
+			this.x = this.frame.x + this.frame.w - this.w;
+		if( this.y + this.h > this.frame.y + this.frame.h )
+			this.y = this.frame.y + this.frame.h - this.h;
 
 		this.visible = true;
+	}
+	function UIDropMenu.close()
+	{
+		this.visible = false;
+		this.frame.moved( this );
 	}
 
 	return UIControl.create( UIDropMenu );
@@ -213,10 +303,11 @@ function UIControl.createDropMenu()
 
 function ui_default_paint_menu()
 {
+	var _fo = 3;
 	var _scl = [ 200, 1 ];
 
-	draw({ preset = "tile", position = [ this.x, this.y ],
-		scale = [ this.w, this.h ], color = [ 0.8, 0.8, 0.8 ] });
+	draw_button( this.textures[2], this.x - _fo, this.x + this.w + _fo,
+		this.y - _fo, this.y + this.h + _fo, 4, 4 );
 	
 	foreach( iid, item : this.items )
 	{
@@ -230,42 +321,19 @@ function ui_default_paint_menu()
 			if( item.mouseon || iid == this.open_item )
 				draw_button( tex, x, x + w, y, y + h, 4, 4 );
 			draw_text_rect( item.name, this.font, [0.1,1], DT_CENTER | DT_VCENTER, x, x + w, y - 2, y + h - 2 );
-
-			if( iid == this.open_item )
-			{
-				draw({ preset = "tile", position = [ x, y + h ],
-					scale = [ 200, 24 * item.ch.size + 4 ], color = [ 0.7, 0.7, 0.7 ] });
-				foreach( siid, subitem : item.ch )
-				{
-					sx1 = x + 32;
-					sx2 = sx1 + 160;
-					sy1 = y + h + 2 + 24 * siid;
-					sy2 = sy1 + 20;
-					if( subitem.name )
-					{
-						if( siid == 1 )
-						{
-							tex = this.textures[ 0 ];
-							draw_button( tex, x, x + 200, sy1, sy1 + 24, 4, 4 );
-						}
-						draw_text_rect( subitem.name, this.font, [0.1,1], DT_LEFT | DT_VCENTER, sx1, sx2, sy1, sy2 );
-					}
-					else
-					{
-						draw({ preset = "tile", position = [ x, sy1 + 11 ], scale = _scl, color = [ 0.6, 0.6, 0.6 ] });
-						draw({ preset = "tile", position = [ x, sy1 + 12 ], scale = _scl, color = [ 0.8, 0.8, 0.8 ] });
-					}
-				}
-			}
 		}
 	}
+
+	foreach( ch : this.children )
+		if( ch.on_draw )
+			ch.on_draw();
 }
 
 function UIControl.createMenu()
 {
 	var UIMenu =
 	{
-		type = "button",
+		type = "menu",
 		x = 0,
 		y = 0,
 		w = 9999,
@@ -276,6 +344,7 @@ function UIControl.createMenu()
 		[
 			create_texture( "engine/img/menuitemH.png" ),
 			create_texture( "engine/img/menuitemC.png" ),
+			create_texture( "engine/img/frame.png" ),
 		],
 
 		items = [],
@@ -293,6 +362,21 @@ function UIControl.createMenu()
 		this._super.onresize.thiscall( this, w, h );
 	}
 
+	function UIMenu.setOpenItem( iid )
+	{
+		// close the previous one
+		if( this.open_item != -1 &&
+			type_get( this.items[ this.open_item ].onclick ) == TYPE_OBJECT )
+			this.items[ this.open_item ].onclick.close();
+
+		this.open_item = iid;
+
+		// open the new one
+		if( iid != -1 &&
+			type_get( this.items[ iid ].onclick ) == TYPE_OBJECT )
+			this.items[ iid ].onclick.open( this.items[ iid ].x, this.y + 24 );
+	}
+
 	function UIMenu.onmousemove( x, y )
 	{
 		foreach( iid, item : this.items )
@@ -301,7 +385,7 @@ function UIControl.createMenu()
 			x2 = x1 + item.width;
 			item.mouseon = x >= x1 && x <= x2;
 			if( item.mouseon && this.open_item >= 0 )
-				this.open_item = iid;
+				this.setOpenItem( iid );
 		}
 	}
 	function UIMenu.onmousedown( x, y, bid )
@@ -314,9 +398,9 @@ function UIControl.createMenu()
 			{
 				item.clicked = true;
 				if( this.open_item == iid )
-					this.open_item = -1;
+					this.setOpenItem( -1 );
 				else
-					this.open_item = iid;
+					this.setOpenItem( iid );
 			}
 		}
 	}
@@ -327,29 +411,29 @@ function UIControl.createMenu()
 			if( item.clicked )
 			{
 				if( item.onclick )
-					item.onclick();
+					item.onclick.thiscall( this );
 				item.clicked = false;
 			}
 		}
 	}
 	function UIMenu.globalmousedown( x, y )
 	{
+		// button hits
 		btnhit = false;
 		vhit = y >= this.y && y <= this.y + this.h;
 		foreach( iid, item : this.items )
 		{
 			btnhit ||= item.mouseon && vhit;
-			if( iid == this.open_item )
-			{
-				x1 = this.x + item.x;
-				x2 = x1 + 200;
-				y1 = this.y + 2 + item.height;
-				y2 = y1 + 24 * item.ch.size + 4;
-				btnhit ||= x >= x1 && x <= x2 && y >= y1 && y <= y2;
-			}
 		}
+
+		// child hits
+		cat = this.get_ctrl_at( x, y );
+		if( cat != null && cat != this )
+			btnhit = true;
+
+		// if none, close menu
 		if( !btnhit )
-			this.open_item = -1;
+			this.setOpenItem( -1 );
 	}
 
 	function UIMenu.onleave()
@@ -377,6 +461,8 @@ function UIControl.createMenu()
 	function UIMenu.addItem( item )
 	{
 		this.items.push( item );
+		if( type_get( item.onclick ) == TYPE_OBJECT )
+			this.addChild( item.onclick );
 		return item;
 	}
 
@@ -395,7 +481,24 @@ global UIFrame =
 	
 	curhover = null,
 	curclick = null,
+	lmpos_x = null,
+	lmpos_y = null,
 };
+
+function UIFrame.addChild( ch )
+{
+	UIControl.addChild.thiscall( this, ch );
+	ch.frame = this;
+	return ch;
+}
+
+function UIFrame.moved( me )
+{
+	if( this.curhover == me )
+	{
+		this.curhover = null;
+	}
+}
 
 function UIFrame.event( e )
 {
@@ -407,6 +510,8 @@ function UIFrame.event( e )
 	}
 	if( e.type == SDL_MOUSEMOTION )
 	{
+		this.lmpos_x = e.x;
+		this.lmpos_y = e.y;
 		var ctrl = this.get_ctrl_at( e.x, e.y );
 		if( ctrl !== this.curhover )
 		{

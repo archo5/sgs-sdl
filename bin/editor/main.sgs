@@ -21,15 +21,16 @@ function initialize()
 	global lasttime = ftime();
 	
 	global UITopMenu, UI = UIFrame.create( 1024, 576 );
+	
 	UI.addChild( UITopMenu = UIControl.createMenu() );
 
 	// FILE //
-	mi_file = UICreateMenuItem( "File" );
-	mi_file.ch.push( UICreateMenuItem( "New" ) );
-	mi_file.ch.push( UICreateMenuItem( "Open" ) );
-	mi_file.ch.push( UICreateMenuItem() );
-	mi_file.ch.push( UICreateMenuItem( "Quit", function(){ global sys_exit = true; } ) );
-	UITopMenu.addItem( mi_file );
+	mi_file = UIControl.createDropMenu();
+	mi_file.items.push( UICreateMenuItem( "New" ) );
+	mi_file.items.push( UICreateMenuItem( "Open" ) );
+	mi_file.items.push( UICreateMenuItem() );
+	mi_file.items.push( UICreateMenuItem( "Quit", function(){ global sys_exit = true; } ) );
+	UITopMenu.addItem( UICreateMenuItem( "File", mi_file ) );
 
 	// EDIT //
 	mi_edit = UICreateMenuItem( "Edit" );
@@ -45,6 +46,7 @@ function initialize()
 	UIDropMenu.items.push( UICreateMenuItem() );
 	UIDropMenu.items.push( UICreateMenuItem( "Something before inv" ) );
 	ii = UICreateMenuItem( "Invisible" ); ii.visible = false; UIDropMenu.items.push( ii );
+	UIDropMenu.items[1].onclick = function(){ println( "Whoa" ); };
 	UIDropMenu.items.push( UICreateMenuItem( "Something after inv" ) );
 
 	UI.onclick = closure( function( x, y, bid )
