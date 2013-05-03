@@ -31,8 +31,8 @@ UIControl.onmousemove = _efn;
 UIControl.onattach = _efn;
 function UIControl.onhittest( x, y )
 {
-	return this.x <= x && this.x + this.w >= x
-		&& this.y <= y && this.y + this.h >= y;
+	return this.ax <= x && this.ax + this.w >= x
+		&& this.ay <= y && this.ay + this.h >= y;
 }
 function UIControl.onenter(){ this.mouseon = true; }
 function UIControl.onleave(){ this.mouseon = false; }
@@ -47,6 +47,16 @@ function UIControl.onmouseup( x, y, bid )
 	if( this.clicked3 && this.mouseon && bid == 3 ){ this.onclick( x, y, bid ); this.clicked3 = false; }
 }
 function UIControl.onresize( w, h ){ foreach( c : this.children ) c.onresize( w, h ); }
+function UIControl.onlayout()
+{
+	if( this.parent != null )
+	{
+		this.ax = this.x + this.parent.ax;
+		this.ay = this.y + this.parent.ay;
+	}
+	foreach( c : this.children )
+		c.onlayout();
+}
 function UIControl.globalmousedown( x, y, bid ){ foreach( c : this.children ) c.globalmousedown( x, y, bid ); }
 function UIControl.globalmouseup( x, y, bid ){ foreach( c : this.children ) c.globalmouseup( x, y, bid ); }
 
@@ -76,7 +86,24 @@ function UIControl.addChild( ch )
 	ch.frame = this.frame;
 	this.children.push( ch );
 	ch.onattach();
+	ch.onlayout();
 	return ch;
+}
+function UIControl.removeChild( ch )
+{
+	foreach( i, c : this.children )
+	{
+		if( ch == c )
+		{
+			this.children.erase( i );
+			break;
+		}
+	}
+}
+function UIControl.remove()
+{
+	if( this.parent != null )
+		this.parent.removeChild( this );
 }
 
 function UIControl.create( override )
@@ -90,16 +117,55 @@ function UIControl.create( override )
 }
 
 
+/*
+*
+*   S T A T I C
+*
+*/
+
+function UIControl.createText( text, x, y, w, h, placement, color )
+{
+	color ||= [ 0.1, 1 ];
+	placement ||= DT_LEFT | DT_TOP;
+
+	var UIText =
+	{
+		name = text,
+		type = "text",
+		x = x,
+		y = y,
+		w = w,
+		h = h,
+		color = color,
+		placement = placement,
+	};
+
+	function UIText.on_draw()
+	{
+		draw_text_rect( this.name, this.font, this.color, this.placement,
+			this.ax, this.ax + this.w, this.ay, this.ay + this.h );
+	}
+
+	return UIControl.create( UIText );
+}
+
+
+/*
+*
+*   B U T T O N
+*
+*/
+
 function ui_default_paint_button()
 {
 	mon = this.mouseon; if( this.clicked ) mon = 0;
 	tex = this.textures[ mon + this.clicked * 2 ];
-	draw_button( tex, this.x, this.x + this.w, this.y, this.y + this.h );
+	draw_button( tex, this.ax, this.ax + this.w, this.ay, this.ay + this.h );
 
 	draw_text_rect( this.name, this.font, [0.9,1], DT_CENTER | DT_VCENTER,
-		this.x + 8, this.x + this.w - 8, this.y + 9, this.y + this.h - 7 );
+		this.ax + 8, this.ax + this.w - 8, this.ay + 9, this.ay + this.h - 7 );
 	draw_text_rect( this.name, this.font, [0.1,1], DT_CENTER | DT_VCENTER,
-		this.x + 8, this.x + this.w - 8, this.y + 8, this.y + this.h - 8 );
+		this.ax + 8, this.ax + this.w - 8, this.ay + 8, this.ay + this.h - 8 );
 }
 
 function UIControl.createButton( name, x, y, w, h, onclick )
@@ -124,6 +190,8 @@ function UIControl.createButton( name, x, y, w, h, onclick )
 }
 
 
+
+
 function UICreateMenuItem( name, onclick, icon )
 {
 	return
@@ -138,6 +206,12 @@ function UICreateMenuItem( name, onclick, icon )
 	};
 }
 
+
+/*
+*
+*   D R O P   M E N U
+*
+*/
 
 function ui_default_paint_dropmenu()
 {
@@ -166,6 +240,8 @@ function ui_default_paint_dropmenu()
 				draw_button( tex, x1, x2, y1, y2, 4, 4 );
 			}
 			draw_text_rect( item.name, this.font, [0.1,1], DT_LEFT | DT_VCENTER, x1 + 32, x2, y1, y2 - 4 );
+			if( item.icon === true )
+				draw_text_rect( ">", this.font, [0.1,1], DT_CENTER | DT_VCENTER, x1, x1 + 32, y1, y2 - 4 );
 		}
 		else
 		{
@@ -266,6 +342,8 @@ function UIControl.createDropMenu()
 		this.w = 200;
 		this.h = 4;
 
+		this.onlayout();
+
 		foreach( item : this.items )
 		{
 			item.clicked = false;
@@ -300,6 +378,11 @@ function UIControl.createDropMenu()
 }
 
 
+/*
+*
+*   T O P   M E N U
+*
+*/
 
 function ui_default_paint_menu()
 {
@@ -470,12 +553,134 @@ function UIControl.createMenu()
 }
 
 
+/*
+*
+*   D I A L O G S
+*
+*/
+
+global UIDialog = {};
+
+/*
+	Filler
+	- renders semi-transparent black background and the children
+*/
+function UIDialog.createFiller()
+{
+	var UIFiller =
+	{
+		x = 0,
+		y = 0,
+		w = 0,
+		h = 0,
+	};
+
+	function UIFiller.onresize( w, h )
+	{
+		this.w = w;
+		this.h = h;
+		UIControl.onresize.thiscall( this, w, h );
+	}
+	function UIFiller.onattach()
+	{
+		this.x = this.parent.x;
+		this.y = this.parent.y;
+		this.w = this.parent.w;
+		this.h = this.parent.h;
+	}
+	function UIFiller.on_draw()
+	{
+		draw({ preset = "tile", position = [this.x,this.y],
+			scale = [this.w,this.h], color = [0,0,0,0.5] });
+		foreach( c : this.children )
+			c.on_draw();
+	}
+
+	return UIControl.create( UIFiller );
+}
+
+/*
+	Wrapper
+	- renders a box and the children
+*/
+function UIDialog.createWrapper( x, y, w, h )
+{
+	var UIWrapper =
+	{
+		x = x,
+		y = y,
+		w = w,
+		h = h,
+		texture = create_texture( "engine/img/frame.png" ),
+	};
+
+	function UIWrapper.on_draw()
+	{
+		draw_button( this.texture, this.x - 4, this.x + this.w + 4,
+			this.y - 4, this.y + this.h + 4, 4, 4 );
+		foreach( c : this.children )
+			c.on_draw();
+	}
+
+	return UIControl.create( UIWrapper );
+}
+
+/*
+	A Question popup
+	- calls the callback with 1/0/-1(cancel)
+*/
+function UIDialog.createQuestion( frame, text, callback, cancel )
+{
+	cancel ||= false;
+
+	filler = UIDialog.createFiller();
+	frame.addChild( filler );
+
+	wrap_width = 400;
+	wrap_height = 200;
+	wrap_x = frame.x + ( frame.w - wrap_width ) * 0.5;
+	wrap_y = frame.y + ( frame.h - wrap_height ) * 0.5;
+
+	wrapper = UIDialog.createWrapper( wrap_x, wrap_y, wrap_width, wrap_height );
+	filler.addChild( wrapper );
+
+	tbx = UIControl.createText( text, 30, 30, wrap_width - 60, 100, DT_CENTER | DT_VCENTER );
+	wrapper.addChild( tbx );
+
+	btn_yes = UIControl.createButton( "Yes", 30, 150, 100, 30,
+		closure( function(){ this[0]( 1 ); this[1].remove(); }, [callback,filler] ) );
+	wrapper.addChild( btn_yes );
+
+	no_off = 150;
+	if( !cancel )
+		no_off = 270;
+	btn_no = UIControl.createButton( "No", no_off, 150, 100, 30,
+		closure( function(){ this[0]( 0 ); this[1].remove(); }, [callback,filler] ) );
+	wrapper.addChild( btn_no );
+
+	if( cancel )
+	{
+		btn_no = UIControl.createButton( "Cancel", 270, 150, 100, 30,
+			closure( function(){ this[0]( false ); this[1].remove(); }, [callback,filler] ) );
+		wrapper.addChild( btn_no );
+	}
+}
+
+
+/*
+*
+*   F R A M E
+*
+*/
+
 global UIFrame =
 {
 	name = "__frame__",
 	type = "frame",
 	x = 0,
 	y = 0,
+	ax = 0,
+	ay = 0,
 	w = 9999,
 	h = 9999,
 	
@@ -507,6 +712,7 @@ function UIFrame.event( e )
 		this.w = e.w;
 		this.h = e.h;
 		this.onresize( e.w, e.h );
+		this.onlayout();
 	}
 	if( e.type == SDL_MOUSEMOTION )
 	{

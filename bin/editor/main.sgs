@@ -2,11 +2,66 @@
 include_file( "engine/all.sgs" );
 
 
+global
+	EM_VIEW = 0,
+	EM_PUT = 1,
+	EM_PAINT = 2;
 
-function topmenu_file()
+
+function ed_create_state()
 {
+	return
+	{
+		mode = EM_VIEW,
+		show_grid = true,
+		modified = false,
+		file = null,
+		objects = [],
+		undo_list = [],
+		redo_list = [],
+	};
 }
 
+global ED = ed_create_state();
+
+function ED_setMode( mode )
+{
+	ED.mode = mode;
+	items = UITopMenu.children[ 1 ].items;
+	foreach( item : items )
+		item.icon = null;
+	items[ mode ].icon = true;
+}
+function ED_toggleViewGrid()
+{
+	ED.show_grid = !ED.show_grid;
+	UITopMenu.children[ 2 ].items[ 0 ].icon = ED.show_grid;
+}
+
+
+function topmenu_file_new()
+{
+	cb = function( res ){ if( res ) ED = ed_create_state(); };
+	UIDialog.createQuestion( UI, "Do you really want to clear everything?", cb );
+}
+function topmenu_file_quit()
+{
+	if( ED.modified )
+	{
+		function cb( res )
+		{
+			if( res == 1 )
+				println( "Saving..." );
+			else if( res === 0 )
+				global sys_exit = true;
+		}
+		UIDialog.createQuestion( UI, "You have unsaved changes. Do you want to save?", cb, true );
+	}
+	else
+	{
+		global sys_exit = true;
+	}
+}
 
 
 function configure()
@@ -26,19 +81,28 @@ function initialize()
 
 	// FILE //
 	mi_file = UIControl.createDropMenu();
-	mi_file.items.push( UICreateMenuItem( "New" ) );
+	mi_file.items.push( UICreateMenuItem( "New", topmenu_file_new ) );
 	mi_file.items.push( UICreateMenuItem( "Open" ) );
 	mi_file.items.push( UICreateMenuItem() );
-	mi_file.items.push( UICreateMenuItem( "Quit", function(){ global sys_exit = true; } ) );
+	mi_file.items.push( UICreateMenuItem( "Quit", topmenu_file_quit ) );
 	UITopMenu.addItem( UICreateMenuItem( "File", mi_file ) );
 
-	// EDIT //
-	mi_edit = UICreateMenuItem( "Edit" );
-	UITopMenu.addItem( mi_edit );
+	// MODE //
+	mi_mode = UIControl.createDropMenu();
+	mi_mode.items.push( UICreateMenuItem( "View", function(){ ED_setMode( EM_VIEW ); }, true ) );
+	mi_mode.items.push( UICreateMenuItem( "Put", function(){ ED_setMode( EM_PUT ); } ) );
+	mi_mode.items.push( UICreateMenuItem( "Paint", function(){ ED_setMode( EM_PAINT ); } ) );
+	UITopMenu.addItem( UICreateMenuItem( "Mode", mi_mode ) );
+
+	// VIEW //
+	mi_view = UIControl.createDropMenu();
+	mi_view.items.push( UICreateMenuItem( "Grid", function(){ ED_toggleViewGrid(); }, true ) );
+	UITopMenu.addItem( UICreateMenuItem( "View", mi_view ) );
 
 	UITopMenu.recalcLayout();
 
 	// test ... //
+	/*
 	global UIDropMenu = UIControl.createDropMenu();
 	UI.addChild( UIDropMenu );
 	UIDropMenu.items.push( UICreateMenuItem( "Something" ) );
@@ -52,6 +116,7 @@ function initialize()
 	UI.onclick = closure( function( x, y, bid )
 		{ if( bid == 3 ) UIDropMenu.open(x,y); this( x, y, bid ); }
 		, UI.onclick );
+	*/
 }
 
 function update()
