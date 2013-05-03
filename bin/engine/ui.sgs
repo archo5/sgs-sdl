@@ -13,6 +13,7 @@ global UIControl =
 	
 	/* states */
 	clicked = false,
+	clicked3 = false,
 	mouseon = false,
 	
 	/* processing */
@@ -30,8 +31,16 @@ function UIControl.onhittest( x, y )
 }
 function UIControl.onenter(){ this.mouseon = true; }
 function UIControl.onleave(){ this.mouseon = false; }
-function UIControl.onmousedown( x, y, bid ){ if( this.mouseon && bid == 1 ) this.clicked = true; }
-function UIControl.onmouseup(){ if( this.clicked && this.mouseon ) this.onclick(); this.clicked = false; }
+function UIControl.onmousedown( x, y, bid )
+{
+	if( this.mouseon && bid == 1 ) this.clicked = true;
+	if( this.mouseon && bid == 3 ) this.clicked3 = true;
+}
+function UIControl.onmouseup( x, y, bid )
+{
+	if( this.clicked && this.mouseon && bid == 1 ){ this.onclick( x, y, bid ); this.clicked = false; }
+	if( this.clicked3 && this.mouseon && bid == 3 ){ this.onclick( x, y, bid ); this.clicked3 = false; }
+}
 function UIControl.onresize( w, h ){ foreach( c : this.children ) c.onresize( w, h ); }
 function UIControl.globalmousedown( x, y, bid ){ foreach( c : this.children ) c.globalmousedown( x, y, bid ); }
 function UIControl.globalmouseup( x, y, bid ){ foreach( c : this.children ) c.globalmouseup( x, y, bid ); }
@@ -101,6 +110,106 @@ function UIControl.createButton( name, x, y, w, h, onclick )
 }
 
 
+function UICreateMenuItem( name, onclick, icon )
+{
+	return
+	{
+		ch = [],
+		icon = icon,
+		name = name,
+		onclick = onclick,
+		visible = true,
+		mouseon = false,
+		clicked = false,
+	};
+}
+
+
+function ui_default_paint_dropmenu()
+{
+	if( !this.visible )
+		return;
+
+	var _sepscl = [ this.w, 1 ];
+
+	draw({ preset = "tile", position = [ this.x, this.y ],
+		scale = [ this.w, this.h ], color = [ 0.7, 0.7, 0.7 ] });
+	foreach( iid, item : this.items )
+	{
+		if( !item.visible )
+			continue;
+		x1 = this.x;
+		x2 = x1 + this.w;
+		y1 = this.y + item.y;
+		y2 = y1 + item.height;
+		if( item.name )
+		{
+			if( iid == 1 )
+			{
+				tex = this.textures[ 0 ];
+				draw_button( tex, x1, x2, y1, y2, 4, 4 );
+			}
+			draw_text_rect( item.name, this.font, [0.1,1], DT_LEFT | DT_VCENTER, x1 + 32, x2, y1, y2 - 4 );
+		}
+		else
+		{
+			draw({ preset = "tile", position = [ x1, y1 + 3 ], scale = _sepscl, color = [ 0.6, 0.6, 0.6 ] });
+			draw({ preset = "tile", position = [ x1, y1 + 4 ], scale = _sepscl, color = [ 0.8, 0.8, 0.8 ] });
+		}
+	}
+}
+
+function UIControl.createDropMenu()
+{
+	var UIDropMenu =
+	{
+		type = "dropmenu",
+		x = 0,
+		y = 0,
+		w = 0,
+		h = 0,
+		on_draw = ui_default_paint_dropmenu,
+
+		textures =
+		[
+			create_texture( "engine/img/menuitemH.png" ),
+			create_texture( "engine/img/menuitemC.png" ),
+		],
+
+		items = [],
+		open_item = -1,
+		visible = false,
+	};
+
+	function UIDropMenu.open( x, y )
+	{
+		this.x = x;
+		this.y = y;
+		this.w = 200;
+		this.h = 4;
+
+		foreach( item : this.items )
+		{
+			item.y = this.h - 2;
+			if( item.visible )
+			{
+				if( item.name !== null )
+					item.height = this.font.size + 8;
+				else
+					item.height = 8;
+				this.h += item.height;
+			}
+		}
+
+		// TODO pull it out of corners and sides
+
+		this.visible = true;
+	}
+
+	return UIControl.create( UIDropMenu );
+}
+
+
 
 function ui_default_paint_menu()
 {
@@ -150,20 +259,6 @@ function ui_default_paint_menu()
 			}
 		}
 	}
-}
-
-function UICreateMenuItem( name, onclick, icon )
-{
-	return
-	{
-		ch = [],
-		icon = icon,
-		name = name,
-		onclick = onclick,
-		visible = true,
-		mouseon = false,
-		clicked = false,
-	};
 }
 
 function UIControl.createMenu()

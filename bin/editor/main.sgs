@@ -36,6 +36,20 @@ function initialize()
 	UITopMenu.addItem( mi_edit );
 
 	UITopMenu.recalcLayout();
+
+	// test ... //
+	global UIDropMenu = UIControl.createDropMenu();
+	UI.addChild( UIDropMenu );
+	UIDropMenu.items.push( UICreateMenuItem( "Something" ) );
+	UIDropMenu.items.push( UICreateMenuItem( "Something else" ) );
+	UIDropMenu.items.push( UICreateMenuItem() );
+	UIDropMenu.items.push( UICreateMenuItem( "Something before inv" ) );
+	ii = UICreateMenuItem( "Invisible" ); ii.visible = false; UIDropMenu.items.push( ii );
+	UIDropMenu.items.push( UICreateMenuItem( "Something after inv" ) );
+
+	UI.onclick = closure( function( x, y, bid )
+		{ if( bid == 3 ) UIDropMenu.open(x,y); this( x, y, bid ); }
+		, UI.onclick );
 }
 
 function update()
