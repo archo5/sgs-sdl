@@ -28,6 +28,42 @@ function set_camera_ui( x1, x2, y1, y2 )
 	set_camera( mtx );
 }
 
+function draw_fitted( tex, left, right, top, bottom, placement )
+{
+	xq = 1;
+	yq = 1;
+	if( placement & DT_LEFT ) xq = 0;
+	if( placement & DT_RIGHT ) xq = 2;
+	if( placement & DT_TOP ) yq = 0;
+	if( placement & DT_BOTTOM ) yq = 2;
+
+	iw = tex.width;
+	ih = tex.height;
+	rw = right - left;
+	rh = bottom - top;
+
+	if( iw > rw || ih > rh )
+	{
+		ia = iw / ih;
+		ra = rw / rh;
+		if( ia > ra ) // width-limited
+		{
+			ih *= rw / iw;
+			iw = rw;
+		}
+		else // height-limited
+		{
+			iw *= rh / ih;
+			ih = rh;
+		}
+	}
+	draw({
+		preset = "tile", texture = tex,
+		position = [ ( rw - iw ) / 2 * xq + left, ( rh - ih ) / 2 * yq + top ],
+		scale = [ iw, ih ],
+	});
+}
+
 function draw_button( tex, left, right, top, bottom, off, texoff )
 {
 	off ||= 8;

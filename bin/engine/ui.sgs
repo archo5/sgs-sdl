@@ -43,8 +43,18 @@ function UIControl.onmousedown( x, y, bid )
 }
 function UIControl.onmouseup( x, y, bid )
 {
-	if( this.clicked && this.mouseon && bid == 1 ){ this.onclick( x, y, bid ); this.clicked = false; }
-	if( this.clicked3 && this.mouseon && bid == 3 ){ this.onclick( x, y, bid ); this.clicked3 = false; }
+	if( this.clicked && bid == 1 )
+	{
+		if( this.mouseon && this.onclick != null )
+			this.onclick( x, y, bid );
+		this.clicked = false;
+	}
+	if( this.clicked3 && bid == 3 )
+	{
+		if( this.mouseon && this.onclick != null )
+			this.onclick( x, y, bid );
+		this.clicked3 = false;
+	}
 }
 function UIControl.onresize( w, h ){ foreach( c : this.children ) c.onresize( w, h ); }
 function UIControl.onlayout()
@@ -59,6 +69,8 @@ function UIControl.onlayout()
 }
 function UIControl.globalmousedown( x, y, bid ){ foreach( c : this.children ) c.globalmousedown( x, y, bid ); }
 function UIControl.globalmouseup( x, y, bid ){ foreach( c : this.children ) c.globalmouseup( x, y, bid ); }
+function UIControl.globalmousemove( x, y, xr, yr )
+{ foreach( c : this.children ) c.globalmousemove( x, y, xr, yr ); }
 
 /* PROCESSING */
 function UIControl.hasProperty( name )
@@ -152,7 +164,7 @@ function UIControl.createText( text, x, y, w, h, placement, color )
 
 /*
 *
-*   B U T T O N
+*   B U T T O N S
 *
 */
 
@@ -160,12 +172,19 @@ function ui_default_paint_button()
 {
 	mon = this.mouseon; if( this.clicked ) mon = 0;
 	tex = this.textures[ mon + this.clicked * 2 ];
-	draw_button( tex, this.ax, this.ax + this.w, this.ay, this.ay + this.h );
+	draw_button( tex, this.ax - 4, this.ax + this.w + 4, this.ay - 4, this.ay + this.h + 4 );
 
-	draw_text_rect( this.name, this.font, [0.9,1], DT_CENTER | DT_VCENTER,
-		this.ax + 8, this.ax + this.w - 8, this.ay + 9, this.ay + this.h - 7 );
-	draw_text_rect( this.name, this.font, [0.1,1], DT_CENTER | DT_VCENTER,
-		this.ax + 8, this.ax + this.w - 8, this.ay + 8, this.ay + this.h - 8 );
+	if( this.icon != null )
+	{
+		draw_fitted( this.icon, this.ax + 2, this.ax + this.w - 2, this.ay + 2, this.ay + this.h - 2 );
+	}
+	else
+	{
+		draw_text_rect( this.name, this.font, [0.9,1], DT_CENTER | DT_VCENTER,
+			this.ax + 4, this.ax + this.w - 4, this.ay + 5, this.ay + this.h - 3 );
+		draw_text_rect( this.name, this.font, [0.1,1], DT_CENTER | DT_VCENTER,
+			this.ax + 4, this.ax + this.w - 4, this.ay + 4, this.ay + this.h - 4 );
+	}
 }
 
 function UIControl.createButton( name, x, y, w, h, onclick )
@@ -178,6 +197,7 @@ function UIControl.createButton( name, x, y, w, h, onclick )
 		y = y,
 		w = w,
 		h = h,
+		icon = null,
 		onclick = onclick,
 		on_draw = ui_default_paint_button,
 		textures =
@@ -190,9 +210,56 @@ function UIControl.createButton( name, x, y, w, h, onclick )
 }
 
 
+function ui_default_paint_radiobtn()
+{
+	clk = this.clicked || ( isset( this.frame.formdata, this.key ) &&
+		this.frame.formdata[ this.key ] == this.value );
+	mon = this.mouseon; if( clk ) mon = 0;
+	tex = this.textures[ mon + clk * 2 ];
+	draw_button( tex, this.ax - 4, this.ax + this.w + 4, this.ay - 4, this.ay + this.h + 4 );
+
+	draw_text_rect( this.name, this.font, [0.9,1], DT_CENTER | DT_VCENTER,
+		this.ax + 4, this.ax + this.w - 4, this.ay + 5, this.ay + this.h - 3 );
+	draw_text_rect( this.name, this.font, [0.1,1], DT_CENTER | DT_VCENTER,
+		this.ax + 4, this.ax + this.w - 4, this.ay + 4, this.ay + this.h - 4 );
+}
+
+function UIControl.createRadioButton( name, key, value, x, y, w, h, onchange )
+{
+	var UIRadioButton =
+	{
+		name = name,
+		type = "radio",
+		key = key,
+		value = value,
+		x = x,
+		y = y,
+		w = w,
+		h = h,
+		onchange = onchange,
+		on_draw = ui_default_paint_radiobtn,
+		textures =
+		[
+			create_texture( "engine/img/buttonN.png" ),
+			create_texture( "engine/img/buttonH.png" ),
+			create_texture( "engine/img/buttonC.png" ),
+		],
+	};
+
+	function UIRadioButton.onclick()
+	{
+		this.frame.formdata[ this.key ] = this.value;
+		if( this.onchange )
+			this.onchange();
+	}
+
+	return UIControl.create( UIRadioButton );
+}
 
 
-function UICreateMenuItem( name, onclick, icon )
+
+
+function UICreateItem( name, onclick, icon )
 {
 	return
 	{
@@ -234,7 +301,7 @@ function ui_default_paint_dropmenu()
 		y2 = y1 + item.height;
 		if( item.name )
 		{
-			if( item.mouseon )
+			if( item.mouseon && this.mouseon )
 			{
 				tex = this.textures[ item.clicked ];
 				draw_button( tex, x1, x2, y1, y2, 4, 4 );
@@ -326,7 +393,7 @@ function UIControl.createDropMenu()
 			if( item.clicked )
 			{
 				if( item.onclick )
-					item.onclick();
+					item.onclick.thiscall( this, item );
 				if( this.parent.hasProperty( "setOpenItem" ) )
 					this.parent.setOpenItem( -1 );
 				item.clicked = false;
@@ -511,8 +578,19 @@ function UIControl.createMenu()
 
 		// child hits
 		cat = this.get_ctrl_at( x, y );
-		if( cat != null && cat != this )
-			btnhit = true;
+		if( cat !== null && cat !== this )
+		{
+			while( cat.parent != this )
+				cat = cat.parent;
+			foreach( item : this.items )
+			{
+				if( item.onclick === cat )
+				{
+					btnhit = true;
+					break;
+				}
+			}
+		}
 
 		// if none, close menu
 		if( !btnhit )
@@ -550,6 +628,255 @@ function UIControl.createMenu()
 	}
 
 	return UIControl.create( UIMenu );
+}
+
+
+/*
+*
+*   E X T E N D E D
+*
+*/
+
+/*
+	Scrollbars
+*/
+function UIControl.createVScroll( x, y, w, h, onchange )
+{
+	btnh = 16;
+	if( btnh * 2 > h )
+		btnh = h / 2;
+
+	var UIVScroll =
+	{
+		x = x,
+		y = y,
+		w = w,
+		h = h,
+		hview = 100, // view height
+		hcontent = 10, // content height
+		pos = 0, // content offset (0 to hcontent-hview)
+		btnh = btnh,
+		visible = true,
+		onchange = onchange,
+		texture = create_texture( "engine/img/frame.png" ),
+	};
+
+	function UIVScroll.on_draw()
+	{
+		if( !this.visible )
+			return;
+		draw_button( this.texture, this.ax - 2, this.ax + this.w + 2,
+			this.ay - 2, this.ay + this.h + 2, 4, 4 );
+		foreach( c : this.children )
+			c.on_draw();
+	}
+
+	function UIVScroll.setPos( pos )
+	{
+		if( pos < 0 || this.hview >= this.hcontent ) pos = 0;
+		if( pos > 1 ) pos = 1;
+		this.pos = pos;
+
+		btn = this.children[ 1 ];
+		btn.y = this.btnh + 2 + ( this.h - this.btnh * 3 - 4 ) * pos;
+		if( this.onchange )
+			this.onchange();
+		btn.onlayout();
+	}
+	function UIVScroll.onclick()
+	{
+		if( this.frame.lmpos_y < this.children[ 1 ].ay )
+			this.setPos( this.pos - 150 / this.hcontent );
+		else
+			this.setPos( this.pos + 150 / this.hcontent );
+	}
+
+	var ctl = UIControl.create( UIVScroll );
+	ctl.ax = x;
+	ctl.ay = y;
+
+	if( ctl.hview >= ctl.hcontent )
+		hvcaspect = 1;
+	else
+		hvcaspect = ctl.hview / ctl.hcontent;
+
+	ctl.addChild( vsub = UIControl.createButton( "U", 0, 0, w, btnh ) );
+	ctl.addChild( vssb = UIControl.createButton( "", 0, btnh + 2,
+		w, ( h - btnh * 2 - 4 ) * hvcaspect ) );
+	ctl.addChild( vsdb = UIControl.createButton( "D", 0, h - btnh, w, btnh ) );
+
+	vsub.icon = create_texture( "engine/img/btnup.png" );
+	vsdb.icon = create_texture( "engine/img/btndn.png" );
+
+	function vssb.onmousedown( x, y, bid )
+	{
+		if( bid == 1 )
+		{
+			this.parent.btny = this.y;
+			this.parent.refy = y;
+		}
+		UIControl.onmousedown.thiscall( this, x, y, bid );
+	}
+	function vssb.globalmousemove( x, y )
+	{
+		if( this.clicked )
+		{
+			ymin = this.parent.btnh + 2;
+			ymax = this.parent.h - this.parent.btnh - this.h - 2;
+			this.y = this.parent.btny;
+			if( abs( this.x + this.w * 0.5 - x ) < 200 )
+				this.y += y - this.parent.refy;
+			if( this.y < ymin ) this.y = ymin;
+			if( this.y > ymax ) this.y = ymax;
+			if( ymin == ymax )
+				this.parent.pos = 0;
+			else
+				this.parent.pos = ( this.y - ymin ) / ( ymax - ymin );
+			if( this.parent.onchange )
+				this.parent.onchange();
+			this.onlayout();
+		}
+	}
+
+	function vsub.onclick()
+	{
+		this.parent.setPos( this.parent.pos - 60 / this.parent.hcontent );
+	}
+	function vsdb.onclick()
+	{
+		this.parent.setPos( this.parent.pos + 60 / this.parent.hcontent );
+	}
+
+	return ctl;
+}
+
+/*
+	Listbox
+*/
+function UIControl.createListBox( options, selected, x, y, w, h, onchange )
+{
+	var UIListBox =
+	{
+		x = x,
+		y = y,
+		w = w,
+		h = h,
+		open = false,
+		pos = 0,
+		hbase = h,
+		hopen = [options.size, 10][options.size > 10] * 24,
+		scroll = options.size > 10,
+		onchange = onchange,
+		options = options,
+		selected = selected,
+		hover = -1,
+		textures =
+		[
+			create_texture( "engine/img/menuitemH.png" ),
+			create_texture( "engine/img/menuitemC.png" ),
+			create_texture( "engine/img/frame.png" ),
+		],
+	};
+
+	function UIListBox.on_draw()
+	{
+		if( this.open )
+		{
+			draw_button( this.textures[2], this.ax - 2, this.ax + this.w + 2,
+				this.ay - 2, this.ay + this.hbase + this.hopen + 2, 4, 4 );
+			foreach( i, opt : this.options )
+			{
+				x1 = this.ax;
+				x2 = x1 + this.w;
+				y1 = this.ay + this.hbase + i * 24;
+				y2 = y1 + 24;
+				if( i == this.hover && this.mouseon )
+					draw_button( this.textures[ this.clicked ], x1 + 2, x2 - 2, y1 + 2, y2 - 2, 4, 4 );
+				draw_text_rect( opt, this.font, [0.1,1.0],
+					DT_LEFT | DT_VCENTER, x1 + 4, x2 - 4, y1 + 2, y2 - 4 );
+			}
+		}
+
+		foreach( c : this.children )
+			c.on_draw();
+	}
+
+	function UIListBox.onmousemove( x, y )
+	{
+		this.hover = -1;
+		foreach( i, opt : this.options )
+		{
+			x1 = this.ax;
+			x2 = x1 + this.w;
+			y1 = this.ay + this.hbase + i * 24;
+			y2 = y1 + 24;
+			if( x1 <= x && x2 > x && y1 <= y && y2 > y )
+			{
+				this.hover = i;
+				break;
+			}
+		}
+	}
+	function UIListBox.onclick()
+	{
+		this.select( this.hover );
+		this.open = false;
+	}
+	function UIListBox.globalmouseup( x, y, bid )
+	{
+		if( this.open && !this.onhittest( x, y ) )
+			this.open = false;
+	}
+
+	function UIListBox.select( id )
+	{
+		this.selected = id;
+		if( id >= 0 )
+			name = this.options[ id ];
+		else
+			name = "";
+		this.children[ 0 ].name = name;
+		if( this.onchange )
+			this.onchange( this );
+	}
+
+	var ctl = UIControl.create( UIListBox );
+	ctl.ax = x;
+	ctl.ay = y;
+
+	if( selected >= 0 )
+		name = options[ selected ];
+	else
+		name = "";
+	var onclk = function()
+	{
+		this.parent.open = !this.parent.open;
+		this.parent.children[ 1 ].visible = this.parent.open && this.parent.scroll;
+		this.parent.h = this.parent.hbase;
+		if( this.parent.open )
+			this.parent.h += this.parent.hopen;
+	};
+	ctl.addChild( lb_btn = UIControl.createButton( name, 0, 0, w, 24, onclk ) );
+	lb_btn.icon = create_texture( "engine/img/btndn.png" );
+	function lb_btn.on_draw()
+	{
+		clk = this.clicked || this.parent.open;
+		mon = this.mouseon; if( clk ) mon = 0;
+		tex = this.textures[ mon + clk * 2 ];
+		draw_button( tex, this.ax - 4, this.ax + this.w + 4, this.ay - 4, this.ay + this.h + 4 );
+
+		draw_text_rect( this.name, this.font, [0.9,1], DT_LEFT | DT_VCENTER,
+			this.ax + 4, this.ax + this.w - 4, this.ay + 5, this.ay + this.h - 3 );
+		draw_text_rect( this.name, this.font, [0.1,1], DT_LEFT | DT_VCENTER,
+			this.ax + 4, this.ax + this.w - 4, this.ay + 4, this.ay + this.h - 4 );
+		draw_fitted( this.icon, this.ax + 4, this.ax + this.w - 4,
+			this.ay + 2, this.ay + this.h - 2, DT_RIGHT | DT_VCENTER );
+	}
+
+	ctl.addChild( vscb = UIControl.createVScroll( w - 16, h + 2, 16, UIListBox.hopen - 2 ) );
+	vscb.visible = false;
+
+	return ctl;
 }
 
 
@@ -686,6 +1013,7 @@ global UIFrame =
 	
 	curhover = null,
 	curclick = null,
+	curclick3 = null,
 	lmpos_x = null,
 	lmpos_y = null,
 };
@@ -718,6 +1046,7 @@ function UIFrame.event( e )
 	{
 		this.lmpos_x = e.x;
 		this.lmpos_y = e.y;
+		this.globalmousemove( e.x, e.y, e.xrel, e.yrel );
 		var ctrl = this.get_ctrl_at( e.x, e.y );
 		if( ctrl !== this.curhover )
 		{
@@ -738,16 +1067,28 @@ function UIFrame.event( e )
 			this.globalmousedown( e.x, e.y, e.button );
 			if( ctrl !== null )
 				ctrl.onmousedown( e.x, e.y, e.button );
-			this.curclick = ctrl;
+			if( e.button == 1 )
+				this.curclick = ctrl;
+			if( e.button == 3 )
+				this.curclick3 = ctrl;
 		}
 		else
 		{
 			this.globalmouseup( e.x, e.y, e.button );
 			if( ctrl !== null )
 				ctrl.onmouseup( e.x, e.y, e.button );
-			if( this.curclick !== null && ctrl !== this.curclick )
-				this.curclick.onmouseup( e.x, e.y, e.button );
-			this.curclick = null;
+			if( e.button == 1 )
+			{
+				if( this.curclick !== null && ctrl !== this.curclick )
+					this.curclick.onmouseup( e.x, e.y, e.button );
+				this.curclick = null;
+			}
+			if( e.button == 3 )
+			{
+				if( this.curclick3 !== null && ctrl !== this.curclick3 )
+					this.curclick3.onmouseup( e.x, e.y, e.button );
+				this.curclick3 = null;
+			}
 		}
 	}
 }
@@ -765,6 +1106,7 @@ function UIFrame.draw()
 function UIFrame.create( w, h )
 {
 	var f = clone( UIFrame );
+	f.formdata = {};
 	f.w = w;
 	f.h = h;
 	return UIControl.create( f );

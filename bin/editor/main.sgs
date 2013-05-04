@@ -11,29 +11,23 @@ function ED_message( msg )
 }
 
 
-function ED_stateToUI()
-{
-	items = UITopMenu.children[ 1 ].items;
-	foreach( item : items )
-		item.icon = null;
-	items[ ED.mode ].icon = true;
-	UITopMenu.children[ 2 ].items[ 0 ].icon = ED.show_grid;
-}
-
 function ED_resetAll()
 {
-	global ED = ED_createState();
-	ED_stateToUI();
+	global ED;
+	var oed = ED;
+	ED = ED_createState();
+	ED.show_grid = oed.show_grid;
+	ED.snap_grid = oed.snap_grid;
 }
-function ED_setMode( mode )
-{
-	ED.mode = mode;
-	ED_stateToUI();
-}
-function ED_toggleViewGrid()
+function ED_toggleViewGrid( item )
 {
 	ED.show_grid = !ED.show_grid;
-	ED_stateToUI();
+	item.icon = ED.show_grid;
+}
+function ED_toggleSnapGrid( item )
+{
+	ED.snap_grid = !ED.snap_grid;
+	item.icon = ED.snap_grid;
 }
 
 
@@ -83,25 +77,37 @@ function initialize()
 	
 	UI.addChild( UITopMenu = UIControl.createMenu() );
 
+	UI.formdata[ "editmode" ] = ED.mode = EM_EDIT;
+	function ed_changemode(){ ED.mode = UI.formdata[ "editmode" ]; };
+	UITopMenu.addChild( UIControl.createText( "Mode:", 150, 0, 50, 22, DT_CENTER | DT_VCENTER ) );
+	UITopMenu.addChild( UIControl.createRadioButton( "View", "editmode", EM_VIEW, 200, 0, 52, 24, ed_changemode ) );
+	UITopMenu.addChild( UIControl.createRadioButton( "Edit", "editmode", EM_EDIT, 254, 0, 52, 24, ed_changemode ) );
+	UITopMenu.addChild( UIControl.createRadioButton( "Put", "editmode", EM_PUT, 308, 0, 52, 24, ed_changemode ) );
+	UITopMenu.addChild( UIControl.createRadioButton( "Paint", "editmode", EM_PAINT, 362, 0, 52, 24, ed_changemode ) );
+
+	UITopMenu.addChild( UIControl.createText( "Object:", 440, 0, 80, 22, DT_CENTER | DT_VCENTER ) );
+	var opts = [ "First", "Some option", "The following one..." ];
+	if( true )
+	{
+		opts = [];
+		foreach( edo : EDOBJ )
+			opts.push( edo.name );
+	}
+	UITopMenu.addChild( UIControl.createListBox( opts, 0, 520, 0, 200, 24 ) );
+
 	// FILE //
 	mi_file = UIControl.createDropMenu();
-	mi_file.items.push( UICreateMenuItem( "New", topmenu_file_new ) );
-	mi_file.items.push( UICreateMenuItem( "Open" ) );
-	mi_file.items.push( UICreateMenuItem() );
-	mi_file.items.push( UICreateMenuItem( "Quit", topmenu_file_quit ) );
-	UITopMenu.addItem( UICreateMenuItem( "File", mi_file ) );
+	mi_file.items.push( UICreateItem( "New", topmenu_file_new ) );
+	mi_file.items.push( UICreateItem( "Open" ) );
+	mi_file.items.push( UICreateItem() );
+	mi_file.items.push( UICreateItem( "Quit", topmenu_file_quit ) );
+	UITopMenu.addItem( UICreateItem( "File", mi_file ) );
 
-	// MODE //
-	mi_mode = UIControl.createDropMenu();
-	mi_mode.items.push( UICreateMenuItem( "View", function(){ ED_setMode( EM_VIEW ); }, true ) );
-	mi_mode.items.push( UICreateMenuItem( "Put", function(){ ED_setMode( EM_PUT ); } ) );
-	mi_mode.items.push( UICreateMenuItem( "Paint", function(){ ED_setMode( EM_PAINT ); } ) );
-	UITopMenu.addItem( UICreateMenuItem( "Mode", mi_mode ) );
-
-	// VIEW //
-	mi_view = UIControl.createDropMenu();
-	mi_view.items.push( UICreateMenuItem( "Grid", function(){ ED_toggleViewGrid(); }, true ) );
-	UITopMenu.addItem( UICreateMenuItem( "View", mi_view ) );
+	// OPTIONS //
+	mi_opts = UIControl.createDropMenu();
+	mi_opts.items.push( UICreateItem( "Show grid", ED_toggleViewGrid, true ) );
+	mi_opts.items.push( UICreateItem( "Snap to grid", ED_toggleSnapGrid, true ) );
+	UITopMenu.addItem( UICreateItem( "Options", mi_opts ) );
 
 	UITopMenu.recalcLayout();
 
@@ -109,13 +115,13 @@ function initialize()
 	/*
 	global UIDropMenu = UIControl.createDropMenu();
 	UI.addChild( UIDropMenu );
-	UIDropMenu.items.push( UICreateMenuItem( "Something" ) );
-	UIDropMenu.items.push( UICreateMenuItem( "Something else" ) );
-	UIDropMenu.items.push( UICreateMenuItem() );
-	UIDropMenu.items.push( UICreateMenuItem( "Something before inv" ) );
-	ii = UICreateMenuItem( "Invisible" ); ii.visible = false; UIDropMenu.items.push( ii );
+	UIDropMenu.items.push( UICreateItem( "Something" ) );
+	UIDropMenu.items.push( UICreateItem( "Something else" ) );
+	UIDropMenu.items.push( UICreateItem() );
+	UIDropMenu.items.push( UICreateItem( "Something before inv" ) );
+	ii = UICreateItem( "Invisible" ); ii.visible = false; UIDropMenu.items.push( ii );
 	UIDropMenu.items[1].onclick = function(){ println( "Whoa" ); };
-	UIDropMenu.items.push( UICreateMenuItem( "Something after inv" ) );
+	UIDropMenu.items.push( UICreateItem( "Something after inv" ) );
 
 	UI.onclick = closure( function( x, y, bid )
 		{ if( bid == 3 ) UIDropMenu.open(x,y); this( x, y, bid ); }
@@ -123,15 +129,10 @@ function initialize()
 	*/
 }
 
-function update()
-{
-	global lasttime, ED_msg_alpha, ED_msg_text;
-	var curtime = ftime();
-	var delta = curtime - lasttime;
-	if( delta > 1.0/15.0 )
-		delta = 1.0/15.0;
-	lasttime = curtime;
 
+function ED_render()
+{
+	global ED_msg_alpha, ED_msg_text;
 	var cc = [0.1,0.2,0.4];
 	clear( cc );
 
@@ -141,10 +142,24 @@ function update()
 	if( ED_msg_alpha > 0 )
 	{
 		draw_text_rect( ED_msg_text, UI.font, [0.9, ED_msg_alpha], DT_LEFT | DT_BOTTOM, 4, UI.w - 4, 4, UI.h - 4 );
-		ED_msg_alpha -= delta / 3;
 	}
 	
 	present();
+}
+
+function update()
+{
+	global lasttime, ED_msg_alpha;
+	var curtime = ftime();
+	var delta = curtime - lasttime;
+	if( delta > 1.0/15.0 )
+		delta = 1.0/15.0;
+	lasttime = curtime;
+
+	if( ED_msg_alpha > 0 )
+		ED_msg_alpha -= delta / 3;
+
+	ED_render();
 
 	sleeptime = 15 - delta * 1000;
 	if( sleeptime > 0 ) sleep( sleeptime );

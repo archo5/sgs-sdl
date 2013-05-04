@@ -1,9 +1,14 @@
 
 
 global
-	EM_VIEW = 0,
-	EM_PUT = 1,
-	EM_PAINT = 2;
+	EM_VIEW =  0,
+	EM_EDIT =  1,
+	EM_PUT =   2,
+	EM_PAINT = 3;
+
+global
+	EA_NONE = 0,
+	EA_MOVE = 1;
 
 
 function ED_createState()
@@ -12,18 +17,29 @@ function ED_createState()
 	return
 	{
 		mode = EM_VIEW,
+		action = EA_NONE,
+		origpos = null,
+		origcurpos = null,
+
 		view_x = 0,
 		view_y = 0,
 		view_size = 300,
+
 		mouseon = -1,
 		selected = [],
 		scrolling = false,
+
 		show_grid = true,
+		snap_grid = true,
+		grid_w = 16,
+		grid_h = 16,
+
 		modified = false,
 		file = null,
 		objects = [],
 		undo_list = [],
 		redo_list = [],
+
 		default_icon = deficon,
 		default_itex = create_texture( deficon ),
 		mouseon_tex = create_texture( "editor/img/mouseon.png" ),
@@ -89,29 +105,33 @@ function ED_initialize()
 function ED_draw()
 {
 	aspect = UI.w / UI.h;
-	set_camera_ui( 0, UI.w, 0, UI.h );
-	foreach( oid, obj : ED.objects )
+
+	if( ED.mode != EM_VIEW )
 	{
-		x = obj.x;
-		y = obj.y;
-		width = obj.width / ED.view_size * UI.h * 0.5;
-		height = obj.height / ED.view_size * UI.h * 0.5;
-		if( obj.data != null )
+		set_camera_ui( 0, UI.w, 0, UI.h );
+		foreach( oid, obj : ED.objects )
 		{
-			x -= obj.data.origin_x;
-			y -= obj.data.origin_y;
+			x = obj.x;
+			y = obj.y;
+			width = obj.width / ED.view_size * UI.h * 0.5;
+			height = obj.height / ED.view_size * UI.h * 0.5;
+			if( obj.data != null )
+			{
+				x -= obj.data.origin_x;
+				y -= obj.data.origin_y;
+			}
+
+			x = ( ( x - ED.view_x ) / aspect / ED.view_size * 0.5 + 0.5 ) * UI.w;
+			y = ( ( y - ED.view_y ) / ED.view_size * 0.5 + 0.5 ) * UI.h;
+
+			if( array_find( ED.selected, obj ) !== false )
+				draw_button( ED.select_tex, x - 4, x + width + 4, y - 4, y + height + 4, 4, 4 );
+			if( ED.mouseon == oid )
+				draw_button( ED.mouseon_tex, x - 4, x + width + 4, y - 4, y + height + 4, 4, 4 );
 		}
-
-		x = ( ( x - ED.view_x ) / aspect / ED.view_size * 0.5 + 0.5 ) * UI.w;
-		y = ( ( y - ED.view_y ) / ED.view_size * 0.5 + 0.5 ) * UI.h;
-
-		if( array_find( ED.selected, obj ) !== false )
-			draw_button( ED.select_tex, x - 4, x + width + 4, y - 4, y + height + 4, 4, 4 );
-		if( ED.mouseon == oid )
-			draw_button( ED.mouseon_tex, x - 4, x + width + 4, y - 4, y + height + 4, 4, 4 );
 	}
 
-	set_camera_2d( ED.view_x, ED.view_y, ED.view_size, UI.w / UI.h, 0 );
+	set_camera_2d( ED.view_x, ED.view_y, ED.view_size, aspect, 0 );
 
 	foreach( oid, obj : ED.objects )
 	{
@@ -126,6 +146,26 @@ function ED_draw()
 			y -= obj.data.origin_y;
 		}
 		draw({ preset = "tile", texture = tex, position = [ x, y ], scale = [ width, height ] });
+	}
+
+	if( ED.show_grid )
+	{
+		vsx = ED.view_size * aspect;
+		vsy = ED.view_size;
+		refx1 = round( ( ED.view_x - vsx - ED.grid_w ) / ED.grid_w ) * ED.grid_w;
+		refy1 = round( ( ED.view_y - vsy - ED.grid_h ) / ED.grid_h ) * ED.grid_h;
+		refx2 = round( ( ED.view_x + vsx + ED.grid_w ) / ED.grid_w ) * ED.grid_w;
+		refy2 = round( ( ED.view_y + vsy + ED.grid_h ) / ED.grid_h ) * ED.grid_h;
+		for( x = refx1; x <= refx2; x += ED.grid_w )
+		{
+			draw({ preset = "box", position = [ x, ED.view_y ],
+				scale = [ vsy / UI.w * 4, vsy * 2 ], color = [0.9,0.9,0.9,0.5] });
+		}
+		for( y = refy1; y <= refy2; y += ED.grid_h )
+		{
+			draw({ preset = "box", position = [ ED.view_x, y ],
+				scale = [ vsx * 2, vsy / UI.w * 4 ], color = [0.9,0.9,0.9,0.5] });
+		}
 	}
 }
 
@@ -179,6 +219,13 @@ function ED_event( e )
 		q = 0;
 		if( e.button == 1 )
 		{
+			if( ( ED.mode == EM_EDIT || ED.mode == EM_PUT ) && ED.selected.size && ED.mouseon != -1 &&
+				ED.selected[0] && ED.objects[ ED.mouseon ] == ED.selected[0] )
+			{
+				ED.action = EA_MOVE;
+				ED.origpos = vec2d( ED.selected[0].x, ED.selected[0].y );
+				ED.origcurpos = vec2d( ED_getworldx( e.x ), ED_getworldy( e.y ) );
+			}
 			ED.selected = [];
 			if( ED.mouseon != -1 )
 				ED.selected.push( ED.objects[ ED.mouseon ] );
@@ -213,6 +260,8 @@ function ED_event( e )
 	}
 	else if( e.type == SDL_MOUSEBUTTONUP )
 	{
+		if( e.button == 1 )
+			ED.action = EA_NONE;
 		if( e.button == 2 )
 			ED.scrolling = false;
 	}
@@ -226,8 +275,22 @@ function ED_event( e )
 		{
 			ED.view_x -= e.xrel / UI.h * ED.view_size * 2;
 			ED.view_y -= e.yrel / UI.h * ED.view_size * 2;
+			ED_render();
 		}
 		ED_updatehover( e.x, e.y );
+
+		if( ED.action == EA_MOVE )
+		{
+			wx = ED_getworldx( e.x );
+			wy = ED_getworldy( e.y );
+			ED.selected[0].x = wx - ED.origcurpos.x + ED.origpos.x;
+			ED.selected[0].y = wy - ED.origcurpos.y + ED.origpos.y;
+			if( ED.snap_grid )
+			{
+				ED.selected[0].x = round( ED.selected[0].x / ED.grid_w ) * ED.grid_w;
+				ED.selected[0].y = round( ED.selected[0].y / ED.grid_h ) * ED.grid_h;
+			}
+		}
 	}
 }
 
