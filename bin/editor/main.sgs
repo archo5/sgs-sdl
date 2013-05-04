@@ -1,47 +1,45 @@
 
 include_file( "engine/all.sgs" );
+include_file( "editor/system.sgs" );
 
 
-global
-	EM_VIEW = 0,
-	EM_PUT = 1,
-	EM_PAINT = 2;
-
-
-function ed_create_state()
+global ED_msg_alpha = 0, ED_msg_text = "";
+function ED_message( msg )
 {
-	return
-	{
-		mode = EM_VIEW,
-		show_grid = true,
-		modified = false,
-		file = null,
-		objects = [],
-		undo_list = [],
-		redo_list = [],
-	};
+	global ED_msg_text = msg,
+	       ED_msg_alpha = 1;
 }
 
-global ED = ed_create_state();
 
-function ED_setMode( mode )
+function ED_stateToUI()
 {
-	ED.mode = mode;
 	items = UITopMenu.children[ 1 ].items;
 	foreach( item : items )
 		item.icon = null;
-	items[ mode ].icon = true;
+	items[ ED.mode ].icon = true;
+	UITopMenu.children[ 2 ].items[ 0 ].icon = ED.show_grid;
+}
+
+function ED_resetAll()
+{
+	global ED = ED_createState();
+	ED_stateToUI();
+}
+function ED_setMode( mode )
+{
+	ED.mode = mode;
+	ED_stateToUI();
 }
 function ED_toggleViewGrid()
 {
 	ED.show_grid = !ED.show_grid;
-	UITopMenu.children[ 2 ].items[ 0 ].icon = ED.show_grid;
+	ED_stateToUI();
 }
 
 
 function topmenu_file_new()
 {
-	cb = function( res ){ if( res ) ED = ed_create_state(); };
+	cb = function( res ){ if( res ) ED_resetAll(); };
 	UIDialog.createQuestion( UI, "Do you really want to clear everything?", cb );
 }
 function topmenu_file_quit()
@@ -74,6 +72,12 @@ function initialize()
 	set_video_mode( 1024, 576, 32, "resizable" );
 
 	global lasttime = ftime();
+
+	ED_initialize();
+
+	ED_createObject( "misc", 32, 32 );
+	ED_createObject( "player", 64, 32 );
+	ED_createObject( "metadata", 128, 32 );
 	
 	global UITopMenu, UI = UIFrame.create( 1024, 576 );
 	
@@ -121,7 +125,7 @@ function initialize()
 
 function update()
 {
-	global lasttime;
+	global lasttime, ED_msg_alpha, ED_msg_text;
 	var curtime = ftime();
 	var delta = curtime - lasttime;
 	if( delta > 1.0/15.0 )
@@ -131,9 +135,14 @@ function update()
 	var cc = [0.1,0.2,0.4];
 	clear( cc );
 
-	set_camera_2d( 232, 232, 200, 1024/576, 0 );
+	ED_draw();
 
 	UI.draw();
+	if( ED_msg_alpha > 0 )
+	{
+		draw_text_rect( ED_msg_text, UI.font, [0.9, ED_msg_alpha], DT_LEFT | DT_BOTTOM, 4, UI.w - 4, 4, UI.h - 4 );
+		ED_msg_alpha -= delta / 3;
+	}
 	
 	present();
 
@@ -143,9 +152,10 @@ function update()
 
 function on_event( e )
 {
-	if( e.type == SDL_QUIT )
+	if( e.type == SDL_QUIT || ( e.type == SDL_KEYDOWN && e.keycode == SDLK_F4 && e.mod & KMOD_ALT ) )
 		global sys_exit = true;
 
+	ED_event( e );
 	UI.event( e );
 }
 

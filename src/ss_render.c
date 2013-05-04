@@ -816,7 +816,7 @@ int ss_draw( SGS_CTX )
 		{
 			if( vt < vtex.data + vtex.size )
 			{
-				glTexCoord2f( 1-vt[0], 1-vt[1] );
+				glTexCoord2f( vt[0], 1-vt[1] );
 				vt += 2;
 			}
 			if( vc < vcol.data + vcol.size )

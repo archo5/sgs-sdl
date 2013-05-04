@@ -1,0 +1,11 @@
+{
+	"player":
+	{
+		"name": "player",
+		"icon": "crosshair.png",
+		"origin_x": 64,
+		"origin_y": 64,
+		"params": []
+	},
+	"metadata": {}
+}

@@ -1,4 +1,6 @@
 
+#include "../sgscript/ext/sgsjson.c"
+
 #include "ss_main.h"
 
 #include "../sgscript/ext/sgs_idbg.h"
@@ -24,6 +26,9 @@ int main( int argc, char* argv[] )
 	sgs_LoadLib_OS( C );
 	sgs_LoadLib_String( C );
 	sgs_LoadLib_Type( C );
+
+	json_module_entry_point( C );
+
 	sgs_InitExtSys( C );
 	sgs_InitExtMath( C );
 	sgs_InitImage( C );
@@ -77,7 +82,7 @@ int main( int argc, char* argv[] )
 		sgs_Pop( C, 1 );
 	}
 	
-	printf( "\n\n-- sgs-sdl framework --\n\n" );
+	printf( "\n[SGS-SDL framework]\n" );
 	
 	/* initialize SDL */
 	if( SDL_Init( SDL_INIT_VIDEO ) < 0 )

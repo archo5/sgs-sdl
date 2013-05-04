@@ -109,6 +109,22 @@ sgs_RegIntConst sdl_ints[] =
 	IC( SDL_QUIT ),
 	IC( SDL_VIDEORESIZE ),
 	IC( SDL_VIDEOEXPOSE ),
+
+	/* constants */
+	IC( SDLK_F4 ),
+	
+	IC( KMOD_NONE ),
+	IC( KMOD_NUM ),
+	IC( KMOD_CAPS ),
+	IC( KMOD_LCTRL ),
+	IC( KMOD_RCTRL ),
+	IC( KMOD_RSHIFT ),
+	IC( KMOD_LSHIFT ),
+	IC( KMOD_RALT ),
+	IC( KMOD_LALT ),
+	IC( KMOD_CTRL ),
+	IC( KMOD_SHIFT ),
+	IC( KMOD_ALT ),
 };
 
 sgs_RegFuncConst sdl_funcs[] =

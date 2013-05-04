@@ -2,7 +2,7 @@
 function set_camera_2d( x, y, size, aspect, angle )
 {
 	size = 1.0/size;
-	x *= size;
+	x *= size/aspect;
 	y *= size;
 	mtx = 
 	[

@@ -1,4 +1,16 @@
 
+function WARNING( what ){ sys_print( SGS_WARNING, what ); }
+function ERROR( what ){ sys_print( SGS_ERROR, what ); }
+
+
+function array_find( arr, what )
+{
+	foreach( i, x : arr )
+		if( x === what )
+			return i;
+	return false;
+}
+
 function expand_col4( color )
 {
 	c0 = color[ 0 ];

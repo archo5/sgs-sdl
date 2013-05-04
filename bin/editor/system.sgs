@@ -1,0 +1,233 @@
+
+
+global
+	EM_VIEW = 0,
+	EM_PUT = 1,
+	EM_PAINT = 2;
+
+
+function ED_createState()
+{
+	var deficon = "editor/img/default_icon.png";
+	return
+	{
+		mode = EM_VIEW,
+		view_x = 0,
+		view_y = 0,
+		view_size = 300,
+		mouseon = -1,
+		selected = [],
+		scrolling = false,
+		show_grid = true,
+		modified = false,
+		file = null,
+		objects = [],
+		undo_list = [],
+		redo_list = [],
+		default_icon = deficon,
+		default_itex = create_texture( deficon ),
+		mouseon_tex = create_texture( "editor/img/mouseon.png" ),
+		select_tex = create_texture( "editor/img/select.png" ),
+	};
+}
+
+function ED_addUndoLevel()
+{
+	ED.redo_list.clear();
+	ED.undo_list.push( clone( ED.objects ) );
+	ED.modified = true;
+}
+
+function ED_createObject( name, x, y )
+{
+	var data = null;
+	if( isset( EDOBJ, name ) )
+		data = EDOBJ[ name ];
+
+	obj = { name = name, x = x, y = y, data = data };
+	if( obj.data != null )
+	{
+		obj.tex = obj.data.texture;
+		obj.width = obj.data.width;
+		obj.height = obj.data.height;
+	}
+	else
+	{
+		obj.tex = ED.default_itex;
+		obj.width = obj.tex.width;
+		obj.height = obj.tex.height;
+	}
+	ED_addUndoLevel();
+	ED.objects.push( obj );
+	return obj;
+}
+
+function ED_loadObjDefs()
+{
+	var defs = json_decode( io_file_read( "editor/objects.json" ) );
+	foreach( key, def : defs )
+	{
+		if( !isset( def, "name" ) ){ def.name = key; }
+		if( !isset( def, "icon" ) ){ def.icon = ED.default_icon; }
+		if( !isset( def, "origin_x" ) ){ def.origin_x = 0; }
+		if( !isset( def, "origin_y" ) ){ def.origin_y = 0; }
+		if( !isset( def, "params" ) ){ def.params = []; }
+
+		def.texture = create_texture( def.icon );
+		if( !isset( def, "width" ) ){ def.width = def.texture.width; }
+		if( !isset( def, "height" ) ){ def.height = def.texture.height; }
+	}
+	return defs;
+}
+
+function ED_initialize()
+{
+	global ED = ED_createState();
+	global EDOBJ = ED_loadObjDefs();
+}
+
+function ED_draw()
+{
+	aspect = UI.w / UI.h;
+	set_camera_ui( 0, UI.w, 0, UI.h );
+	foreach( oid, obj : ED.objects )
+	{
+		x = obj.x;
+		y = obj.y;
+		width = obj.width / ED.view_size * UI.h * 0.5;
+		height = obj.height / ED.view_size * UI.h * 0.5;
+		if( obj.data != null )
+		{
+			x -= obj.data.origin_x;
+			y -= obj.data.origin_y;
+		}
+
+		x = ( ( x - ED.view_x ) / aspect / ED.view_size * 0.5 + 0.5 ) * UI.w;
+		y = ( ( y - ED.view_y ) / ED.view_size * 0.5 + 0.5 ) * UI.h;
+
+		if( array_find( ED.selected, obj ) !== false )
+			draw_button( ED.select_tex, x - 4, x + width + 4, y - 4, y + height + 4, 4, 4 );
+		if( ED.mouseon == oid )
+			draw_button( ED.mouseon_tex, x - 4, x + width + 4, y - 4, y + height + 4, 4, 4 );
+	}
+
+	set_camera_2d( ED.view_x, ED.view_y, ED.view_size, UI.w / UI.h, 0 );
+
+	foreach( oid, obj : ED.objects )
+	{
+		x = obj.x;
+		y = obj.y;
+		tex = obj.tex;
+		width = obj.width;
+		height = obj.height;
+		if( obj.data != null )
+		{
+			x -= obj.data.origin_x;
+			y -= obj.data.origin_y;
+		}
+		draw({ preset = "tile", texture = tex, position = [ x, y ], scale = [ width, height ] });
+	}
+}
+
+function ED_getworldx( x )
+{
+	return ( x - UI.w * 0.5 ) / UI.h * ED.view_size * 2 + ED.view_x;
+}
+
+function ED_getworldy( y )
+{
+	return ( y - UI.h * 0.5 ) / UI.h * ED.view_size * 2 + ED.view_y;
+}
+
+function ED_updatehover( x, y )
+{
+	x = ED_getworldx( x );
+	y = ED_getworldy( y );
+	ED.mouseon = -1;
+	for( i = ED.objects.size - 1; i >= 0; --i )
+	{
+		O = ED.objects[ i ];
+		ox = O.x;
+		oy = O.y;
+		if( O.data != null )
+		{
+			ox -= O.data.origin_x;
+			oy -= O.data.origin_y;
+		}
+		if( x >= ox && y >= oy && x < ox + O.width && y < oy + O.height )
+		{
+			ED.mouseon = i;
+			break;
+		}
+	}
+}
+
+function ED_zoomMsg()
+{
+	zoompc = UI.h / ED.view_size * 50;
+	ED_message( "Zoom: " $ round( zoompc * 100 ) / 100 $ "%" );
+}
+
+function ED_event( e )
+{
+	if( e.type == SDL_MOUSEBUTTONDOWN )
+	{
+		var ctrl = UI.get_ctrl_at( e.x, e.y );
+		if( ctrl !== null && ctrl !== UI )
+			return;
+
+		q = 0;
+		if( e.button == 1 )
+		{
+			ED.selected = [];
+			if( ED.mouseon != -1 )
+				ED.selected.push( ED.objects[ ED.mouseon ] );
+		}
+		if( e.button == 2 )
+			ED.scrolling = true;
+		if( e.button == 4 )
+			q = 0.1;
+		if( e.button == 5 )
+			q = -0.1;
+		if( q )
+		{
+			if( ( q > 0 && ED.view_size < 10 ) ||
+				( q < 0 && ED.view_size > 1000 ) )
+			{
+				ED_zoomMsg();
+				return;
+			}
+
+			w = UI.w; if( w <= 0 ) w = 1;
+			h = UI.h; if( h <= 0 ) h = 1;
+			sz = h;
+			x = ( e.x - w * 0.5 ) / sz;
+			y = ( e.y - h * 0.5 ) / sz;
+			ED.view_x += x * ED.view_size * q * 4;
+			ED.view_y += y * ED.view_size * q * 4;
+			ED.view_size *= pow( 0.1, q );
+
+			ED_updatehover( e.x, e.y );
+			ED_zoomMsg();
+		}
+	}
+	else if( e.type == SDL_MOUSEBUTTONUP )
+	{
+		if( e.button == 2 )
+			ED.scrolling = false;
+	}
+	else if( e.type == SDL_MOUSEMOTION )
+	{
+		var ctrl = UI.get_ctrl_at( e.x, e.y );
+		if( ctrl !== null && ctrl !== UI )
+			return;
+
+		if( ED.scrolling )
+		{
+			ED.view_x -= e.xrel / UI.h * ED.view_size * 2;
+			ED.view_y -= e.yrel / UI.h * ED.view_size * 2;
+		}
+		ED_updatehover( e.x, e.y );
+	}
+}
+
