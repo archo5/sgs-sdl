@@ -80,12 +80,10 @@ function initialize()
 	UI.formdata[ "editmode" ] = ED.mode = EM_EDIT;
 	function ed_changemode(){ ED.mode = UI.formdata[ "editmode" ]; };
 	UITopMenu.addChild( UIControl.createText( "Mode:", 150, 0, 50, 22, DT_CENTER | DT_VCENTER ) );
-	UITopMenu.addChild( UIControl.createRadioButton( "View", "editmode", EM_VIEW, 200, 0, 52, 24, ed_changemode ) );
-	UITopMenu.addChild( UIControl.createRadioButton( "Edit", "editmode", EM_EDIT, 254, 0, 52, 24, ed_changemode ) );
-	UITopMenu.addChild( UIControl.createRadioButton( "Put", "editmode", EM_PUT, 308, 0, 52, 24, ed_changemode ) );
-	UITopMenu.addChild( UIControl.createRadioButton( "Paint", "editmode", EM_PAINT, 362, 0, 52, 24, ed_changemode ) );
+	var mopts = [ "View", "Edit", "Put", "Paint", "Erase" ];
+	UITopMenu.addChild( UIControl.createListBox( "editmode", mopts, EM_EDIT, 200, 0, 80, 24, ed_changemode ) );
 
-	UITopMenu.addChild( UIControl.createText( "Object:", 440, 0, 80, 22, DT_CENTER | DT_VCENTER ) );
+	UITopMenu.addChild( UIControl.createText( "Object:", 300, 0, 60, 22, DT_CENTER | DT_VCENTER ) );
 	var opts = [ "First", "Some option", "The following one...", "uhdslfhajlsh", "what what what",
 		"1111111 one one one", "this is not the stop", "nor is it the end", "of time and whatever",
 		"but we shall see", "what the fuck", "is it", "soon." ];
@@ -96,7 +94,7 @@ function initialize()
 			opts.push( v.name );
 	}
 	UI.formdata[ "object_type" ] = 0;
-	UITopMenu.addChild( UIControl.createListBox( "object_type", opts, 0, 520, 0, 200, 24 ) );
+	UITopMenu.addChild( UIControl.createListBox( "object_type", opts, 0, 360, 0, 200, 24 ) );
 
 	UITopMenu.addChild( propbtn = UIControl.createSwitch( "Show properties", "show_props", 0, 0, 120, 24 ) );
 	propbtn.right_margin = 0;

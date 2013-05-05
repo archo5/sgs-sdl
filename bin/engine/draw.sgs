@@ -1,31 +1,42 @@
 
-function set_camera_2d( x, y, size, aspect, angle )
+function get_camera_2d_mtx( x, y, size, aspect, angle )
 {
 	size = 1.0/size;
 	x *= size/aspect;
 	y *= size;
-	mtx = 
+	return
 	[
 		size/aspect, 0, 0, -x,
 		0, -size, 0, y,
 		0, 0, 1, -0.5,
 		0, 0, 0, 1,
 	];
-	set_camera( mtx );
+}
+function set_camera_2d( x, y, size, aspect, angle )
+{
+	set_camera( get_camera_2d_mtx( x, y, size, aspect, angle ) );
 }
 
-function set_camera_ui( x1, x2, y1, y2 )
+function get_camera_ui_mtx( x1, x2, y1, y2 )
 {
 	w = x2 - x1;
 	h = y2 - y1;
-	mtx =
+	return
 	[
 		2.0/w, 0, 0, -1-x1/w,
 		0, -2.0/h, 0, 1+y1/w,
 		0, 0, 1, 0,
 		0, 0, 0, 1,
 	];
-	set_camera( mtx );
+}
+function set_camera_ui( x1, x2, y1, y2 )
+{
+	set_camera( get_camera_ui_mtx( x1, x2, y1, y2 ) );
+}
+
+function multiply_point_matrix( mtx, x, y )
+{
+	return vec2d( mtx[0]*x + mtx[1]*y + mtx[3], mtx[4]*x + mtx[5]*y + mtx[7] );
 }
 
 function draw_fitted( tex, left, right, top, bottom, placement )

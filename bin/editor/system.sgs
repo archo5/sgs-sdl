@@ -8,7 +8,8 @@ global
 
 global
 	EA_NONE = 0,
-	EA_MOVE = 1;
+	EA_MOVE = 1,
+	EA_PAINT = 2;
 
 
 function ED_createLevelState( tfname )
@@ -75,8 +76,10 @@ function ED_addUndoLevel( name )
 	ED_message( name );
 }
 
-function ED_createObject( name, x, y )
+function ED_createObject( name, x, y, painting )
 {
+	painting ||= false;
+
 	var data = null;
 	if( isset( EDOBJ, name ) )
 		data = EDOBJ[ name ];
@@ -94,7 +97,8 @@ function ED_createObject( name, x, y )
 		obj.width = obj.tex.width;
 		obj.height = obj.tex.height;
 	}
-	ED_addUndoLevel( "Added '" $ name $ "'" );
+	if( !painting )
+		ED_addUndoLevel( "Added '" $ name $ "'" );
 	ED.state.objects.push( obj );
 	return obj;
 }
@@ -162,37 +166,25 @@ function ED_initialize()
 		EDOLIST.push( v );
 }
 
+function transform_to_view( mtx, x, y, w, h )
+{
+	pt = multiply_point_matrix( mtx, x, y );
+	return vec2d
+	(
+		( pt.x * 0.5 + 0.5 ) * w,
+		( pt.y * -0.5 + 0.5 ) * h
+	);
+}
+
 function ED_draw()
 {
 	aspect = UI.w / UI.h;
 
-	if( ED.mode == EM_EDIT )
-	{
-		set_camera_ui( 0, UI.w, 0, UI.h );
-		foreach( oid, obj : ED.objects )
-		{
-			x = obj.x;
-			y = obj.y;
-			width = obj.width / ED.view_size * UI.h * 0.5;
-			height = obj.height / ED.view_size * UI.h * 0.5;
-			if( obj.data != null )
-			{
-				x -= obj.data.origin_x;
-				y -= obj.data.origin_y;
-			}
+	mtx = get_camera_2d_mtx( ED.view_x, ED.view_y, ED.view_size, aspect, 0 );
 
-			x = ( ( x - ED.view_x ) / aspect / ED.view_size * 0.5 + 0.5 ) * UI.w;
-			y = ( ( y - ED.view_y ) / ED.view_size * 0.5 + 0.5 ) * UI.h;
+	set_camera( mtx );
 
-			if( array_find( ED.selected, obj ) !== false )
-				draw_button( ED.select_tex, x - 4, x + width + 4, y - 4, y + height + 4, 4, 4 );
-			if( ED.mouseon == oid )
-				draw_button( ED.mouseon_tex, x - 4, x + width + 4, y - 4, y + height + 4, 4, 4 );
-		}
-	}
-
-	set_camera_2d( ED.view_x, ED.view_y, ED.view_size, aspect, 0 );
-
+	/* OBJECTS */
 	foreach( oid, obj : ED.objects )
 	{
 		x = obj.x;
@@ -208,24 +200,131 @@ function ED_draw()
 		draw({ preset = "tile", texture = tex, position = [ x, y ], scale = [ width, height ] });
 	}
 
+	/* GHOST OBJECTS (future) */
+	if( ( ED.mode == EM_PUT || ED.mode == EM_PAINT ) && ED.action != EA_MOVE )
+	{
+		x = ED_getworldx( UI.lmpos_x );
+		y = ED_getworldy( UI.lmpos_y );
+		if( ED.snap_grid )
+		{
+			x = ED_snapx( x );
+			y = ED_snapy( y );
+		}
+		obj = EDOLIST[ UI.formdata[ "object_type" ] ];
+		x -= obj.origin_x;
+		y -= obj.origin_y;
+		draw({ preset = "tile", texture = obj.texture, position = [ x, y ],
+			scale = [ obj.width, obj.height ], color = [ 1, 1, 1, 0.5 ] });
+	}
+	
+	/* SELECTED / MOUSE-ON */
+	if( ED.mode == EM_EDIT )
+	{
+		set_camera_ui( 0, UI.w, 0, UI.h );
+		foreach( oid, obj : ED.selected )
+		{
+			x1 = obj.x;
+			y1 = obj.y;
+			if( obj.data != null )
+			{
+				x1 -= obj.data.origin_x;
+				y1 -= obj.data.origin_y;
+			}
+			x2 = x1 + obj.width;
+			y2 = y1 + obj.height;
+
+			p1 = transform_to_view( mtx, x1, y1, UI.w, UI.h );
+			p2 = transform_to_view( mtx, x2, y2, UI.w, UI.h );
+
+			draw_button( ED.select_tex, p1.x - 4, p2.x + 4, p1.y - 4, p2.y + 4, 4, 4 );
+		}
+		if( ED.mouseon != -1 )
+		{
+			obj = ED.objects[ ED.mouseon ];
+			x1 = obj.x;
+			y1 = obj.y;
+			if( obj.data != null )
+			{
+				x1 -= obj.data.origin_x;
+				y1 -= obj.data.origin_y;
+			}
+			x2 = x1 + obj.width;
+			y2 = y1 + obj.height;
+
+			p1 = transform_to_view( mtx, x1, y1, UI.w, UI.h );
+			p2 = transform_to_view( mtx, x2, y2, UI.w, UI.h );
+
+			draw_button( ED.mouseon_tex, p1.x - 4, p2.x + 4, p1.y - 4, p2.y + 4, 4, 4 );
+		}
+	}
+
+	/* PAINTBRUSH OBSTRUCTIONS */
+	if( ED.mode == EM_PAINT )
+	{
+		set_camera_ui( 0, UI.w, 0, UI.h );
+		x = ED_getworldx( UI.lmpos_x );
+		y = ED_getworldy( UI.lmpos_y );
+
+		if( ED.snap_grid )
+		{
+			x = ED_snapx( x );
+			y = ED_snapy( y );
+		}
+
+		ox = x;
+		oy = y;
+		obj = EDOLIST[ UI.formdata[ "object_type" ] ];
+		x -= obj.origin_x;
+		y -= obj.origin_y;
+		w = obj.width;
+		h = obj.height;
+
+		objs = ED_findObjectsInBox( x, x + w, y, y + h );
+		foreach( oid, obj : objs )
+		{
+			x1 = obj.x;
+			y1 = obj.y;
+			if( obj.data != null )
+			{
+				x1 -= obj.data.origin_x;
+				y1 -= obj.data.origin_y;
+			}
+			x2 = x1 + obj.width;
+			y2 = y1 + obj.height;
+
+			p1 = transform_to_view( mtx, x1, y1, UI.w, UI.h );
+			p2 = transform_to_view( mtx, x2, y2, UI.w, UI.h );
+
+			draw_button( ED.select_tex, p1.x - 4, p2.x + 4, p1.y - 4, p2.y + 4, 4, 4 );
+		}
+	}
+
+	set_camera( mtx );
+
+	/* THE GRID */
 	if( ED.show_grid )
 	{
 		vsx = ED.view_size * aspect;
 		vsy = ED.view_size;
-		refx1 = round( ( ED.view_x - vsx - ED.grid_w ) / ED.grid_w ) * ED.grid_w;
-		refy1 = round( ( ED.view_y - vsy - ED.grid_h ) / ED.grid_h ) * ED.grid_h;
-		refx2 = round( ( ED.view_x + vsx + ED.grid_w ) / ED.grid_w ) * ED.grid_w;
-		refy2 = round( ( ED.view_y + vsy + ED.grid_h ) / ED.grid_h ) * ED.grid_h;
+		refx1 = ED_snapx( ED.view_x - vsx - ED.grid_w );
+		refy1 = ED_snapy( ED.view_y - vsy - ED.grid_h );
+		refx2 = ED_snapx( ED.view_x + vsx + ED.grid_w );
+		refy2 = ED_snapy( ED.view_y + vsy + ED.grid_h );
+
+		positions = [];
+		positions.reserve( ( refx2 - refx1 ) / ED.grid_w + 1 );
+		positions.reserve( ( refy2 - refy1 ) / ED.grid_h + 1 );
+
 		for( x = refx1; x <= refx2; x += ED.grid_w )
-		{
-			draw({ preset = "box", position = [ x, ED.view_y ],
-				scale = [ vsy / UI.w * 4, vsy * 2 ], color = [0.9,0.9,0.9,0.5] });
-		}
+			positions.push([ x, ED.view_y ]);
+		draw({ preset = "box", positions = positions,
+			scale = [ vsy / UI.w * 4, vsy * 2 ], color = [0.9,0.9,0.9,0.5] });
+
+		positions.resize( 0 );
 		for( y = refy1; y <= refy2; y += ED.grid_h )
-		{
-			draw({ preset = "box", position = [ ED.view_x, y ],
-				scale = [ vsx * 2, vsy / UI.w * 4 ], color = [0.9,0.9,0.9,0.5] });
-		}
+			positions.push([ ED.view_x, y ]);
+		draw({ preset = "box", positions = positions,
+			scale = [ vsx * 2, vsy / UI.w * 4 ], color = [0.9,0.9,0.9,0.5] });
 	}
 }
 
@@ -233,10 +332,84 @@ function ED_getworldx( x )
 {
 	return ( x - UI.w * 0.5 ) / UI.h * ED.view_size * 2 + ED.view_x;
 }
-
 function ED_getworldy( y )
 {
 	return ( y - UI.h * 0.5 ) / UI.h * ED.view_size * 2 + ED.view_y;
+}
+function ED_snapx( x )
+{
+	return round( x / ED.grid_w ) * ED.grid_w;
+}
+function ED_snapy( y )
+{
+	return round( y / ED.grid_h ) * ED.grid_h;
+}
+
+function ED_findObjectsInBox( x1, x2, y1, y2 )
+{
+	out = [];
+	foreach( obj : ED.objects )
+	{
+		ox1 = obj.x;
+		oy1 = obj.y;
+		if( obj.data )
+		{
+			ox1 -= obj.data.origin_x;
+			oy1 -= obj.data.origin_y;
+		}
+		ox2 = ox1 + obj.width;
+		oy2 = oy1 + obj.height;
+
+		if( x1 < ox2 && ox1 < x2 &&
+			y1 < oy2 && oy1 < y2 )
+			out.push( obj );
+	}
+	return out;
+}
+
+function ED_beginPaint()
+{
+	ED.action = EA_PAINT;
+	ED.numpainted = 0;
+}
+function ED_endPaint()
+{
+}
+function ED_doPaint( x, y )
+{
+	x = ED_getworldx( x );
+	y = ED_getworldy( y );
+
+	if( ED.snap_grid )
+	{
+		x = ED_snapx( x );
+		y = ED_snapy( y );
+	}
+
+	ox = x;
+	oy = y;
+	obj = EDOLIST[ UI.formdata[ "object_type" ] ];
+	x -= obj.origin_x;
+	y -= obj.origin_y;
+	w = obj.width;
+	h = obj.height;
+
+	objs = ED_findObjectsInBox( x, x + w, y, y + h );
+	if( objs.size == 0 )
+	{
+		if( ED.numpainted == 0 )
+			ED_addUndoLevel( "Painted '" $ obj.name $ "'" );
+		ED_createObject( obj.id, ox, oy );
+		ED.numpainted++;
+	}
+
+	ED_message( "Painting... Number of objects painted: " $ ED.numpainted );
+}
+
+function ED_zoomMsg()
+{
+	zoompc = UI.h / ED.view_size * 50;
+	ED_message( "Zoom: " $ round( zoompc * 100 ) / 100 $ "%" );
 }
 
 function ED_updatehover( x, y )
@@ -260,12 +433,6 @@ function ED_updatehover( x, y )
 			break;
 		}
 	}
-}
-
-function ED_zoomMsg()
-{
-	zoompc = UI.h / ED.view_size * 50;
-	ED_message( "Zoom: " $ round( zoompc * 100 ) / 100 $ "%" );
 }
 
 function ED_event( e )
@@ -322,17 +489,31 @@ function ED_event( e )
 		{
 			x = ED_getworldx( e.x );
 			y = ED_getworldy( e.y );
+			if( ED.snap_grid )
+			{
+				x = ED_snapx( x );
+				y = ED_snapy( y );
+			}
 			obj = ED_createObject( EDOLIST[ UI.formdata[ "object_type" ] ].id, x, y );
 			ED.selected = [obj];
 			ED.action = EA_MOVE;
 			ED.origpos = ED.origcurpos = vec2d( x, y );
 			return x;
 		}
+		if( ED.mode == EM_PAINT && e.button == 1 )
+		{
+			ED_beginPaint();
+			ED_doPaint( e.x, e.y );
+		}
 	}
 	else if( e.type == SDL_MOUSEBUTTONUP )
 	{
 		if( e.button == 1 )
+		{
+			if( ED.action == EA_PAINT )
+				ED_endPaint();
 			ED.action = EA_NONE;
+		}
 		if( e.button == 2 )
 			ED.scrolling = false;
 	}
@@ -358,10 +539,13 @@ function ED_event( e )
 			ED.selected[0].y = wy - ED.origcurpos.y + ED.origpos.y;
 			if( ED.snap_grid )
 			{
-				ED.selected[0].x = round( ED.selected[0].x / ED.grid_w ) * ED.grid_w;
-				ED.selected[0].y = round( ED.selected[0].y / ED.grid_h ) * ED.grid_h;
+				ED.selected[0].x = ED_snapx( ED.selected[0].x );
+				ED.selected[0].y = ED_snapy( ED.selected[0].y );
 			}
 		}
+
+		if( ED.action == EA_PAINT )
+			ED_doPaint( e.x, e.y );
 	}
 	else if( e.type == SDL_KEYDOWN )
 	{
