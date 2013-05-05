@@ -11,10 +11,20 @@ global
 	EA_MOVE = 1;
 
 
+function ED_createLevelState( tfname )
+{
+	return
+	{
+		name = tfname,
+		objects = [],
+		selected = [],
+	};
+}
+
 function ED_createState()
 {
 	var deficon = "editor/img/default_icon.png";
-	return
+	var state =
 	{
 		mode = EM_VIEW,
 		action = EA_NONE,
@@ -26,7 +36,6 @@ function ED_createState()
 		view_size = 300,
 
 		mouseon = -1,
-		selected = [],
 		scrolling = false,
 
 		show_grid = true,
@@ -36,7 +45,7 @@ function ED_createState()
 
 		modified = false,
 		file = null,
-		objects = [],
+		state = ED_createLevelState( "New Level" ),
 		undo_list = [],
 		redo_list = [],
 
@@ -45,13 +54,25 @@ function ED_createState()
 		mouseon_tex = create_texture( "editor/img/mouseon.png" ),
 		select_tex = create_texture( "editor/img/select.png" ),
 	};
+
+	// additional helper links to current state
+	state.objects = state.state.objects;
+	state.selected = state.state.selected;
+	return state;
 }
 
-function ED_addUndoLevel()
+function ED_addUndoLevel( name )
 {
 	ED.redo_list.clear();
-	ED.undo_list.push( clone( ED.objects ) );
+
+	cstate = clone( ED.state );
+	cstate.name = name;
+	cstate.objects = clone( cstate.objects );
+	cstate.selected = clone( cstate.selected );
+
+	ED.undo_list.push( cstate );
 	ED.modified = true;
+	ED_message( name );
 }
 
 function ED_createObject( name, x, y )
@@ -73,9 +94,43 @@ function ED_createObject( name, x, y )
 		obj.width = obj.tex.width;
 		obj.height = obj.tex.height;
 	}
-	ED_addUndoLevel();
-	ED.objects.push( obj );
+	ED_addUndoLevel( "Added '" $ name $ "'" );
+	ED.state.objects.push( obj );
 	return obj;
+}
+
+function ED_removeObjects( objs )
+{
+	if( objs.size )
+	{
+		name = "Deleted ";
+		donl = [];
+		for( i = 0; i < objs.size && i < 5; ++i )
+			donl.push( "'" $ objs[ i ].name $ "'" );
+		name $= string_implode( donl, ", " );
+		if( objs.size > 5 )
+			name $= " and others";
+		ED_addUndoLevel( name );
+	}
+	foreach( obj : objs )
+	{
+		foreach( i, so : ED.objects )
+		{
+			if( so === obj )
+			{
+				ED.objects.erase( i );
+				break;
+			}
+		}
+		foreach( i, sel : ED.selected )
+		{
+			if( sel === obj )
+			{
+				ED.selected.erase( i );
+				break;
+			}
+		}
+	}
 }
 
 function ED_loadObjDefs()
@@ -83,6 +138,7 @@ function ED_loadObjDefs()
 	var defs = json_decode( io_file_read( "editor/objects.json" ) );
 	foreach( key, def : defs )
 	{
+		def.id = key;
 		if( !isset( def, "name" ) ){ def.name = key; }
 		if( !isset( def, "icon" ) ){ def.icon = ED.default_icon; }
 		if( !isset( def, "origin_x" ) ){ def.origin_x = 0; }
@@ -98,15 +154,19 @@ function ED_loadObjDefs()
 
 function ED_initialize()
 {
-	global ED = ED_createState();
-	global EDOBJ = ED_loadObjDefs();
+	global ED, EDOBJ, EDOLIST;
+	ED = ED_createState();
+	EDOBJ = ED_loadObjDefs();
+	EDOLIST = [];
+	foreach( v : EDOBJ )
+		EDOLIST.push( v );
 }
 
 function ED_draw()
 {
 	aspect = UI.w / UI.h;
 
-	if( ED.mode != EM_VIEW )
+	if( ED.mode == EM_EDIT )
 	{
 		set_camera_ui( 0, UI.w, 0, UI.h );
 		foreach( oid, obj : ED.objects )
@@ -217,9 +277,9 @@ function ED_event( e )
 			return;
 
 		q = 0;
-		if( e.button == 1 )
+		if( e.button == 1 && ED.mode == EM_EDIT )
 		{
-			if( ( ED.mode == EM_EDIT || ED.mode == EM_PUT ) && ED.selected.size && ED.mouseon != -1 &&
+			if( ED.selected.size && ED.mouseon != -1 &&
 				ED.selected[0] && ED.objects[ ED.mouseon ] == ED.selected[0] )
 			{
 				ED.action = EA_MOVE;
@@ -257,6 +317,17 @@ function ED_event( e )
 			ED_updatehover( e.x, e.y );
 			ED_zoomMsg();
 		}
+
+		if( ED.mode == EM_PUT && e.button == 1 )
+		{
+			x = ED_getworldx( e.x );
+			y = ED_getworldy( e.y );
+			obj = ED_createObject( EDOLIST[ UI.formdata[ "object_type" ] ].id, x, y );
+			ED.selected = [obj];
+			ED.action = EA_MOVE;
+			ED.origpos = ED.origcurpos = vec2d( x, y );
+			return x;
+		}
 	}
 	else if( e.type == SDL_MOUSEBUTTONUP )
 	{
@@ -291,6 +362,11 @@ function ED_event( e )
 				ED.selected[0].y = round( ED.selected[0].y / ED.grid_h ) * ED.grid_h;
 			}
 		}
+	}
+	else if( e.type == SDL_KEYDOWN )
+	{
+		if( e.keycode == SDLK_DELETE && ED.selected.size )
+			ED_removeObjects( clone( ED.selected ) );
 	}
 }
 

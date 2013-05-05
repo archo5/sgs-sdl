@@ -19,16 +19,18 @@ global UIControlDefaults =
 	mouseon = false,
 };
 
-global UIControl =
-{
-	/* processing */
-	on_draw = null,
-};
+global UIControl = {};
 
 /* DEFAULT events */
+UIControl.on_draw = _efn;
 UIControl.onclick = _efn;
 UIControl.onmousemove = _efn;
-UIControl.onattach = _efn;
+function UIControl.onattach()
+{
+	this.frame = this.parent.frame;
+	foreach( c : this.children )
+		c.onattach();
+}
 function UIControl.onhittest( x, y )
 {
 	return this.ax <= x && this.ax + this.w >= x
@@ -95,7 +97,6 @@ function UIControl.get_ctrl_at( x, y )
 function UIControl.addChild( ch )
 {
 	ch.parent = this;
-	ch.frame = this.frame;
 	this.children.push( ch );
 	ch.onattach();
 	ch.onlayout();
@@ -254,6 +255,42 @@ function UIControl.createRadioButton( name, key, value, x, y, w, h, onchange )
 	}
 
 	return UIControl.create( UIRadioButton );
+}
+
+
+
+function UIControl.createSwitch( name, key, x, y, w, h, onchange )
+{
+	var UISwitch =
+	{
+		name = name,
+		type = "switch",
+		key = key,
+		value = true,
+		x = x,
+		y = y,
+		w = w,
+		h = h,
+		onchange = onchange,
+		on_draw = ui_default_paint_radiobtn,
+		textures =
+		[
+			create_texture( "engine/img/buttonN.png" ),
+			create_texture( "engine/img/buttonH.png" ),
+			create_texture( "engine/img/buttonC.png" ),
+		],
+	};
+
+	function UISwitch.onclick()
+	{
+		this.frame.formdata[ this.key ] =
+			!isset( this.frame.formdata, this.key ) ||
+			!this.frame.formdata[ this.key ];
+		if( this.onchange )
+			this.onchange();
+	}
+
+	return UIControl.create( UISwitch );
 }
 
 
@@ -503,6 +540,7 @@ function UIControl.createMenu()
 
 	function UIMenu.onattach()
 	{
+		UIControl.onattach.thiscall( this );
 		this.w = this.parent.w;
 	}
 
@@ -671,6 +709,18 @@ function UIControl.createVScroll( x, y, w, h, onchange )
 			c.on_draw();
 	}
 
+	function UIVScroll.setView( view, cont, pos )
+	{
+		this.hview = view;
+		this.hcontent = cont;
+		if( view >= cont )
+			hvcaspect = 1;
+		else
+			hvcaspect = view / cont;
+		this.children[ 1 ].h = ( this.h - this.btnh * 2 - 4 ) * hvcaspect;
+		this.onlayout();
+		this.setPos( pos );
+	}
 	function UIVScroll.setPos( pos )
 	{
 		if( pos < 0 || this.hview >= this.hcontent ) pos = 0;
@@ -678,7 +728,7 @@ function UIControl.createVScroll( x, y, w, h, onchange )
 		this.pos = pos;
 
 		btn = this.children[ 1 ];
-		btn.y = this.btnh + 2 + ( this.h - this.btnh * 3 - 4 ) * pos;
+		btn.y = this.btnh + 2 + ( this.h - btn.h - this.btnh * 2 - 4 ) * pos;
 		if( this.onchange )
 			this.onchange();
 		btn.onlayout();
@@ -724,7 +774,7 @@ function UIControl.createVScroll( x, y, w, h, onchange )
 			ymin = this.parent.btnh + 2;
 			ymax = this.parent.h - this.parent.btnh - this.h - 2;
 			this.y = this.parent.btny;
-			if( abs( this.x + this.w * 0.5 - x ) < 200 )
+			if( abs( this.ax + this.w * 0.5 - x ) < 200 )
 				this.y += y - this.parent.refy;
 			if( this.y < ymin ) this.y = ymin;
 			if( this.y > ymax ) this.y = ymax;
@@ -753,7 +803,7 @@ function UIControl.createVScroll( x, y, w, h, onchange )
 /*
 	Listbox
 */
-function UIControl.createListBox( options, selected, x, y, w, h, onchange )
+function UIControl.createListBox( key, options, selected, x, y, w, h, onchange )
 {
 	var UIListBox =
 	{
@@ -762,9 +812,10 @@ function UIControl.createListBox( options, selected, x, y, w, h, onchange )
 		w = w,
 		h = h,
 		open = false,
-		pos = 0,
+		key = key,
 		hbase = h,
 		hopen = [options.size, 10][options.size > 10] * 24,
+		hfull = options.size * 24,
 		scroll = options.size > 10,
 		onchange = onchange,
 		options = options,
@@ -784,16 +835,20 @@ function UIControl.createListBox( options, selected, x, y, w, h, onchange )
 		{
 			draw_button( this.textures[2], this.ax - 2, this.ax + this.w + 2,
 				this.ay - 2, this.ay + this.hbase + this.hopen + 2, 4, 4 );
-			foreach( i, opt : this.options )
+			if( this.frame.pushRect( this.ax, this.ax + this.w, this.ay + this.hbase, this.ay + this.h ) )
 			{
-				x1 = this.ax;
-				x2 = x1 + this.w;
-				y1 = this.ay + this.hbase + i * 24;
-				y2 = y1 + 24;
-				if( i == this.hover && this.mouseon )
-					draw_button( this.textures[ this.clicked ], x1 + 2, x2 - 2, y1 + 2, y2 - 2, 4, 4 );
-				draw_text_rect( opt, this.font, [0.1,1.0],
-					DT_LEFT | DT_VCENTER, x1 + 4, x2 - 4, y1 + 2, y2 - 4 );
+				foreach( i, opt : this.options )
+				{
+					x1 = this.ax;
+					x2 = x1 + this.w;
+					y1 = this.ay + this.hbase + i * 24 - this.children[1].pos * ( this.hfull - this.hopen );
+					y2 = y1 + 24;
+					if( i == this.hover && this.mouseon )
+						draw_button( this.textures[ this.clicked ], x1 + 2, x2 - 2, y1 + 2, y2 - 2, 4, 4 );
+					draw_text_rect( opt, this.font, [0.1,1.0],
+						DT_LEFT | DT_VCENTER, x1 + 4, x2 - 4, y1 + 2, y2 - 4 );
+				}
+				this.frame.popRect();
 			}
 		}
 
@@ -801,6 +856,22 @@ function UIControl.createListBox( options, selected, x, y, w, h, onchange )
 			c.on_draw();
 	}
 
+	function UIListBox.onmousedown( x, y, bid )
+	{
+		if( this.open )
+		{
+			if( bid == 4 ) this.children[1].children[0].onclick();
+			if( bid == 5 ) this.children[1].children[2].onclick();
+		}
+		UIControl.onmousedown.thiscall( this, x, y, bid );
+	}
+
+	function UIListBox.onhittest( x, y )
+	{
+		if( !this.open && !this.children[0].onhittest( x, y ) )
+			return false;
+		return UIControl.onhittest.thiscall( this, x, y );
+	}
 	function UIListBox.onmousemove( x, y )
 	{
 		this.hover = -1;
@@ -808,7 +879,7 @@ function UIControl.createListBox( options, selected, x, y, w, h, onchange )
 		{
 			x1 = this.ax;
 			x2 = x1 + this.w;
-			y1 = this.ay + this.hbase + i * 24;
+			y1 = this.ay + this.hbase + i * 24 - this.children[1].pos * ( this.hfull - this.hopen );
 			y2 = y1 + 24;
 			if( x1 <= x && x2 > x && y1 <= y && y2 > y )
 			{
@@ -817,15 +888,20 @@ function UIControl.createListBox( options, selected, x, y, w, h, onchange )
 			}
 		}
 	}
+	function UIListBox.close()
+	{
+		this.open = false;
+		this.children[1].visible = false;
+	}
 	function UIListBox.onclick()
 	{
 		this.select( this.hover );
-		this.open = false;
+		this.close();
 	}
 	function UIListBox.globalmouseup( x, y, bid )
 	{
 		if( this.open && !this.onhittest( x, y ) )
-			this.open = false;
+			this.close();
 	}
 
 	function UIListBox.select( id )
@@ -836,6 +912,7 @@ function UIControl.createListBox( options, selected, x, y, w, h, onchange )
 		else
 			name = "";
 		this.children[ 0 ].name = name;
+		this.frame.formdata[ this.key ] = id;
 		if( this.onchange )
 			this.onchange( this );
 	}
@@ -855,6 +932,8 @@ function UIControl.createListBox( options, selected, x, y, w, h, onchange )
 		this.parent.h = this.parent.hbase;
 		if( this.parent.open )
 			this.parent.h += this.parent.hopen;
+		else
+			this.parent.close();
 	};
 	ctl.addChild( lb_btn = UIControl.createButton( name, 0, 0, w, 24, onclk ) );
 	lb_btn.icon = create_texture( "engine/img/btndn.png" );
@@ -870,10 +949,11 @@ function UIControl.createListBox( options, selected, x, y, w, h, onchange )
 		draw_text_rect( this.name, this.font, [0.1,1], DT_LEFT | DT_VCENTER,
 			this.ax + 4, this.ax + this.w - 4, this.ay + 4, this.ay + this.h - 4 );
 		draw_fitted( this.icon, this.ax + 4, this.ax + this.w - 4,
-			this.ay + 2, this.ay + this.h - 2, DT_RIGHT | DT_VCENTER );
+			this.ay + 2, this.ay + this.h - 2 + this.parent.open * 2, DT_RIGHT | DT_VCENTER );
 	}
 
 	ctl.addChild( vscb = UIControl.createVScroll( w - 16, h + 2, 16, UIListBox.hopen - 2 ) );
+	vscb.setView( ctl.hopen, ctl.hfull, 0 );
 	vscb.visible = false;
 
 	return ctl;
@@ -910,6 +990,7 @@ function UIDialog.createFiller()
 	}
 	function UIFiller.onattach()
 	{
+		UIControl.onattach.thiscall( this );
 		this.x = this.parent.x;
 		this.y = this.parent.y;
 		this.w = this.parent.w;
@@ -1103,11 +1184,43 @@ function UIFrame.draw()
 	}
 }
 
+function UIFrame.pushRect( x1, x2, y1, y2 )
+{
+	if( this.rects.size )
+		tr = this.rects[ this.rects.size - 1 ];
+	else
+		tr = { x1 = 0, x2 = this.w, y1 = 0, y2 = this.h };
+
+	if( tr.x1 >= x2 || tr.x2 <= x1 || tr.y1 >= y2 || tr.y2 <= y1 )
+		return false;
+
+	x1 = max( x1, tr.x1 );
+	x2 = min( x2, tr.x2 );
+	y1 = max( y1, tr.y1 );
+	y2 = min( y2, tr.y2 );
+	this.rects.push({ x1 = x1, x2 = x2, y1 = y1, y2 = y2 });
+	set_cliprect( x1, x2, y1, y2 );
+	return true;
+}
+
+function UIFrame.popRect()
+{
+	this.rects.pop();
+	if( this.rects.size )
+	{
+		tr = this.rects[ this.rects.size - 1 ];
+		set_cliprect( tr.x1, tr.x2, tr.y1, tr.y2 );
+	}
+	else
+		set_cliprect( null );
+}
+
 function UIFrame.create( w, h )
 {
 	var f = clone( UIFrame );
 	f.formdata = {};
 	f.w = w;
 	f.h = h;
+	f.rects = [];
 	return UIControl.create( f );
 }

@@ -6,7 +6,13 @@
 
 #define FN( f ) { #f, ss_##f }
 #define IC( i ) { #i, i }
+#define ICX( n, i ) { #n, i }
 #define _WARN( err ) { sgs_Printf( C, SGS_WARNING, err ); return 0; }
+
+
+
+int g_width = 0;
+int g_height = 0;
 
 
 int ss_sleep( SGS_CTX )
@@ -44,10 +50,10 @@ int ss_set_video_mode( SGS_CTX )
 	f = sgs_GetFlagString( C, 3, setvideomode_flags );
 	f |= SDL_OPENGL;
 	
-    SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 8 );
-    SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 8 );
-    SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 8 );
-    SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
+	SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 8 );
+	SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 8 );
+	SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 8 );
+	SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 	scr = SDL_SetVideoMode( w, h, b, f );
 	glDisable( GL_DEPTH_TEST );
 	glMatrixMode( GL_MODELVIEW );
@@ -110,9 +116,289 @@ sgs_RegIntConst sdl_ints[] =
 	IC( SDL_VIDEORESIZE ),
 	IC( SDL_VIDEOEXPOSE ),
 
-	/* constants */
+	/* keycodes */
+	IC( SDLK_UNKNOWN ),
+	IC( SDLK_FIRST ),
+	IC( SDLK_BACKSPACE ),
+	IC( SDLK_TAB ),
+	IC( SDLK_CLEAR ),
+	IC( SDLK_RETURN ),
+	IC( SDLK_PAUSE ),
+	IC( SDLK_ESCAPE ),
+	IC( SDLK_SPACE ),
+	IC( SDLK_EXCLAIM ),
+	IC( SDLK_QUOTEDBL ),
+	IC( SDLK_HASH ),
+	IC( SDLK_DOLLAR ),
+	IC( SDLK_AMPERSAND ),
+	IC( SDLK_QUOTE ),
+	IC( SDLK_LEFTPAREN ),
+	IC( SDLK_RIGHTPAREN ),
+	IC( SDLK_ASTERISK ),
+	IC( SDLK_PLUS ),
+	IC( SDLK_COMMA ),
+	IC( SDLK_MINUS ),
+	IC( SDLK_PERIOD ),
+	IC( SDLK_SLASH ),
+	IC( SDLK_0 ),
+	IC( SDLK_1 ),
+	IC( SDLK_2 ),
+	IC( SDLK_3 ),
+	IC( SDLK_4 ),
+	IC( SDLK_5 ),
+	IC( SDLK_6 ),
+	IC( SDLK_7 ),
+	IC( SDLK_8 ),
+	IC( SDLK_9 ),
+	IC( SDLK_COLON ),
+	IC( SDLK_SEMICOLON ),
+	IC( SDLK_LESS ),
+	IC( SDLK_EQUALS ),
+	IC( SDLK_GREATER ),
+	IC( SDLK_QUESTION ),
+	IC( SDLK_AT ),
+	/*
+	   Skip uppercase letters
+	 */
+	IC( SDLK_LEFTBRACKET ),
+	IC( SDLK_BACKSLASH ),
+	IC( SDLK_RIGHTBRACKET ),
+	IC( SDLK_CARET ),
+	IC( SDLK_UNDERSCORE ),
+	IC( SDLK_BACKQUOTE ),
+	IC( SDLK_a ),
+	IC( SDLK_b ),
+	IC( SDLK_c ),
+	IC( SDLK_d ),
+	IC( SDLK_e ),
+	IC( SDLK_f ),
+	IC( SDLK_g ),
+	IC( SDLK_h ),
+	IC( SDLK_i ),
+	IC( SDLK_j ),
+	IC( SDLK_k ),
+	IC( SDLK_l ),
+	IC( SDLK_m ),
+	IC( SDLK_n ),
+	IC( SDLK_o ),
+	IC( SDLK_p ),
+	IC( SDLK_q ),
+	IC( SDLK_r ),
+	IC( SDLK_s ),
+	IC( SDLK_t ),
+	IC( SDLK_u ),
+	IC( SDLK_v ),
+	IC( SDLK_w ),
+	IC( SDLK_x ),
+	IC( SDLK_y ),
+	IC( SDLK_z ),
+	/* second mapping, for consistency */
+	ICX( SDLK_A, SDLK_a ),
+	ICX( SDLK_B, SDLK_b ),
+	ICX( SDLK_C, SDLK_c ),
+	ICX( SDLK_D, SDLK_d ),
+	ICX( SDLK_E, SDLK_e ),
+	ICX( SDLK_F, SDLK_f ),
+	ICX( SDLK_G, SDLK_g ),
+	ICX( SDLK_H, SDLK_h ),
+	ICX( SDLK_I, SDLK_i ),
+	ICX( SDLK_J, SDLK_j ),
+	ICX( SDLK_K, SDLK_k ),
+	ICX( SDLK_L, SDLK_l ),
+	ICX( SDLK_M, SDLK_m ),
+	ICX( SDLK_N, SDLK_n ),
+	ICX( SDLK_O, SDLK_o ),
+	ICX( SDLK_P, SDLK_p ),
+	ICX( SDLK_Q, SDLK_q ),
+	ICX( SDLK_R, SDLK_r ),
+	ICX( SDLK_S, SDLK_s ),
+	ICX( SDLK_T, SDLK_t ),
+	ICX( SDLK_U, SDLK_u ),
+	ICX( SDLK_V, SDLK_v ),
+	ICX( SDLK_W, SDLK_w ),
+	ICX( SDLK_X, SDLK_x ),
+	ICX( SDLK_Y, SDLK_y ),
+	ICX( SDLK_Z, SDLK_z ),
+	IC( SDLK_DELETE ),
+	/* End of ASCII mapped keysyms */
+
+	/* International keyboard syms */
+	IC( SDLK_WORLD_0 ),		/* 0xA0 */
+	IC( SDLK_WORLD_1 ),
+	IC( SDLK_WORLD_2 ),
+	IC( SDLK_WORLD_3 ),
+	IC( SDLK_WORLD_4 ),
+	IC( SDLK_WORLD_5 ),
+	IC( SDLK_WORLD_6 ),
+	IC( SDLK_WORLD_7 ),
+	IC( SDLK_WORLD_8 ),
+	IC( SDLK_WORLD_9 ),
+	IC( SDLK_WORLD_10 ),
+	IC( SDLK_WORLD_11 ),
+	IC( SDLK_WORLD_12 ),
+	IC( SDLK_WORLD_13 ),
+	IC( SDLK_WORLD_14 ),
+	IC( SDLK_WORLD_15 ),
+	IC( SDLK_WORLD_16 ),
+	IC( SDLK_WORLD_17 ),
+	IC( SDLK_WORLD_18 ),
+	IC( SDLK_WORLD_19 ),
+	IC( SDLK_WORLD_20 ),
+	IC( SDLK_WORLD_21 ),
+	IC( SDLK_WORLD_22 ),
+	IC( SDLK_WORLD_23 ),
+	IC( SDLK_WORLD_24 ),
+	IC( SDLK_WORLD_25 ),
+	IC( SDLK_WORLD_26 ),
+	IC( SDLK_WORLD_27 ),
+	IC( SDLK_WORLD_28 ),
+	IC( SDLK_WORLD_29 ),
+	IC( SDLK_WORLD_30 ),
+	IC( SDLK_WORLD_31 ),
+	IC( SDLK_WORLD_32 ),
+	IC( SDLK_WORLD_33 ),
+	IC( SDLK_WORLD_34 ),
+	IC( SDLK_WORLD_35 ),
+	IC( SDLK_WORLD_36 ),
+	IC( SDLK_WORLD_37 ),
+	IC( SDLK_WORLD_38 ),
+	IC( SDLK_WORLD_39 ),
+	IC( SDLK_WORLD_40 ),
+	IC( SDLK_WORLD_41 ),
+	IC( SDLK_WORLD_42 ),
+	IC( SDLK_WORLD_43 ),
+	IC( SDLK_WORLD_44 ),
+	IC( SDLK_WORLD_45 ),
+	IC( SDLK_WORLD_46 ),
+	IC( SDLK_WORLD_47 ),
+	IC( SDLK_WORLD_48 ),
+	IC( SDLK_WORLD_49 ),
+	IC( SDLK_WORLD_50 ),
+	IC( SDLK_WORLD_51 ),
+	IC( SDLK_WORLD_52 ),
+	IC( SDLK_WORLD_53 ),
+	IC( SDLK_WORLD_54 ),
+	IC( SDLK_WORLD_55 ),
+	IC( SDLK_WORLD_56 ),
+	IC( SDLK_WORLD_57 ),
+	IC( SDLK_WORLD_58 ),
+	IC( SDLK_WORLD_59 ),
+	IC( SDLK_WORLD_60 ),
+	IC( SDLK_WORLD_61 ),
+	IC( SDLK_WORLD_62 ),
+	IC( SDLK_WORLD_63 ),
+	IC( SDLK_WORLD_64 ),
+	IC( SDLK_WORLD_65 ),
+	IC( SDLK_WORLD_66 ),
+	IC( SDLK_WORLD_67 ),
+	IC( SDLK_WORLD_68 ),
+	IC( SDLK_WORLD_69 ),
+	IC( SDLK_WORLD_70 ),
+	IC( SDLK_WORLD_71 ),
+	IC( SDLK_WORLD_72 ),
+	IC( SDLK_WORLD_73 ),
+	IC( SDLK_WORLD_74 ),
+	IC( SDLK_WORLD_75 ),
+	IC( SDLK_WORLD_76 ),
+	IC( SDLK_WORLD_77 ),
+	IC( SDLK_WORLD_78 ),
+	IC( SDLK_WORLD_79 ),
+	IC( SDLK_WORLD_80 ),
+	IC( SDLK_WORLD_81 ),
+	IC( SDLK_WORLD_82 ),
+	IC( SDLK_WORLD_83 ),
+	IC( SDLK_WORLD_84 ),
+	IC( SDLK_WORLD_85 ),
+	IC( SDLK_WORLD_86 ),
+	IC( SDLK_WORLD_87 ),
+	IC( SDLK_WORLD_88 ),
+	IC( SDLK_WORLD_89 ),
+	IC( SDLK_WORLD_90 ),
+	IC( SDLK_WORLD_91 ),
+	IC( SDLK_WORLD_92 ),
+	IC( SDLK_WORLD_93 ),
+	IC( SDLK_WORLD_94 ),
+	IC( SDLK_WORLD_95 ),		/* 0xFF */
+
+	/* Numeric keypad */
+	IC( SDLK_KP0 ),
+	IC( SDLK_KP1 ),
+	IC( SDLK_KP2 ),
+	IC( SDLK_KP3 ),
+	IC( SDLK_KP4 ),
+	IC( SDLK_KP5 ),
+	IC( SDLK_KP6 ),
+	IC( SDLK_KP7 ),
+	IC( SDLK_KP8 ),
+	IC( SDLK_KP9 ),
+	IC( SDLK_KP_PERIOD ),
+	IC( SDLK_KP_DIVIDE ),
+	IC( SDLK_KP_MULTIPLY ),
+	IC( SDLK_KP_MINUS ),
+	IC( SDLK_KP_PLUS ),
+	IC( SDLK_KP_ENTER ),
+	IC( SDLK_KP_EQUALS ),
+
+	/* Arrows + Home/End pad */
+	IC( SDLK_UP ),
+	IC( SDLK_DOWN ),
+	IC( SDLK_RIGHT ),
+	IC( SDLK_LEFT ),
+	IC( SDLK_INSERT ),
+	IC( SDLK_HOME ),
+	IC( SDLK_END ),
+	IC( SDLK_PAGEUP ),
+	IC( SDLK_PAGEDOWN ),
+
+	/* Function keys */
+	IC( SDLK_F1 ),
+	IC( SDLK_F2 ),
+	IC( SDLK_F3 ),
 	IC( SDLK_F4 ),
-	
+	IC( SDLK_F5 ),
+	IC( SDLK_F6 ),
+	IC( SDLK_F7 ),
+	IC( SDLK_F8 ),
+	IC( SDLK_F9 ),
+	IC( SDLK_F10 ),
+	IC( SDLK_F11 ),
+	IC( SDLK_F12 ),
+	IC( SDLK_F13 ),
+	IC( SDLK_F14 ),
+	IC( SDLK_F15 ),
+
+	/* Key state modifier keys */
+	IC( SDLK_NUMLOCK ),
+	IC( SDLK_CAPSLOCK ),
+	IC( SDLK_SCROLLOCK ),
+	IC( SDLK_RSHIFT ),
+	IC( SDLK_LSHIFT ),
+	IC( SDLK_RCTRL ),
+	IC( SDLK_LCTRL ),
+	IC( SDLK_RALT ),
+	IC( SDLK_LALT ),
+	IC( SDLK_RMETA ),
+	IC( SDLK_LMETA ),
+	IC( SDLK_LSUPER ),		/* Left "Windows" key */
+	IC( SDLK_RSUPER ),		/* Right "Windows" key */
+	IC( SDLK_MODE ),		/* "Alt Gr" key */
+	IC( SDLK_COMPOSE ),		/* Multi-key compose key */
+
+	/* Miscellaneous function keys */
+	IC( SDLK_HELP ),
+	IC( SDLK_PRINT ),
+	IC( SDLK_SYSREQ ),
+	IC( SDLK_BREAK ),
+	IC( SDLK_MENU ),
+	IC( SDLK_POWER ),		/* Power Macintosh power key */
+	IC( SDLK_EURO ),		/* Some european keyboards */
+	IC( SDLK_UNDO ),		/* Atari keyboard has Undo */
+
+	/* Add any other keys here */
+
+	IC( SDLK_LAST ),
+
+	/* key modifier flags */
 	IC( KMOD_NONE ),
 	IC( KMOD_NUM ),
 	IC( KMOD_CAPS ),
@@ -210,7 +496,9 @@ int sgs_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 		break;
 	
 	case SDL_VIDEORESIZE:
-		glViewport( 0, 0, event->resize.w, event->resize.h );
+		g_width = event->resize.w;
+		g_height = event->resize.h;
+		glViewport( 0, 0, g_width, g_height );
 		sgs_PushString( C, "w" );
 		sgs_PushInt( C, event->resize.w );
 		sgs_PushString( C, "h" );

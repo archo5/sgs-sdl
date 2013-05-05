@@ -86,14 +86,25 @@ function initialize()
 	UITopMenu.addChild( UIControl.createRadioButton( "Paint", "editmode", EM_PAINT, 362, 0, 52, 24, ed_changemode ) );
 
 	UITopMenu.addChild( UIControl.createText( "Object:", 440, 0, 80, 22, DT_CENTER | DT_VCENTER ) );
-	var opts = [ "First", "Some option", "The following one..." ];
+	var opts = [ "First", "Some option", "The following one...", "uhdslfhajlsh", "what what what",
+		"1111111 one one one", "this is not the stop", "nor is it the end", "of time and whatever",
+		"but we shall see", "what the fuck", "is it", "soon." ];
 	if( true )
 	{
 		opts = [];
-		foreach( edo : EDOBJ )
-			opts.push( edo.name );
+		foreach( v : EDOLIST )
+			opts.push( v.name );
 	}
-	UITopMenu.addChild( UIControl.createListBox( opts, 0, 520, 0, 200, 24 ) );
+	UI.formdata[ "object_type" ] = 0;
+	UITopMenu.addChild( UIControl.createListBox( "object_type", opts, 0, 520, 0, 200, 24 ) );
+
+	UITopMenu.addChild( propbtn = UIControl.createSwitch( "Show properties", "show_props", 0, 0, 120, 24 ) );
+	propbtn.right_margin = 0;
+	function propbtn.onresize()
+	{
+		this.x = this.parent.w - this.w - this.right_margin;
+	}
+	propbtn.onresize();
 
 	// FILE //
 	mi_file = UIControl.createDropMenu();

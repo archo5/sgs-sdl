@@ -1254,6 +1254,32 @@ cleanup:
 
 
 
+int ss_set_cliprect( SGS_CTX )
+{
+	sgs_Integer x1, x2, y1, y2;
+	if( sgs_StackSize( C ) == 1 &&
+		sgs_ItemType( C, 0 ) == SVT_NULL )
+	{
+		glDisable( GL_SCISSOR_TEST );
+		sgs_PushBool( C, 1 );
+		return 1;
+	}
+	else if( sgs_StackSize( C ) == 4 &&
+		sgs_ParseInt( C, 0, &x1 ) &&
+		sgs_ParseInt( C, 1, &x2 ) &&
+		sgs_ParseInt( C, 2, &y1 ) &&
+		sgs_ParseInt( C, 3, &y2 ) )
+	{
+		if( x2 < x1 || y2 < y1 )
+			_WARN( "set_cliprect(): invalid (negative) width and/or height" )
+		glScissor( x1, g_height - y2, x2 - x1, y2 - y1 );
+		glEnable( GL_SCISSOR_TEST );
+		sgs_PushBool( C, 1 );
+		return 1;
+	}
+	else
+		_WARN( "set_cliprect(): unexpected arguments; function expects null or 4 int values" )
+}
 
 
 
@@ -1277,6 +1303,7 @@ sgs_RegFuncConst gl_funcs[] =
 	FN( draw_text_line ),
 	FN( is_font ),
 	FN( set_camera ),
+	FN( set_cliprect ),
 };
 
 const char* gl_init = "global _Gtex = {}, _Gfonts = {};";
