@@ -171,7 +171,7 @@ function update()
 	ED_render();
 
 	sleeptime = 15 - delta * 1000;
-	if( sleeptime > 0 ) sleep( sleeptime );
+//	if( sleeptime > 0 ) sleep( sleeptime );
 }
 
 function on_event( e )

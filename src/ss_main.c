@@ -21,10 +21,18 @@ int ss_enable_profiler( SGS_CTX )
 	return 0;
 }
 
+int ss_enable_profiler2( SGS_CTX )
+{
+	g_enabledProfiler = 2;
+	return 0;
+}
+
 int sgs_InitDebug( SGS_CTX )
 {
 	sgs_PushCFunction( C, ss_enable_profiler );
 	sgs_StoreGlobal( C, "enable_profiler" );
+	sgs_PushCFunction( C, ss_enable_profiler2 );
+	sgs_StoreGlobal( C, "enable_profiler2" );
 	return SGS_SUCCESS;
 }
 
@@ -92,7 +100,7 @@ int main( int argc, char* argv[] )
 	}
 
 	if( g_enabledProfiler )
-		sgs_ProfInit( C, &P, SGS_PROF_OPTIME );
+		sgs_ProfInit( C, &P, g_enabledProfiler );
 	
 	/* check if already required to exit */
 	{

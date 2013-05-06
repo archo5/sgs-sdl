@@ -527,7 +527,7 @@ function ED_event( e )
 		{
 			ED.view_x -= e.xrel / UI.h * ED.view_size * 2;
 			ED.view_y -= e.yrel / UI.h * ED.view_size * 2;
-			ED_render();
+		//	ED_render();
 		}
 		ED_updatehover( e.x, e.y );
 

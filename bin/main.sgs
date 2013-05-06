@@ -16,10 +16,15 @@ function configure()
 			println( "PREEXIT" );
 			sys_exit = true;
 		}
-		else if( arg == "-profile-ops" )
+		else if( arg == "-profile" )
 		{
 			enable_profiler();
 			println( "PROFILER ENABLED" );
+		}
+		else if( arg == "-profile-ops" )
+		{
+			enable_profiler2();
+			println( "PROFILER [mode 2] ENABLED" );
 		}
 		else if( arg == "-editor" )
 		{
