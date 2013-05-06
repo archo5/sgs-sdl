@@ -5,21 +5,32 @@ include_file( "engine/all.sgs" );
 function configure()
 {
 	global sys_exit;
+
+	editor = false;
 	
-	foreach( i : sys_args )
+	for( i = 0; i < sys_args.size; ++i )
 	{
 		var arg = sys_args[ i ];
 		if( arg == "-preexit" )
 		{
-			print( "PREEXIT\n" );
+			println( "PREEXIT" );
 			sys_exit = true;
+		}
+		else if( arg == "-profile-ops" )
+		{
+			enable_profiler();
+			println( "PROFILER ENABLED" );
 		}
 		else if( arg == "-editor" )
 		{
-			include_file( "editor/main.sgs" );
-			configure();
-			return;
+			editor = true;
 		}
+	}
+
+	if( editor )
+	{
+		include_file( "editor/main.sgs" );
+		configure();
 	}
 }
 

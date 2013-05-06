@@ -8,6 +8,7 @@
 
 #undef ARRAY_SIZE
 #include "../sgscript/ext/sgs_idbg.c"
+#include "../sgscript/ext/sgs_prof.c"
 #undef ARRAY_SIZE
 #define ARRAY_SIZE( x ) (sizeof(x)/sizeof(x[0]))
 

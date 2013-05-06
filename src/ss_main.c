@@ -4,13 +4,31 @@
 #include "ss_main.h"
 
 #include "../sgscript/ext/sgs_idbg.h"
+#include "../sgscript/ext/sgs_prof.h"
 
 
 const char* scr_globalvars = "global \
 sys_exit = false;\
 ";
 
-#undef main
+
+int g_enabledProfiler = 0;
+sgs_Prof P;
+
+int ss_enable_profiler( SGS_CTX )
+{
+	g_enabledProfiler = 1;
+	return 0;
+}
+
+int sgs_InitDebug( SGS_CTX )
+{
+	sgs_PushCFunction( C, ss_enable_profiler );
+	sgs_StoreGlobal( C, "enable_profiler" );
+	return SGS_SUCCESS;
+}
+
+#undef main /* SDL */
 int main( int argc, char* argv[] )
 {
 	int ret;
@@ -29,6 +47,7 @@ int main( int argc, char* argv[] )
 
 	json_module_entry_point( C );
 
+	sgs_InitDebug( C );
 	sgs_InitExtSys( C );
 	sgs_InitExtMath( C );
 	sgs_InitImage( C );
@@ -71,6 +90,9 @@ int main( int argc, char* argv[] )
 		fprintf( stderr, "Failed to configure the framework.\n" );
 		return 1;
 	}
+
+	if( g_enabledProfiler )
+		sgs_ProfInit( C, &P, SGS_PROF_OPTIME );
 	
 	/* check if already required to exit */
 	{
@@ -153,6 +175,13 @@ int main( int argc, char* argv[] )
 		fprintf( stderr, "Failed to clean the application.\n" );
 		return 1;
 	}
+
+	if( g_enabledProfiler )
+	{
+		sgs_ProfDump( &P );
+		sgs_ProfClose( &P );
+	}
+
 	sgs_CloseIDbg( C, &D );
 	sgs_DestroyEngine( C );
 	
