@@ -1056,20 +1056,20 @@ function UIDialog.createQuestion( frame, text, callback, cancel )
 	wrapper.addChild( tbx );
 
 	btn_yes = UIControl.createButton( "Yes", 30, 150, 100, 30,
-		closure( function(){ this[0]( 1 ); this[1].remove(); }, [callback,filler] ) );
+		closure( function(data){ data[0]( 1 ); data[1].remove(); }, [callback,filler] ) );
 	wrapper.addChild( btn_yes );
 
 	no_off = 150;
 	if( !cancel )
 		no_off = 270;
 	btn_no = UIControl.createButton( "No", no_off, 150, 100, 30,
-		closure( function(){ this[0]( 0 ); this[1].remove(); }, [callback,filler] ) );
+		closure( function(data){ data[0]( 0 ); data[1].remove(); }, [callback,filler] ) );
 	wrapper.addChild( btn_no );
 
 	if( cancel )
 	{
 		btn_no = UIControl.createButton( "Cancel", 270, 150, 100, 30,
-			closure( function(){ this[0]( false ); this[1].remove(); }, [callback,filler] ) );
+			closure( function(data){ data[0]( false ); data[1].remove(); }, [callback,filler] ) );
 		wrapper.addChild( btn_no );
 	}
 }

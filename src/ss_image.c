@@ -31,27 +31,13 @@ int _make_image( SGS_CTX, int16_t w, int16_t h, const void* src )
 	return SGS_SUCCESS;
 }
 
-int ss_image_destruct( SGS_CTX, sgs_VarObj* data )
+int ss_image_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 {
 	IMGHDR;
 	sgs_Dealloc( img->data );
 	sgs_Dealloc( img );
 	return SGS_SUCCESS;
 }
-
-int ss_image_clone( SGS_CTX, sgs_VarObj* data )
-{
-	IMGHDR;
-	return _make_image( C, img->width, img->height, img->data );
-}
-
-int ss_image_gettype( SGS_CTX, sgs_VarObj* data )
-{
-	UNUSED( data );
-	sgs_PushString( C, "image" );
-	return SGS_SUCCESS;
-}
-
 
 int ss_image_resize( SGS_CTX )
 {
@@ -98,7 +84,7 @@ end:
 	return 1;
 }
 
-int ss_image_getprop( SGS_CTX, sgs_VarObj* data )
+int ss_image_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
 	char* str;
 	sgs_SizeVal size;
@@ -114,24 +100,36 @@ int ss_image_getprop( SGS_CTX, sgs_VarObj* data )
 	return SGS_ENOTFND;
 }
 
-
-int ss_image_tostring( SGS_CTX, sgs_VarObj* data )
+int ss_image_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
-	char buf[ 32 ];
-	IMGHDR;
-	sprintf( buf, "Image (%d x %d)", (int) img->width, (int) img->height );
-	sgs_PushString( C, buf );
-	return SGS_SUCCESS;
+	if( type == SGS_CONVOP_CLONE )
+	{
+		IMGHDR;
+		return _make_image( C, img->width, img->height, img->data );
+	}
+	else if( type == SGS_CONVOP_TOTYPE )
+	{
+		UNUSED( data );
+		sgs_PushString( C, "image" );
+		return SGS_SUCCESS;
+	}
+	else if( type == SVT_STRING )
+	{
+		char buf[ 32 ];
+		IMGHDR;
+		sprintf( buf, "Image (%d x %d)", (int) img->width, (int) img->height );
+		sgs_PushString( C, buf );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
 }
 
 
 void* image_iface[] =
 {
+	SOP_GETINDEX, ss_image_getindex,
+	SOP_CONVERT, ss_image_convert,
 	SOP_DESTRUCT, ss_image_destruct,
-	SOP_CLONE, ss_image_clone,
-	SOP_GETTYPE, ss_image_gettype,
-	SOP_GETPROP, ss_image_getprop,
-	SOP_TOSTRING, ss_image_tostring,
 	SOP_END
 };
 
@@ -231,7 +229,7 @@ int sgs_CreateImageHelper( SGS_CTX, int16_t w, int16_t h, const void* bits, cons
 	return 1;
 }
 
-int ss_load_image_png( SGS_CTX )
+int ss_load_image_( SGS_CTX, int type1, int type2 )
 {
 	char *str;
 	sgs_SizeVal size;
@@ -245,7 +243,7 @@ int ss_load_image_png( SGS_CTX )
 		BITMAPINFOHEADER* bih;
 		int16_t w, h;
 		
-		dib = FreeImage_Load( FIF_PNG, str, PNG_DEFAULT );
+		dib = FreeImage_Load( type1, str, type2 );
 		if( !dib )
 			_WARN( "ss_load_image_*(): failed to load image" )
 		
@@ -269,6 +267,8 @@ int ss_load_image_png( SGS_CTX )
 		return ret;
 	}
 }
+int ss_load_image_png( SGS_CTX ){ return ss_load_image_( C, FIF_PNG, PNG_DEFAULT ); }
+int ss_load_image_dds( SGS_CTX ){ return ss_load_image_( C, FIF_DDS, DDS_DEFAULT ); }
 
 
 sgs_RegIntConst img_ints[] =
@@ -281,6 +281,7 @@ sgs_RegFuncConst img_funcs[] =
 	FN( load_image ),
 	
 	FNP( ss_load_image_png ),
+	FNP( ss_load_image_dds ),
 };
 
 int sgs_InitImage( SGS_CTX )

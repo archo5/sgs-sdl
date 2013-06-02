@@ -54,7 +54,7 @@ sgs_Texture;
 
 #define TEXHDR sgs_Texture* tex = (sgs_Texture*) data->data
 
-int sstex_destruct( SGS_CTX, sgs_VarObj* data )
+int sstex_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 {
 	TEXHDR;
 	glDeleteTextures( 1, &tex->id );
@@ -62,14 +62,25 @@ int sstex_destruct( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-int sstex_gettype( SGS_CTX, sgs_VarObj* data )
+int sstex_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
-	UNUSED( data );
-	sgs_PushString( C, "texture" );
-	return SGS_SUCCESS;
+	if( type == SGS_CONVOP_TOTYPE )
+	{
+		sgs_PushString( C, "texture" );
+		return SGS_SUCCESS;
+	}
+	else if( type == SVT_STRING )
+	{
+		char buf[ 48 ];
+		TEXHDR;
+		sprintf( buf, "Texture (%d x %d, type %d)", (int) tex->width, (int) tex->height, (int) tex->flags );
+		sgs_PushString( C, buf );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
 }
 
-int sstex_getprop( SGS_CTX, sgs_VarObj* data )
+int sstex_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
 	char* str;
 	sgs_SizeVal size;
@@ -84,21 +95,11 @@ int sstex_getprop( SGS_CTX, sgs_VarObj* data )
 	return SGS_ENOTFND;
 }
 
-int sstex_tostring( SGS_CTX, sgs_VarObj* data )
-{
-	char buf[ 48 ];
-	TEXHDR;
-	sprintf( buf, "Texture (%d x %d, type %d)", (int) tex->width, (int) tex->height, (int) tex->flags );
-	sgs_PushString( C, buf );
-	return SGS_SUCCESS;
-}
-
 void* tex_iface[] =
 {
+	SOP_GETINDEX, sstex_getindex,
+	SOP_CONVERT, sstex_convert,
 	SOP_DESTRUCT, sstex_destruct,
-	SOP_GETTYPE, sstex_gettype,
-	SOP_GETPROP, sstex_getprop,
-	SOP_TOSTRING, sstex_tostring,
 	SOP_END
 };
 
@@ -932,7 +933,7 @@ void ss_font_free( ss_font* font, SGS_CTX )
 
 #define FONTHDR ss_font* font = (ss_font*) data->data
 
-int ss_font_destruct( SGS_CTX, sgs_VarObj* data )
+int ss_font_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 {
 	FONTHDR;
 	ss_font_free( font, C );
@@ -940,11 +941,15 @@ int ss_font_destruct( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-int ss_font_gettype( SGS_CTX, sgs_VarObj* data )
+int ss_font_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
-	UNUSED( data );
-	sgs_PushString( C, "font" );
-	return SGS_SUCCESS;
+	if( type == SGS_CONVOP_TOTYPE )
+	{
+		UNUSED( data );
+		sgs_PushString( C, "font" );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
 }
 
 ss_glyph* ss_font_get_glyph( ss_font* font, SGS_CTX, uint32_t cp );
@@ -981,7 +986,7 @@ int ss_fontI_get_advance( SGS_CTX )
 	return 1;
 }
 
-int ss_font_getprop( SGS_CTX, sgs_VarObj* data )
+int ss_font_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
 	char* str = sgs_ToString( C, 0 );
 	FONTHDR;
@@ -994,9 +999,9 @@ int ss_font_getprop( SGS_CTX, sgs_VarObj* data )
 
 void* font_iface[] =
 {
+	SOP_GETINDEX, ss_font_getindex,
+	SOP_CONVERT, ss_font_convert,
 	SOP_DESTRUCT, ss_font_destruct,
-	SOP_GETTYPE, ss_font_gettype,
-	SOP_GETPROP, ss_font_getprop,
 	SOP_END,
 };
 
@@ -1019,13 +1024,8 @@ int ss_create_font( SGS_CTX )
 
 	/* check if dict has the font */
 	sgs_PushGlobal( C, "_Gfonts" );
-	{
-		sgs_Variable obj, idx;
-		sgs_GetStackItem( C, -1, &obj );
-		sgs_GetStackItem( C, -2, &idx );
-		if( sgs_PushIndex( C, &obj, &idx ) == SGS_SUCCESS )
-			return 1;
-	}
+	if( sgs_PushIndex( C, -1, -2 ) == SGS_SUCCESS )
+		return 1;
 
 	/* attempt to load font with different base paths */
 	{

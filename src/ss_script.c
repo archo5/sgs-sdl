@@ -135,10 +135,31 @@ int stdlib_tovec2d( SGS_CTX, int pos, sgs_Real* v2f, int strict )
 	return 1;
 }
 
-static int sem_v2d_destruct( SGS_CTX, sgs_VarObj* data ){ sgs_Dealloc( data->data ); return SUC; }
-static int sem_v2d_clone( SGS_CTX, sgs_VarObj* data ){ V2DHDR; return _make_v2d( C, hdr[0], hdr[1] ); }
-static int sem_v2d_gettype( SGS_CTX, sgs_VarObj* data ){ UNUSED( data ); sgs_PushString( C, "vec2d" ); return SUC; }
-static int sem_v2d_getprop( SGS_CTX, sgs_VarObj* data )
+static int sem_v2d_destruct( SGS_CTX, sgs_VarObj* data, int dco ){ sgs_Dealloc( data->data ); return SUC; }
+
+static int sem_v2d_convert( SGS_CTX, sgs_VarObj* data, int type )
+{
+	V2DHDR;
+	if( type == SGS_CONVOP_CLONE )
+	{
+		return _make_v2d( C, hdr[0], hdr[1] );
+	}
+	else if( type == SGS_CONVOP_TOTYPE )
+	{
+		sgs_PushString( C, "vec2d" );
+		return SUC;
+	}
+	else if( type == SVT_STRING )
+	{
+		char buf[ 48 ];
+		sprintf( buf, "vec2d(%g;%g)", hdr[0], hdr[1] );
+		sgs_PushString( C, buf );
+		return SUC;
+	}
+	return SGS_ENOTSUP;
+}
+
+static int sem_v2d_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
 	char* str;
 	sgs_SizeVal size;
@@ -165,7 +186,7 @@ static int sem_v2d_getprop( SGS_CTX, sgs_VarObj* data )
 	if( !strcmp( str, "perp2" ) ) return _make_v2d( C, hdr[1], -hdr[0] );
 	return SGS_ENOTFND;
 }
-static int sem_v2d_setprop( SGS_CTX, sgs_VarObj* data )
+static int sem_v2d_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
 	char* str;
 	sgs_SizeVal size;
@@ -180,89 +201,69 @@ static int sem_v2d_setprop( SGS_CTX, sgs_VarObj* data )
 	if( !strcmp( str, "y" ) ){ hdr[ 1 ] = val; return SUC; }
 	return SGS_ENOTFND;
 }
-static int sem_v2d_tostring( SGS_CTX, sgs_VarObj* data )
+
+static int sem_v2d_expr( SGS_CTX, sgs_VarObj* data, int type )
 {
-	char buf[ 48 ];
-	V2DHDR;
-	sprintf( buf, "vec2d(%g;%g)", hdr[0], hdr[1] );
-	sgs_PushString( C, buf );
-	return SUC;
-}
-static int sem_v2d_compare( SGS_CTX, sgs_VarObj* data )
-{
-	sgs_Real *v1, *v2;
-	if( sgs_ItemType( C, 0 ) != SVT_OBJECT || sgs_ItemType( C, 1 ) != SVT_OBJECT ||
-		sgs_GetObjectData( C, 0 )->iface != vec2d_iface ||
-		sgs_GetObjectData( C, 1 )->iface != vec2d_iface )
-		return SGS_EINVAL;
-	
-	v1 = (sgs_Real*) sgs_GetObjectData( C, 0 )->data;
-	v2 = (sgs_Real*) sgs_GetObjectData( C, 1 )->data;
-	
-	return v1[0] - v2[0] + v1[1] - v2[1];
-}
-static int sem_v2d_add( SGS_CTX, sgs_VarObj* data )
-{
-	sgs_Real v1[ 2 ], v2[ 2 ];
-	if( !stdlib_tovec2d( C, 0, v1, 0 ) || !stdlib_tovec2d( C, 1, v2, 0 ) )
-		return SGS_EINVAL;
-	return _make_v2d( C, v1[0] + v2[0], v1[1] + v2[1] );
-}
-static int sem_v2d_sub( SGS_CTX, sgs_VarObj* data )
-{
-	sgs_Real v1[ 2 ], v2[ 2 ];
-	if( !stdlib_tovec2d( C, 0, v1, 0 ) || !stdlib_tovec2d( C, 1, v2, 0 ) )
-		return SGS_EINVAL;
-	return _make_v2d( C, v1[0] - v2[0], v1[1] - v2[1] );
-}
-static int sem_v2d_mul( SGS_CTX, sgs_VarObj* data )
-{
-	sgs_Real v1[ 2 ], v2[ 2 ];
-	if( !stdlib_tovec2d( C, 0, v1, 0 ) || !stdlib_tovec2d( C, 1, v2, 0 ) )
-		return SGS_EINVAL;
-	return _make_v2d( C, v1[0] * v2[0], v1[1] * v2[1] );
-}
-static int sem_v2d_div( SGS_CTX, sgs_VarObj* data )
-{
-	sgs_Real v1[ 2 ], v2[ 2 ];
-	if( !stdlib_tovec2d( C, 0, v1, 0 ) || !stdlib_tovec2d( C, 1, v2, 0 ) )
-		return SGS_EINVAL;
-	if( v2[0] == 0 || v2[1] == 0 )
+	if( type == SGS_EOP_ADD || type == SGS_EOP_SUB || type == SGS_EOP_MUL
+		|| type == SGS_EOP_DIV || type == SGS_EOP_MOD )
 	{
-		sgs_Printf( C, SGS_ERROR, "vec2d operator '/' - division by zero" );
-		return SGS_EINPROC;
+		sgs_Real r[ 2 ], v1[ 2 ], v2[ 2 ];
+		if( !stdlib_tovec2d( C, 0, v1, 0 ) || !stdlib_tovec2d( C, 1, v2, 0 ) )
+			return SGS_EINVAL;
+		
+		if( ( type == SGS_EOP_DIV || type == SGS_EOP_MOD ) &&
+			( v2[0] == 0 || v2[1] == 0 ) )
+		{
+			const char* errstr = type == SGS_EOP_DIV ?
+				"vec2d operator '/' - division by zero" :
+				"vec2d operator '%' - modulo by zero";
+			sgs_Printf( C, SGS_ERROR, errstr );
+			return SGS_EINPROC;
+		}
+		
+		if( type == SGS_EOP_ADD )
+			{ r[0] = v1[0] + v2[0]; r[1] = v1[1] + v2[1]; }
+		else if( type == SGS_EOP_SUB )
+			{ r[0] = v1[0] - v2[0]; r[1] = v1[1] - v2[1]; }
+		else if( type == SGS_EOP_MUL )
+			{ r[0] = v1[0] * v2[0]; r[1] = v1[1] * v2[1]; }
+		else if( type == SGS_EOP_DIV )
+			{ r[0] = v1[0] / v2[0]; r[1] = v1[1] / v2[1]; }
+		else
+			{ r[0] = fmod( v1[0], v2[0] ); r[1] = fmod( v1[1], v2[1] ); }
+		
+		return _make_v2d( C, r[0], r[1] );
 	}
-	return _make_v2d( C, v1[0] / v2[0], v1[1] / v2[1] );
-}
-static int sem_v2d_mod( SGS_CTX, sgs_VarObj* data )
-{
-	sgs_Real v1[ 2 ], v2[ 2 ];
-	if( !stdlib_tovec2d( C, 0, v1, 0 ) || !stdlib_tovec2d( C, 1, v2, 0 ) )
-		return SGS_EINVAL;
-	if( v2[0] == 0 || v2[1] == 0 )
+	else if( type == SGS_EOP_COMPARE )
 	{
-		sgs_Printf( C, SGS_ERROR, "vec2d operator '%' - modulo by zero" );
-		return SGS_EINPROC;
+		sgs_Real *v1, *v2;
+		if( sgs_ItemType( C, 0 ) != SVT_OBJECT || sgs_ItemType( C, 1 ) != SVT_OBJECT ||
+			sgs_GetObjectData( C, 0 )->iface != vec2d_iface ||
+			sgs_GetObjectData( C, 1 )->iface != vec2d_iface )
+			return SGS_EINVAL;
+		
+		v1 = (sgs_Real*) sgs_GetObjectData( C, 0 )->data;
+		v2 = (sgs_Real*) sgs_GetObjectData( C, 1 )->data;
+		
+		return v1[0] - v2[0] + v1[1] - v2[1];
 	}
-	return _make_v2d( C, fmod( v1[0], v2[0] ), fmod( v1[1], v2[1] ) );
+	else if( type == SGS_EOP_NEGATE )
+	{
+		V2DHDR;
+		return _make_v2d( C, -hdr[0], -hdr[1] );
+	}
+	return SGS_ENOTSUP;
 }
-static int sem_v2d_negate( SGS_CTX, sgs_VarObj* data ){ V2DHDR; return _make_v2d( C, -hdr[0], -hdr[1] ); }
 
 static void* vec2d_iface[] =
 {
+	SOP_GETINDEX, sem_v2d_getindex,
+	SOP_SETINDEX, sem_v2d_setindex,
+	SOP_EXPR, sem_v2d_expr,
+	
+	SOP_CONVERT, sem_v2d_convert,
 	SOP_DESTRUCT, sem_v2d_destruct,
-	SOP_CLONE, sem_v2d_clone,
-	SOP_GETTYPE, sem_v2d_gettype,
-	SOP_GETPROP, sem_v2d_getprop,
-	SOP_SETPROP, sem_v2d_setprop,
-	SOP_TOSTRING, sem_v2d_tostring,
-	SOP_COMPARE, sem_v2d_compare,
-	SOP_ADD, sem_v2d_add,
-	SOP_SUB, sem_v2d_sub,
-	SOP_MUL, sem_v2d_mul,
-	SOP_DIV, sem_v2d_div,
-	SOP_MOD, sem_v2d_mod,
-	SOP_NEGATE, sem_v2d_negate,
+	
 	SOP_END
 };
 
