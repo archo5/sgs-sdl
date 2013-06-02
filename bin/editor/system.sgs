@@ -187,15 +187,16 @@ function ED_draw()
 	/* OBJECTS */
 	foreach( oid, obj : ED.objects )
 	{
-		x = obj.x;
-		y = obj.y;
-		tex = obj.tex;
-		width = obj.width;
-		height = obj.height;
-		if( obj.data != null )
+		// 0 name, 1 x, 2 y, 3 data, 4 tex, 5 width, 6 height
+		x = obj.1;//x;
+		y = obj.2;//y;
+		tex = obj.4;//tex;
+		width = obj.5;//width;
+		height = obj.6;//height;
+		if( obj.3/*data*/ != null )
 		{
-			x -= obj.data.origin_x;
-			y -= obj.data.origin_y;
+			x -= obj.3/*data*/.origin_x;
+			y -= obj.3/*data*/.origin_y;
 		}
 		draw({ preset = "tile", texture = tex, position = [ x, y ], scale = [ width, height ] });
 	}
