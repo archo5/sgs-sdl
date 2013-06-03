@@ -752,8 +752,35 @@ colors:
 	sgs_UnpackFree( C, tfi );
 	return 1;
 }
+
+typedef struct _ssvtx
+{
+	float pos[ 3 ];
+	float tex[ 2 ];
+	uint32_t col;
+	
+	float padding[2];
+}
+ssvtx;
+
+uint32_t col4f_pack( float* col )
+{
+#define MAX( a, b ) ((a)>(b)?(a):(b))
+#define MIN( a, b ) ((a)<(b)?(a):(b))
+	float r = col[0], g = col[1], b = col[2], a = col[3];
+	uint32_t ir = r * 255, ig = g * 255, ib = b * 255, ia = a * 255;
+	ir = MAX( 0, MIN( 255, ir ) ); ig = MAX( 0, MIN( 255, ig ) );
+	ib = MAX( 0, MIN( 255, ib ) ); ia = MAX( 0, MIN( 255, ia ) );
+	return ir | (ig<<8) | (ib<<16) | (ia<<24);
+#undef MIN
+#undef MAX
+}
+
 int ss_draw( SGS_CTX )
 {
+	MemBuf B = membuf_create();
+	ssvtx tmp = { { 0, 0, 0 }, { 0, 0 }, 0xffffffff, {0,0} };
+	
 	float *tf, *cc, *vp, *vt, *vc;
 	int mode = GL_TRIANGLES, ret = 1;
 	GLuint texid = 0;
@@ -794,8 +821,11 @@ int ss_draw( SGS_CTX )
 		glDisable( GL_TEXTURE_2D );
 	
 	glMatrixMode( GL_MODELVIEW );
-	glColor4f( 1, 1, 1, 1 );
-	glTexCoord2f( 0, 0 );
+	
+	glEnableClientState( GL_VERTEX_ARRAY );
+	glEnableClientState( GL_TEXTURE_COORD_ARRAY );
+	glEnableClientState( GL_COLOR_ARRAY );
+	
 	cc = icol.data;
 	for( tf = xform.data; tf < xform.data + xform.size; tf += 16 )
 	{
@@ -805,11 +835,11 @@ int ss_draw( SGS_CTX )
 		if( cc < icol.data + icol.size )
 		{
 			/* TODO: color multiplication */
-			glColor4fv( cc );
+			tmp.col = col4f_pack( cc );
 			cc += 4;
 		}
 		
-		glBegin( mode );
+		membuf_resize( &B, C, 0 );
 		
 		vt = vtex.data;
 		vc = vcol.data;
@@ -817,21 +847,35 @@ int ss_draw( SGS_CTX )
 		{
 			if( vt < vtex.data + vtex.size )
 			{
-				glTexCoord2f( vt[0], 1-vt[1] );
+				tmp.tex[0] = vt[0];
+				tmp.tex[1] = 1 - vt[1];
 				vt += 2;
 			}
 			if( vc < vcol.data + vcol.size )
 			{
-				glColor4fv( vc );
+				tmp.col = col4f_pack( vc );
 				vc += 4;
 			}
-			glVertex2fv( vp );
+			tmp.pos[0] = vp[0];
+			tmp.pos[1] = vp[1];
+			membuf_appbuf( &B, C, &tmp, sizeof(tmp) );
 		}
 		
-		glEnd();
+		/* TODO: fix hardcoded offsets, maybe */
+		glVertexPointer( 3, GL_FLOAT, sizeof(ssvtx), B.ptr );
+		glTexCoordPointer( 2, GL_FLOAT, sizeof(ssvtx), B.ptr + 12 );
+		glColorPointer( 4, GL_UNSIGNED_BYTE, sizeof(ssvtx), B.ptr + 20 );
+		
+		glDrawArrays( mode, 0, B.size / sizeof(ssvtx) );
 		
 		glPopMatrix();
 	}
+	
+	glDisableClientState( GL_VERTEX_ARRAY );
+	glDisableClientState( GL_TEXTURE_COORD_ARRAY );
+	glDisableClientState( GL_COLOR_ARRAY );
+	
+	membuf_destroy( &B, C );
 	
 end:
 	if( vert.my ) sgs_Dealloc( vert.data );
