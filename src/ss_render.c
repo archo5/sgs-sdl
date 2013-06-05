@@ -13,7 +13,7 @@
 
 #define FN( f ) { #f, ss_##f }
 #define IC( i ) { #i, i }
-#define _WARN( err ) { sgs_Printf( C, SGS_WARNING, err ); return 0; }
+#define _WARN( err ) return sgs_Printf( C, SGS_WARNING, err );
 
 
 
@@ -307,12 +307,12 @@ floatbuf;
 	- defcomp - a numcomp-sized array that contains the default values for shorter-than-numcomp components
 	- arr - whether to expect an array of multivalue items (true) or an array of float-ish items (false)
 */
-const char* _parse_floatvec( SGS_CTX, float* out, int numcomp )
+const char* _parse_floatvec( SGS_CTX, int stkitem, float* out, int numcomp )
 {
 	sgs_Real data[ 2 ];
 	sgs_Variable var;
 	
-	if( stdlib_tovec2d( C, -1, data, 0 ) )
+	if( stdlib_tovec2d( C, stkitem, data, 0 ) )
 	{
 		out[ 0 ] = data[ 0 ];
 		if( numcomp > 1 )
@@ -320,7 +320,7 @@ const char* _parse_floatvec( SGS_CTX, float* out, int numcomp )
 		return NULL;
 	}
 	
-	sgs_GetStackItem( C, -1, &var );
+	sgs_GetStackItem( C, stkitem, &var );
 	if( sgs_IsArray( C, &var ) )
 	{
 		int32_t i, asz = sgs_ArraySize( C, &var );
@@ -370,7 +370,7 @@ const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, int numc
 		}
 		memcpy( out->data, defcomp, numcomp * sizeof(float) );
 		sgs_PushVariable( C, var );
-		res = _parse_floatvec( C, out->data, numcomp );
+		res = _parse_floatvec( C, -1, out->data, numcomp );
 		sgs_Pop( C, 1 );
 		if( res && out->my )
 		{
@@ -403,7 +403,7 @@ const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, int numc
 		
 		sgs_PushVariable( C, &item );
 		sgs_Release( C, &item );
-		subres = _parse_floatvec( C, off, numcomp );
+		subres = _parse_floatvec( C, -1, off, numcomp );
 		sgs_Pop( C, 1 );
 		
 		if( subres )
@@ -893,16 +893,197 @@ cleanup:
 	goto end;
 }
 
+
+
+typedef struct _vtxfmt vtxfmt;
+struct _vtxfmt
+{
+	int size;
+	/* use / offset / type / count / size / order */
+	GLuint P[ 6 ];
+	GLuint T[ 6 ];
+	GLuint C[ 6 ];
+	GLuint N[ 6 ];
+};
+
+int ss_vertex_format_destruct( SGS_CTX, sgs_VarObj* data, int dco )
+{
+	sgs_Dealloc( data->data );
+	return SGS_SUCCESS;
+}
+
+void* vertex_format_iface[] =
+{
+	SOP_DESTRUCT, ss_vertex_format_destruct,
+	SOP_END,
+};
+
+int ss_make_vertex_format( SGS_CTX )
+{
+	char *fmt;
+	sgs_SizeVal fmtsize;
+	
+	SGSFN( "make_vertex_format" );
+	
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseString( C, 0, &fmt, &fmtsize ) )
+		_WARN( "unexpected arguments; "
+			"function expects 1 argument: string" )
+	
+	{
+		vtxfmt* ef;
+		vtxfmt F = {0};
+		char* fmtend = fmt + fmtsize;
+		int order = 0;
+		while( fmt < fmtend - 2 )
+		{
+			int isz = 0;
+			GLuint* dst;
+			
+			int ch = fmt[0], type = fmt[1], cnt = fmt[2];
+			if( ch != 'p' && ch != 't' && ch != 'c' && ch != 'n' )
+				_WARN( "wrong channel specifier (not p/t/c/n)" )
+			if( type != 'f'  && type != 'c' )
+				_WARN( "wrong type specifier (not f/c)" )
+			if( cnt != '1' && cnt != '2' && cnt != '3' && cnt != '4' )
+				_WARN( "wrong count specifier (not 1/2/3/4)" )
+			
+			if( ch == 'p' ) dst = F.P;
+			else if( ch == 't' ) dst = F.T;
+			else if( ch == 'c' ) dst = F.C;
+			else if( ch == 'n' ) dst = F.N;
+			else dst = NULL;
+			
+			if( dst[0] )
+				_WARN( "a channel cannot appear twice in a format" )
+			
+			dst[0] = 1;
+			dst[1] = F.size;
+			if( type == 'f' ){ isz = 4; dst[2] = GL_FLOAT; }
+			else if( type == 'c' ){ isz = 1; dst[2] = GL_UNSIGNED_BYTE; }
+			
+			if( cnt == '1' ) dst[3] = 1;
+			else if( cnt == '2' ) dst[3] = 2;
+			else if( cnt == '3' ) dst[3] = 3;
+			else if( cnt == '4' ) dst[3] = 4;
+			
+			if( ch == 'n' && cnt != '3' )
+				_WARN( "normals must have 3 components" )
+			
+			F.size += dst[4] = isz * dst[3];
+			dst[5] = ++order;
+			
+			fmt += 3;
+		}
+		
+		if( !F.size )
+			_WARN( "empty vertex format" )
+		
+		ef = sgs_Alloc( vtxfmt );
+		memcpy( ef, &F, sizeof(F) );
+		sgs_PushObject( C, ef, vertex_format_iface );
+		return 1;
+	}
+}
+
+/*
+	- texture
+	- format
+	- data
+*/
+int ss_draw_packed( SGS_CTX )
+{
+	sgs_Integer start, count, type;
+	sgs_Texture* T = NULL;
+	vtxfmt* F;
+	char *data, *idcs = NULL;
+	sgs_SizeVal datasize, idcsize = 0;
+	int ssz = sgs_StackSize( C );
+	
+	SGSFN( "draw_packed" );
+	
+	if( !( ssz == 6 || ssz == 7 ) ||
+		!( sgs_ItemType( C, 0 ) == SVT_NULL || sgs_IsObject( C, 0, tex_iface ) ) ||
+		!sgs_IsObject( C, 1, vertex_format_iface ) ||
+		!sgs_ParseString( C, 2, &data, &datasize ) ||
+		!sgs_ParseInt( C, 3, &start ) ||
+		!sgs_ParseInt( C, 4, &count ) ||
+		!sgs_ParseInt( C, 5, &type ) ||
+		( ssz >=7 && !sgs_ParseString( C, 6, &idcs, &idcsize ) )
+		)
+		_WARN( "unexpected arguments; function expects 6 arguments: "
+			"texture|null, format, string, int, int, int, bool" )
+	
+	F = (vtxfmt*) sgs_GetObjectData( C, 1 )->data;
+	if( sgs_IsObject( C, 0, tex_iface ) )
+		T = (sgs_Texture*) sgs_GetObjectData( C, 0 )->data;
+	
+	if( idcs )
+	{
+		if( 2 * (start+count) > idcsize )
+			_WARN( "not enough data to draw with given start/count values" )
+	}
+	else
+	{
+		if( F->size * (start+count) > datasize )
+			_WARN( "not enough data to draw with given start/count values" )
+	}
+	
+	if( F->P[0] ) glVertexPointer( F->P[3], F->P[2], F->size, data + F->P[1] );
+	if( F->T[0] ) glTexCoordPointer( F->T[3], F->T[2], F->size, data + F->T[1] );
+	if( F->C[0] ) glColorPointer( F->C[3], F->C[2], F->size, data + F->C[1] );
+	if( F->N[0] ) glNormalPointer( F->N[2], F->size, data + F->N[1] );
+	
+	if( T )
+	{
+		glBindTexture( GL_TEXTURE_2D, T->id );
+		glEnable( GL_TEXTURE_2D );
+	}
+	else
+		glDisable( GL_TEXTURE_2D );
+	
+	if( F->P[0] ) glEnableClientState( GL_VERTEX_ARRAY );
+	if( F->T[0] ) glEnableClientState( GL_TEXTURE_COORD_ARRAY );
+	if( F->C[0] ) glEnableClientState( GL_COLOR_ARRAY );
+	if( F->N[0] ) glEnableClientState( GL_NORMAL_ARRAY );
+	
+	glColor4f( 1, 1, 1, 1 );
+	if( idcs )
+		glDrawElements( type, count, GL_UNSIGNED_SHORT, idcs + start * 2 );
+	else
+		glDrawArrays( type, start, count );
+	
+	if( F->P[0] ) glDisableClientState( GL_VERTEX_ARRAY );
+	if( F->T[0] ) glDisableClientState( GL_TEXTURE_COORD_ARRAY );
+	if( F->C[0] ) glDisableClientState( GL_COLOR_ARRAY );
+	if( F->N[0] ) glDisableClientState( GL_NORMAL_ARRAY );
+	
+	return 0;
+}
+
+
+
 int ss_set_camera( SGS_CTX )
 {
 	float mtx[ 16 ] = {0};
+	float mtx2[ 16 ] = {0};
+	int ssz = sgs_StackSize( C );
+	
+	SGSFN( "set_camera" );
 
-	if( sgs_StackSize( C ) != 1 ||
-		_parse_floatvec( C, mtx, 16 ) )
-		_WARN( "set_camera(): expected an array of 16 'real' values" )
-
+	if( ssz < 1 || ssz > 2 ||
+		_parse_floatvec( C, 0, mtx, 16 ) ||
+		( ssz >= 2 && _parse_floatvec( C, 1, mtx2, 16 ) ) )
+		_WARN( "expected an array of 16 'real' values" )
+	
 	glMatrixMode( GL_PROJECTION );
-	glLoadIdentity();
+	if( ssz >= 2 )
+	{
+		_mtx_transpose( mtx2 );
+		glLoadMatrixf( mtx2 );
+	}
+	else
+		glLoadIdentity();
 	glMatrixMode( GL_MODELVIEW );
 	_mtx_transpose( mtx );
 	glLoadMatrixf( mtx );
@@ -1343,11 +1524,9 @@ sgs_RegFuncConst gl_funcs[] =
 {
 	FN( create_texture ),
 	FN( draw ),
-	FN( create_font ),
-	FN( draw_text_line ),
-	FN( is_font ),
-	FN( set_camera ),
-	FN( set_cliprect ),
+	FN( make_vertex_format ), FN( draw_packed ),
+	FN( create_font ), FN( draw_text_line ), FN( is_font ),
+	FN( set_camera ), FN( set_cliprect ),
 };
 
 const char* gl_init = "global _Gtex = {}, _Gfonts = {};";
