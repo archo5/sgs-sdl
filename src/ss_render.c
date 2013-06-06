@@ -1062,6 +1062,43 @@ int ss_draw_packed( SGS_CTX )
 }
 
 
+int ss_matrix_push( SGS_CTX )
+{
+	int set = 0;
+	float mtx[ 16 ] = {0};
+	int ssz = sgs_StackSize( C );
+	
+	SGSFN( "matrix_push" );
+	
+	if( ssz < 1 || ssz > 2 ||
+		_parse_floatvec( C, 0, mtx, 16 ) ||
+		( ssz >= 2 && !sgs_ParseBool( C, 0, &set ) ) )
+		_WARN( "unexpected arguments; function expects array(real x16)[, bool]" )
+	
+	glMatrixMode( GL_MODELVIEW );
+	glPushMatrix();
+	_mtx_transpose( mtx );
+	if( set )
+		glLoadMatrixf( mtx );
+	else
+		glMultMatrixf( mtx );
+	
+	return 0;
+}
+
+int ss_matrix_pop( SGS_CTX )
+{
+	SGSFN( "matrix_pop" );
+	
+	if( sgs_StackSize( C ) )
+		_WARN( "unexpected arguments" )
+	
+	glMatrixMode( GL_MODELVIEW );
+	glPopMatrix();
+	
+	return 0;
+}
+
 
 int ss_set_camera( SGS_CTX )
 {
@@ -1526,6 +1563,7 @@ sgs_RegFuncConst gl_funcs[] =
 	FN( draw ),
 	FN( make_vertex_format ), FN( draw_packed ),
 	FN( create_font ), FN( draw_text_line ), FN( is_font ),
+	FN( matrix_push ), FN( matrix_pop ),
 	FN( set_camera ), FN( set_cliprect ),
 };
 
