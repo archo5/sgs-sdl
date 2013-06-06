@@ -1073,7 +1073,8 @@ int ss_matrix_push( SGS_CTX )
 	if( ssz < 1 || ssz > 2 ||
 		_parse_floatvec( C, 0, mtx, 16 ) ||
 		( ssz >= 2 && !sgs_ParseBool( C, 0, &set ) ) )
-		_WARN( "unexpected arguments; function expects array(real x16)[, bool]" )
+		_WARN( "unexpected arguments; "
+			"function expects 1-2 arguments: array(real x16)[, bool]" )
 	
 	glMatrixMode( GL_MODELVIEW );
 	glPushMatrix();
@@ -1095,6 +1096,24 @@ int ss_matrix_pop( SGS_CTX )
 	
 	glMatrixMode( GL_MODELVIEW );
 	glPopMatrix();
+	
+	return 0;
+}
+
+int ss_set_depth_test( SGS_CTX )
+{
+	int set;
+	
+	SGSFN( "set_depth_test" );
+	
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseBool( C, 0, &set ) )
+		_WARN( "unexpected arguments; function expects 1 argument: bool" )
+	
+	if( set )
+		glEnable( GL_DEPTH_TEST );
+	else
+		glDisable( GL_DEPTH_TEST );
 	
 	return 0;
 }
@@ -1565,6 +1584,7 @@ sgs_RegFuncConst gl_funcs[] =
 	FN( create_font ), FN( draw_text_line ), FN( is_font ),
 	FN( matrix_push ), FN( matrix_pop ),
 	FN( set_camera ), FN( set_cliprect ),
+	FN( set_depth_test ),
 };
 
 const char* gl_init = "global _Gtex = {}, _Gfonts = {};";

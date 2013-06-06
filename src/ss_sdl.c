@@ -66,6 +66,9 @@ int ss_set_video_mode( SGS_CTX )
 	glEnable( GL_BLEND );
 	glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 	
+	glEnable( GL_ALPHA_TEST );
+	glAlphaFunc( GL_GREATER, 0 );
+	
 	sgs_PushBool( C, !!scr );
 	return 1;
 }
@@ -92,8 +95,9 @@ int ss_clear( SGS_CTX )
 		!stdlib_tocolor4( C, 0, col ) )
 		_WARN( "clear(): function expects 1 argument: array of 1-4 real values" )
 	
+	glClearDepth( 1.0f );
 	glClearColor( col[0], col[1], col[2], col[3] );
-	glClear( GL_COLOR_BUFFER_BIT );
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	return 0;
 }
 int ss_present( SGS_CTX )
