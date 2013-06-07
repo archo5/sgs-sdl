@@ -1,5 +1,5 @@
 
-include_file( "engine/all.sgs" );
+include "fmt", "engine/all.sgs";
 
 
 function configure()
@@ -127,6 +127,17 @@ function update()
 	
 	var vcol = [ [cc[0]+0.2,cc[1],cc[2]], [cc[0],cc[1]+0.2,cc[2]], [cc[0],cc[1],cc[2]+0.2] ];
 //	draw({ mode = GL_TRIANGLES, vertices = V, vcolors = vcol, positions = P, scale = [16,16], angle = rotation * M_PI });
+	
+	vdata = fmt_pack( "5f12x 5f12x 5f12x 5f12x",
+		100, 100, 0, 0, 0,
+		200, 100, 0, 1, 0,
+		300, 300, 0, 1, 1,
+		100, 200, 0, 0, 1
+	);
+	vfmt = make_vertex_format( "|pf3tf2" );
+	idata = fmt_pack( "4w", 1, 2, 3, 0 );
+	draw_packed( image, vfmt, vdata, 0, 4, GL_TRIANGLE_FAN );
+	draw_packed( image, vfmt, vdata, 0, 4, GL_TRIANGLE_FAN, idata );
 
 	rain_do( delta );
 	

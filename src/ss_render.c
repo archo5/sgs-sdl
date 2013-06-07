@@ -935,6 +935,11 @@ int ss_make_vertex_format( SGS_CTX )
 		vtxfmt F = {0};
 		char* fmtend = fmt + fmtsize;
 		int order = 0;
+		
+		int aligned = fmt < fmtend && *fmt == '|';
+		if( aligned )
+			fmt++;
+		
 		while( fmt < fmtend - 2 )
 		{
 			int isz = 0;
@@ -978,6 +983,9 @@ int ss_make_vertex_format( SGS_CTX )
 		
 		if( !F.size )
 			_WARN( "empty vertex format" )
+		
+		if( aligned )
+			F.size = ( ( F.size - 1 ) / 32 + 1 ) * 32;
 		
 		ef = sgs_Alloc( vtxfmt );
 		memcpy( ef, &F, sizeof(F) );
