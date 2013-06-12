@@ -69,7 +69,7 @@ int sstex_convert( SGS_CTX, sgs_VarObj* data, int type )
 		sgs_PushString( C, "texture" );
 		return SGS_SUCCESS;
 	}
-	else if( type == SVT_STRING )
+	else if( type == VT_STRING )
 	{
 		char buf[ 48 ];
 		TEXHDR;
@@ -145,7 +145,7 @@ int ss_create_texture( SGS_CTX )
 	
 	sgs_PushItem( C, 0 ); /* NAME [FLAGS] NAME */
 	
-	if( sgs_ItemType( C, 0 ) == SVT_STRING )
+	if( sgs_ItemType( C, 0 ) == VT_STRING )
 	{
 		sgs_Variable var, obj, idx;
 		
@@ -234,7 +234,7 @@ int ss_create_texture( SGS_CTX )
 
 GLuint sgs_GetTextureId( SGS_CTX, sgs_Variable* var )
 {
-	if( var->type != SVT_OBJECT || var->data.O->iface != tex_iface )
+	if( BASETYPE(var->type) != VT_OBJECT || var->data.O->iface != tex_iface )
 		return 0;
 	
 	return ((sgs_Texture*) var->data.O->data)->id;
@@ -393,7 +393,7 @@ const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, int numc
 	{
 		const char* subres;
 		sgs_Variable item;
-		if( !sgs_ArrayGet( C, var, i, &item ) || item.type != SVT_OBJECT )
+		if( !sgs_ArrayGet( C, var, i, &item ) || BASETYPE(item.type) != VT_OBJECT )
 		{
 			sgs_Dealloc( out->data );
 			return "element was not an object";
@@ -793,7 +793,7 @@ int ss_draw( SGS_CTX )
 	};
 	
 	if( sgs_StackSize( C ) != 1 ||
-		sgs_ItemType( C, 0 ) != SVT_OBJECT )
+		sgs_ItemType( C, 0 ) != VT_OBJECT )
 		_WARN( "draw(): expected one dictionary argument" )
 	
 	sgs_UnpackDict( C, 0, mi );
@@ -1011,7 +1011,7 @@ int ss_draw_packed( SGS_CTX )
 	SGSFN( "draw_packed" );
 	
 	if( !( ssz == 6 || ssz == 7 ) ||
-		!( sgs_ItemType( C, 0 ) == SVT_NULL || sgs_IsObject( C, 0, tex_iface ) ) ||
+		!( sgs_ItemType( C, 0 ) == VT_NULL || sgs_IsObject( C, 0, tex_iface ) ) ||
 		!sgs_IsObject( C, 1, vertex_format_iface ) ||
 		!sgs_ParseString( C, 2, &data, &datasize ) ||
 		!sgs_ParseInt( C, 3, &start ) ||
@@ -1250,9 +1250,9 @@ int ss_fontI_get_advance( SGS_CTX )
 
 	if( !sgs_Method( C ) ||
 		sgs_StackSize( C ) != 3 ||
-		sgs_ItemType( C, 0 ) != SVT_OBJECT ||
+		sgs_ItemType( C, 0 ) != VT_OBJECT ||
 		sgs_GetObjectData( C, 0 )->iface != font_iface ||
-		!( sgs_ItemType( C, 1 ) == SVT_NULL || sgs_ParseInt( C, 1, &a ) ) ||
+		!( sgs_ItemType( C, 1 ) == VT_NULL || sgs_ParseInt( C, 1, &a ) ) ||
 		!sgs_ParseInt( C, 2, &b ) )
 		_WARN( "font::get_advance(): unexpected arguments; "
 			"method expects this=font and 2 arguments: int|null, int" )
@@ -1495,7 +1495,7 @@ int ss_is_font( SGS_CTX )
 	if( sgs_StackSize( C ) != 1 )
 		_WARN( "is_font(): unexpected arguments; function expects 1 argument" )
 
-	sgs_PushBool( C, sgs_ItemType( C, 0 ) == SVT_OBJECT &&
+	sgs_PushBool( C, sgs_ItemType( C, 0 ) == VT_OBJECT &&
 		sgs_GetObjectData( C, 0 )->iface == font_iface );
 	return 1;
 }
@@ -1515,7 +1515,7 @@ int ss_draw_text_line( SGS_CTX )
 
 	if( !sgs_ParseString( C, 0, &str, &strsize ) )
 		_WARN( "draw_text_line(): argument 1 (text) must be 'string'" )
-	if( sgs_ItemType( C, 1 ) != SVT_OBJECT || !sgs_GetStackItem( C, 1, &fontvar )
+	if( sgs_ItemType( C, 1 ) != VT_OBJECT || !sgs_GetStackItem( C, 1, &fontvar )
 		|| fontvar.data.O->iface != font_iface )
 		_WARN( "draw_text_line(): argument 2 (font) has wrong type (must be 'font')" )
 	if( !sgs_ParseInt( C, 2, &X ) )
@@ -1547,7 +1547,7 @@ int ss_set_cliprect( SGS_CTX )
 {
 	sgs_Integer x1, x2, y1, y2;
 	if( sgs_StackSize( C ) == 1 &&
-		sgs_ItemType( C, 0 ) == SVT_NULL )
+		sgs_ItemType( C, 0 ) == VT_NULL )
 	{
 		glDisable( GL_SCISSOR_TEST );
 		sgs_PushBool( C, 1 );

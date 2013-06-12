@@ -43,7 +43,7 @@ OBJ = $(patsubst %,$(OBJDIR)/%,$(_OBJ))
 
 
 $(OUTDIR)/sgs-sdl$(BINEXT): $(OBJ)
-	$(MAKE) -C sgscript
+	$(MAKE) -C sgscript static=1
 	gcc -Wall -o $@ $(OBJ) -Lsgscript/lib $(LINKPATHS) $(PLATFLAGS) \
 		-lSDLmain -lSDL -lsgscript -lfreeimage
 	$(PLATPOST)
@@ -53,4 +53,5 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPS)
 
 .PHONY: clean
 clean:
+	$(MAKE) -C sgscript clean
 	$(RM) $(call FixPath,$(OBJDIR)/*.o $(OUTDIR)/sgs*)

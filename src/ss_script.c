@@ -62,7 +62,7 @@ int sgs_UnpackDict( SGS_CTX, int pos, dict_unpack_item_t* items )
 	int ret = 0;
 	sgs_Variable obj, idx;
 	
-	if( !sgs_GetStackItem( C, pos, &obj ) || obj.type != SVT_OBJECT )
+	if( !sgs_GetStackItem( C, pos, &obj ) || BASETYPE( obj.type ) != VT_OBJECT )
 		return ret;
 	
 	while( items->name )
@@ -118,12 +118,12 @@ int stdlib_tovec2d( SGS_CTX, int pos, sgs_Real* v2f, int strict )
 {
 	sgs_VarObj* data;
 	int ty = sgs_ItemType( C, pos );
-	if( !strict && ( ty == SVT_INT || ty == SVT_REAL ) )
+	if( !strict && ( ty == VT_INT || ty == VT_REAL ) )
 	{
 		v2f[0] = v2f[1] = sgs_GetReal( C, pos );
 		return 1;
 	}
-	if( sgs_ItemType( C, pos ) != SVT_OBJECT )
+	if( sgs_ItemType( C, pos ) != VT_OBJECT )
 		return 0;
 	data = sgs_GetObjectData( C, pos );
 	if( data->iface != vec2d_iface )
@@ -149,7 +149,7 @@ static int sem_v2d_convert( SGS_CTX, sgs_VarObj* data, int type )
 		sgs_PushString( C, "vec2d" );
 		return SUC;
 	}
-	else if( type == SVT_STRING )
+	else if( type == VT_STRING )
 	{
 		char buf[ 48 ];
 		sprintf( buf, "vec2d(%g;%g)", hdr[0], hdr[1] );
@@ -237,7 +237,7 @@ static int sem_v2d_expr( SGS_CTX, sgs_VarObj* data, int type )
 	else if( type == SGS_EOP_COMPARE )
 	{
 		sgs_Real *v1, *v2;
-		if( sgs_ItemType( C, 0 ) != SVT_OBJECT || sgs_ItemType( C, 1 ) != SVT_OBJECT ||
+		if( sgs_ItemType( C, 0 ) != VT_OBJECT || sgs_ItemType( C, 1 ) != VT_OBJECT ||
 			sgs_GetObjectData( C, 0 )->iface != vec2d_iface ||
 			sgs_GetObjectData( C, 1 )->iface != vec2d_iface )
 			return SGS_EINVAL;
