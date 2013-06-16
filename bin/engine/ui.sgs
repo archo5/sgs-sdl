@@ -554,14 +554,14 @@ function UIControl.createMenu()
 	{
 		// close the previous one
 		if( this.open_item != -1 &&
-			type_get( this.items[ this.open_item ].onclick ) == TYPE_OBJECT )
+			typeid( this.items[ this.open_item ].onclick ) == VT_OBJECT )
 			this.items[ this.open_item ].onclick.close();
 
 		this.open_item = iid;
 
 		// open the new one
 		if( iid != -1 &&
-			type_get( this.items[ iid ].onclick ) == TYPE_OBJECT )
+			typeid( this.items[ iid ].onclick ) == VT_OBJECT )
 			this.items[ iid ].onclick.open( this.items[ iid ].x, this.y + 24 );
 	}
 
@@ -660,7 +660,7 @@ function UIControl.createMenu()
 	function UIMenu.addItem( item )
 	{
 		this.items.push( item );
-		if( type_get( item.onclick ) == TYPE_OBJECT )
+		if( typeid( item.onclick ) == VT_OBJECT )
 			this.addChild( item.onclick );
 		return item;
 	}

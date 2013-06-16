@@ -51,7 +51,11 @@ int main( int argc, char* argv[] )
 	sgs_LoadLib_Math( C );
 	sgs_LoadLib_OS( C );
 	sgs_LoadLib_String( C );
-	sgs_LoadLib_Type( C );
+	if( sgs_GlobalCall( C, "loadtypeflags", 0, 0 ) != SGS_SUCCESS )
+	{
+		fprintf( stderr, "Failed to initialize the scripting engine\n" );
+		return 1;
+	}
 
 	json_module_entry_point( C );
 

@@ -76,6 +76,35 @@ function ED_addUndoLevel( name )
 	ED_message( name );
 }
 
+/*
+	Call this whenever position or material is changed
+*/
+function ED_updateMesh( obj )
+{
+	x = obj.x;
+	y = obj.y;
+	w = obj.width;
+	h = obj.height;
+	if( obj.data )
+	{
+		x -= obj.data.origin_x;
+		y -= obj.data.origin_y;
+		u0 = obj.data.u0;
+		u1 = obj.data.u1;
+		v0 = obj.data.v0;
+		v1 = obj.data.v1;
+	}
+	else
+	{
+		u0 = 0;
+		u1 = 1;
+		v0 = 0;
+		v1 = 1;
+	}
+	obj.mesh = fmt_pack( "16f", x, y, u0, v1,
+		x+w, y, u1, v1, x+w, y+h, u1, v0, x, y+h, u0, v0 );
+}
+
 function ED_createObject( name, x, y, painting )
 {
 	painting ||= false;
@@ -100,6 +129,7 @@ function ED_createObject( name, x, y, painting )
 	if( !painting )
 		ED_addUndoLevel( "Added '" $ name $ "'" );
 	ED.state.objects.push( obj );
+	ED_updateMesh( obj );
 	return obj;
 }
 
@@ -139,7 +169,15 @@ function ED_removeObjects( objs )
 
 function ED_loadObjDefs()
 {
-	var defs = json_decode( io_file_read( "editor/objects.json" ) );
+	defs = [];
+	foreach( r, name : io_dir( "editor/objects" ) )
+	{
+		if( !r || string_find_rev( name, ".json" ) < name.length - 5 )
+			continue;
+		ffn = "editor/objects/" $ name;
+		defs = get_merged( defs, json_decode( io_file_read( ffn ) ) );
+	}
+	eps = 0.001;
 	foreach( key, def : defs )
 	{
 		def.id = key;
@@ -148,8 +186,17 @@ function ED_loadObjDefs()
 		if( !isset( def, "origin_x" ) ){ def.origin_x = 0; }
 		if( !isset( def, "origin_y" ) ){ def.origin_y = 0; }
 		if( !isset( def, "params" ) ){ def.params = []; }
+		
+		if( !isset( def, "u0" ) ) def.u0 = 0;
+		if( !isset( def, "u1" ) ) def.u1 = 1;
+		if( !isset( def, "v0" ) ) def.v0 = 0;
+		if( !isset( def, "v1" ) ) def.v1 = 1;
+		def.u0 += eps;
+		def.u1 -= eps;
+		def.v0 += eps;
+		def.v1 -= eps;
 
-		def.texture = create_texture( def.icon );
+		def.texture = create_texture( def.icon, "nolerp" );
 		if( !isset( def, "width" ) ){ def.width = def.texture.width; }
 		if( !isset( def, "height" ) ){ def.height = def.texture.height; }
 	}
@@ -185,20 +232,25 @@ function ED_draw()
 	set_camera( mtx );
 
 	/* OBJECTS */
+	fmt = make_vertex_format( "pf2tf2" );
+	fmt2 = make_vertex_format( "pf2tf2cf4" );
 	foreach( oid, obj : ED.objects )
 	{
-		// 0 name, 1 x, 2 y, 3 data, 4 tex, 5 width, 6 height
-		x = obj.1;//x;
-		y = obj.2;//y;
-		tex = obj.4;//tex;
-		width = obj.5;//width;
-		height = obj.6;//height;
-		if( obj.3/*data*/ != null )
+		// 0 name, 1 x, 2 y, 3 data, 4 tex, 5 width, 6 height, (7 mesh?)
+		tex = obj.tex;
+		/*
+		x = obj.x;
+		y = obj.y;
+		width = obj.width;
+		height = obj.height;
+		if( obj.data != null )
 		{
-			x -= obj.3/*data*/.origin_x;
-			y -= obj.3/*data*/.origin_y;
+			x -= obj.data.origin_x;
+			y -= obj.data.origin_y;
 		}
-		draw({ preset = "tile", texture = tex, position = [ x, y ], scale = [ width, height ] });
+		*/
+	//	draw({ preset = "tile", texture = tex, position = [ x, y ], scale = [ width, height ] });
+		draw_packed( tex, fmt, obj.mesh, 0, 4, GL_TRIANGLE_FAN );
 	}
 
 	/* GHOST OBJECTS (future) */
@@ -212,10 +264,21 @@ function ED_draw()
 			y = ED_snapy( y );
 		}
 		obj = EDOLIST[ UI.formdata[ "object_type" ] ];
+		tmpobj = { x = x, y = y, width = obj.width, height = obj.height, data = obj };
+		ED_updateMesh( tmpobj );
+		
+		/*
 		x -= obj.origin_x;
 		y -= obj.origin_y;
 		draw({ preset = "tile", texture = obj.texture, position = [ x, y ],
 			scale = [ obj.width, obj.height ], color = [ 1, 1, 1, 0.5 ] });
+		*/
+		colpack = fmt_pack( "4f", 1, 1, 1, 0.5 );
+		P = string_part;
+		M = tmpobj.mesh;
+		tmpmesh = P( M, 0, 16 ) $ colpack $ P( M, 16, 16 ) $ colpack $
+			P( M, 32, 16 ) $ colpack $ P( M, 48, 16 ) $ colpack;
+		draw_packed( obj.texture, fmt2, tmpmesh, 0, 4, GL_TRIANGLE_FAN );
 	}
 	
 	/* SELECTED / MOUSE-ON */
@@ -543,6 +606,7 @@ function ED_event( e )
 				ED.selected[0].x = ED_snapx( ED.selected[0].x );
 				ED.selected[0].y = ED_snapy( ED.selected[0].y );
 			}
+			ED_updateMesh( ED.selected[0] );
 		}
 
 		if( ED.action == EA_PAINT )

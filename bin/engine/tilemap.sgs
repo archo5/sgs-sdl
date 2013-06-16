@@ -14,6 +14,7 @@ function Tilemap.create( texture, tileWidth, tileHeight )
 		tiles = {},
 		mesh = null,
 		revid = 1,
+		vfmt = make_vertex_format( "|pf2tf2cf4" ),
 	},
 	Tilemap );
 }
@@ -43,42 +44,32 @@ function Tilemap.checkCache()
 	th = this.tileH;
 	itw = 1.0 / this.texture.width;
 	ith = 1.0 / this.texture.height;
+	mesh = "";
 	foreach( tile : this.tiles )
 	{
 		x = tile[0] * tw;
 		y = tile[1] * th;
-		tx = tile[2] * tw;
-		ty = tile[3] * th;
-		tx1 = tx + tw;
-		ty1 = ty + th;
+		tx = tile[2] * tw * itw;
+		ty = tile[3] * th * itw;
+		tx1 = tx + tw * itw;
+		ty1 = ty + th * itw;
 		col = tile[4];
-		P.push
-		(
-			vec2d( x, y ),
-			vec2d( x+tw, y ),
-			vec2d( x+tw, y+th ),
-			vec2d( x, y+th )
-		);
-		T.push
-		(
-			vec2d( tx*itw, ty*ith ),
-			vec2d( tx1*itw, ty*ith ),
-			vec2d( tx1*itw, ty1*ith ),
-			vec2d( tx*itw, ty1*ith )
-		);
-		C.push
-		(
-			col, col, col, col
-		);
+		if( col.size < 4 )
+			col.push( 1.0 );
+		mesh $= fmt_pack( "8f8f8f8f",
+			x, y, tx, ty, col[0], col[1], col[2], col[3],
+			x+tw, y, tx1, ty, col[0], col[1], col[2], col[3],
+			x+tw, y+th, tx1, ty1, col[0], col[1], col[2], col[3],
+			x, y+th, tx, ty1, col[0], col[1], col[2], col[3] );
 	}
-	this.mesh = [ P, T, C ];
+	this.mesh = mesh;
 	this.revid = 0;
 }
 
-function Tilemap.render( /*opt*/ xform )
+function Tilemap.render()
 {
 	this.checkCache();
-
+	/*
 	if( !xform )
 		xform = { position = [0,0] };
 	xform.mode = GL_QUADS;
@@ -88,4 +79,7 @@ function Tilemap.render( /*opt*/ xform )
 	xform.vcolors = this.mesh[ 2 ];
 
 	draw( xform );
+	*/
+	draw_packed( this.texture, this.vfmt, this.mesh,
+		0, this.mesh.length / 32, GL_QUADS );
 }

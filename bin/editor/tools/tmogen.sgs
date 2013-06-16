@@ -1,0 +1,66 @@
+
+include "io", "string", "json";
+
+
+function err( x ){ sys_print( SGS_WARNING, x ); sys_exit(1); }
+
+
+print "Name of output file: ";
+name = string_trim( read_stdin() );
+if( !name )
+	err( "no output file specified" );
+
+print "Path to texture file: ";
+tex = string_trim( read_stdin() );
+if( !tex )
+	err( "no texture file specified" );
+
+print "Tile size: ";
+tsize = toint( string_trim( read_stdin() ) );
+if( !tsize || tsize < 0 )
+	err( "invalid tile size" );
+
+print "Texture width: ";
+twidth = toint( string_trim( read_stdin() ) );
+if( !twidth || twidth < 0 )
+	err( "invalid texture width" );
+
+print "Texture height: ";
+theight = toint( string_trim( read_stdin() ) );
+if( !theight || theight < 0 )
+	err( "invalid texture height" );
+
+
+printlns
+(
+	"",
+	"Name:    " $ name,
+	"Texture: " $ tex,
+	"Size:    " $ tsize,
+	"Width:   " $ twidth,
+	"Height:  " $ theight,
+	""
+);
+
+out = {};
+for( y = 0; y < theight; y += tsize )
+{
+	for( x = 0; x < twidth; x += tsize )
+	{
+		key = string_explode( name, "/" ).reverse()[0] $ "_" $ x $ "_" $ y;
+		ty = theight - y - tsize;
+		tile =
+		{
+			icon = tex,
+			u0 = x / twidth,
+			u1 = ( x + tsize ) / twidth,
+			v0 = ty / theight,
+			v1 = ( ty + tsize ) / theight,
+			width = tsize,
+			height = tsize,
+		};
+		out[ key ] = tile;
+	}
+}
+
+io_file_write( name $ ".json", json_encode( out ) );

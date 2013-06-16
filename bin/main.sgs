@@ -45,12 +45,14 @@ function initialize()
 	set_video_mode( 1024, 576, 32, "" );
 	
 	global UI = UIFrame.create();
-	UI.addChild( UIControl.createButton( "Make it rain!", 10, 10, 120, 40, rain_start ) );
+//	UI.addChild( UIControl.createButton( "Make it rain!", 10, 10, 120, 40, function(){} ) );
 
 	global TM = Tilemap.create( create_texture( "ntset.png", "nolerp" ), 32, 32 );
-	for( y = 0; y < 16; ++y )
+	floor = _G.floor;
+	randf = _G.randf;
+	for( y = 0; y < 64; ++y )
 	{
-		for( x = 0; x < 24; ++x )
+		for( x = 0; x < 64; ++x )
 		{
 			TM.set( x, y, floor( randf() * 3.99 ), floor( randf() * 3.99 ), [1,1,1] );
 		}
@@ -67,38 +69,6 @@ global mpos = [0,0];
 
 global lasttime = ftime();
 global rotation = 0;
-global V =
-[
-	vec2d( sin( 0 ), cos( 0 ) ),
-	vec2d( sin( M_PI*2/3 ), cos( M_PI*2/3 ) ),
-	vec2d( sin( M_PI*4/3 ), cos( M_PI*4/3 ) )
-];
-global C = [ [1,0,0], [0,1,0], [0,0,1] ];
-global P = [];
-for( var i = 0; i < 576; ++i )
-	P.push( vec2d( randf() * 1200, i + randf() ) );
-
-global rain = [];
-global rands = []; for( i = 0; i < 500; ++i ) rands.push( randf() );
-
-function rain_start()
-{
-	global rain;
-	for( i = 0; i < 100; ++i )
-		rain.push( vec2d( randf() * 1024, -10 - 800 * randf() ) );
-}
-
-function rain_do( delta )
-{
-	global rain;
-	for( i = 0; i < rain.size; ++i )
-	{
-		rain[ i ].y += delta * 500 * ( 1 + rands[ i % rands.size ] );
-		if( rain[ i ].y > 600 )
-			rain[ i ].y -= 800;
-	}
-	draw({ preset = "box", texture = image, positions = rain, scale = [16,64] });
-}
 
 function update()
 {
@@ -114,19 +84,9 @@ function update()
 	var cc = [0.1,0.2,0.4];
 	clear( cc );
 
-	set_camera_2d( 232, 232, 200, 1024/576, 0 );
+	set_camera_2d( 500, 500, 500, 1024/576, 0 );
 
 	TM.render();
-	
-	for( var i = 0; i < P.size; ++i )
-	{
-		P[i].x += delta * 100;
-		if( P[i].x > 1100 )
-			P[i].x -= 1200 + randf() * 50;
-	}
-	
-	var vcol = [ [cc[0]+0.2,cc[1],cc[2]], [cc[0],cc[1]+0.2,cc[2]], [cc[0],cc[1],cc[2]+0.2] ];
-//	draw({ mode = GL_TRIANGLES, vertices = V, vcolors = vcol, positions = P, scale = [16,16], angle = rotation * M_PI });
 	
 	vdata = fmt_pack( "5f12x 5f12x 5f12x 5f12x",
 		100, 100, 0, 0, 0,
@@ -139,19 +99,16 @@ function update()
 	draw_packed( image, vfmt, vdata, 0, 4, GL_TRIANGLE_FAN );
 	draw_packed( image, vfmt, vdata, 0, 4, GL_TRIANGLE_FAN, idata );
 
-	rain_do( delta );
-	
-//	draw({ mode = GL_TRIANGLES, vertices = V, vcolors = C, position = mpos, scale = [32,32], angle = rotation * M_PI });
-
 	set_camera_ui( 0, 1024, 0, 576 );
 
 	draw({ preset = "box", texture = image, position = mpos, scale = [128,128], angle = rotation * M_PI });
 	
 	UI.draw();
-
-	nrpt = rain.size * 2 + P.size;
+	
 	fn = create_font( "verdana.ttf", 16 );
-	draw_text_line( "particle count: " $ rain.size+P.size $ "   particle tris: " $ nrpt, fn, 300, 0, [1] );
+	tx = "frame time: " $ ( ftime() - lasttime ) * 1000.0 $ " ms";
+	draw_text_line( tx, fn, 301, 1, [0,0,0,1] );
+	draw_text_line( tx, fn, 300, 0, [1] );
 	
 	present();
 
