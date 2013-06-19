@@ -386,3 +386,35 @@ int sgs_InitExtSys( SGS_CTX )
 	return SGS_SUCCESS;
 }
 
+
+
+
+
+/*
+	API
+*/
+
+static void* apiobj_iface[] = { SOP_END };
+
+extern void* tex_iface[];
+
+int ss_parse_texture( SGS_CTX, int item, sgs_Texture** tex )
+{
+	if( !sgs_IsObject( C, item, tex_iface ) )
+		return 0;
+	if( tex )
+		*tex = (sgs_Texture*) sgs_GetObjectData( C, item )->data;
+	return 1;
+}
+
+int sgs_InitAPI( SGS_CTX )
+{
+	int ret;
+	
+	sgs_PushObject( C, ss_parse_texture, apiobj_iface );
+	ret = sgs_StoreGlobal( C, SS_PARSE_TEXTURE_KEY );
+	if( ret != SGS_SUCCESS ) return ret;
+	
+	return SGS_SUCCESS;
+}
+

@@ -63,6 +63,7 @@ int main( int argc, char* argv[] )
 	sgs_InitExtSys( C );
 	sgs_InitExtMath( C );
 	sgs_InitImage( C );
+	sgs_InitAPI( C );
 
 	/* run the config file */
 	ret = sgs_ExecFile( C, "engine/config.sgs" );

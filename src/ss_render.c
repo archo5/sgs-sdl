@@ -37,21 +37,6 @@ void _mtx_transpose( float* m )
 }
 
 
-
-#define CT_HREPEAT 1
-#define CT_VREPEAT 2
-#define CT_NOLERP 4
-#define CT_MIPMAPS 8
-
-typedef struct _sgs_Texture
-{
-	GLuint id;
-	int32_t flags;
-	int16_t width;
-	int16_t height;
-}
-sgs_Texture;
-
 #define TEXHDR sgs_Texture* tex = (sgs_Texture*) data->data
 
 int sstex_destruct( SGS_CTX, sgs_VarObj* data, int dco )
