@@ -1183,22 +1183,21 @@ int ss_font_init( ss_font* font, SGS_CTX, const char* filename, int size )
 	return 1;
 }
 
+
+static void fontfreefunc( HTPair* p, void* ud )
+{
+	SGS_CTX = (sgs_Context*) ud;
+	ss_glyph* G = (ss_glyph*) p->ptr;
+	if( G->texture )
+		glDeleteTextures( 1, &G->texture );
+	sgs_Dealloc( G );
+}
+
 void ss_font_free( ss_font* font, SGS_CTX )
 {
 	if( font->loaded )
 	{
-		HTPair *p = font->glyphs.pairs, *pend = font->glyphs.pairs + font->glyphs.size;
-		while( p < pend )
-		{
-			if( p->str && p->ptr )
-			{
-				ss_glyph* G = (ss_glyph*) p->ptr;
-				if( G->texture )
-					glDeleteTextures( 1, &G->texture );
-				sgs_Dealloc( G );
-			}
-			p++;
-		}
+		ht_iterate( &font->glyphs, fontfreefunc, C );
 		FT_Done_Face( font->face );
 		ht_free( &font->glyphs, C );
 	}
@@ -1403,15 +1402,16 @@ ss_glyph* ss_font_create_glyph( ss_font* font, SGS_CTX, uint32_t cp )
 
 ss_glyph* ss_font_get_glyph( ss_font* font, SGS_CTX, uint32_t cp )
 {
-	void* g = ht_get( &font->glyphs, (const char*) &cp, 4 );
-	if( !g )
+	const char* cpc = (const char*) &cp;
+	HTPair* p = ht_find( &font->glyphs, cpc, 4, sgs_HashFunc( cpc, 4 ) );
+	if( !p || !p->ptr )
 	{
 		ss_glyph* ng = ss_font_create_glyph( font, C, cp );
 		ht_set( &font->glyphs, C, (const char*) &cp, 4, ng );
 		return ng;
 	}
 	else
-		return (ss_glyph*) g;
+		return (ss_glyph*) p->ptr;
 }
 
 void ss_int_drawtext_line( ss_font* font, SGS_CTX, char* str,
