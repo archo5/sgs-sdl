@@ -331,15 +331,15 @@ sgs_Image* sgs_ImageDS2X( sgs_Image* src, SGS_CTX )
 		for( x = 0; x < w; ++x )
 		{
 			int cx0 = x * 2, cy0 = y * 2;
-			int cx1 = ( cx0 + 1 ) % w, cy1 = ( cy0 + 1 ) % h;
+			int cx1 = ( cx0 + 1 ) % src->width, cy1 = ( cy0 + 1 ) % src->height;
 			uint32_t c00 = srcdata[ cx0 + src->width * cy0 ];
 			uint32_t c10 = srcdata[ cx1 + src->width * cy0 ];
 			uint32_t c01 = srcdata[ cx0 + src->width * cy1 ];
 			uint32_t c11 = srcdata[ cx1 + src->width * cy1 ];
-			uint32_t com1 = ((c00>>24)&0xff) + ((c10>>24)&0xff) + ((c01>>24)&0xff) + ((c11>>24)&0xff);
-			uint32_t com2 = ((c00>>16)&0xff) + ((c10>>16)&0xff) + ((c01>>16)&0xff) + ((c11>>16)&0xff);
-			uint32_t com3 = ((c00>>8)&0xff) + ((c10>>8)&0xff) + ((c01>>8)&0xff) + ((c11>>8)&0xff);
-			uint32_t com4 = ((c00)&0xff) + ((c10)&0xff) + ((c01)&0xff) + ((c11)&0xff);
+			uint32_t com1 = ( ((c00>>24)&0xff) + ((c10>>24)&0xff) + ((c01>>24)&0xff) + ((c11>>24)&0xff) ) / 4;
+			uint32_t com2 = ( ((c00>>16)&0xff) + ((c10>>16)&0xff) + ((c01>>16)&0xff) + ((c11>>16)&0xff) ) / 4;
+			uint32_t com3 = ( ((c00>>8)&0xff) + ((c10>>8)&0xff) + ((c01>>8)&0xff) + ((c11>>8)&0xff) ) / 4;
+			uint32_t com4 = ( ((c00)&0xff) + ((c10)&0xff) + ((c01)&0xff) + ((c11)&0xff) ) / 4;
 			uint32_t col = (com1<<24) | (com2<<16) | (com3<<8) | com4;
 			data[ x + y * w ] = col;
 		}

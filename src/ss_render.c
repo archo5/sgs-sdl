@@ -201,12 +201,12 @@ int ss_create_texture( SGS_CTX )
 		
 		if( flags & CT_HREPEAT ) glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
 		if( flags & CT_VREPEAT ) glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, flags & CT_NOLERP ? GL_NEAREST : GL_LINEAR );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, flags & CT_NOLERP ? GL_NEAREST : GL_LINEAR );
 		{
-			GLuint magf = flags & CT_MIPMAPS ?
+			GLuint minf = flags & CT_MIPMAPS ?
 				( flags & CT_NOLERP ? GL_NEAREST_MIPMAP_NEAREST : GL_LINEAR_MIPMAP_LINEAR ) :
 				( flags & CT_NOLERP ? GL_NEAREST : GL_LINEAR );
-			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magf );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minf );
 		}
 		
 		tt = sgs_Alloc( sgs_Texture );
