@@ -119,7 +119,7 @@ int ss_create_texture( SGS_CTX )
 		{ "hrepeat", CT_HREPEAT },
 		{ "vrepeat", CT_VREPEAT },
 		{ "nolerp", CT_NOLERP },
-	/*	{ "mipmaps", CT_MIPMAPS }, TODO */
+		{ "mipmaps", CT_MIPMAPS },
 		FSI_LAST
 	};
 	
@@ -180,6 +180,24 @@ int ss_create_texture( SGS_CTX )
 # define GL_BGRA 0x80E1
 #endif
 		glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, ii->width, ii->height, 0, GL_BGRA, GL_UNSIGNED_BYTE, ii->data );
+		if( flags & CT_MIPMAPS )
+		{
+			int miplev = 0;
+			int more = ii->width > 1 || ii->height > 1;
+			sgs_Image* pdii = ii;
+			while( more )
+			{
+				sgs_Image* dii = sgs_ImageDS2X( pdii, C );
+				if( pdii != ii )
+					sgs_DeleteImage( pdii, C );
+				pdii = dii;
+				more = dii->width > 1 || dii->height > 1;
+				glTexImage2D( GL_TEXTURE_2D, ++miplev, GL_RGBA, dii->width,
+					dii->height, 0, GL_BGRA, GL_UNSIGNED_BYTE, dii->data );
+			}
+			if( pdii != ii )
+				sgs_DeleteImage( pdii, C );
+		}
 		
 		if( flags & CT_HREPEAT ) glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
 		if( flags & CT_VREPEAT ) glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );

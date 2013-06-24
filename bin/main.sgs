@@ -59,7 +59,7 @@ function initialize()
 	}
 	
 	println();
-	global image = create_texture( "crosshair.png" );
+	global image = create_texture( "crosshair.png", "mipmaps" );
 	println( image );
 	printvar( _Gtex );
 	println();

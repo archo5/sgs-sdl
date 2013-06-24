@@ -309,3 +309,47 @@ int stdlib_toimage( SGS_CTX, int pos, sgs_Image** out )
 	return 1;
 }
 
+
+sgs_Image* sgs_ImageDS2X( sgs_Image* src, SGS_CTX )
+{
+	int x, y;
+	sgs_Image* img;
+	uint32_t* data, *srcdata = (uint32_t*) src->data;
+	int w = src->width / 2;
+	int h = src->height / 2;
+	
+	if( w < 1 ) w = 1;
+	if( h < 1 ) h = 1;
+	
+	img = sgs_Alloc( sgs_Image );
+	img->width = w;
+	img->height = h;
+	img->data = data = sgs_Alloc_n( uint32_t, w * h );
+	
+	for( y = 0; y < h; ++y )
+	{
+		for( x = 0; x < w; ++x )
+		{
+			int cx0 = x * 2, cy0 = y * 2;
+			int cx1 = ( cx0 + 1 ) % w, cy1 = ( cy0 + 1 ) % h;
+			uint32_t c00 = srcdata[ cx0 + src->width * cy0 ];
+			uint32_t c10 = srcdata[ cx1 + src->width * cy0 ];
+			uint32_t c01 = srcdata[ cx0 + src->width * cy1 ];
+			uint32_t c11 = srcdata[ cx1 + src->width * cy1 ];
+			uint32_t com1 = ((c00>>24)&0xff) + ((c10>>24)&0xff) + ((c01>>24)&0xff) + ((c11>>24)&0xff);
+			uint32_t com2 = ((c00>>16)&0xff) + ((c10>>16)&0xff) + ((c01>>16)&0xff) + ((c11>>16)&0xff);
+			uint32_t com3 = ((c00>>8)&0xff) + ((c10>>8)&0xff) + ((c01>>8)&0xff) + ((c11>>8)&0xff);
+			uint32_t com4 = ((c00)&0xff) + ((c10)&0xff) + ((c01)&0xff) + ((c11)&0xff);
+			uint32_t col = (com1<<24) | (com2<<16) | (com3<<8) | com4;
+			data[ x + y * w ] = col;
+		}
+	}
+	return img;
+}
+
+void sgs_DeleteImage( sgs_Image* img, SGS_CTX )
+{
+	sgs_Dealloc( img->data );
+	sgs_Dealloc( img );
+}
+
