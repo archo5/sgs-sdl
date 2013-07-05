@@ -598,7 +598,7 @@ function UIControl.createMenu()
 		{
 			if( item.clicked )
 			{
-				if( item.onclick )
+				if( item.onclick && typeid( item.onclick ) != VT_OBJECT )
 					item.onclick.thiscall( this );
 				item.clicked = false;
 			}
