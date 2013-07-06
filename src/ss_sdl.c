@@ -27,6 +27,18 @@ int ss_sleep( SGS_CTX )
 	return 0;
 }
 
+int ss_set_gl_attrib( SGS_CTX )
+{
+	sgs_Integer attr, val;
+	SGSFN( "set_gl_attrib" );
+	
+	if( !sgs_ParseInt( C, 0, &attr ) || !sgs_ParseInt( C, 1, &val ) )
+		_WARN( "function expects 2 arguments: int, int" )
+	
+	sgs_PushBool( C, SDL_GL_SetAttribute( attr, val ) == 0 );
+	return 1;
+}
+
 flag_string_item_t setvideomode_flags[] =
 {
 	{ "fullscreen", SDL_FULLSCREEN },
@@ -53,10 +65,6 @@ int ss_set_video_mode( SGS_CTX )
 	f = sgs_GetFlagString( C, 3, setvideomode_flags );
 	f |= SDL_OPENGL;
 	
-	SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 8 );
-	SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 8 );
-	SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 8 );
-	SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 	scr = SDL_SetVideoMode( w, h, b, f );
 	glDisable( GL_DEPTH_TEST );
 	glMatrixMode( GL_MODELVIEW );
@@ -521,12 +529,34 @@ sgs_RegIntConst sdl_ints[] =
 	IC( KMOD_CTRL ),
 	IC( KMOD_SHIFT ),
 	IC( KMOD_ALT ),
+	
+	/* GL attributes */
+	IC( SDL_GL_RED_SIZE ),
+	IC( SDL_GL_GREEN_SIZE ),
+	IC( SDL_GL_BLUE_SIZE ),
+	IC( SDL_GL_ALPHA_SIZE ),
+	IC( SDL_GL_BUFFER_SIZE ),
+	IC( SDL_GL_DOUBLEBUFFER ),
+	IC( SDL_GL_DEPTH_SIZE ),
+	IC( SDL_GL_STENCIL_SIZE ),
+	IC( SDL_GL_ACCUM_RED_SIZE ),
+	IC( SDL_GL_ACCUM_GREEN_SIZE ),
+	IC( SDL_GL_ACCUM_BLUE_SIZE ),
+	IC( SDL_GL_ACCUM_ALPHA_SIZE ),
+	IC( SDL_GL_STEREO ),
+	IC( SDL_GL_MULTISAMPLEBUFFERS ),
+	IC( SDL_GL_MULTISAMPLESAMPLES ),
+	IC( SDL_GL_ACCELERATED_VISUAL ),
+	/* SDL 1.3?
+	IC( SDL_GL_CONTEXT_MAJOR_VERSION ),
+	IC( SDL_GL_CONTEXT_MINOR_VERSION ),
+	*/
 };
 
 sgs_RegFuncConst sdl_funcs[] =
 {
 	FN( sleep ),
-	FN( set_video_mode ), FN( list_video_modes ),
+	FN( set_gl_attrib ), FN( set_video_mode ), FN( list_video_modes ),
 	FN( set_caption ), FN( show_cursor ),
 	FN( grab_input ), FN( warp_mouse ),
 	FN( get_mouse_state ), FN( get_relative_mouse_state ),

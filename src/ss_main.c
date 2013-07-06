@@ -126,6 +126,10 @@ int main( int argc, char* argv[] )
 		return 1;
 	}
 	SDL_EnableUNICODE( 1 );
+	SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 8 );
+	SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 8 );
+	SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 8 );
+	SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 	printf( "\ninitialized...\n" );
 	
 	/* initialize script-space SDL API */

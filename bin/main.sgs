@@ -43,8 +43,10 @@ function initialize()
 {
 	set_caption( "The SGS-SDL Game Framework" );
 	printvar( list_video_modes("fullscreen") );
+	set_gl_attrib( SDL_GL_DEPTH_SIZE, 24 );
+	set_gl_attrib( SDL_GL_STENCIL_SIZE, 8 );
 	set_video_mode( 1024, 576, 32, "" );
-	grab_input(true);
+//	grab_input(true);
 	show_cursor(false);
 	
 	global UI = UIFrame.create();
