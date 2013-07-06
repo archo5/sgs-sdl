@@ -42,7 +42,9 @@ function configure()
 function initialize()
 {
 	set_caption( "The SGS-SDL Game Framework" );
+	printvar( list_video_modes("fullscreen") );
 	set_video_mode( 1024, 576, 32, "" );
+	grab_input(true);
 	
 	global UI = UIFrame.create();
 //	UI.addChild( UIControl.createButton( "Make it rain!", 10, 10, 120, 40, function(){} ) );
@@ -121,7 +123,10 @@ function on_event( e )
 	if( e.type == SDL_QUIT )
 		global sys_exit = true;
 	if( e.type == SDL_MOUSEMOTION )
+	{
 		global mpos = [e.x,e.y];
+		println( get_relative_mouse_state() );
+	}
 
 	UI.event( e );
 }

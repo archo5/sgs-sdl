@@ -18,9 +18,10 @@ int g_height = 0;
 int ss_sleep( SGS_CTX )
 {
 	sgs_Integer time;
+	SGSFN( "sleep" );
 	if( sgs_StackSize( C ) != 1 ||
 		!sgs_ParseInt( C, 0, &time ) )
-		_WARN( "sleep() - unexpected arguments; function expects 1 argument: int" )
+		_WARN( "function expects 1 argument: int" )
 	
 	SDL_Delay( time );
 	return 0;
@@ -40,12 +41,14 @@ int ss_set_video_mode( SGS_CTX )
 	sgs_Integer w, h, b, f;
 	sgs_SizeVal tss;
 	
+	SGSFN( "set_video_mode" );
+	
 	if( sgs_StackSize( C ) != 4 ||
 		!sgs_ParseInt( C, 0, &w ) ||
 		!sgs_ParseInt( C, 1, &h ) ||
 		!sgs_ParseInt( C, 2, &b ) ||
 		!sgs_ParseString( C, 3, &ts, &tss ) )
-		_WARN( "set_video_mode() - unexpected arguments; function expects 4 arguments: int, int, int, string" )
+		_WARN( "function expects 4 arguments: int, int, int, string" )
 	
 	f = sgs_GetFlagString( C, 3, setvideomode_flags );
 	f |= SDL_OPENGL;
@@ -73,16 +76,109 @@ int ss_set_video_mode( SGS_CTX )
 	return 1;
 }
 
+int ss_list_video_modes( SGS_CTX )
+{
+	int i;
+	char* ts;
+	sgs_SizeVal tss;
+	sgs_Integer f;
+	SDL_Rect** modes;
+	
+	SGSFN( "list_video_modes" );
+	
+	if( !sgs_ParseString( C, 0, &ts, &tss ) )
+		_WARN( "function expects 1 argument: string" )
+	
+	f = sgs_GetFlagString( C, 3, setvideomode_flags );
+	f |= SDL_OPENGL;
+	
+	modes = SDL_ListModes( NULL, f );
+	if( modes == (SDL_Rect**)0 )
+	{
+		sgs_PushBool( C, 0 );
+		return 1;
+	}
+	if( modes == (SDL_Rect**)-1 )
+	{
+		sgs_PushBool( C, 1 );
+		return 1;
+	}
+	for( i = 0; modes[ i ]; ++i )
+	{
+		sgs_PushInt( C, modes[ i ]->w );
+		sgs_PushInt( C, modes[ i ]->h );
+		sgs_PushArray( C, 2 );
+	}
+	sgs_PushArray( C, i );
+	return 1;
+}
+
 int ss_set_caption( SGS_CTX )
 {
 	char* str;
 	sgs_SizeVal size;
 	
+	SGSFN( "set_caption" );
+	
 	if( !sgs_ParseString( C, 0, &str, &size ) )
-		_WARN( "set_caption() - unexpected arguments; function expects 1 argument: string" );
+		_WARN( "function expects 1 argument: string" );
 	
 	SDL_WM_SetCaption( str, NULL );
 	return 0;
+}
+
+int ss_grab_input( SGS_CTX )
+{
+	SGSFN( "grab_input" );
+	if( !sgs_StackSize( C ) )
+	{
+		sgs_PushBool( C, SDL_WM_GrabInput( SDL_GRAB_QUERY ) == SDL_GRAB_ON );
+		return 1;
+	}
+	else
+	{
+		int grab;
+		if( sgs_StackSize( C ) != 1 || !sgs_ParseBool( C, 0, &grab ) )
+			_WARN( "function expects 1 argument: bool" )
+		
+		SDL_WM_GrabInput( grab ? SDL_GRAB_ON : SDL_GRAB_OFF );
+		return 0;
+	}
+}
+
+int ss_warp_mouse( SGS_CTX )
+{
+	sgs_Integer x, y;
+	SGSFN( "warp_mouse" );
+	if( !sgs_ParseInt( C, 0, &x ) ||
+		!sgs_ParseInt( C, 1, &y ) )
+		_WARN( "function expects 2 argument: int, int" )
+	SDL_WarpMouse( (Uint16) x, (Uint16) y );
+	return 0;
+}
+
+int ss_get_mouse_state( SGS_CTX )
+{
+	int x, y, btnmask;
+	SGSFN( "get_mouse_state" );
+	btnmask = SDL_GetMouseState( &x, &y );
+	sgs_PushInt( C, x );
+	sgs_PushInt( C, y );
+	sgs_PushInt( C, btnmask );
+	sgs_PushArray( C, 3 );
+	return 1;
+}
+
+int ss_get_relative_mouse_state( SGS_CTX )
+{
+	int x, y, btnmask;
+	SGSFN( "get_relative_mouse_state" );
+	btnmask = SDL_GetRelativeMouseState( &x, &y );
+	sgs_PushInt( C, x );
+	sgs_PushInt( C, y );
+	sgs_PushInt( C, btnmask );
+	sgs_PushArray( C, 3 );
+	return 1;
 }
 
 /*
@@ -420,7 +516,10 @@ sgs_RegIntConst sdl_ints[] =
 sgs_RegFuncConst sdl_funcs[] =
 {
 	FN( sleep ),
-	FN( set_video_mode ), FN( set_caption ),
+	FN( set_video_mode ), FN( list_video_modes ),
+	FN( set_caption ),
+	FN( grab_input ), FN( warp_mouse ),
+	FN( get_mouse_state ), FN( get_relative_mouse_state ),
 	FN( clear ), FN( present ),
 };
 
@@ -515,7 +614,7 @@ int sgs_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 	*/
 	}
 	
-	ret = sgs_GlobalCall( C, "dict", sgs_StackSize( C ) - osz, 1 );
+	ret = sgs_PushDict( C, sgs_StackSize( C ) - osz );
 	if( ret != SGS_SUCCESS )
 		sgs_Pop( C, sgs_StackSize( C ) - osz );
 	return ret;

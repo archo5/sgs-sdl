@@ -157,6 +157,12 @@ int main( int argc, char* argv[] )
 		while( SDL_PollEvent( &event ) )
 		{
 			int ssz = sgs_StackSize( C );
+			if( event.type == SDL_KEYDOWN && event.key.state == SDL_PRESSED &&
+				event.key.keysym.sym == SDLK_F4 && ( event.key.keysym.mod & KMOD_ALT ) )
+			{
+				sgs_ExecString( C, "global sys_exit = true;" );
+				break;
+			}
 			if( sgs_CreateSDLEvent( C, &event ) || sgs_GlobalCall( C, "on_event", 1, 0 ) )
 			{
 				fprintf( stderr, "error in event creation\n" );
