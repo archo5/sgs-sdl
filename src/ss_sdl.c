@@ -127,6 +127,16 @@ int ss_set_caption( SGS_CTX )
 	return 0;
 }
 
+int ss_show_cursor( SGS_CTX )
+{
+	int shc;
+	SGSFN( "show_cursor" );
+	if( !sgs_ParseBool( C, 0, &shc ) )
+		_WARN( "function expects 1 argument: bool" )
+	SDL_ShowCursor( shc ? SDL_ENABLE : SDL_DISABLE );
+	return 0;
+}
+
 int ss_grab_input( SGS_CTX )
 {
 	SGSFN( "grab_input" );
@@ -517,7 +527,7 @@ sgs_RegFuncConst sdl_funcs[] =
 {
 	FN( sleep ),
 	FN( set_video_mode ), FN( list_video_modes ),
-	FN( set_caption ),
+	FN( set_caption ), FN( show_cursor ),
 	FN( grab_input ), FN( warp_mouse ),
 	FN( get_mouse_state ), FN( get_relative_mouse_state ),
 	FN( clear ), FN( present ),
