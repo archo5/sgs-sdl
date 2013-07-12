@@ -101,8 +101,8 @@ function update()
 	);
 	vfmt = make_vertex_format( "|pf3tf2" );
 	idata = fmt_pack( "4w", 1, 2, 3, 0 );
-	draw_packed( image, vfmt, vdata, 0, 4, GL_TRIANGLE_FAN );
-	draw_packed( image, vfmt, vdata, 0, 4, GL_TRIANGLE_FAN, idata );
+	draw_packed( image, vfmt, vdata, 0, 4, PT_TRIANGLE_FAN );
+	draw_packed( image, vfmt, vdata, 0, 4, PT_TRIANGLE_FAN, idata );
 
 	set_camera_ui( 0, 1024, 0, 576 );
 

@@ -140,13 +140,13 @@ int main( int argc, char* argv[] )
 	}
 	printf( "SDL API initialized...\n" );
 	
-	/* initialize script-space OpenGL API */
+	/* initialize script-space rendering API */
 	if( sgs_InitGL( C ) )
 	{
-		fprintf( stderr, "Couldn't initialize OpenGL API\n" );
+		fprintf( stderr, "Couldn't initialize rendering API\n" );
 		return 1;
 	}
-	printf( "OpenGL API initialized...\n" );
+	printf( "Rendering API initialized...\n" );
 	
 	/* initialize the application */
 	if( sgs_GlobalCall( C, "initialize", 0, 0 ) )

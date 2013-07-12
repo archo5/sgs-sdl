@@ -72,7 +72,7 @@ function Tilemap.render()
 	/*
 	if( !xform )
 		xform = { position = [0,0] };
-	xform.mode = GL_QUADS;
+	xform.mode = PT_QUADS;
 	xform.texture = this.texture;
 	xform.vertices = this.mesh[ 0 ];
 	xform.vtexcoords = this.mesh[ 1 ];
@@ -81,5 +81,5 @@ function Tilemap.render()
 	draw( xform );
 	*/
 	draw_packed( this.texture, this.vfmt, this.mesh,
-		0, this.mesh.length / 32, GL_QUADS );
+		0, this.mesh.length / 32, PT_QUADS );
 }

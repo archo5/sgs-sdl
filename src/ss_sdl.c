@@ -4,6 +4,14 @@
 #include "ss_main.h"
 
 
+#ifdef SS_USED3D
+IDirect3D9* GD3D = NULL;
+IDirect3DDevice9* GD3DDev = NULL;
+D3DPRESENT_PARAMETERS GD3DPP;
+
+#endif
+
+
 #define FN( f ) { #f, ss_##f }
 #define IC( i ) { #i, i }
 #define ICX( n, i ) { #n, i }
@@ -49,7 +57,7 @@ flag_string_item_t setvideomode_flags[] =
 int ss_set_video_mode( SGS_CTX )
 {
 	char* ts;
-	SDL_Surface* scr;
+	int suc = 0;
 	sgs_Integer w, h, b, f;
 	sgs_SizeVal tss;
 	
@@ -63,9 +71,34 @@ int ss_set_video_mode( SGS_CTX )
 		_WARN( "function expects 4 arguments: int, int, int, string" )
 	
 	f = sgs_GetFlagString( C, 3, setvideomode_flags );
+#ifndef SS_USED3D
 	f |= SDL_OPENGL;
+#endif
 	
-	scr = SDL_SetVideoMode( w, h, b, f );
+	suc = !!SDL_SetVideoMode( w, h, b, f );
+	
+#ifdef SS_USED3D
+	if( !GD3D )
+		GD3D = Direct3DCreate9( D3D_SDK_VERSION );
+
+	ZeroMemory( &GD3DPP, sizeof(GD3DPP) );
+	GD3DPP.Windowed = 1;
+	GD3DPP.SwapEffect = D3DSWAPEFFECT_DISCARD;
+	GD3DPP.EnableAutoDepthStencil = 0;
+	GD3DPP.hDeviceWindow = GetActiveWindow();
+	GD3DPP.BackBufferWidth = w;
+	GD3DPP.BackBufferHeight = h;
+	GD3DPP.BackBufferFormat = b == 32 ? D3DFMT_X8R8G8B8 : D3DFMT_R5G6B5;
+	GD3DPP.MultiSampleType = D3DMULTISAMPLE_NONE;
+
+	if( !GD3DDev )
+	{
+		suc = !FAILED( IDirect3D9_CreateDevice( GD3D,
+			D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, GetActiveWindow(),
+			D3DCREATE_HARDWARE_VERTEXPROCESSING, &GD3DPP, &GD3DDev ) );
+	}
+	
+#else
 	glDisable( GL_DEPTH_TEST );
 	glMatrixMode( GL_MODELVIEW );
 	glLoadIdentity();
@@ -80,7 +113,9 @@ int ss_set_video_mode( SGS_CTX )
 	glEnable( GL_ALPHA_TEST );
 	glAlphaFunc( GL_GREATER, 0 );
 	
-	sgs_PushBool( C, !!scr );
+#endif
+	
+	sgs_PushBool( C, suc );
 	return 1;
 }
 
@@ -209,14 +244,28 @@ int ss_clear( SGS_CTX )
 		!stdlib_tocolor4( C, 0, col ) )
 		_WARN( "clear(): function expects 1 argument: array of 1-4 real values" )
 	
+#ifndef SS_USED3D
 	glClearDepth( 1.0f );
 	glClearColor( col[0], col[1], col[2], col[3] );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+#else
+	if( GD3DDev )
+	{
+		uint32_t cc = (((uint8_t)(col[3]*255))<<24) | (((uint8_t)(col[0]*255))<<16) |
+			(((uint8_t)(col[1]*255))<<8) | (((uint8_t)(col[2]*255)));
+		IDirect3DDevice9_Clear( GD3DDev, 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, cc, 1.0f, 0 );
+	}
+#endif
 	return 0;
 }
 int ss_present( SGS_CTX )
 {
+#ifndef SS_USED3D
 	SDL_GL_SwapBuffers();
+#else
+	if( GD3DDev )
+		IDirect3DDevice9_Present( GD3DDev, NULL, NULL, NULL, NULL );
+#endif
 	return 0;
 }
 
@@ -641,7 +690,9 @@ int sgs_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 	case SDL_VIDEORESIZE:
 		g_width = event->resize.w;
 		g_height = event->resize.h;
+#ifndef SS_USED3D
 		glViewport( 0, 0, g_width, g_height );
+#endif
 		sgs_PushString( C, "w" );
 		sgs_PushInt( C, event->resize.w );
 		sgs_PushString( C, "h" );

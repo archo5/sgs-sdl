@@ -21,6 +21,27 @@
 FT_Library g_ftlib;
 
 
+#ifdef SS_USED3D
+#define PT_POINTS D3DPT_POINTLIST
+#define PT_LINES D3DPT_LINELIST
+#define PT_LINE_STRIP D3DPT_LINESTRIP
+#define PT_TRIANGLES D3DPT_TRIANGLELIST
+#define PT_TRIANGLE_FAN D3DPT_TRIANGLEFAN
+#define PT_TRIANGLE_STRIP D3DPT_TRIANGLESTRIP
+#define PT_QUADS 10
+
+#else
+#define PT_POINTS GL_POINTS
+#define PT_LINES GL_LINES
+#define PT_LINE_STRIP GL_LINE_STRIP
+#define PT_TRIANGLES GL_TRIANGLES
+#define PT_TRIANGLE_FAN GL_TRIANGLE_FAN
+#define PT_TRIANGLE_STRIP GL_TRIANGLE_STRIP
+#define PT_QUADS GL_QUADS
+
+#endif
+
+
 
 
 void _mtx_transpose( float* m )
@@ -42,8 +63,11 @@ void _mtx_transpose( float* m )
 int sstex_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 {
 	TEXHDR;
+#ifndef SS_USED3D
 	glDeleteTextures( 1, &tex->id );
-	sgs_Dealloc( tex );
+#else
+	IDirect3DResource9_Release( tex->obj );
+#endif
 	return SGS_SUCCESS;
 }
 
@@ -170,10 +194,45 @@ int ss_create_texture( SGS_CTX )
 		_WARN( "create_texture() - unexpected arguments; function expects 1-2 arguments: (image|string)[, string]" )
 	
 	{
-		sgs_Texture* tt;
-		GLuint tex;
-		glGenTextures( 1, &tex );
-		glBindTexture( GL_TEXTURE_2D, tex );
+		sgs_Texture* tt = (sgs_Texture*) sgs_PushObjectIPA( C, sizeof(sgs_Texture), tex_iface );
+		tt->flags = flags;
+		tt->width = ii->width;
+		tt->height = ii->height;
+		
+#ifdef SS_USED3D
+		{
+			int miplev = 1, i, y;
+			sgs_Image* pdii = ii;
+			IDirect3DTexture9* tex = NULL;
+			if( flags & CT_MIPMAPS )
+			{
+				int sz = ii->width > ii->height ? ii->width : ii->height;
+				while( sz > 1 )
+				{
+					sz /= 2;
+					miplev++;
+				}
+			}
+			IDirect3DDevice9_CreateTexture( GD3DDev, ii->width, ii->height,
+				miplev, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &tex, NULL );
+			tt->obj = (IDirect3DBaseTexture9*) tex;
+			for( i = 0; i < miplev; ++i )
+			{
+				D3DLOCKED_RECT lr;
+				IDirect3DTexture9_LockRect( tex, i, &lr, NULL, D3DLOCK_DISCARD );
+				for( y = 0; y < pdii->height; ++y )
+					memcpy( ((uint8_t*)lr.pBits) + lr.Pitch * y, pdii->data, pdii->width * 4 );
+				IDirect3DTexture9_UnlockRect( tex, i );
+				if( i < miplev-1 )
+					pdii = sgs_ImageDS2X( pdii, C );
+			}
+			if( pdii != ii )
+				sgs_DeleteImage( pdii, C );
+		}
+		
+#else
+		glGenTextures( 1, &tt->id );
+		glBindTexture( GL_TEXTURE_2D, tt->id );
 		
 		glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
 #ifndef GL_BGRA
@@ -209,12 +268,7 @@ int ss_create_texture( SGS_CTX )
 			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minf );
 		}
 		
-		tt = sgs_Alloc( sgs_Texture );
-		tt->id = tex;
-		tt->flags = flags;
-		tt->width = ii->width;
-		tt->height = ii->height;
-		sgs_PushObject( C, tt, tex_iface );
+#endif
 	}
 	
 	/* IMAGE [FLAGS] [KEY](if bystr) TEXTURE */
@@ -235,6 +289,7 @@ int ss_create_texture( SGS_CTX )
 }
 
 
+#ifndef SS_USED3D
 GLuint sgs_GetTextureId( SGS_CTX, sgs_Variable* var )
 {
 	if( BASETYPE(var->type) != VT_OBJECT || var->data.O->iface != tex_iface )
@@ -242,6 +297,17 @@ GLuint sgs_GetTextureId( SGS_CTX, sgs_Variable* var )
 	
 	return ((sgs_Texture*) var->data.O->data)->id;
 }
+
+#else
+IDirect3DBaseTexture9* sgs_GetTexture( SGS_CTX, sgs_Variable* var )
+{
+	if( BASETYPE(var->type) != VT_OBJECT || var->data.O->iface != tex_iface )
+		return 0;
+	
+	return ((sgs_Texture*) var->data.O->data)->obj;
+}
+
+#endif
 
 
 /*
@@ -459,7 +525,7 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 		
 		if( !strcmp( str, "box" ) )
 		{
-			*outmode = GL_QUADS;
+			*outmode = PT_QUADS;
 			static const float boxbuf[] =
 			{
 				-0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f,
@@ -479,7 +545,7 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 		}
 		if( !strcmp( str, "tile" ) )
 		{
-			*outmode = GL_QUADS;
+			*outmode = PT_QUADS;
 			static const float boxbuf[] =
 			{
 				0, 0, 1, 0, 1, 1, 0, 1,
@@ -707,7 +773,9 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 				mtx[ 2 ] = mtx[ 6 ] = mtx[ 8 ] = mtx[ 9 ] =
 					mtx[ 11 ] = mtx[ 12 ] = mtx[ 13 ] = mtx[ 14 ] = 0;
 				
+#ifndef SS_USED3D
 				_mtx_transpose( mtx );
+#endif
 			}
 		}
 		
@@ -759,9 +827,8 @@ colors:
 typedef struct _ssvtx
 {
 	float pos[ 3 ];
-	float tex[ 2 ];
 	uint32_t col;
-	
+	float tex[ 2 ];
 	float padding[2];
 }
 ssvtx;
@@ -779,14 +846,33 @@ uint32_t col4f_pack( float* col )
 #undef MAX
 }
 
+uint32_t getprimitivecount( int mode, uint32_t vcount )
+{
+	switch( mode )
+	{
+	case PT_POINTS: return vcount;
+	case PT_LINES: return vcount / 2;
+	case PT_LINE_STRIP: return vcount - 1;
+	case PT_TRIANGLES: return vcount / 3;
+	case PT_TRIANGLE_FAN: return vcount - 2;
+	case PT_TRIANGLE_STRIP: return vcount - 2;
+	case PT_QUADS: return vcount / 4;
+	}
+	return 0;
+}
+
 int ss_draw( SGS_CTX )
 {
 	MemBuf B = membuf_create();
-	ssvtx tmp = { { 0, 0, 0 }, { 0, 0 }, 0xffffffff, {0,0} };
+	ssvtx tmp = { { 0, 0, 0 }, 0xffffffff, { 0, 0 }, {0,0} };
 	
 	float *tf, *cc, *vp, *vt, *vc;
-	int mode = GL_TRIANGLES, ret = 1;
+	int mode = PT_TRIANGLES, ret = 1;
+#ifdef SS_USED3D
+	IDirect3DBaseTexture9* texobj = NULL;
+#else
 	GLuint texid = 0;
+#endif
 	floatbuf vert = NFB, vcol = NFB, vtex = NFB, xform = NFB, icol = NFB;
 	sgs_Variable texture;
 	dict_unpack_item_t mi[] =
@@ -808,13 +894,22 @@ int ss_draw( SGS_CTX )
 	
 	if( mi[0].var )
 	{
+#ifdef SS_USED3D
+		texobj = sgs_GetTexture( C, mi[0].var );
+		if( !texobj )
+#else
 		texid = sgs_GetTextureId( C, mi[0].var );
 		if( !texid )
+#endif
 		{
 			sgs_Printf( C, SGS_WARNING, "draw(): could not use texture" );
 		}
 	}
 	
+#ifdef SS_USED3D
+	IDirect3DDevice9_SetTexture( GD3DDev, 0, texobj );
+
+#else
 	if( texid )
 	{
 		glEnable( GL_TEXTURE_2D );
@@ -828,12 +923,20 @@ int ss_draw( SGS_CTX )
 	glEnableClientState( GL_VERTEX_ARRAY );
 	glEnableClientState( GL_TEXTURE_COORD_ARRAY );
 	glEnableClientState( GL_COLOR_ARRAY );
+
+#endif
 	
 	cc = icol.data;
 	for( tf = xform.data; tf < xform.data + xform.size; tf += 16 )
 	{
+#ifdef SS_USED3D
+		IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_WORLD, (D3DMATRIX*) tf );
+
+#else
 		glPushMatrix();
 		glMultMatrixf( tf );
+
+#endif
 		
 		if( cc < icol.data + icol.size )
 		{
@@ -864,10 +967,18 @@ int ss_draw( SGS_CTX )
 			membuf_appbuf( &B, C, &tmp, sizeof(tmp) );
 		}
 		
+#ifdef SS_USED3D
+		IDirect3DDevice9_SetFVF( GD3DDev, D3DFVF_XYZ | D3DFVF_TEX1 | D3DFVF_DIFFUSE );
+		IDirect3DDevice9_DrawPrimitiveUP( GD3DDev, mode,
+			getprimitivecount( mode, B.size / sizeof(ssvtx) ),
+			B.ptr, sizeof(ssvtx) );
+	}
+
+#else
 		/* TODO: fix hardcoded offsets, maybe */
 		glVertexPointer( 3, GL_FLOAT, sizeof(ssvtx), B.ptr );
-		glTexCoordPointer( 2, GL_FLOAT, sizeof(ssvtx), B.ptr + 12 );
-		glColorPointer( 4, GL_UNSIGNED_BYTE, sizeof(ssvtx), B.ptr + 20 );
+		glColorPointer( 4, GL_UNSIGNED_BYTE, sizeof(ssvtx), B.ptr + 12 );
+		glTexCoordPointer( 2, GL_FLOAT, sizeof(ssvtx), B.ptr + 16 );
 		
 		glDrawArrays( mode, 0, B.size / sizeof(ssvtx) );
 		
@@ -877,6 +988,8 @@ int ss_draw( SGS_CTX )
 	glDisableClientState( GL_VERTEX_ARRAY );
 	glDisableClientState( GL_TEXTURE_COORD_ARRAY );
 	glDisableClientState( GL_COLOR_ARRAY );
+
+#endif
 	
 	membuf_destroy( &B, C );
 	
@@ -898,20 +1011,88 @@ cleanup:
 
 
 
+#ifndef GL_FLOAT
+#  define GL_FLOAT 1
+#  define GL_UNSIGNED_BYTE 2
+#endif
+
 typedef struct _vtxfmt vtxfmt;
 struct _vtxfmt
 {
 	int size;
 	/* use / offset / type / count / size / order */
-	GLuint P[ 6 ];
-	GLuint T[ 6 ];
-	GLuint C[ 6 ];
-	GLuint N[ 6 ];
+	uint32_t P[ 6 ];
+	uint32_t T[ 6 ];
+	uint32_t C[ 6 ];
+	uint32_t N[ 6 ];
+	
+#ifdef SS_USED3D
+	IDirect3DVertexDeclaration9* vdecl;
+#endif
 };
+
+
+#ifdef SS_USED3D
+static int vd_make_typecount( int type, int count )
+{
+	if( type == GL_FLOAT && count == 1 ) return D3DDECLTYPE_FLOAT1;
+	if( type == GL_FLOAT && count == 2 ) return D3DDECLTYPE_FLOAT2;
+	if( type == GL_FLOAT && count == 3 ) return D3DDECLTYPE_FLOAT3;
+	if( type == GL_FLOAT && count == 4 ) return D3DDECLTYPE_FLOAT4;
+	if( type == GL_UNSIGNED_BYTE && count == 4 ) return D3DDECLTYPE_D3DCOLOR;
+	return 0;
+}
+
+static void initialize_optimized_format( vtxfmt* F )
+{
+	D3DVERTEXELEMENT9 els[ 5 ] = { D3DDECL_END(), D3DDECL_END(),
+		D3DDECL_END(), D3DDECL_END(), D3DDECL_END() };
+	
+	int i = 0;
+	if( F->P[0] )
+	{
+		D3DVERTEXELEMENT9 el = { 0, F->P[1], vd_make_typecount( F->P[2], F->P[3] ),
+			D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0 };
+		memcpy( els + i++, &el, sizeof(D3DVERTEXELEMENT9) );
+	}
+	if( F->T[0] )
+	{
+		D3DVERTEXELEMENT9 el = { 0, F->T[1], vd_make_typecount( F->T[2], F->T[3] ),
+			D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0 };
+		memcpy( els + i++, &el, sizeof(D3DVERTEXELEMENT9) );
+	}
+	if( F->C[0] )
+	{
+		D3DVERTEXELEMENT9 el = { 0, F->C[1], vd_make_typecount( F->C[2], F->C[3] ),
+			D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0 };
+		memcpy( els + i++, &el, sizeof(D3DVERTEXELEMENT9) );
+	}
+	if( F->N[0] )
+	{
+		D3DVERTEXELEMENT9 el = { 0, F->N[1], vd_make_typecount( F->N[2], F->N[3] ),
+			D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_NORMAL, 0 };
+		memcpy( els + i++, &el, sizeof(D3DVERTEXELEMENT9) );
+	}
+	
+	F->vdecl = NULL;
+	IDirect3DDevice9_CreateVertexDeclaration( GD3DDev, els, &F->vdecl );
+}
+
+static void free_optimized_format( vtxfmt* F )
+{
+	IDirect3DVertexDeclaration9_Release( F->vdecl );
+}
+
+#else
+#define initialize_optimized_format(x)
+#define free_optimized_format(x)
+
+#endif
+
 
 int ss_vertex_format_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 {
-	sgs_Dealloc( data->data );
+	free_optimized_format( (vtxfmt*) data->data );
 	return SGS_SUCCESS;
 }
 
@@ -946,7 +1127,7 @@ int ss_make_vertex_format( SGS_CTX )
 		while( fmt < fmtend - 2 )
 		{
 			int isz = 0;
-			GLuint* dst;
+			uint32_t* dst;
 			
 			int ch = fmt[0], type = fmt[1], cnt = fmt[2];
 			if( ch != 'p' && ch != 't' && ch != 'c' && ch != 'n' )
@@ -990,9 +1171,9 @@ int ss_make_vertex_format( SGS_CTX )
 		if( aligned )
 			F.size = ( ( F.size - 1 ) / 32 + 1 ) * 32;
 		
-		ef = sgs_Alloc( vtxfmt );
+		ef = (vtxfmt*) sgs_PushObjectIPA( C, sizeof(F), vertex_format_iface );
 		memcpy( ef, &F, sizeof(F) );
-		sgs_PushObject( C, ef, vertex_format_iface );
+		initialize_optimized_format( ef );
 		return 1;
 	}
 }
@@ -1040,6 +1221,15 @@ int ss_draw_packed( SGS_CTX )
 			_WARN( "not enough data to draw with given start/count values" )
 	}
 	
+#ifdef SS_USED3D
+	IDirect3DDevice9_SetTexture( GD3DDev, 0, T ? T->obj : NULL );
+	IDirect3DDevice9_SetVertexDeclaration( GD3DDev, F->vdecl );
+	IDirect3DDevice9_DrawPrimitiveUP( GD3DDev, type,
+		getprimitivecount( type, count / F->size ),
+		data, F->size );
+	IDirect3DDevice9_SetVertexDeclaration( GD3DDev, NULL );
+
+#else
 	if( F->P[0] ) glVertexPointer( F->P[3], F->P[2], F->size, data + F->P[1] );
 	if( F->T[0] ) glTexCoordPointer( F->T[3], F->T[2], F->size, data + F->T[1] );
 	if( F->C[0] ) glColorPointer( F->C[3], F->C[2], F->size, data + F->C[1] );
@@ -1069,9 +1259,36 @@ int ss_draw_packed( SGS_CTX )
 	if( F->C[0] ) glDisableClientState( GL_COLOR_ARRAY );
 	if( F->N[0] ) glDisableClientState( GL_NORMAL_ARRAY );
 	
+#endif
+	
 	return 0;
 }
 
+
+static inline void Matrix4x4MultiplyBy4x4( float src1[4][4], float src2[4][4], float dest[4][4] )
+{
+	dest[0][0] = src1[0][0] * src2[0][0] + src1[0][1] * src2[1][0] + src1[0][2] * src2[2][0] + src1[0][3] * src2[3][0]; 
+	dest[0][1] = src1[0][0] * src2[0][1] + src1[0][1] * src2[1][1] + src1[0][2] * src2[2][1] + src1[0][3] * src2[3][1]; 
+	dest[0][2] = src1[0][0] * src2[0][2] + src1[0][1] * src2[1][2] + src1[0][2] * src2[2][2] + src1[0][3] * src2[3][2]; 
+	dest[0][3] = src1[0][0] * src2[0][3] + src1[0][1] * src2[1][3] + src1[0][2] * src2[2][3] + src1[0][3] * src2[3][3]; 
+	dest[1][0] = src1[1][0] * src2[0][0] + src1[1][1] * src2[1][0] + src1[1][2] * src2[2][0] + src1[1][3] * src2[3][0]; 
+	dest[1][1] = src1[1][0] * src2[0][1] + src1[1][1] * src2[1][1] + src1[1][2] * src2[2][1] + src1[1][3] * src2[3][1]; 
+	dest[1][2] = src1[1][0] * src2[0][2] + src1[1][1] * src2[1][2] + src1[1][2] * src2[2][2] + src1[1][3] * src2[3][2]; 
+	dest[1][3] = src1[1][0] * src2[0][3] + src1[1][1] * src2[1][3] + src1[1][2] * src2[2][3] + src1[1][3] * src2[3][3]; 
+	dest[2][0] = src1[2][0] * src2[0][0] + src1[2][1] * src2[1][0] + src1[2][2] * src2[2][0] + src1[2][3] * src2[3][0]; 
+	dest[2][1] = src1[2][0] * src2[0][1] + src1[2][1] * src2[1][1] + src1[2][2] * src2[2][1] + src1[2][3] * src2[3][1]; 
+	dest[2][2] = src1[2][0] * src2[0][2] + src1[2][1] * src2[1][2] + src1[2][2] * src2[2][2] + src1[2][3] * src2[3][2]; 
+	dest[2][3] = src1[2][0] * src2[0][3] + src1[2][1] * src2[1][3] + src1[2][2] * src2[2][3] + src1[2][3] * src2[3][3]; 
+	dest[3][0] = src1[3][0] * src2[0][0] + src1[3][1] * src2[1][0] + src1[3][2] * src2[2][0] + src1[3][3] * src2[3][0]; 
+	dest[3][1] = src1[3][0] * src2[0][1] + src1[3][1] * src2[1][1] + src1[3][2] * src2[2][1] + src1[3][3] * src2[3][1]; 
+	dest[3][2] = src1[3][0] * src2[0][2] + src1[3][1] * src2[1][2] + src1[3][2] * src2[2][2] + src1[3][3] * src2[3][2]; 
+	dest[3][3] = src1[3][0] * src2[0][3] + src1[3][1] * src2[1][3] + src1[3][2] * src2[2][3] + src1[3][3] * src2[3][3]; 
+};
+
+
+typedef float mat4x4[4][4];
+mat4x4 matrices[8];
+int curmtx = 0;
 
 int ss_matrix_push( SGS_CTX )
 {
@@ -1087,6 +1304,20 @@ int ss_matrix_push( SGS_CTX )
 		_WARN( "unexpected arguments; "
 			"function expects 1-2 arguments: array(real x16)[, bool]" )
 	
+#ifdef SS_USED3D
+	{
+		if( curmtx >= 8 )
+			return 0;
+		float *mtxin = (float*) matrices[ curmtx++ ], omtx[ 16 ];
+		IDirect3DDevice9_GetTransform( GD3DDev, D3DTS_WORLD, (D3DMATRIX*) mtxin );
+		if( set )
+			memcpy( omtx, mtx, sizeof(float)*16 );
+		else
+			Matrix4x4MultiplyBy4x4( (float (*)[4]) mtx, (float (*)[4]) mtxin, (float (*)[4]) omtx );
+		IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_WORLD, (D3DMATRIX*) omtx );
+	}
+	
+#else
 	glMatrixMode( GL_MODELVIEW );
 	glPushMatrix();
 	_mtx_transpose( mtx );
@@ -1094,6 +1325,8 @@ int ss_matrix_push( SGS_CTX )
 		glLoadMatrixf( mtx );
 	else
 		glMultMatrixf( mtx );
+	
+#endif
 	
 	return 0;
 }
@@ -1105,8 +1338,18 @@ int ss_matrix_pop( SGS_CTX )
 	if( sgs_StackSize( C ) )
 		_WARN( "unexpected arguments" )
 	
+#ifdef SS_USED3D
+	if( curmtx > 0 )
+	{
+		curmtx--;
+		IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_WORLD, (D3DMATRIX*) matrices[ curmtx ] );
+	}
+	
+#else
 	glMatrixMode( GL_MODELVIEW );
 	glPopMatrix();
+	
+#endif
 	
 	return 0;
 }
@@ -1121,10 +1364,16 @@ int ss_set_depth_test( SGS_CTX )
 		!sgs_ParseBool( C, 0, &set ) )
 		_WARN( "unexpected arguments; function expects 1 argument: bool" )
 	
+#ifdef SS_USED3D
+	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_ZENABLE, set );
+	
+#else
 	if( set )
 		glEnable( GL_DEPTH_TEST );
 	else
 		glDisable( GL_DEPTH_TEST );
+	
+#endif
 	
 	return 0;
 }
@@ -1143,6 +1392,12 @@ int ss_set_camera( SGS_CTX )
 		( ssz >= 2 && _parse_floatvec( C, 1, mtx2, 16 ) ) )
 		_WARN( "expected an array of 16 'real' values" )
 	
+#ifdef SS_USED3D
+	IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_VIEW, (D3DMATRIX*) mtx );
+	if( ssz >= 2 )
+		IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_PROJECTION, (D3DMATRIX*) mtx2 );
+	
+#else
 	glMatrixMode( GL_PROJECTION );
 	if( ssz >= 2 )
 	{
@@ -1154,6 +1409,8 @@ int ss_set_camera( SGS_CTX )
 	glMatrixMode( GL_MODELVIEW );
 	_mtx_transpose( mtx );
 	glLoadMatrixf( mtx );
+	
+#endif
 	return 0;
 }
 
@@ -1173,7 +1430,11 @@ struct _ss_glyph
 	int bmoffx;
 	int bmoffy;
 	int advx;
+#ifdef SS_USED3D
+	IDirect3DTexture9* texture;
+#else
 	GLuint texture;
+#endif
 	double usagetime;
 	float sortQ;
 }
@@ -1207,7 +1468,11 @@ static void fontfreefunc( HTPair* p, void* ud )
 	SGS_CTX = (sgs_Context*) ud;
 	ss_glyph* G = (ss_glyph*) p->ptr;
 	if( G->texture )
+#ifdef SS_USED3D
+		IDirect3DResource9_Release( G->texture );
+#else
 		glDeleteTextures( 1, &G->texture );
+#endif
 	sgs_Dealloc( G );
 }
 
@@ -1374,16 +1639,42 @@ ss_glyph* ss_font_create_glyph( ss_font* font, SGS_CTX, uint32_t cp )
 {
 	int x, y;
 	uint8_t* imgdata, *pp;
+#ifdef SS_USED3D
+	IDirect3DTexture9* tex;
+#else
 	GLuint tex = 0;
+#endif
 	FT_GlyphSlot glyph;
 	ss_glyph* G = sgs_Alloc( ss_glyph );
-
+	
+	UNUSED(imgdata);
 	FT_Load_Char( font->face, cp, 0 );
 	glyph = font->face->glyph;
 	FT_Render_Glyph( glyph, FT_RENDER_MODE_NORMAL );
 	
 	if( glyph->bitmap.width * glyph->bitmap.rows )
 	{
+#ifdef SS_USED3D
+		D3DLOCKED_RECT lr;
+		IDirect3DDevice9_CreateTexture( GD3DDev, glyph->bitmap.width,
+			glyph->bitmap.rows, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &tex, NULL );
+		IDirect3DTexture9_LockRect( tex, 0, &lr, NULL, D3DLOCK_DISCARD );
+		pp = glyph->bitmap.buffer;
+		for( y = 0; y < glyph->bitmap.rows; ++y )
+		{
+			for( x = 0; x < glyph->bitmap.width; ++x )
+			{
+				int off = y * lr.Pitch * 4;
+				((uint8_t*)lr.pBits)[ off + x * 4 ] = 0xff;
+				((uint8_t*)lr.pBits)[ off + x * 4 + 1 ] = 0xff;
+				((uint8_t*)lr.pBits)[ off + x * 4 + 2 ] = 0xff;
+				((uint8_t*)lr.pBits)[ off + x * 4 + 3 ] = pp[ x ];
+			}
+			pp += glyph->bitmap.pitch;
+		}
+		IDirect3DTexture9_UnlockRect( tex, 0 );
+		
+#else
 		glGenTextures( 1, &tex );
 		glBindTexture( GL_TEXTURE_2D, tex );
 		imgdata = sgs_Alloc_n( uint8_t, glyph->bitmap.width * glyph->bitmap.rows * 4 );
@@ -1392,7 +1683,7 @@ ss_glyph* ss_font_create_glyph( ss_font* font, SGS_CTX, uint32_t cp )
 		{
 			for( x = 0; x < glyph->bitmap.width; ++x )
 			{
-				int off = y * glyph->bitmap.pitch * 4;
+				int off = y * glyph->bitmap.width * 4;
 				imgdata[ off + x * 4 ] = 0xff;
 				imgdata[ off + x * 4 + 1 ] = 0xff;
 				imgdata[ off + x * 4 + 2 ] = 0xff;
@@ -1405,6 +1696,8 @@ ss_glyph* ss_font_create_glyph( ss_font* font, SGS_CTX, uint32_t cp )
 		sgs_Dealloc( imgdata );
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+		
+#endif
 	}
 
 	G->glyph_id = FT_Get_Char_Index( font->face, cp );
@@ -1439,8 +1732,11 @@ void ss_int_drawtext_line( ss_font* font, SGS_CTX, char* str,
 	uint32_t previous = 0;
 	ss_glyph* G;
 
+#ifndef SS_USED3D
 	glEnable( GL_TEXTURE_2D );
 	glColor4f( color[0], color[1], color[2], color[3] );
+	
+#endif
 
 	use_kerning = FT_HAS_KERNING( font->face );
 
@@ -1476,6 +1772,18 @@ void ss_int_drawtext_line( ss_font* font, SGS_CTX, char* str,
 			mx = x + G->bmoffx;
 			my = y + font->size - G->bmoffy;
 			
+#ifdef SS_USED3D
+			{
+				float vdata[] = { mx, my, 0, 0, 0,  mx, my+H, 0, 0, 1,
+					mx+W, my+H, 0, 1, 1,  mx+W, my, 0, 1, 0 };
+				IDirect3DDevice9_SetFVF( GD3DDev, D3DFVF_XYZ | D3DFVF_TEX1 );
+				IDirect3DDevice9_SetTexture( GD3DDev, 0,
+					(IDirect3DBaseTexture9*) G->texture );
+				IDirect3DDevice9_DrawPrimitiveUP( GD3DDev,
+					D3DPT_TRIANGLESTRIP, 2, vdata, sizeof(float)*5 );
+			}
+			
+#else
 			glBindTexture( GL_TEXTURE_2D, G->texture );
 			glBegin( GL_QUADS );
 			glTexCoord2f( 0, 0 );
@@ -1487,6 +1795,7 @@ void ss_int_drawtext_line( ss_font* font, SGS_CTX, char* str,
 			glTexCoord2f( 1, 0 );
 			glVertex2f( mx+W, my );
 			glEnd();
+#endif
 		}
 
 		xadv = G->advx;
@@ -1552,7 +1861,11 @@ int ss_set_cliprect( SGS_CTX )
 	if( sgs_StackSize( C ) == 1 &&
 		sgs_ItemType( C, 0 ) == VT_NULL )
 	{
+#ifdef SS_USED3D
+		IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_SCISSORTESTENABLE, 0 );
+#else
 		glDisable( GL_SCISSOR_TEST );
+#endif
 		sgs_PushBool( C, 1 );
 		return 1;
 	}
@@ -1564,8 +1877,16 @@ int ss_set_cliprect( SGS_CTX )
 	{
 		if( x2 < x1 || y2 < y1 )
 			_WARN( "set_cliprect(): invalid (negative) width and/or height" )
+#ifdef SS_USED3D
+		{
+			RECT rect = { x1, y1, x2, y2 };
+			IDirect3DDevice9_SetScissorRect( GD3DDev, &rect );
+		}
+		IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_SCISSORTESTENABLE, 1 );
+#else
 		glScissor( x1, g_height - y2, x2 - x1, y2 - y1 );
 		glEnable( GL_SCISSOR_TEST );
+#endif
 		sgs_PushBool( C, 1 );
 		return 1;
 	}
@@ -1578,13 +1899,13 @@ int ss_set_cliprect( SGS_CTX )
 sgs_RegIntConst gl_ints[] =
 {
 	/* GL draw modes */
-	IC( GL_POINTS ),
-	IC( GL_LINES ),
-	IC( GL_LINE_STRIP ),
-	IC( GL_TRIANGLES ),
-	IC( GL_TRIANGLE_FAN ),
-	IC( GL_TRIANGLE_STRIP ),
-	IC( GL_QUADS ),
+	IC( PT_POINTS ),
+	IC( PT_LINES ),
+	IC( PT_LINE_STRIP ),
+	IC( PT_TRIANGLES ),
+	IC( PT_TRIANGLE_FAN ),
+	IC( PT_TRIANGLE_STRIP ),
+	IC( PT_QUADS ),
 };
 
 sgs_RegFuncConst gl_funcs[] =

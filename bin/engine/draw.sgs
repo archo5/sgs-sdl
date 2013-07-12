@@ -186,6 +186,6 @@ function draw_button( tex, left, right, top, bottom, off, texoff )
 		[1-tox, 1-toy], [1, 1-toy], [1, 1], [1-tox, 1],
 	];
 
-	draw({ texture = tex, mode = GL_QUADS, vertices = V, vtexcoords = T, position=[0,0] });
+	draw({ texture = tex, mode = PT_QUADS, vertices = V, vtexcoords = T, position=[0,0] });
 }
 

@@ -3,7 +3,7 @@ ifdef SystemRoot
 	RM = del /Q
 	CP = copy
 	FixPath = $(subst /,\,$1)
-	PLATFLAGS = -lkernel32 -lOpenGL32 -lmingw32 -lfreetype.dll
+	PLATFLAGS = -lkernel32 -lOpenGL32 -ld3d9 -lmingw32 -lfreetype.dll
 	LINKPATHS = -Lsdl-win/lib -Lfreeimage -Lfreetype
 	COMPATHS = -Isdl-win/include -Ifreetype/include
 	PLATPOST = $(CP) $(call FixPath,sdl-win/bin/SDL.dll bin) & \
@@ -40,7 +40,7 @@ endif
 
 C2FLAGS = $(CFLAGS) -DBUILDING_SGS_SDL
 
-_DEPS = ss_main.h ss_api.h
+_DEPS = ss_main.h ss_api.h ss_cfg.h
 DEPS = $(patsubst %,$(SRCDIR)/%,$(_DEPS))
 
 _OBJ = ss_main.o ss_script.o ss_sdl.o ss_render.o ss_image.o

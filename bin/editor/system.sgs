@@ -250,7 +250,7 @@ function ED_draw()
 		}
 		*/
 	//	draw({ preset = "tile", texture = tex, position = [ x, y ], scale = [ width, height ] });
-		draw_packed( tex, fmt, obj.mesh, 0, 4, GL_TRIANGLE_FAN );
+		draw_packed( tex, fmt, obj.mesh, 0, 4, PT_TRIANGLE_FAN );
 	}
 
 	/* GHOST OBJECTS (future) */
@@ -278,7 +278,7 @@ function ED_draw()
 		M = tmpobj.mesh;
 		tmpmesh = P( M, 0, 16 ) $ colpack $ P( M, 16, 16 ) $ colpack $
 			P( M, 32, 16 ) $ colpack $ P( M, 48, 16 ) $ colpack;
-		draw_packed( obj.texture, fmt2, tmpmesh, 0, 4, GL_TRIANGLE_FAN );
+		draw_packed( obj.texture, fmt2, tmpmesh, 0, 4, PT_TRIANGLE_FAN );
 	}
 	
 	/* SELECTED / MOUSE-ON */

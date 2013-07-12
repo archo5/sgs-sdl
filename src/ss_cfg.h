@@ -10,5 +10,9 @@
 # endif
 #endif
 
+#ifdef _WIN32
+#  define SS_USED3D 1
+#endif
+
 
 #endif /* SS_CFG_H_INCLUDED */

@@ -15,6 +15,12 @@
 typedef struct _sgs_Texture
 {
 	/* GLuint */ uint32_t id;
+#if defined(SS_USED3D) && ( defined(BUILDING_SGS_SDL) || defined(SS_USE_TYPES) )
+	IDirect3DBaseTexture9*
+#else
+	void*
+#endif
+	/* lptex */	obj;
 	int32_t flags;
 	int16_t width;
 	int16_t height;
