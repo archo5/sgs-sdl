@@ -56,11 +56,11 @@ function Tilemap.checkCache()
 		col = tile[4];
 		if( col.size < 4 )
 			col.push( 1.0 );
-		mesh $= fmt_pack( "8f8f8f8f",
-			x, y, tx, ty, col[0], col[1], col[2], col[3],
-			x+tw, y, tx1, ty, col[0], col[1], col[2], col[3],
-			x+tw, y+th, tx1, ty1, col[0], col[1], col[2], col[3],
-			x, y+th, tx, ty1, col[0], col[1], col[2], col[3] );
+		v1 = fmt_pack( "8f", x, y, tx, ty, col[0], col[1], col[2], col[3] );
+		v2 = fmt_pack( "8f", x+tw, y, tx1, ty, col[0], col[1], col[2], col[3] );
+		v3 = fmt_pack( "8f", x+tw, y+th, tx1, ty1, col[0], col[1], col[2], col[3] );
+		v4 = fmt_pack( "8f", x, y+th, tx, ty1, col[0], col[1], col[2], col[3] );
+		mesh $= v1 $ v2 $ v3 $ v3 $ v4 $ v1;
 	}
 	this.mesh = mesh;
 	this.revid = 0;
@@ -69,17 +69,7 @@ function Tilemap.checkCache()
 function Tilemap.render()
 {
 	this.checkCache();
-	/*
-	if( !xform )
-		xform = { position = [0,0] };
-	xform.mode = PT_QUADS;
-	xform.texture = this.texture;
-	xform.vertices = this.mesh[ 0 ];
-	xform.vtexcoords = this.mesh[ 1 ];
-	xform.vcolors = this.mesh[ 2 ];
-
-	draw( xform );
-	*/
+	
 	draw_packed( this.texture, this.vfmt, this.mesh,
-		0, this.mesh.length / 32, PT_QUADS );
+		0, this.mesh.length / 32, PT_TRIANGLES );
 }

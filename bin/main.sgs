@@ -88,9 +88,9 @@ function update()
 	
 	var cc = [0.1,0.2,0.4];
 	clear( cc );
-
+	
 	set_camera_2d( 500, 500, 500, 1024/576, 0 );
-
+	
 	TM.render();
 	
 	vdata = fmt_pack( "5f12x 5f12x 5f12x 5f12x",
@@ -103,18 +103,18 @@ function update()
 	idata = fmt_pack( "4w", 1, 2, 3, 0 );
 	draw_packed( image, vfmt, vdata, 0, 4, PT_TRIANGLE_FAN );
 	draw_packed( image, vfmt, vdata, 0, 4, PT_TRIANGLE_FAN, idata );
-
-	set_camera_ui( 0, 1024, 0, 576 );
-
-	draw({ preset = "box", texture = image, position = mpos, scale = [128,128], angle = rotation * M_PI });
 	
+	set_camera_ui( 0, 1024, 0, 576 );
+	
+	draw({ preset = "box", texture = image, position = mpos, scale = [128,128], angle = rotation * M_PI });
+	/*
 	UI.draw();
 	
 	fn = create_font( "verdana.ttf", 16 );
 	tx = "frame time: " $ ( ftime() - lasttime ) * 1000.0 $ " ms";
 	draw_text_line( tx, fn, 301, 1, [0,0,0,1] );
 	draw_text_line( tx, fn, 300, 0, [1] );
-	
+	*/
 	present();
 
 	sleeptime = 15 - delta * 1000;
