@@ -107,14 +107,14 @@ function update()
 	set_camera_ui( 0, 1024, 0, 576 );
 	
 	draw({ preset = "box", texture = image, position = mpos, scale = [128,128], angle = rotation * M_PI });
-	/*
+	
 	UI.draw();
 	
 	fn = create_font( "verdana.ttf", 16 );
 	tx = "frame time: " $ ( ftime() - lasttime ) * 1000.0 $ " ms";
 	draw_text_line( tx, fn, 301, 1, [0,0,0,1] );
 	draw_text_line( tx, fn, 300, 0, [1] );
-	*/
+	
 	present();
 
 	sleeptime = 15 - delta * 1000;

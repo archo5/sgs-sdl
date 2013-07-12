@@ -208,5 +208,7 @@ int main( int argc, char* argv[] )
 	sgs_CloseIDbg( C, &D );
 	sgs_DestroyEngine( C );
 	
+	sgs_FreeGraphics( C );
+	
 	return 0;
 }

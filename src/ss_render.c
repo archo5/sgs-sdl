@@ -202,7 +202,7 @@ int ss_create_texture( SGS_CTX )
 #ifdef SS_USED3D
 		{
 			int miplev = 1, i, y;
-			sgs_Image* pdii = ii;
+			sgs_Image* pdii = ii, *pii;
 			IDirect3DTexture9* tex = NULL;
 			if( flags & CT_MIPMAPS )
 			{
@@ -218,16 +218,17 @@ int ss_create_texture( SGS_CTX )
 			tt->obj = (IDirect3DBaseTexture9*) tex;
 			for( i = 0; i < miplev; ++i )
 			{
+				pii = pdii;
 				D3DLOCKED_RECT lr;
 				IDirect3DTexture9_LockRect( tex, i, &lr, NULL, D3DLOCK_DISCARD );
 				for( y = 0; y < pdii->height; ++y )
-					memcpy( ((uint8_t*)lr.pBits) + lr.Pitch * y, pdii->data, pdii->width * 4 );
+					memcpy( ((uint8_t*)lr.pBits) + lr.Pitch * y, pdii->data + pdii->width * 4 * y, pdii->width * 4 );
 				IDirect3DTexture9_UnlockRect( tex, i );
 				if( i < miplev-1 )
 					pdii = sgs_ImageDS2X( pdii, C );
+				if( pii != ii )
+					sgs_DeleteImage( pii, C );
 			}
-			if( pdii != ii )
-				sgs_DeleteImage( pdii, C );
 		}
 		
 #else
@@ -773,9 +774,7 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 				mtx[ 2 ] = mtx[ 6 ] = mtx[ 8 ] = mtx[ 9 ] =
 					mtx[ 11 ] = mtx[ 12 ] = mtx[ 13 ] = mtx[ 14 ] = 0;
 				
-#ifndef SS_USED3D
 				_mtx_transpose( mtx );
-#endif
 			}
 		}
 		
@@ -866,9 +865,10 @@ int ss_draw( SGS_CTX )
 	MemBuf B = membuf_create();
 	ssvtx tmp = { { 0, 0, 0 }, 0xffffffff, { 0, 0 }, {0,0} };
 	
-	float *tf, *cc, *vp, *vt, *vc;
+	float *tf, *cc, *vp, *vt, *vc, tox = 0, toy = 0;
 	int mode = PT_TRIANGLES, ret = 1;
 #ifdef SS_USED3D
+	float mtxbk[ 16 ];
 	IDirect3DBaseTexture9* texobj = NULL;
 #else
 	GLuint texid = 0;
@@ -908,6 +908,23 @@ int ss_draw( SGS_CTX )
 	
 #ifdef SS_USED3D
 	IDirect3DDevice9_SetTexture( GD3DDev, 0, texobj );
+	if( texobj )
+	{
+		sgs_Texture* tex = (sgs_Texture*) mi[0].var->data.O->data;
+		int lin = !( tex->flags & CT_NOLERP );
+		int mip = ( tex->flags & CT_MIPMAPS );
+		int hr = ( tex->flags & CT_HREPEAT );
+		int vr = ( tex->flags & CT_VREPEAT );
+		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_MINFILTER, lin ? D3DTEXF_LINEAR : D3DTEXF_POINT );
+		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_MAGFILTER, lin ? D3DTEXF_LINEAR : D3DTEXF_POINT );
+		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_MIPFILTER, mip ? ( lin ? D3DTEXF_LINEAR : D3DTEXF_POINT ) : D3DTEXF_NONE );
+		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_ADDRESSU, hr ? D3DTADDRESS_WRAP : D3DTADDRESS_CLAMP );
+		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_ADDRESSV, vr ? D3DTADDRESS_WRAP : D3DTADDRESS_CLAMP );
+		tox = 0.5f / tex->width;
+		toy = 0.5f / tex->height;
+	}
+	
+	IDirect3DDevice9_GetTransform( GD3DDev, D3DTS_WORLD, (D3DMATRIX*) mtxbk );
 
 #else
 	if( texid )
@@ -953,8 +970,8 @@ int ss_draw( SGS_CTX )
 		{
 			if( vt < vtex.data + vtex.size )
 			{
-				tmp.tex[0] = vt[0];
-				tmp.tex[1] = 1 - vt[1];
+				tmp.tex[0] = vt[0] + tox;
+				tmp.tex[1] = 1 - vt[1] + toy;
 				vt += 2;
 			}
 			if( vc < vcol.data + vcol.size )
@@ -969,10 +986,24 @@ int ss_draw( SGS_CTX )
 		
 #ifdef SS_USED3D
 		IDirect3DDevice9_SetFVF( GD3DDev, D3DFVF_XYZ | D3DFVF_TEX1 | D3DFVF_DIFFUSE );
-		IDirect3DDevice9_DrawPrimitiveUP( GD3DDev, mode,
-			getprimitivecount( mode, B.size / sizeof(ssvtx) ),
-			B.ptr, sizeof(ssvtx) );
+		if( mode == PT_QUADS )
+		{
+			int i, cnt = B.size / sizeof(ssvtx) - 3;
+			for( i = 0; i < cnt; i += 4 )
+			{
+				IDirect3DDevice9_DrawPrimitiveUP( GD3DDev, D3DPT_TRIANGLEFAN,
+					2, B.ptr + sizeof(ssvtx) * i, sizeof(ssvtx) );
+			}
+		}
+		else
+		{
+			IDirect3DDevice9_DrawPrimitiveUP( GD3DDev, mode,
+				getprimitivecount( mode, B.size / sizeof(ssvtx) ),
+				B.ptr, sizeof(ssvtx) );
+		}
 	}
+	
+	IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_WORLD, (D3DMATRIX*) mtxbk );
 
 #else
 		/* TODO: fix hardcoded offsets, maybe */
@@ -1045,6 +1076,7 @@ static int vd_make_typecount( int type, int count )
 
 static void initialize_optimized_format( vtxfmt* F )
 {
+	HRESULT hr;
 	D3DVERTEXELEMENT9 els[ 5 ] = { D3DDECL_END(), D3DDECL_END(),
 		D3DDECL_END(), D3DDECL_END(), D3DDECL_END() };
 	
@@ -1075,7 +1107,8 @@ static void initialize_optimized_format( vtxfmt* F )
 	}
 	
 	F->vdecl = NULL;
-	IDirect3DDevice9_CreateVertexDeclaration( GD3DDev, els, &F->vdecl );
+	hr = IDirect3DDevice9_CreateVertexDeclaration( GD3DDev, els, &F->vdecl );
+	sgs_BreakIf( FAILED( hr ) && "vertex declaration creation failed" );
 }
 
 static void free_optimized_format( vtxfmt* F )
@@ -1195,7 +1228,7 @@ int ss_draw_packed( SGS_CTX )
 	SGSFN( "draw_packed" );
 	
 	if( !( ssz == 6 || ssz == 7 ) ||
-		!( sgs_ItemType( C, 0 ) == VT_NULL || sgs_IsObject( C, 0, tex_iface ) ) ||
+		!( sgs_ItemType( C, 0 ) == SGS_VT_NULL || sgs_IsObject( C, 0, tex_iface ) ) ||
 		!sgs_IsObject( C, 1, vertex_format_iface ) ||
 		!sgs_ParseString( C, 2, &data, &datasize ) ||
 		!sgs_ParseInt( C, 3, &start ) ||
@@ -1223,9 +1256,23 @@ int ss_draw_packed( SGS_CTX )
 	
 #ifdef SS_USED3D
 	IDirect3DDevice9_SetTexture( GD3DDev, 0, T ? T->obj : NULL );
+	if( T && T->obj )
+	{
+		sgs_Texture* tex = T;
+		int lin = !( tex->flags & CT_NOLERP );
+		int mip = ( tex->flags & CT_MIPMAPS );
+		int hr = ( tex->flags & CT_HREPEAT );
+		int vr = ( tex->flags & CT_VREPEAT );
+		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_MINFILTER, lin ? D3DTEXF_LINEAR : D3DTEXF_POINT );
+		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_MAGFILTER, lin ? D3DTEXF_LINEAR : D3DTEXF_POINT );
+		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_MIPFILTER, mip ? ( lin ? D3DTEXF_LINEAR : D3DTEXF_POINT ) : D3DTEXF_NONE );
+		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_ADDRESSU, hr ? D3DTADDRESS_WRAP : D3DTADDRESS_CLAMP );
+		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_ADDRESSV, vr ? D3DTADDRESS_WRAP : D3DTADDRESS_CLAMP );
+	}
+	
 	IDirect3DDevice9_SetVertexDeclaration( GD3DDev, F->vdecl );
 	IDirect3DDevice9_DrawPrimitiveUP( GD3DDev, type,
-		getprimitivecount( type, count / F->size ),
+		getprimitivecount( type, count ),
 		data, F->size );
 	IDirect3DDevice9_SetVertexDeclaration( GD3DDev, NULL );
 
@@ -1393,9 +1440,10 @@ int ss_set_camera( SGS_CTX )
 		_WARN( "expected an array of 16 'real' values" )
 	
 #ifdef SS_USED3D
+	_mtx_transpose( mtx );
 	IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_VIEW, (D3DMATRIX*) mtx );
-	if( ssz >= 2 )
-		IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_PROJECTION, (D3DMATRIX*) mtx2 );
+	if( ssz < 2 ){ mtx2[0] = 1; mtx2[5] = 1; mtx2[10] = 1; mtx2[15] = 1; }
+	IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_PROJECTION, (D3DMATRIX*) mtx2 );
 	
 #else
 	glMatrixMode( GL_PROJECTION );
@@ -1469,7 +1517,7 @@ static void fontfreefunc( HTPair* p, void* ud )
 	ss_glyph* G = (ss_glyph*) p->ptr;
 	if( G->texture )
 #ifdef SS_USED3D
-		IDirect3DResource9_Release( G->texture );
+		IDirect3DTexture9_Release( G->texture );
 #else
 		glDeleteTextures( 1, &G->texture );
 #endif
@@ -1493,7 +1541,6 @@ int ss_font_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 {
 	FONTHDR;
 	ss_font_free( font, C );
-	sgs_Dealloc( font );
 	return SGS_SUCCESS;
 }
 
@@ -1517,9 +1564,9 @@ int ss_fontI_get_advance( SGS_CTX )
 
 	if( !sgs_Method( C ) ||
 		sgs_StackSize( C ) != 3 ||
-		sgs_ItemType( C, 0 ) != VT_OBJECT ||
+		sgs_ItemType( C, 0 ) != SGS_VT_OBJECT ||
 		sgs_GetObjectData( C, 0 )->iface != font_iface ||
-		!( sgs_ItemType( C, 1 ) == VT_NULL || sgs_ParseInt( C, 1, &a ) ) ||
+		!( sgs_ItemType( C, 1 ) == SGS_VT_NULL || sgs_ParseInt( C, 1, &a ) ) ||
 		!sgs_ParseInt( C, 2, &b ) )
 		_WARN( "font::get_advance(): unexpected arguments; "
 			"method expects this=font and 2 arguments: int|null, int" )
@@ -1587,9 +1634,8 @@ int ss_create_font( SGS_CTX )
 	{
 		char* paths = NULL;
 		MemBuf fpath = membuf_create();
-		ss_font* fn = sgs_Alloc( ss_font );
+		ss_font* fn = (ss_font*) sgs_PushObjectIPA( C, sizeof(ss_font), font_iface );
 		fn->loaded = 0;
-		sgs_PushObject( C, fn, font_iface );
 
 		if( sgs_PushGlobal( C, "ss_font_search_paths" ) ||
 			!sgs_ParseString( C, -1, &paths, NULL ) )
@@ -1640,7 +1686,7 @@ ss_glyph* ss_font_create_glyph( ss_font* font, SGS_CTX, uint32_t cp )
 	int x, y;
 	uint8_t* imgdata, *pp;
 #ifdef SS_USED3D
-	IDirect3DTexture9* tex;
+	IDirect3DTexture9* tex = NULL;
 #else
 	GLuint tex = 0;
 #endif
@@ -1655,16 +1701,18 @@ ss_glyph* ss_font_create_glyph( ss_font* font, SGS_CTX, uint32_t cp )
 	if( glyph->bitmap.width * glyph->bitmap.rows )
 	{
 #ifdef SS_USED3D
+		HRESULT hr;
 		D3DLOCKED_RECT lr;
-		IDirect3DDevice9_CreateTexture( GD3DDev, glyph->bitmap.width,
+		hr = IDirect3DDevice9_CreateTexture( GD3DDev, glyph->bitmap.width,
 			glyph->bitmap.rows, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &tex, NULL );
+		sgs_BreakIf( tex == NULL || FAILED(hr) );
 		IDirect3DTexture9_LockRect( tex, 0, &lr, NULL, D3DLOCK_DISCARD );
 		pp = glyph->bitmap.buffer;
 		for( y = 0; y < glyph->bitmap.rows; ++y )
 		{
 			for( x = 0; x < glyph->bitmap.width; ++x )
 			{
-				int off = y * lr.Pitch * 4;
+				int off = y * lr.Pitch;
 				((uint8_t*)lr.pBits)[ off + x * 4 ] = 0xff;
 				((uint8_t*)lr.pBits)[ off + x * 4 + 1 ] = 0xff;
 				((uint8_t*)lr.pBits)[ off + x * 4 + 2 ] = 0xff;
@@ -1725,6 +1773,14 @@ ss_glyph* ss_font_get_glyph( ss_font* font, SGS_CTX, uint32_t cp )
 		return (ss_glyph*) p->ptr;
 }
 
+typedef struct _fontvtx
+{
+	float x,y,z;
+	D3DCOLOR col;
+	float u,v;
+}
+fontvtx;
+
 void ss_int_drawtext_line( ss_font* font, SGS_CTX, char* str,
 	sgs_SizeVal size, int x, int y, int xto, sgs_Real* color )
 {
@@ -1732,7 +1788,11 @@ void ss_int_drawtext_line( ss_font* font, SGS_CTX, char* str,
 	uint32_t previous = 0;
 	ss_glyph* G;
 
-#ifndef SS_USED3D
+#ifdef SS_USED3D
+	D3DCOLOR cc = D3DCOLOR_ARGB( ((int)(color[3]*255)),
+		((int)(color[0]*255)), ((int)(color[1]*255)), ((int)(color[2]*255)) );
+	
+#else
 	glEnable( GL_TEXTURE_2D );
 	glColor4f( color[0], color[1], color[2], color[3] );
 	
@@ -1774,13 +1834,14 @@ void ss_int_drawtext_line( ss_font* font, SGS_CTX, char* str,
 			
 #ifdef SS_USED3D
 			{
-				float vdata[] = { mx, my, 0, 0, 0,  mx, my+H, 0, 0, 1,
-					mx+W, my+H, 0, 1, 1,  mx+W, my, 0, 1, 0 };
-				IDirect3DDevice9_SetFVF( GD3DDev, D3DFVF_XYZ | D3DFVF_TEX1 );
+				float tox = 0.5f / W, toy = 0.5f / H;
+				fontvtx vdata[4] = { { mx, my, 0, cc, tox, toy }, { mx, my+H, 0, cc, tox, 1+toy },
+					{ mx+W, my+H, 0, cc, 1+tox, 1+toy }, { mx+W, my, 0, cc, 1+tox, toy } };
+				IDirect3DDevice9_SetFVF( GD3DDev, D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX1 );
 				IDirect3DDevice9_SetTexture( GD3DDev, 0,
 					(IDirect3DBaseTexture9*) G->texture );
 				IDirect3DDevice9_DrawPrimitiveUP( GD3DDev,
-					D3DPT_TRIANGLESTRIP, 2, vdata, sizeof(float)*5 );
+					D3DPT_TRIANGLEFAN, 2, vdata, sizeof(fontvtx) );
 			}
 			
 #else
@@ -1859,7 +1920,7 @@ int ss_set_cliprect( SGS_CTX )
 {
 	sgs_Integer x1, x2, y1, y2;
 	if( sgs_StackSize( C ) == 1 &&
-		sgs_ItemType( C, 0 ) == VT_NULL )
+		sgs_ItemType( C, 0 ) == SGS_VT_NULL )
 	{
 #ifdef SS_USED3D
 		IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_SCISSORTESTENABLE, 0 );

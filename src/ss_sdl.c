@@ -84,7 +84,8 @@ int ss_set_video_mode( SGS_CTX )
 	ZeroMemory( &GD3DPP, sizeof(GD3DPP) );
 	GD3DPP.Windowed = 1;
 	GD3DPP.SwapEffect = D3DSWAPEFFECT_DISCARD;
-	GD3DPP.EnableAutoDepthStencil = 0;
+	GD3DPP.EnableAutoDepthStencil = 1;
+	GD3DPP.AutoDepthStencilFormat = D3DFMT_D16;
 	GD3DPP.hDeviceWindow = GetActiveWindow();
 	GD3DPP.BackBufferWidth = w;
 	GD3DPP.BackBufferHeight = h;
@@ -97,6 +98,24 @@ int ss_set_video_mode( SGS_CTX )
 			D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, GetActiveWindow(),
 			D3DCREATE_HARDWARE_VERTEXPROCESSING, &GD3DPP, &GD3DDev ) );
 	}
+	
+	IDirect3DDevice9_SetTextureStageState( GD3DDev, 0, D3DTSS_COLORARG2, D3DTA_DIFFUSE );
+	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_LIGHTING, 0 );
+	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_CULLMODE, D3DCULL_NONE );
+	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_ZENABLE, 0 );
+	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_ALPHABLENDENABLE, 1 );
+	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
+	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
+	{
+		float wm[ 16 ] = { 1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1 };
+		float vm[ 16 ] = { 1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 100,  0, 0, 0, 1 };
+		float pm[ 16 ] = { 2.0f/1024.0f, 0, 0, 0,  0, 2.0f/576.0f, 0, 0,  0, 0, 1.0f/999.0f, 1.0f/-999.0f,  0, 0, 0, 1 };
+		IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_WORLD, (D3DMATRIX*) wm );
+		IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_VIEW, (D3DMATRIX*) vm );
+		IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_PROJECTION, (D3DMATRIX*) pm );
+	}
+	
+	IDirect3DDevice9_BeginScene( GD3DDev );
 	
 #else
 	glDisable( GL_DEPTH_TEST );
@@ -263,8 +282,20 @@ int ss_present( SGS_CTX )
 #ifndef SS_USED3D
 	SDL_GL_SwapBuffers();
 #else
-	if( GD3DDev )
-		IDirect3DDevice9_Present( GD3DDev, NULL, NULL, NULL, NULL );
+	/*
+	float wm[ 16 ] = { 1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1 };
+	float vm[ 16 ] = { 1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 100,  0, 0, 0, 1 };
+	float pm[ 16 ] = { 2.0f/1024.0f, 0, 0, 0,  0, 2.0f/576.0f, 0, 0,  0, 0, 1.0f/999.0f, 1.0f/-999.0f,  0, 0, 0, 1 };
+	IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_WORLD, (D3DMATRIX*) wm );
+	IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_VIEW, (D3DMATRIX*) vm );
+	IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_PROJECTION, (D3DMATRIX*) pm );
+	float data[20] = { -10, -10, 0, 0, 0,   10, -10, 0, 1, 0,  10, 10, 0, 1, 1,  -10, 10, 0, 0, 1 };
+	IDirect3DDevice9_SetFVF( GD3DDev, D3DFVF_XYZ | D3DFVF_TEX1 );
+	IDirect3DDevice9_DrawPrimitiveUP( GD3DDev, D3DPT_TRIANGLEFAN, 2, data, sizeof(float)*5 );
+	*/
+	IDirect3DDevice9_EndScene( GD3DDev );
+	IDirect3DDevice9_Present( GD3DDev, NULL, NULL, NULL, NULL );
+	IDirect3DDevice9_BeginScene( GD3DDev );
 #endif
 	return 0;
 }
@@ -621,6 +652,13 @@ int sgs_InitSDL( SGS_CTX )
 	if( ret != SGS_SUCCESS ) return ret;
 	
 	return SGS_SUCCESS;
+}
+
+
+void sgs_FreeGraphics( SGS_CTX )
+{
+	IDirect3DDevice9_Release( GD3DDev );
+	IDirect3D9_Release( GD3D );
 }
 
 

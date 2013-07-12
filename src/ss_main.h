@@ -92,6 +92,7 @@ void sgs_DeleteImage( sgs_Image* img, SGS_CTX );
 /* SGScript - SDL */
 int sgs_InitSDL( SGS_CTX );
 int sgs_CreateSDLEvent( SGS_CTX, SDL_Event* event );
+void sgs_FreeGraphics( SGS_CTX );
 
 
 /* SGScript - OpenGL */
