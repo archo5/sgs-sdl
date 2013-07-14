@@ -22,7 +22,10 @@ extern IDirect3DDevice9* GD3DDev;
 
 #include <SDL/SDL.h>
 
-#ifndef SS_USED3D
+#ifdef SS_USED3D
+#  define SDL_VIDEO_DEVICELOST SDL_USEREVENT + 1
+#  define SDL_VIDEO_DEVICERESET SDL_USEREVENT + 2
+#else
 #  define GL_GLEXT_PROTOTYPES
 #  include "SDL/SDL_opengl.h"
 #endif
@@ -101,6 +104,7 @@ int sgs_InitGL( SGS_CTX );
 
 /* API */
 int ss_parse_texture( SGS_CTX, int item, sgs_Texture** out );
+void* ss_get_iface( int which );
 
 int sgs_InitAPI( SGS_CTX );
 

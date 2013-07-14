@@ -407,12 +407,29 @@ int ss_parse_texture( SGS_CTX, int item, sgs_Texture** tex )
 	return 1;
 }
 
+void* ss_get_iface( int which )
+{
+	switch( which )
+	{
+#ifdef SS_USED3D
+	case SSI_D3D: return GD3D;
+	case SSI_D3D_DEVICE: return GD3DDev;
+#endif
+	case SSI_TEX_IFACE: return tex_iface;
+	}
+	return NULL;
+}
+
 int sgs_InitAPI( SGS_CTX )
 {
 	int ret;
 	
 	sgs_PushObject( C, ss_parse_texture, apiobj_iface );
 	ret = sgs_StoreGlobal( C, SS_PARSE_TEXTURE_KEY );
+	if( ret != SGS_SUCCESS ) return ret;
+	
+	sgs_PushObject( C, ss_get_iface, apiobj_iface );
+	ret = sgs_StoreGlobal( C, SS_GET_IFACE_KEY );
 	if( ret != SGS_SUCCESS ) return ret;
 	
 	return SGS_SUCCESS;

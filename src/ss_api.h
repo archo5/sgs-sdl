@@ -28,6 +28,11 @@ typedef struct _sgs_Texture
 sgs_Texture;
 
 
+#define SSI_D3D 1
+#define SSI_D3D_DEVICE 2
+#define SSI_TEX_IFACE 3
+
+
 /* functions transferred via the SGScript hash table */
 /* calling them would most probably crash the engine or corrupt the memory,
 	so the identifier-unfriendly symbols try to prevent that from happening */
@@ -36,6 +41,10 @@ sgs_Texture;
 #define SS_PARSE_TEXTURE pfn_ss_parse_texture ss_parse_texture
 typedef int (*pfn_ss_parse_texture) ( sgs_Context*, int /* item */, sgs_Texture** /* tex */ );
 
+
+#define SS_GET_IFACE_KEY "$__get_iface"
+#define SS_GET_IFACE pfn_ss_get_iface ss_get_iface
+typedef void* (*pfn_ss_get_iface) ( int which );
 
 
 #ifndef BUILDING_SGS_SDL

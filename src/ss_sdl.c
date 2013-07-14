@@ -23,6 +23,48 @@ int g_width = 0;
 int g_height = 0;
 
 
+void _ss_reset_states()
+{
+	IDirect3DDevice9_SetTextureStageState( GD3DDev, 0, D3DTSS_COLORARG2, D3DTA_DIFFUSE );
+	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_LIGHTING, 0 );
+	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_CULLMODE, D3DCULL_NONE );
+	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_ZENABLE, 0 );
+	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_ALPHABLENDENABLE, 1 );
+	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
+	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
+	{
+		float wm[ 16 ] = { 1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1 };
+		float vm[ 16 ] = { 1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 100,  0, 0, 0, 1 };
+		float pm[ 16 ] = { 2.0f/1024.0f, 0, 0, 0,  0, 2.0f/576.0f, 0, 0,  0, 0, 1.0f/999.0f, 1.0f/-999.0f,  0, 0, 0, 1 };
+		IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_WORLD, (D3DMATRIX*) wm );
+		IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_VIEW, (D3DMATRIX*) vm );
+		IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_PROJECTION, (D3DMATRIX*) pm );
+	}
+}
+
+int _ss_reset_device( SGS_CTX )
+{
+	D3DPRESENT_PARAMETERS npp;
+	SDL_Event event;
+	
+	npp = GD3DPP;
+	
+	event.type = SDL_VIDEO_DEVICELOST;
+	sgs_CreateSDLEvent( C, &event );
+	sgs_GlobalCall( C, "on_event", 1, 0 );
+	
+	IDirect3DDevice9_Reset( GD3DDev, &npp );
+	
+	_ss_reset_states();
+	
+	event.type = SDL_VIDEO_DEVICERESET;
+	sgs_CreateSDLEvent( C, &event );
+	sgs_GlobalCall( C, "on_event", 1, 0 );
+	
+	return 1;
+}
+
+
 int ss_sleep( SGS_CTX )
 {
 	sgs_Integer time;
@@ -47,17 +89,20 @@ int ss_set_gl_attrib( SGS_CTX )
 	return 1;
 }
 
+#define SDL_VSYNC 0x10000
+
 flag_string_item_t setvideomode_flags[] =
 {
 	{ "fullscreen", SDL_FULLSCREEN },
 	{ "resizable", SDL_RESIZABLE },
 	{ "noframe", SDL_NOFRAME },
+	{ "vsync", SDL_VSYNC },
 	FSI_LAST
 };
 int ss_set_video_mode( SGS_CTX )
 {
 	char* ts;
-	int suc = 0;
+	int suc = 0, vsync;
 	sgs_Integer w, h, b, f;
 	sgs_SizeVal tss;
 	
@@ -71,16 +116,10 @@ int ss_set_video_mode( SGS_CTX )
 		_WARN( "function expects 4 arguments: int, int, int, string" )
 	
 	f = sgs_GetFlagString( C, 3, setvideomode_flags );
-#ifndef SS_USED3D
-	f |= SDL_OPENGL;
-#endif
-	
-	suc = !!SDL_SetVideoMode( w, h, b, f );
+	vsync = ( f & SDL_VSYNC ) != 0;
+	f &= ~SDL_VSYNC;
 	
 #ifdef SS_USED3D
-	if( !GD3D )
-		GD3D = Direct3DCreate9( D3D_SDK_VERSION );
-
 	ZeroMemory( &GD3DPP, sizeof(GD3DPP) );
 	GD3DPP.Windowed = 1;
 	GD3DPP.SwapEffect = D3DSWAPEFFECT_DISCARD;
@@ -91,28 +130,28 @@ int ss_set_video_mode( SGS_CTX )
 	GD3DPP.BackBufferHeight = h;
 	GD3DPP.BackBufferFormat = b == 32 ? D3DFMT_X8R8G8B8 : D3DFMT_R5G6B5;
 	GD3DPP.MultiSampleType = D3DMULTISAMPLE_NONE;
-
+	GD3DPP.PresentationInterval = vsync ? D3DPRESENT_INTERVAL_ONE : D3DPRESENT_INTERVAL_IMMEDIATE;
+#else
+	f |= SDL_OPENGL;
+#endif
+	
+	suc = !!SDL_SetVideoMode( w, h, b, f );
+	
+#ifdef SS_USED3D
+	if( !GD3D )
+		GD3D = Direct3DCreate9( D3D_SDK_VERSION );
+	
 	if( !GD3DDev )
 	{
 		suc = !FAILED( IDirect3D9_CreateDevice( GD3D,
 			D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, GetActiveWindow(),
 			D3DCREATE_HARDWARE_VERTEXPROCESSING, &GD3DPP, &GD3DDev ) );
+		
+		_ss_reset_states();
 	}
-	
-	IDirect3DDevice9_SetTextureStageState( GD3DDev, 0, D3DTSS_COLORARG2, D3DTA_DIFFUSE );
-	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_LIGHTING, 0 );
-	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_CULLMODE, D3DCULL_NONE );
-	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_ZENABLE, 0 );
-	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_ALPHABLENDENABLE, 1 );
-	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
-	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
+	else
 	{
-		float wm[ 16 ] = { 1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1 };
-		float vm[ 16 ] = { 1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 100,  0, 0, 0, 1 };
-		float pm[ 16 ] = { 2.0f/1024.0f, 0, 0, 0,  0, 2.0f/576.0f, 0, 0,  0, 0, 1.0f/999.0f, 1.0f/-999.0f,  0, 0, 0, 1 };
-		IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_WORLD, (D3DMATRIX*) wm );
-		IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_VIEW, (D3DMATRIX*) vm );
-		IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_PROJECTION, (D3DMATRIX*) pm );
+		_ss_reset_device( C );
 	}
 	
 	IDirect3DDevice9_BeginScene( GD3DDev );
@@ -282,19 +321,14 @@ int ss_present( SGS_CTX )
 #ifndef SS_USED3D
 	SDL_GL_SwapBuffers();
 #else
-	/*
-	float wm[ 16 ] = { 1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1 };
-	float vm[ 16 ] = { 1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 100,  0, 0, 0, 1 };
-	float pm[ 16 ] = { 2.0f/1024.0f, 0, 0, 0,  0, 2.0f/576.0f, 0, 0,  0, 0, 1.0f/999.0f, 1.0f/-999.0f,  0, 0, 0, 1 };
-	IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_WORLD, (D3DMATRIX*) wm );
-	IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_VIEW, (D3DMATRIX*) vm );
-	IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_PROJECTION, (D3DMATRIX*) pm );
-	float data[20] = { -10, -10, 0, 0, 0,   10, -10, 0, 1, 0,  10, 10, 0, 1, 1,  -10, 10, 0, 0, 1 };
-	IDirect3DDevice9_SetFVF( GD3DDev, D3DFVF_XYZ | D3DFVF_TEX1 );
-	IDirect3DDevice9_DrawPrimitiveUP( GD3DDev, D3DPT_TRIANGLEFAN, 2, data, sizeof(float)*5 );
-	*/
 	IDirect3DDevice9_EndScene( GD3DDev );
-	IDirect3DDevice9_Present( GD3DDev, NULL, NULL, NULL, NULL );
+	if( IDirect3DDevice9_Present( GD3DDev, NULL, NULL, NULL, NULL ) == D3DERR_DEVICELOST )
+	{
+		if( IDirect3DDevice9_TestCooperativeLevel( GD3DDev ) == D3DERR_DEVICENOTRESET )
+		{
+			_ss_reset_device( C );
+		}
+	}
 	IDirect3DDevice9_BeginScene( GD3DDev );
 #endif
 	return 0;
@@ -313,6 +347,9 @@ sgs_RegIntConst sdl_ints[] =
 	IC( SDL_QUIT ),
 	IC( SDL_VIDEORESIZE ),
 	IC( SDL_VIDEOEXPOSE ),
+	
+	IC( SDL_VIDEO_DEVICELOST ),
+	IC( SDL_VIDEO_DEVICERESET ),
 
 	/* keycodes */
 	IC( SDLK_UNKNOWN ),
@@ -726,11 +763,18 @@ int sgs_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 		break;
 	
 	case SDL_VIDEORESIZE:
+#ifdef SS_USED3D
+		if( GD3DPP.BackBufferWidth != event->resize.w || GD3DPP.BackBufferHeight != event->resize.h )
+		{
+			GD3DPP.BackBufferWidth = event->resize.w;
+			GD3DPP.BackBufferHeight = event->resize.h;
+			_ss_reset_device( C );
+		}
+#else
+		glViewport( 0, 0, event->resize.w, event->resize.h );
+#endif
 		g_width = event->resize.w;
 		g_height = event->resize.h;
-#ifndef SS_USED3D
-		glViewport( 0, 0, g_width, g_height );
-#endif
 		sgs_PushString( C, "w" );
 		sgs_PushInt( C, event->resize.w );
 		sgs_PushString( C, "h" );
