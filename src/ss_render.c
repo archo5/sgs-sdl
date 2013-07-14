@@ -1993,6 +1993,16 @@ int sgs_InitGL( SGS_CTX )
 	ret = sgs_RegFuncConsts( C, gl_funcs, ARRAY_SIZE( gl_funcs ) );
 	if( ret != SGS_SUCCESS ) return ret;
 	
+#ifdef SS_USED3D
+	sgs_PushInt( C, 1 );
+	sgs_PushInt( C, 1 );
+#else
+	sgs_PushInt( C, -1 );
+	sgs_PushInt( C, 0 );
+#endif
+	sgs_StoreGlobal( C, "ss_using_d3d" );
+	sgs_StoreGlobal( C, "ss_using_d3d_signed" );
+	
 	ret = sgs_ExecString( C, gl_init );
 	if( ret != SGS_SUCCESS ) return ret;
 	

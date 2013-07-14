@@ -1,0 +1,41 @@
+
+include "string", "fmt";
+
+global Histogram =
+{
+};
+
+function Histogram.create( limit )
+{
+	limit ||= 100;
+	data =
+	{
+		limit = limit,
+		data = [],
+		vfmt = make_vertex_format( "pf2cc4" ),
+	};
+	return class( data, Histogram );
+}
+
+function Histogram.push( val )
+{
+	while( this.data.size >= this.limit )
+		this.data.shift();
+	this.data.push( val );
+}
+
+function Histogram.draw( x, y, xscale, yscale, color, vlim )
+{
+	bc = 0x7f000000;
+	bg = fmt_pack( "ffl ffl ffl ffl", x, y, bc, x + this.limit * xscale, y, bc,
+		x + this.limit * xscale, y + yscale * vlim, bc, x, y + yscale * vlim, bc );
+	draw_packed( null, this.vfmt, bg, 0, 4, GL_QUADS );
+	
+	verts = "";
+	foreach( px, py : this.data )
+	{
+		verts $= fmt_pack( "ffl", x + px * xscale, y + py * yscale, color );
+	}
+	if( verts.length > 0 )
+		draw_packed( null, this.vfmt, verts, 0, verts.length / 12, GL_LINE_STRIP );
+}

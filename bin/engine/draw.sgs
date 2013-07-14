@@ -6,7 +6,7 @@ function get_camera_2d_mtx( x, y, size, aspect, angle )
 	y *= size;
 	return
 	[
-		size/aspect, 0, 0, -x,
+		ss_using_d3d_signed * size/aspect, 0, 0, -x,
 		0, -size, 0, y,
 		0, 0, size, 0.5*size,
 		0, 0, 0, 1,
@@ -93,7 +93,7 @@ function get_camera_perspective( angle, aspect, znear, zfar )
 	xscale = yscale / aspect;
 	return
 	[
-		xscale, 0, 0, 0,
+		ss_using_d3d_signed * -xscale, 0, 0, 0,
 		0, yscale, 0, 0,
 		0, 0, zfar/(zfar-znear), -znear*zfar/(zfar-znear),
 		0, 0, 1, 0,
@@ -106,6 +106,14 @@ function set_camera_3d( pos, dir, up, angle, aspect, znear, zfar )
 		mtx_transpose( get_camera_lookat( pos, dir, up ) )
 		,get_camera_perspective( angle, aspect, znear, zfar )
 	);
+}
+function get_camera_3d( pos, dir, up, angle, aspect, znear, zfar )
+{
+	return
+	[
+		get_camera_lookat( pos, dir, up )
+		,get_camera_perspective( angle, aspect, znear, zfar )
+	];
 }
 
 function draw_fitted( tex, left, right, top, bottom, placement )
