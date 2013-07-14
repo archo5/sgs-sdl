@@ -432,6 +432,16 @@ int sgs_InitAPI( SGS_CTX )
 	ret = sgs_StoreGlobal( C, SS_GET_IFACE_KEY );
 	if( ret != SGS_SUCCESS ) return ret;
 	
+#ifdef SS_USED3D
+	sgs_PushInt( C, 1 );
+	sgs_PushInt( C, 1 );
+#else
+	sgs_PushInt( C, -1 );
+	sgs_PushInt( C, 0 );
+#endif
+	sgs_StoreGlobal( C, "ss_using_d3d" );
+	sgs_StoreGlobal( C, "ss_using_d3d_signed" );
+	
 	return SGS_SUCCESS;
 }
 
