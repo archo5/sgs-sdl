@@ -26,6 +26,9 @@ int g_height = 0;
 void _ss_reset_states()
 {
 	IDirect3DDevice9_SetTextureStageState( GD3DDev, 0, D3DTSS_COLORARG2, D3DTA_DIFFUSE );
+	IDirect3DDevice9_SetTextureStageState( GD3DDev, 0, D3DTSS_ALPHAOP, D3DTOP_MODULATE );
+	IDirect3DDevice9_SetTextureStageState( GD3DDev, 0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE );
+	IDirect3DDevice9_SetTextureStageState( GD3DDev, 0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE );
 	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_LIGHTING, 0 );
 	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_CULLMODE, D3DCULL_NONE );
 	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_ZENABLE, 0 );
