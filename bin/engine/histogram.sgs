@@ -29,7 +29,7 @@ function Histogram.draw( x, y, xscale, yscale, color, vlim )
 	bc = 0x7f000000;
 	bg = fmt_pack( "ffl ffl ffl ffl", x, y, bc, x + this.limit * xscale, y, bc,
 		x + this.limit * xscale, y + yscale * vlim, bc, x, y + yscale * vlim, bc );
-	draw_packed( null, this.vfmt, bg, 0, 4, GL_QUADS );
+	draw_packed( null, this.vfmt, bg, 0, 4, PT_QUADS );
 	
 	verts = "";
 	foreach( px, py : this.data )
@@ -37,5 +37,5 @@ function Histogram.draw( x, y, xscale, yscale, color, vlim )
 		verts $= fmt_pack( "ffl", x + px * xscale, y + py * yscale, color );
 	}
 	if( verts.length > 0 )
-		draw_packed( null, this.vfmt, verts, 0, verts.length / 12, GL_LINE_STRIP );
+		draw_packed( null, this.vfmt, verts, 0, verts.length / 12, PT_LINE_STRIP );
 }
