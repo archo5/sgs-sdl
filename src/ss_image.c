@@ -113,7 +113,7 @@ int ss_image_convert( SGS_CTX, sgs_VarObj* data, int type )
 		sgs_PushString( C, "image" );
 		return SGS_SUCCESS;
 	}
-	else if( type == VT_STRING )
+	else if( type == SVT_STRING )
 	{
 		char buf[ 32 ];
 		IMGHDR;
@@ -297,7 +297,7 @@ int sgs_InitImage( SGS_CTX )
 
 int sgs_IsImageVar( sgs_Variable* var )
 {
-	return BASETYPE(var->type) == VT_OBJECT && var->data.O->iface == image_iface;
+	return BASETYPE(var->type) == SVT_OBJECT && var->data.O->iface == image_iface;
 }
 
 int stdlib_toimage( SGS_CTX, int pos, sgs_Image** out )

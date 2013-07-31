@@ -78,7 +78,7 @@ int sstex_convert( SGS_CTX, sgs_VarObj* data, int type )
 		sgs_PushString( C, "texture" );
 		return SGS_SUCCESS;
 	}
-	else if( type == VT_STRING )
+	else if( type == SVT_STRING )
 	{
 		char buf[ 48 ];
 		TEXHDR;
@@ -154,10 +154,8 @@ int ss_create_texture( SGS_CTX )
 	
 	sgs_PushItem( C, 0 ); /* NAME [FLAGS] NAME */
 	
-	if( sgs_ItemType( C, 0 ) == VT_STRING )
+	if( sgs_ItemType( C, 0 ) == SVT_STRING )
 	{
-		sgs_Variable var, obj, idx;
-		
 		bystr = 1;
 		
 		/* check if image already loaded */
@@ -166,11 +164,9 @@ int ss_create_texture( SGS_CTX )
 		sgs_StringMultiConcat( C, 3 ); /* NAME [FLAGS] KEY */
 		
 		sgs_PushGlobal( C, "_Gtex" ); /* NAME [FLAGS] KEY _Gtex */
-		if( sgs_GetStackItem( C, -1, &obj ) && sgs_GetStackItem( C, -2, &idx ) && sgs_GetIndex( C, &var, &obj, &idx ) == SGS_SUCCESS )
+		if( sgs_PushIndex( C, -1, -2 ) == SGS_SUCCESS )
 		{
 			/* found it! */
-			sgs_PushVariable( C, &var ); /* NAME [FLAGS] KEY _Gtex TEXTURE */
-			sgs_Release( C, &var );
 			return 1;
 		}
 		sgs_Pop( C, 1 );
@@ -277,12 +273,9 @@ int ss_create_texture( SGS_CTX )
 	/* texture key at position -2 */
 	if( bystr )
 	{
-		sgs_Variable obj, idx, val;
 		sgs_PushGlobal( C, "_Gtex" ); /* IMAGE [FLAGS] KEY TEXTURE _Gtex */
-		sgs_GetStackItem( C, -1, &obj );
-		sgs_GetStackItem( C, -3, &idx );
-		sgs_GetStackItem( C, -2, &val );
-		sgs_SetIndex( C, &obj, &idx, &val );
+		sgs_PushItem( C, -2 );
+		sgs_StoreIndex( C, -2, -1 );
 		sgs_Pop( C, 1 ); /* IMAGE [FLAGS] KEY TEXTURE */
 	}
 	
@@ -293,7 +286,7 @@ int ss_create_texture( SGS_CTX )
 #ifndef SS_USED3D
 GLuint sgs_GetTextureId( SGS_CTX, sgs_Variable* var )
 {
-	if( BASETYPE(var->type) != VT_OBJECT || var->data.O->iface != tex_iface )
+	if( BASETYPE(var->type) != SVT_OBJECT || var->data.O->iface != tex_iface )
 		return 0;
 	
 	return ((sgs_Texture*) var->data.O->data)->id;
@@ -302,7 +295,7 @@ GLuint sgs_GetTextureId( SGS_CTX, sgs_Variable* var )
 #else
 IDirect3DBaseTexture9* sgs_GetTexture( SGS_CTX, sgs_Variable* var )
 {
-	if( BASETYPE(var->type) != VT_OBJECT || var->data.O->iface != tex_iface )
+	if( BASETYPE(var->type) != SVT_OBJECT || var->data.O->iface != tex_iface )
 		return 0;
 	
 	return ((sgs_Texture*) var->data.O->data)->obj;
@@ -380,7 +373,6 @@ floatbuf;
 const char* _parse_floatvec( SGS_CTX, int stkitem, float* out, int numcomp )
 {
 	sgs_Real data[ 2 ];
-	sgs_Variable var;
 	
 	if( stdlib_tovec2d( C, stkitem, data, 0 ) )
 	{
@@ -390,24 +382,20 @@ const char* _parse_floatvec( SGS_CTX, int stkitem, float* out, int numcomp )
 		return NULL;
 	}
 	
-	sgs_GetStackItem( C, stkitem, &var );
-	if( sgs_IsArray( C, &var ) )
+	if( sgs_ItemTypeExt( C, stkitem ) == VTC_ARRAY )
 	{
-		int32_t i, asz = sgs_ArraySize( C, &var );
+		int32_t i, asz = sgs_ArraySize( C, stkitem );
 		if( asz > numcomp )
 			asz = numcomp;
 		
 		for( i = 0; i < asz; ++i )
 		{
 			sgs_Real real;
-			sgs_Variable item;
-			if( !sgs_ArrayGet( C, &var, i, &item ) )
+			if( sgs_PushNumIndex( C, stkitem, i ) )
 			{
 				return "could not read from array";
 			}
 			
-			sgs_PushVariable( C, &item );
-			sgs_Release( C, &item );
 			if( !sgs_ParseReal( C, -1, &real ) )
 			{
 				sgs_Pop( C, 1 );
@@ -428,6 +416,8 @@ const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, int numc
 	float* off;
 	int32_t i, asz;
 	
+	sgs_SizeVal ssz = sgs_StackSize( C );
+	sgs_PushVariable( C, var );
 	if( !arr )
 	{
 		const char* res;
@@ -439,21 +429,23 @@ const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, int numc
 			out->my = 1;
 		}
 		memcpy( out->data, defcomp, numcomp * sizeof(float) );
-		sgs_PushVariable( C, var );
 		res = _parse_floatvec( C, -1, out->data, numcomp );
-		sgs_Pop( C, 1 );
 		if( res && out->my )
 		{
 			sgs_Dealloc( out->data );
 			out->my = 0;
 		}
+		sgs_Pop( C, 1 );
 		return res;
 	}
 	
-	if( !sgs_IsArray( C, var ) )
+	if( var->type != VTC_ARRAY )
+	{
+		sgs_Pop( C, 1 );
 		return "array expected";
+	}
 	
-	asz = sgs_ArraySize( C, var );
+	asz = sgs_ArraySize( C, -1 );
 	out->cnt = asz;
 	out->size = asz * numcomp;
 	out->data = sgs_Alloc_n( float, out->size );
@@ -462,23 +454,22 @@ const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, int numc
 	for( i = 0; i < asz; ++i )
 	{
 		const char* subres;
-		sgs_Variable item;
-		if( !sgs_ArrayGet( C, var, i, &item ) || BASETYPE(item.type) != VT_OBJECT )
+		if( sgs_PushNumIndex( C, -1, i ) || sgs_ItemType( C, -1 ) != SVT_OBJECT )
 		{
 			sgs_Dealloc( out->data );
+			sgs_Pop( C, sgs_StackSize( C ) - ssz );
 			return "element was not an object";
 		}
 		
 		memcpy( off, defcomp, numcomp * sizeof(float) );
 		
-		sgs_PushVariable( C, &item );
-		sgs_Release( C, &item );
 		subres = _parse_floatvec( C, -1, off, numcomp );
 		sgs_Pop( C, 1 );
 		
 		if( subres )
 		{
 			sgs_Dealloc( out->data );
+			sgs_Pop( C, 1 );
 			return subres;
 		}
 		
@@ -487,6 +478,7 @@ const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, int numc
 	
 	out->my = 1;
 	
+	sgs_Pop( C, 1 );
 	return NULL;
 }
 int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floatbuf* vtex )
@@ -882,7 +874,7 @@ int ss_draw( SGS_CTX )
 	};
 	
 	if( sgs_StackSize( C ) != 1 ||
-		sgs_ItemType( C, 0 ) != VT_OBJECT )
+		sgs_ItemType( C, 0 ) != SVT_OBJECT )
 		_WARN( "draw(): expected one dictionary argument" )
 	
 	sgs_UnpackDict( C, 0, mi );
@@ -1228,7 +1220,7 @@ int ss_draw_packed( SGS_CTX )
 	SGSFN( "draw_packed" );
 	
 	if( !( ssz == 6 || ssz == 7 ) ||
-		!( sgs_ItemType( C, 0 ) == SGS_VT_NULL || sgs_IsObject( C, 0, tex_iface ) ) ||
+		!( sgs_ItemType( C, 0 ) == SVT_NULL || sgs_IsObject( C, 0, tex_iface ) ) ||
 		!sgs_IsObject( C, 1, vertex_format_iface ) ||
 		!sgs_ParseString( C, 2, &data, &datasize ) ||
 		!sgs_ParseInt( C, 3, &start ) ||
@@ -1564,9 +1556,9 @@ int ss_fontI_get_advance( SGS_CTX )
 
 	if( !sgs_Method( C ) ||
 		sgs_StackSize( C ) != 3 ||
-		sgs_ItemType( C, 0 ) != SGS_VT_OBJECT ||
+		sgs_ItemType( C, 0 ) != SVT_OBJECT ||
 		sgs_GetObjectData( C, 0 )->iface != font_iface ||
-		!( sgs_ItemType( C, 1 ) == SGS_VT_NULL || sgs_ParseInt( C, 1, &a ) ) ||
+		!( sgs_ItemType( C, 1 ) == SVT_NULL || sgs_ParseInt( C, 1, &a ) ) ||
 		!sgs_ParseInt( C, 2, &b ) )
 		_WARN( "font::get_advance(): unexpected arguments; "
 			"method expects this=font and 2 arguments: int|null, int" )
@@ -1671,11 +1663,8 @@ int ss_create_font( SGS_CTX )
 
 	/* save and return the font object */
 	{
-		sgs_Variable obj, idx, val;
-		sgs_GetStackItem( C, -2, &obj );
-		sgs_GetStackItem( C, -3, &idx );
-		sgs_GetStackItem( C, -1, &val );
-		sgs_SetIndex( C, &obj, &idx, &val );
+		sgs_PushItem( C, -1 );
+		sgs_StoreIndex( C, -3, -4 );
 		return 1;
 	}
 }
@@ -1868,7 +1857,7 @@ int ss_is_font( SGS_CTX )
 	if( sgs_StackSize( C ) != 1 )
 		_WARN( "is_font(): unexpected arguments; function expects 1 argument" )
 
-	sgs_PushBool( C, sgs_ItemType( C, 0 ) == VT_OBJECT &&
+	sgs_PushBool( C, sgs_ItemType( C, 0 ) == SVT_OBJECT &&
 		sgs_GetObjectData( C, 0 )->iface == font_iface );
 	return 1;
 }
@@ -1888,7 +1877,7 @@ int ss_draw_text_line( SGS_CTX )
 
 	if( !sgs_ParseString( C, 0, &str, &strsize ) )
 		_WARN( "draw_text_line(): argument 1 (text) must be 'string'" )
-	if( sgs_ItemType( C, 1 ) != VT_OBJECT || !sgs_GetStackItem( C, 1, &fontvar )
+	if( sgs_ItemType( C, 1 ) != SVT_OBJECT || !sgs_GetStackItem( C, 1, &fontvar )
 		|| fontvar.data.O->iface != font_iface )
 		_WARN( "draw_text_line(): argument 2 (font) has wrong type (must be 'font')" )
 	if( !sgs_ParseInt( C, 2, &X ) )
@@ -1920,7 +1909,7 @@ int ss_set_cliprect( SGS_CTX )
 {
 	sgs_Integer x1, x2, y1, y2;
 	if( sgs_StackSize( C ) == 1 &&
-		sgs_ItemType( C, 0 ) == SGS_VT_NULL )
+		sgs_ItemType( C, 0 ) == SVT_NULL )
 	{
 #ifdef SS_USED3D
 		IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_SCISSORTESTENABLE, 0 );

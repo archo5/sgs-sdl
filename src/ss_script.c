@@ -7,8 +7,8 @@
 #include "ss_main.h"
 
 #undef ARRAY_SIZE
-#include "../sgscript/ext/sgs_idbg.c"
 #include "../sgscript/ext/sgs_prof.c"
+#include "../sgscript/ext/sgs_idbg.c"
 #undef ARRAY_SIZE
 #define ARRAY_SIZE( x ) (sizeof(x)/sizeof(x[0]))
 
@@ -60,26 +60,26 @@ uint32_t sgs_GlobalFlagString( SGS_CTX, const char* name, flag_string_item_t* it
 int sgs_UnpackDict( SGS_CTX, int pos, dict_unpack_item_t* items )
 {
 	int ret = 0;
-	sgs_Variable obj, idx;
 	
-	if( !sgs_GetStackItem( C, pos, &obj ) || BASETYPE( obj.type ) != VT_OBJECT )
+	if( sgs_ItemType( C, pos ) != SVT_OBJECT )
 		return ret;
 	
 	while( items->name )
 	{
+		sgs_SizeVal sz = sgs_StackSize( C );
 		sgs_PushString( C, items->name );
-		sgs_GetStackItem( C, -1, &idx );
-		sgs_Acquire( C, &idx );
-		sgs_Pop( C, 1 );
 		
 		assert( items->var != NULL );
-		if( sgs_GetIndex( C, items->var, &obj, &idx ) != SGS_SUCCESS )
+		if( sgs_PushIndex( C, pos, -1 ) || !sgs_GetStackItem( C, -1, items->var ) )
 			items->var = NULL;
 		else
+		{
+			sgs_Acquire( C, items->var );
 			ret++;
+		}
 		
-		sgs_Release( C, &idx );
 		items++;
+		sgs_Pop( C, sgs_StackSize( C ) - sz );
 	}
 	return ret;
 }
@@ -118,12 +118,12 @@ int stdlib_tovec2d( SGS_CTX, int pos, sgs_Real* v2f, int strict )
 {
 	sgs_VarObj* data;
 	int ty = sgs_ItemType( C, pos );
-	if( !strict && ( ty == VT_INT || ty == VT_REAL ) )
+	if( !strict && ( ty == SVT_INT || ty == SVT_REAL ) )
 	{
 		v2f[0] = v2f[1] = sgs_GetReal( C, pos );
 		return 1;
 	}
-	if( sgs_ItemType( C, pos ) != VT_OBJECT )
+	if( sgs_ItemType( C, pos ) != SVT_OBJECT )
 		return 0;
 	data = sgs_GetObjectData( C, pos );
 	if( data->iface != vec2d_iface )
@@ -149,7 +149,7 @@ static int sem_v2d_convert( SGS_CTX, sgs_VarObj* data, int type )
 		sgs_PushString( C, "vec2d" );
 		return SUC;
 	}
-	else if( type == VT_STRING )
+	else if( type == SVT_STRING )
 	{
 		char buf[ 48 ];
 		sprintf( buf, "vec2d(%g;%g)", hdr[0], hdr[1] );
@@ -237,7 +237,7 @@ static int sem_v2d_expr( SGS_CTX, sgs_VarObj* data, int type )
 	else if( type == SGS_EOP_COMPARE )
 	{
 		sgs_Real *v1, *v2;
-		if( sgs_ItemType( C, 0 ) != VT_OBJECT || sgs_ItemType( C, 1 ) != VT_OBJECT ||
+		if( sgs_ItemType( C, 0 ) != SVT_OBJECT || sgs_ItemType( C, 1 ) != SVT_OBJECT ||
 			sgs_GetObjectData( C, 0 )->iface != vec2d_iface ||
 			sgs_GetObjectData( C, 1 )->iface != vec2d_iface )
 			return SGS_EINVAL;
@@ -307,20 +307,16 @@ static int sem_vec2d_dot( SGS_CTX )
 */
 int stdlib_tocolor4( SGS_CTX, int pos, sgs_Real* v4f )
 {
-	sgs_Variable var;
-	if( sgs_GetStackItem( C, pos, &var ) && sgs_IsArray( C, &var ) )
+	if( sgs_ItemTypeExt( C, pos ) == VTC_ARRAY )
 	{
 		int i;
-		int size = sgs_ArraySize( C, &var );
+		int size = sgs_ArraySize( C, pos );
 		if( size < 1 || size > 4 )
 			return 0;
 		for( i = 0; i < size; ++i )
 		{
-			sgs_Variable item;
-			if( !sgs_ArrayGet( C, &var, i, &item ) )
+			if( sgs_PushNumIndex( C, pos, i ) )
 				return 0;
-			sgs_PushVariable( C, &item );
-			sgs_Release( C, &item );
 			if( !sgs_ParseReal( C, -1, v4f + i ) )
 			{
 				sgs_Pop( C, 1 );
@@ -368,7 +364,7 @@ int sgs_InitExtMath( SGS_CTX )
 
 int ses_sgs_objcount( SGS_CTX )
 {
-	sgs_PushInt( C, sgs_Stat( C, SGS_STAT_VARCOUNT ) );
+	sgs_PushInt( C, sgs_Stat( C, SGS_STAT_OBJCOUNT ) );
 	return 1;
 }
 
