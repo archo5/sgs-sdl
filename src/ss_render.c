@@ -832,7 +832,11 @@ uint32_t col4f_pack( float* col )
 	uint32_t ir = r * 255, ig = g * 255, ib = b * 255, ia = a * 255;
 	ir = MAX( 0, MIN( 255, ir ) ); ig = MAX( 0, MIN( 255, ig ) );
 	ib = MAX( 0, MIN( 255, ib ) ); ia = MAX( 0, MIN( 255, ia ) );
+#ifdef SS_USED3D
+	return D3DCOLOR_ARGB( ia, ir, ig, ib );
+#else
 	return ir | (ig<<8) | (ib<<16) | (ia<<24);
+#endif
 #undef MIN
 #undef MAX
 }
