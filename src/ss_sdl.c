@@ -4,13 +4,6 @@
 #include "ss_main.h"
 
 
-#ifdef SS_USED3D
-IDirect3D9* GD3D = NULL;
-IDirect3DDevice9* GD3DDev = NULL;
-D3DPRESENT_PARAMETERS GD3DPP;
-
-#endif
-
 
 #define FN( f ) { #f, ss_##f }
 #define IC( i ) { #i, i }
@@ -22,6 +15,11 @@ D3DPRESENT_PARAMETERS GD3DPP;
 int g_width = 0;
 int g_height = 0;
 
+
+#ifdef SS_USED3D
+IDirect3D9* GD3D = NULL;
+IDirect3DDevice9* GD3DDev = NULL;
+D3DPRESENT_PARAMETERS GD3DPP;
 
 void _ss_reset_states()
 {
@@ -67,6 +65,8 @@ int _ss_reset_device( SGS_CTX )
 	return 1;
 }
 
+#endif
+
 
 int ss_sleep( SGS_CTX )
 {
@@ -108,6 +108,8 @@ int ss_set_video_mode( SGS_CTX )
 	int suc = 0, vsync;
 	sgs_Integer w, h, b, f;
 	sgs_SizeVal tss;
+	
+	UNUSED( vsync );
 	
 	SGSFN( "set_video_mode" );
 	
@@ -697,8 +699,10 @@ int sgs_InitSDL( SGS_CTX )
 
 void sgs_FreeGraphics( SGS_CTX )
 {
+#ifdef SS_USED3D
 	IDirect3DDevice9_Release( GD3DDev );
 	IDirect3D9_Release( GD3D );
+#endif
 }
 
 

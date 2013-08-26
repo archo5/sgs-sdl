@@ -760,8 +760,8 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 					0,        0,         1, 0
 					0,        0,         0, 1
 				*/
-				mtx[ 0 ] = ca * sclx; mtx[ 1 ] = -sa * sclx; mtx[ 3 ] = posx;
-				mtx[ 4 ] = sa * scly; mtx[ 5 ] = ca * scly; mtx[ 7 ] = posy;
+				mtx[ 0 ] = ca * sclx; mtx[ 1 ] = -sa * scly; mtx[ 3 ] = posx;
+				mtx[ 4 ] = sa * sclx; mtx[ 5 ] = ca * scly; mtx[ 7 ] = posy;
 				mtx[ 10 ] = mtx[ 15 ] = 1;
 				mtx[ 2 ] = mtx[ 6 ] = mtx[ 8 ] = mtx[ 9 ] =
 					mtx[ 11 ] = mtx[ 12 ] = mtx[ 13 ] = mtx[ 14 ] = 0;
@@ -1235,9 +1235,9 @@ int ss_draw_packed( SGS_CTX )
 		_WARN( "unexpected arguments; function expects 6 arguments: "
 			"texture|null, format, string, int, int, int, bool" )
 	
-	F = (vtxfmt*) sgs_GetObjectData( C, 1 )->data;
+	F = (vtxfmt*) sgs_GetObjectData( C, 1 );
 	if( sgs_IsObject( C, 0, tex_iface ) )
-		T = (sgs_Texture*) sgs_GetObjectData( C, 0 )->data;
+		T = (sgs_Texture*) sgs_GetObjectData( C, 0 );
 	
 	if( idcs )
 	{
@@ -1267,9 +1267,14 @@ int ss_draw_packed( SGS_CTX )
 	}
 	
 	IDirect3DDevice9_SetVertexDeclaration( GD3DDev, F->vdecl );
-	IDirect3DDevice9_DrawPrimitiveUP( GD3DDev, type,
-		getprimitivecount( type, count ),
-		data, F->size );
+	if( idcs )
+		IDirect3DDevice9_DrawIndexedPrimitiveUP( GD3DDev, type, 0, count,
+			getprimitivecount( type, count ), idcs + start * 2, D3DFMT_INDEX16,
+			data, F->size );
+	else
+		IDirect3DDevice9_DrawPrimitiveUP( GD3DDev, type,
+			getprimitivecount( type, count ),
+			data, F->size );
 	IDirect3DDevice9_SetVertexDeclaration( GD3DDev, NULL );
 
 #else
@@ -1560,14 +1565,13 @@ int ss_fontI_get_advance( SGS_CTX )
 
 	if( !sgs_Method( C ) ||
 		sgs_StackSize( C ) != 3 ||
-		sgs_ItemType( C, 0 ) != SVT_OBJECT ||
-		sgs_GetObjectData( C, 0 )->iface != font_iface ||
+		!sgs_IsObject( C, 0, font_iface ) ||
 		!( sgs_ItemType( C, 1 ) == SVT_NULL || sgs_ParseInt( C, 1, &a ) ) ||
 		!sgs_ParseInt( C, 2, &b ) )
 		_WARN( "font::get_advance(): unexpected arguments; "
 			"method expects this=font and 2 arguments: int|null, int" )
 
-	font = (ss_font*) sgs_GetObjectData( C, 0 )->data;
+	font = (ss_font*) sgs_GetObjectData( C, 0 );
 
 	if( b )
 	{
@@ -1769,7 +1773,7 @@ ss_glyph* ss_font_get_glyph( ss_font* font, SGS_CTX, uint32_t cp )
 typedef struct _fontvtx
 {
 	float x,y,z;
-	D3DCOLOR col;
+	uint32_t col;
 	float u,v;
 }
 fontvtx;
@@ -1782,7 +1786,7 @@ void ss_int_drawtext_line( ss_font* font, SGS_CTX, char* str,
 	ss_glyph* G;
 
 #ifdef SS_USED3D
-	D3DCOLOR cc = D3DCOLOR_ARGB( ((int)(color[3]*255)),
+	uint32_t cc = D3DCOLOR_ARGB( ((int)(color[3]*255)),
 		((int)(color[0]*255)), ((int)(color[1]*255)), ((int)(color[2]*255)) );
 	
 #else
@@ -1861,8 +1865,7 @@ int ss_is_font( SGS_CTX )
 	if( sgs_StackSize( C ) != 1 )
 		_WARN( "is_font(): unexpected arguments; function expects 1 argument" )
 
-	sgs_PushBool( C, sgs_ItemType( C, 0 ) == SVT_OBJECT &&
-		sgs_GetObjectData( C, 0 )->iface == font_iface );
+	sgs_PushBool( C, sgs_IsObject( C, 0, font_iface ) );
 	return 1;
 }
 

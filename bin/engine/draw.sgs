@@ -6,7 +6,7 @@ function get_camera_2d_mtx( x, y, size, aspect, angle )
 	y *= size;
 	return
 	[
-		ss_using_d3d_signed * size/aspect, 0, 0, -x,
+		size/aspect, 0, 0, -x,
 		0, -size, 0, y,
 		0, 0, size, 0.5*size,
 		0, 0, 0, 1,

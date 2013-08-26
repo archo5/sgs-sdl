@@ -305,7 +305,7 @@ int stdlib_toimage( SGS_CTX, int pos, sgs_Image** out )
 	if( !sgs_IsObject( C, pos, image_iface ) )
 		return 0;
 	
-	*out = (sgs_Image*) sgs_GetObjectData( C, pos )->data;
+	*out = (sgs_Image*) sgs_GetObjectData( C, pos );
 	return 1;
 }
 

@@ -237,13 +237,12 @@ static int sem_v2d_expr( SGS_CTX, sgs_VarObj* data, int type )
 	else if( type == SGS_EOP_COMPARE )
 	{
 		sgs_Real *v1, *v2;
-		if( sgs_ItemType( C, 0 ) != SVT_OBJECT || sgs_ItemType( C, 1 ) != SVT_OBJECT ||
-			sgs_GetObjectData( C, 0 )->iface != vec2d_iface ||
-			sgs_GetObjectData( C, 1 )->iface != vec2d_iface )
+		if( !sgs_IsObject( C, 0, vec2d_iface ) ||
+			!sgs_IsObject( C, 1, vec2d_iface ) )
 			return SGS_EINVAL;
 		
-		v1 = (sgs_Real*) sgs_GetObjectData( C, 0 )->data;
-		v2 = (sgs_Real*) sgs_GetObjectData( C, 1 )->data;
+		v1 = (sgs_Real*) sgs_GetObjectData( C, 0 );
+		v2 = (sgs_Real*) sgs_GetObjectData( C, 1 );
 		
 		return v1[0] - v2[0] + v1[1] - v2[1];
 	}
@@ -399,7 +398,7 @@ int ss_parse_texture( SGS_CTX, int item, sgs_Texture** tex )
 	if( !sgs_IsObject( C, item, tex_iface ) )
 		return 0;
 	if( tex )
-		*tex = (sgs_Texture*) sgs_GetObjectData( C, item )->data;
+		*tex = (sgs_Texture*) sgs_GetObjectData( C, item );
 	return 1;
 }
 
@@ -419,6 +418,8 @@ void* ss_get_iface( int which )
 int sgs_InitAPI( SGS_CTX )
 {
 	int ret;
+	
+	sgs_RegisterType( C, "ss_texture", tex_iface );
 	
 	sgs_PushObject( C, ss_parse_texture, apiobj_iface );
 	ret = sgs_StoreGlobal( C, SS_PARSE_TEXTURE_KEY );

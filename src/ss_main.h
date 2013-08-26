@@ -22,10 +22,9 @@ extern IDirect3DDevice9* GD3DDev;
 
 #include <SDL/SDL.h>
 
-#ifdef SS_USED3D
-#  define SDL_VIDEO_DEVICELOST SDL_USEREVENT + 1
-#  define SDL_VIDEO_DEVICERESET SDL_USEREVENT + 2
-#else
+#define SDL_VIDEO_DEVICELOST SDL_USEREVENT + 1
+#define SDL_VIDEO_DEVICERESET SDL_USEREVENT + 2
+#ifndef SS_USED3D
 #  define GL_GLEXT_PROTOTYPES
 #  include "SDL/SDL_opengl.h"
 #endif
