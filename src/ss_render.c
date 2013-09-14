@@ -104,7 +104,7 @@ int sstex_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	return SGS_ENOTFND;
 }
 
-void* tex_iface[] =
+sgs_ObjCallback tex_iface[] =
 {
 	SOP_GETINDEX, sstex_getindex,
 	SOP_CONVERT, sstex_convert,
@@ -1125,7 +1125,7 @@ int ss_vertex_format_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 	return SGS_SUCCESS;
 }
 
-void* vertex_format_iface[] =
+sgs_ObjCallback vertex_format_iface[] =
 {
 	SOP_DESTRUCT, ss_vertex_format_destruct,
 	SOP_END,
@@ -1468,7 +1468,7 @@ int ss_set_camera( SGS_CTX )
 	The font system
 */
 
-void* font_iface[];
+sgs_ObjCallback font_iface[];
 
 typedef
 struct _ss_glyph
@@ -1600,7 +1600,7 @@ int ss_font_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	return SGS_ENOTFND;
 }
 
-void* font_iface[] =
+sgs_ObjCallback font_iface[] =
 {
 	SOP_GETINDEX, ss_font_getindex,
 	SOP_CONVERT, ss_font_convert,

@@ -2,6 +2,7 @@
 *.layout
 /bin/*.exe
 /bin/*.dll
+/bin/*.so
 /bin/sgs*
 /obj/*
 /lib/*

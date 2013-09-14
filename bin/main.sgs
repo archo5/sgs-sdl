@@ -69,7 +69,7 @@ function initialize()
 //	grab_input(true);
 //	show_cursor(false);
 	
-	global UI = UIFrame.create();
+	global UI = UIFrame.create( 1024, 576 );
 //	UI.addChild( UIControl.createButton( "Make it rain!", 10, 10, 120, 40, function(){} ) );
 
 	global TM = Tilemap.create( create_texture( "ntset.png", "nolerp" ), 32, 32 );
@@ -88,6 +88,8 @@ function initialize()
 	println( image );
 	printvar( _Gtex );
 	println();
+	
+	global Font = create_font( "verdana.ttf", 16 );
 }
 
 global mpos = [0,0];
@@ -100,11 +102,11 @@ function update()
 	global lasttime, rotation, P, W, H;
 	var curtime = ftime();
 	var delta = curtime - lasttime;
+	lasttime = curtime;
 	if( delta > 1.0/15.0 )
 		delta = 1.0/15.0;
-	lasttime = curtime;
 	
-	rotation += delta;
+	rotation += delta * 2;
 	
 	var cc = [0.1,0.2,0.4];
 	clear( cc );
@@ -130,15 +132,14 @@ function update()
 	
 	UI.draw();
 	
-	fn = create_font( "verdana.ttf", 16 );
 	tx = "frame time: " $ ( ftime() - lasttime ) * 1000.0 $ " ms";
-	draw_text_line( tx, fn, 301, 1, [0,0,0,1] );
-	draw_text_line( tx, fn, 300, 0, [0.9,0.7,0.5,1] );
+	draw_text_line( tx, Font, 101, 1, [0,0,0,1] );
+	draw_text_line( tx, Font, 100, 0, [0.9,0.8,0.7,1] );
 	
 	present();
 
-	sleeptime = 15 - delta * 1000;
-	if( sleeptime > 0 ) sleep( sleeptime );
+	sleeptime = 15 - ( ftime() - lasttime ) * 1000;
+//	if( sleeptime > 0 ) sleep( sleeptime );
 }
 
 function on_event( e )

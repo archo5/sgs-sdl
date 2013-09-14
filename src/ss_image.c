@@ -14,7 +14,7 @@
 #define _WARN( err ) { sgs_Printf( C, SGS_WARNING, err ); return 0; }
 
 
-void* image_iface[];
+sgs_ObjCallback image_iface[];
 #define IMGHDR sgs_Image* img = (sgs_Image*) data->data
 
 int _make_image( SGS_CTX, int16_t w, int16_t h, const void* src )
@@ -125,7 +125,7 @@ int ss_image_convert( SGS_CTX, sgs_VarObj* data, int type )
 }
 
 
-void* image_iface[] =
+sgs_ObjCallback image_iface[] =
 {
 	SOP_GETINDEX, ss_image_getindex,
 	SOP_CONVERT, ss_image_convert,

@@ -11,16 +11,18 @@ ifdef SystemRoot
 	           $(CP) $(call FixPath,freetype/libfreetype-6.dll bin) & \
 	           $(CP) $(call FixPath,sgscript/bin/sgscript.dll bin)
 	BINEXT=.exe
+	LIBPFX=
 	LIBEXT=.dll
 else
 	RM = rm -f
 	CP = cp
 	FixPath = $1
-	PLATFLAGS = -lGL -lfreetype
+	PLATFLAGS = -lGL -lfreetype -lm -Wl,-rpath,'$$ORIGIN' -Wl,-z,origin
 	LINKPATHS = 
 	COMPATHS = -I/usr/include/freetype2
-	PLATPOST = $(CP) $(call FixPath,sgscript/bin/sgscript.dll bin)
+	PLATPOST = $(CP) $(call FixPath,sgscript/bin/libsgscript.so bin)
 	BINEXT=
+	LIBPFX=lib
 	LIBEXT=.so
 endif
 
@@ -49,8 +51,8 @@ OBJ = $(patsubst %,$(OBJDIR)/%,$(_OBJ))
 
 $(OUTDIR)/sgs-sdl$(BINEXT): $(OBJ)
 	$(MAKE) -C sgscript
-	gcc -Wall -o $@ $(OBJ) -Lsgscript/lib $(LINKPATHS) $(PLATFLAGS) \
-		-lSDLmain -lSDL sgscript/bin/sgscript$(LIBEXT) -lfreeimage
+	gcc -Wall -o $@ $(OBJ) -Lsgscript/bin $(LINKPATHS) $(PLATFLAGS) \
+		-lSDLmain -lSDL -lsgscript -lfreeimage
 	$(PLATPOST)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPS)
@@ -58,5 +60,8 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPS)
 
 .PHONY: clean
 clean:
-	$(MAKE) -C sgscript clean
 	$(RM) $(call FixPath,$(OBJDIR)/*.o $(OUTDIR)/sgs*)
+
+.PHONY: clean_all
+clean_all: clean
+	$(MAKE) -C sgscript clean

@@ -1176,6 +1176,11 @@ function UIFrame.event( e )
 
 function UIFrame.draw()
 {
+	if( !this.w || !this.h )
+	{
+		WARNING( "UIFrame::draw - invalid frame size" );
+		return;
+	}
 	set_camera_ui( this.x, this.x+this.w, this.y, this.y+this.h );
 	foreach( ch : this.children )
 	{

@@ -13,7 +13,7 @@
 #define ARRAY_SIZE( x ) (sizeof(x)/sizeof(x[0]))
 
 
-#define _WARN( err ) { sgs_Printf( C, SGS_WARNING, err ); return 0; }
+#define _WARN( err ) return sgs_Printf( C, SGS_WARNING, err );
 
 sgs_Integer sgs_GlobalInt( SGS_CTX, const char* name )
 {
@@ -110,7 +110,7 @@ void sgs_UnpackFree( SGS_CTX, dict_unpack_item_t* items )
 	2 D   V E C T O R
 */
 #define V2DHDR sgs_Real* hdr = (sgs_Real*) data->data;
-static void* vec2d_iface[];
+static sgs_ObjCallback vec2d_iface[];
 
 static int _make_v2d( SGS_CTX, sgs_Real x, sgs_Real y ){ sgs_Real* nv = sgs_Alloc_n( sgs_Real, 2 ); nv[ 0 ] = x; nv[ 1 ] = y; sgs_PushObject( C, nv, vec2d_iface ); return SUC; }
 
@@ -254,7 +254,7 @@ static int sem_v2d_expr( SGS_CTX, sgs_VarObj* data, int type )
 	return SGS_ENOTSUP;
 }
 
-static void* vec2d_iface[] =
+static sgs_ObjCallback vec2d_iface[] =
 {
 	SOP_GETINDEX, sem_v2d_getindex,
 	SOP_SETINDEX, sem_v2d_setindex,
@@ -389,9 +389,9 @@ int sgs_InitExtSys( SGS_CTX )
 	API
 */
 
-static void* apiobj_iface[] = { SOP_END };
+static sgs_ObjCallback apiobj_iface[] = { SOP_END };
 
-extern void* tex_iface[];
+extern sgs_ObjCallback tex_iface[];
 
 int ss_parse_texture( SGS_CTX, int item, sgs_Texture** tex )
 {
