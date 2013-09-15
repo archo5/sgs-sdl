@@ -56,7 +56,7 @@ static void* ss_get_apifunc( SGS_CTX, const char* key )
 		void* data;
 		if( sgs_ItemType( C, -1 ) != SGS_VT_OBJECT )
 			return NULL;
-		data = sgs_GetObjectData( C, -1 )->data;
+		data = sgs_GetObjectData( C, -1 );
 		sgs_Pop( C, 1 );
 		return data;
 	}
