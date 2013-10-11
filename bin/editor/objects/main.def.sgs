@@ -1,0 +1,22 @@
+{
+	"player" =
+	{
+		"name" = "Player",
+		"icon" = "crosshair.png",
+		"origin_x" = 64,
+		"origin_y" = 64,
+		"params" = []
+	},
+	"metadata" = {},
+	"test1" = {},
+	"test2" = {},
+	"test3" = {},
+	"huh" = { "name" = "Scaled", "icon" = "crosshair.png", "origin_x" = 16, "origin_y" = 16, "width" = 32, "height" = 32 },
+	"test4" = {},
+	"test5" = {},
+	"test6" = {},
+	"variety" = { "icon" = "ntset.png" },
+	"test7" = {},
+	"test8" = {},
+	"test9" = {}
+}

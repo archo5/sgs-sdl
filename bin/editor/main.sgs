@@ -1,6 +1,5 @@
 
-include_file( "engine/all.sgs" );
-include_file( "editor/system.sgs" );
+include "editor/system";
 
 
 global ED_msg_alpha = 0, ED_msg_text = "";

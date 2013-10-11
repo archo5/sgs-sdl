@@ -1,7 +1,4 @@
 
-include_file( "engine/utils.sgs" );
-
-
 global Tilemap = {};
 
 function Tilemap.create( texture, tileWidth, tileHeight )

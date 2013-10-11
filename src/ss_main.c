@@ -1,6 +1,4 @@
 
-#include "../sgscript/ext/sgsjson.c"
-
 #include "ss_main.h"
 
 #include "../sgscript/ext/sgs_idbg.h"
@@ -47,17 +45,17 @@ int main( int argc, char* argv[] )
 	sgs_InitIDbg( C, &D );
 	
 	/* preinit first-use libs */
+	sgs_LoadLib_Fmt( C );
 	sgs_LoadLib_IO( C );
 	sgs_LoadLib_Math( C );
 	sgs_LoadLib_OS( C );
+	sgs_LoadLib_RE( C );
 	sgs_LoadLib_String( C );
 	if( sgs_GlobalCall( C, "loadtypeflags", 0, 0 ) != SGS_SUCCESS )
 	{
 		fprintf( stderr, "Failed to initialize the scripting engine\n" );
 		return 1;
 	}
-
-	json_module_entry_point( C );
 
 	sgs_InitDebug( C );
 	sgs_InitExtSys( C );
@@ -66,18 +64,18 @@ int main( int argc, char* argv[] )
 	sgs_InitAPI( C );
 
 	/* run the config file */
-	ret = sgs_ExecFile( C, "engine/config.sgs" );
-	if( ret != SGS_SUCCESS )
+	ret = sgs_Include( C, "engine/all" );
+	if( !ret )
 	{
-		fprintf( stderr, "Could not execute 'engine/config.sgs', error %d.\n", ret );
+		fprintf( stderr, "Could not set up engine scripts.\n" );
 		return 1;
 	}
 	
 	/* run the main file */
-	ret = sgs_ExecFile( C, "main.sgs" );
-	if( ret != SGS_SUCCESS )
+	ret = sgs_Include( C, "main" );
+	if( !ret )
 	{
-		fprintf( stderr, "Could not execute 'main.sgs', error %d.\n", ret );
+		fprintf( stderr, "Could not execute 'main'.\n" );
 		return 1;
 	}
 	
@@ -93,7 +91,7 @@ int main( int argc, char* argv[] )
 		{
 			sgs_PushString( C, argv[ i ] );
 		}
-		sgs_GlobalCall( C, "array", argc - 1, 1 );
+		sgs_PushArray( C, argc - 1 );
 		sgs_StoreGlobal( C, "sys_args" );
 	}
 	
@@ -117,8 +115,6 @@ int main( int argc, char* argv[] )
 		sgs_Pop( C, 1 );
 	}
 	
-	printf( "\n[SGS-SDL framework]\n" );
-	
 	/* initialize SDL */
 	if( SDL_Init( SDL_INIT_VIDEO ) < 0 )
 	{
@@ -130,7 +126,6 @@ int main( int argc, char* argv[] )
 	SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 8 );
 	SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 8 );
 	SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
-	printf( "\ninitialized...\n" );
 	
 	/* initialize script-space SDL API */
 	if( sgs_InitSDL( C ) )
@@ -138,7 +133,6 @@ int main( int argc, char* argv[] )
 		fprintf( stderr, "Couldn't initialize SDL API\n" );
 		return 1;
 	}
-	printf( "SDL API initialized...\n" );
 	
 	/* initialize script-space rendering API */
 	if( sgs_InitGL( C ) )
@@ -146,7 +140,6 @@ int main( int argc, char* argv[] )
 		fprintf( stderr, "Couldn't initialize rendering API\n" );
 		return 1;
 	}
-	printf( "Rendering API initialized...\n" );
 	
 	/* initialize the application */
 	if( sgs_GlobalCall( C, "initialize", 0, 0 ) )
@@ -187,7 +180,7 @@ int main( int argc, char* argv[] )
 		/* advance the application exactly one frame */
 		if( sgs_GlobalCall( C, "update", 0, 0 ) )
 		{
-			fprintf( stderr, "Failed to clean the application.\n" );
+			fprintf( stderr, "Failed to update the application.\n" );
 			return 1;
 		}
 	}

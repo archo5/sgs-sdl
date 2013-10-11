@@ -1,7 +1,4 @@
 
-include "fmt", "engine/all.sgs";
-
-
 function configure()
 {
 	global sys_exit;
@@ -34,7 +31,7 @@ function configure()
 
 	if( editor )
 	{
-		include_file( "editor/main.sgs" );
+		include "editor/main";
 		configure();
 	}
 }

@@ -2,17 +2,13 @@
 function WARNING( what ){ sys_print( SGS_WARNING, what ); }
 function ERROR( what ){ sys_print( SGS_ERROR, what ); }
 
-
-function array_find( arr, what )
+function parse_sgs_def( def )
 {
-	foreach( i, x : arr )
-		if( x === what )
-			return i;
-	return false;
+	return eval( "return " $ def $ ";" );
 }
 
-function min( a, b ){ if( a < b ) return a; else return b; }
-function max( a, b ){ if( a > b ) return a; else return b; }
+function min( a, b ){ return if( a < b, a, b ); }
+function max( a, b ){ return if( a > b, a, b ); }
 
 function expand_col4( color )
 {

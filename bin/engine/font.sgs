@@ -1,7 +1,4 @@
 
-include_library( "string" );
-
-
 function get_text_length( text, font )
 {
 	text_ucp = string_utf8_decode( text );

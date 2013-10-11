@@ -172,10 +172,10 @@ function ED_loadObjDefs()
 	defs = [];
 	foreach( r, name : io_dir( "editor/objects" ) )
 	{
-		if( !r || string_find_rev( name, ".json" ) < name.length - 5 )
+		if( !r )
 			continue;
 		ffn = "editor/objects/" $ name;
-		defs = get_merged( defs, json_decode( io_file_read( ffn ) ) );
+		defs = get_merged( defs, parse_sgs_def( io_file_read( ffn ) ) );
 	}
 	eps = 0.001;
 	foreach( key, def : defs )
@@ -412,6 +412,7 @@ function ED_snapy( y )
 function ED_findObjectsInBox( x1, x2, y1, y2 )
 {
 	out = [];
+	out.reserve( 1024 );
 	foreach( obj : ED.objects )
 	{
 		ox1 = obj.x;

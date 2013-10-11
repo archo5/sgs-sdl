@@ -1,8 +1,7 @@
-
-include_file( "engine/draw.sgs" );
-include_file( "engine/font.sgs" );
-include_file( "engine/histogram.sgs" );
-include_file( "engine/tilemap.sgs" );
-include_file( "engine/ui.sgs" );
-include_file( "engine/utils.sgs" );
-
+include "engine/config";
+include "engine/utils";
+include "engine/draw";
+include "engine/font";
+include "engine/histogram";
+include "engine/tilemap";
+include "engine/ui";
