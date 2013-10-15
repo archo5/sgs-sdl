@@ -30,6 +30,7 @@ extern IDirect3DDevice9* GD3DDev;
 #endif
 
 #include "../sgscript/src/sgscript.h"
+#include "../sgscript/ext/sgsxgmath.h"
 
 #include "ss_api.h"
 

@@ -89,7 +89,7 @@ function initialize()
 	global Font = create_font( "verdana.ttf", 16 );
 }
 
-global mpos = [0,0];
+global mpos = vec2(0,0);
 
 global lasttime = ftime();
 global rotation = 0;
@@ -145,7 +145,7 @@ function on_event( e )
 		global sys_exit = true;
 	if( e.type == SDL_MOUSEMOTION )
 	{
-		global mpos = [e.x,e.y];
+		global mpos = vec2( e.x, e.y );
 //		println( get_relative_mouse_state() );
 	}
 	if( e.type == SDL_KEYDOWN && e.keycode == SDLK_F11 )

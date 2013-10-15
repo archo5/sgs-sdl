@@ -372,15 +372,8 @@ floatbuf;
 */
 const char* _parse_floatvec( SGS_CTX, int stkitem, float* out, int numcomp )
 {
-	sgs_Real data[ 2 ];
-	
-	if( stdlib_tovec2d( C, stkitem, data, 0 ) )
-	{
-		out[ 0 ] = data[ 0 ];
-		if( numcomp > 1 )
-			out[ 1 ] = data[ 1 ];
+	if( sgs_ParseVec2( C, stkitem, out, 0 ) )
 		return NULL;
-	}
 	
 	if( sgs_ItemTypeExt( C, stkitem ) == VTC_ARRAY )
 	{
@@ -1952,6 +1945,107 @@ int ss_set_cliprect( SGS_CTX )
 }
 
 
+int ss_set_culling( SGS_CTX )
+{
+	sgs_Integer ii;
+	if( !sgs_LoadArgs( C, "i", &ii ) )
+		return 0;
+#ifdef SS_USED3D
+	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_CULLMODE, ii ? ( ii > 0 ? D3DCULL_CCW : D3DCULL_CW ) : D3DCULL_NONE );
+#else
+	if( ii )
+	{
+		glCullFace( ii < 0 ? GL_FRONT : GL_BACK );
+		glEnable( GL_CULL_FACE );
+	}
+	else
+		glDisable( GL_CULL_FACE );
+#endif
+	return 0;
+}
+
+
+int ss_set_blending( SGS_CTX )
+{
+	sgs_Integer func = 0, src, dst;
+
+#define BLENDOP_ADD 0
+#define BLENDOP_SUBTRACT 1
+#define BLENDOP_REVERSE_SUBTRACT 2
+#define BLENDOP_MIN 3
+#define BLENDOP_MAX 4
+
+#define BLEND_ZERO 0
+#define BLEND_ONE 1
+#define BLEND_SRCCOLOR 2
+#define BLEND_INVSRCCOLOR 3
+#define BLEND_SRCALPHA 4
+#define BLEND_INVSRCALPHA 5
+#define BLEND_DESTCOLOR 6
+#define BLEND_INVDESTCOLOR 7
+#define BLEND_DESTALPHA 8
+#define BLEND_INVDESTALPHA 9
+#define BLEND_SRCALPHASAT 10
+	
+	static const int blendfuncs[] =
+	{
+#ifdef SS_USED3D
+		D3DBLENDOP_ADD, D3DBLENDOP_SUBTRACT, D3DBLENDOP_REVSUBTRACT, D3DBLENDOP_MIN, D3DBLENDOP_MAX,
+#else
+		GL_FUNC_ADD, GL_FUNC_SUBTRACT, GL_FUNC_REVERSE_SUBTRACT, GL_MIN, GL_MAX,
+#endif
+	};
+	static const int blendfactors[] =
+	{
+#ifdef SS_USED3D
+		D3DBLEND_ZERO,
+		D3DBLEND_ONE,
+		D3DBLEND_SRCCOLOR,
+		D3DBLEND_INVSRCCOLOR,
+		D3DBLEND_SRCALPHA,
+		D3DBLEND_INVSRCALPHA,
+		D3DBLEND_DESTCOLOR,
+		D3DBLEND_INVDESTCOLOR,
+		D3DBLEND_DESTALPHA,
+		D3DBLEND_INVDESTALPHA,
+		D3DBLEND_SRCALPHASAT,
+#else
+		GL_ZERO,
+		GL_ONE,
+		GL_SRC_COLOR,
+		GL_ONE_MINUS_SRC_COLOR,
+		GL_SRC_ALPHA,
+		GL_ONE_MINUS_SRC_ALPHA,
+		GL_DST_COLOR,
+		GL_ONE_MINUS_DST_COLOR,
+		GL_DST_ALPHA,
+		GL_ONE_MINUS_DST_ALPHA,
+		GL_SRC_ALPHA_SATURATE,
+#endif
+	};
+	
+	if( !sgs_LoadArgs( C, "iii", &func, &src, &dst ) )
+		return 0;
+	
+	if( func < 0 || func >= ARRAY_SIZE(blendfuncs) )
+		return sgs_Printf( C, SGS_WARNING, "wrong blend function" );
+	if( src < 0 || src >= ARRAY_SIZE(blendfactors) )
+		return sgs_Printf( C, SGS_WARNING, "wrong source blend factor" );
+	if( dst < 0 || dst >= ARRAY_SIZE(blendfactors) )
+		return sgs_Printf( C, SGS_WARNING, "wrong destination blend factor" );
+	
+#ifdef SS_USED3D
+	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_SRCBLEND, blendfactors[ src ] );
+	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_DESTBLEND, blendfactors[ dst ] );
+	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_BLENDOP, blendfuncs[ func ] );
+#else
+	glBlendFunc( blendfactors[ src ], blendfactors[ dst ] );
+	glBlendEquation( blendfuncs[ func ] );
+#endif
+	return 0;
+}
+
+
 
 sgs_RegIntConst gl_ints[] =
 {
@@ -1963,6 +2057,25 @@ sgs_RegIntConst gl_ints[] =
 	IC( PT_TRIANGLE_FAN ),
 	IC( PT_TRIANGLE_STRIP ),
 	IC( PT_QUADS ),
+	
+	/* blending */
+	IC( BLENDOP_ADD ),
+	IC( BLENDOP_SUBTRACT ),
+	IC( BLENDOP_REVERSE_SUBTRACT ),
+	IC( BLENDOP_MIN ),
+	IC( BLENDOP_MAX ),
+	
+	IC( BLEND_ZERO ),
+	IC( BLEND_ONE ),
+	IC( BLEND_SRCCOLOR ),
+	IC( BLEND_INVSRCCOLOR ),
+	IC( BLEND_SRCALPHA ),
+	IC( BLEND_INVSRCALPHA ),
+	IC( BLEND_DESTCOLOR ),
+	IC( BLEND_INVDESTCOLOR ),
+	IC( BLEND_DESTALPHA ),
+	IC( BLEND_INVDESTALPHA ),
+	IC( BLEND_SRCALPHASAT ),
 };
 
 sgs_RegFuncConst gl_funcs[] =
@@ -1973,7 +2086,8 @@ sgs_RegFuncConst gl_funcs[] =
 	FN( create_font ), FN( draw_text_line ), FN( is_font ),
 	FN( matrix_push ), FN( matrix_pop ),
 	FN( set_camera ), FN( set_cliprect ),
-	FN( set_depth_test ),
+	FN( set_depth_test ), FN( set_culling ),
+	FN( set_blending ),
 };
 
 const char* gl_init = "global _Gtex = {}, _Gfonts = {};";

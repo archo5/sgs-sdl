@@ -7,6 +7,7 @@
 #include "ss_main.h"
 
 #undef ARRAY_SIZE
+#include "../sgscript/ext/sgsxgmath.c"
 #include "../sgscript/ext/sgs_prof.c"
 #include "../sgscript/ext/sgs_idbg.c"
 #undef ARRAY_SIZE
@@ -103,204 +104,6 @@ void sgs_UnpackFree( SGS_CTX, dict_unpack_item_t* items )
 	Consider that.
 */
 
-#define SUC SGS_SUCCESS
-#define FN( f ) { #f, sem_##f }
-
-/*
-	2 D   V E C T O R
-*/
-#define V2DHDR sgs_Real* hdr = (sgs_Real*) data->data;
-static sgs_ObjCallback vec2d_iface[];
-
-static int _make_v2d( SGS_CTX, sgs_Real x, sgs_Real y ){ sgs_Real* nv = sgs_Alloc_n( sgs_Real, 2 ); nv[ 0 ] = x; nv[ 1 ] = y; sgs_PushObject( C, nv, vec2d_iface ); return SUC; }
-
-int stdlib_tovec2d( SGS_CTX, int pos, sgs_Real* v2f, int strict )
-{
-	sgs_VarObj* data;
-	int ty = sgs_ItemType( C, pos );
-	if( !strict && ( ty == SVT_INT || ty == SVT_REAL ) )
-	{
-		v2f[0] = v2f[1] = sgs_GetReal( C, pos );
-		return 1;
-	}
-	if( sgs_ItemType( C, pos ) != SVT_OBJECT )
-		return 0;
-	data = sgs_GetObjectData( C, pos );
-	if( data->iface != vec2d_iface )
-		return 0;
-	{
-		sgs_Real* hdr = (sgs_Real*) data->data;
-		v2f[0] = hdr[0]; v2f[1] = hdr[1];
-	}
-	return 1;
-}
-
-static int sem_v2d_destruct( SGS_CTX, sgs_VarObj* data, int dco ){ sgs_Dealloc( data->data ); return SUC; }
-
-static int sem_v2d_convert( SGS_CTX, sgs_VarObj* data, int type )
-{
-	V2DHDR;
-	if( type == SGS_CONVOP_CLONE )
-	{
-		return _make_v2d( C, hdr[0], hdr[1] );
-	}
-	else if( type == SGS_CONVOP_TOTYPE )
-	{
-		sgs_PushString( C, "vec2d" );
-		return SUC;
-	}
-	else if( type == SVT_STRING )
-	{
-		char buf[ 48 ];
-		sprintf( buf, "vec2d(%g;%g)", hdr[0], hdr[1] );
-		sgs_PushString( C, buf );
-		return SUC;
-	}
-	return SGS_ENOTSUP;
-}
-
-static int sem_v2d_getindex( SGS_CTX, sgs_VarObj* data, int prop )
-{
-	char* str;
-	sgs_SizeVal size;
-	V2DHDR;
-	
-	if( !sgs_ParseString( C, 0, &str, &size ) )
-		return SGS_EINVAL;
-	if( !strcmp( str, "x" ) ){ sgs_PushReal( C, hdr[ 0 ] ); return SUC; }
-	if( !strcmp( str, "y" ) ){ sgs_PushReal( C, hdr[ 1 ] ); return SUC; }
-	if( !strcmp( str, "length" ) ){ sgs_PushReal( C, sqrt( hdr[0] * hdr[0] + hdr[1] * hdr[1] ) ); return SUC; }
-	if( !strcmp( str, "length_squared" ) ){ sgs_PushReal( C, hdr[0] * hdr[0] + hdr[1] * hdr[1] ); return SUC; }
-	if( !strcmp( str, "normalized" ) )
-	{
-		sgs_Real lensq = hdr[0] * hdr[0] + hdr[1] * hdr[1];
-		if( lensq )
-		{
-			lensq = 1.0 / sqrt( lensq );
-			return _make_v2d( C, hdr[0] * lensq, hdr[1] * lensq );
-		}
-		return _make_v2d( C, 0, 0 );
-	}
-	if( !strcmp( str, "angle" ) ){ sgs_PushReal( C, atan2( hdr[0], hdr[1] ) ); return SUC; }
-	if( !strcmp( str, "perp" ) ) return _make_v2d( C, -hdr[1], hdr[0] );
-	if( !strcmp( str, "perp2" ) ) return _make_v2d( C, hdr[1], -hdr[0] );
-	return SGS_ENOTFND;
-}
-static int sem_v2d_setindex( SGS_CTX, sgs_VarObj* data, int prop )
-{
-	char* str;
-	sgs_SizeVal size;
-	sgs_Real val;
-	V2DHDR;
-	
-	if( !sgs_ParseString( C, 0, &str, &size ) )
-		return SGS_EINVAL;
-	if( !sgs_ParseReal( C, 1, &val ) )
-		return SGS_EINVAL;
-	if( !strcmp( str, "x" ) ){ hdr[ 0 ] = val; return SUC; }
-	if( !strcmp( str, "y" ) ){ hdr[ 1 ] = val; return SUC; }
-	return SGS_ENOTFND;
-}
-
-static int sem_v2d_expr( SGS_CTX, sgs_VarObj* data, int type )
-{
-	if( type == SGS_EOP_ADD || type == SGS_EOP_SUB || type == SGS_EOP_MUL
-		|| type == SGS_EOP_DIV || type == SGS_EOP_MOD )
-	{
-		sgs_Real r[ 2 ], v1[ 2 ], v2[ 2 ];
-		if( !stdlib_tovec2d( C, 0, v1, 0 ) || !stdlib_tovec2d( C, 1, v2, 0 ) )
-			return SGS_EINVAL;
-		
-		if( ( type == SGS_EOP_DIV || type == SGS_EOP_MOD ) &&
-			( v2[0] == 0 || v2[1] == 0 ) )
-		{
-			const char* errstr = type == SGS_EOP_DIV ?
-				"vec2d operator '/' - division by zero" :
-				"vec2d operator '%' - modulo by zero";
-			sgs_Printf( C, SGS_ERROR, errstr );
-			return SGS_EINPROC;
-		}
-		
-		if( type == SGS_EOP_ADD )
-			{ r[0] = v1[0] + v2[0]; r[1] = v1[1] + v2[1]; }
-		else if( type == SGS_EOP_SUB )
-			{ r[0] = v1[0] - v2[0]; r[1] = v1[1] - v2[1]; }
-		else if( type == SGS_EOP_MUL )
-			{ r[0] = v1[0] * v2[0]; r[1] = v1[1] * v2[1]; }
-		else if( type == SGS_EOP_DIV )
-			{ r[0] = v1[0] / v2[0]; r[1] = v1[1] / v2[1]; }
-		else
-			{ r[0] = fmod( v1[0], v2[0] ); r[1] = fmod( v1[1], v2[1] ); }
-		
-		return _make_v2d( C, r[0], r[1] );
-	}
-	else if( type == SGS_EOP_COMPARE )
-	{
-		sgs_Real *v1, *v2;
-		if( !sgs_IsObject( C, 0, vec2d_iface ) ||
-			!sgs_IsObject( C, 1, vec2d_iface ) )
-			return SGS_EINVAL;
-		
-		v1 = (sgs_Real*) sgs_GetObjectData( C, 0 );
-		v2 = (sgs_Real*) sgs_GetObjectData( C, 1 );
-		
-		return v1[0] - v2[0] + v1[1] - v2[1];
-	}
-	else if( type == SGS_EOP_NEGATE )
-	{
-		V2DHDR;
-		return _make_v2d( C, -hdr[0], -hdr[1] );
-	}
-	return SGS_ENOTSUP;
-}
-
-static sgs_ObjCallback vec2d_iface[] =
-{
-	SOP_GETINDEX, sem_v2d_getindex,
-	SOP_SETINDEX, sem_v2d_setindex,
-	SOP_EXPR, sem_v2d_expr,
-	
-	SOP_CONVERT, sem_v2d_convert,
-	SOP_DESTRUCT, sem_v2d_destruct,
-	
-	SOP_END
-};
-
-#define V2DARGERR "vec2d() - unexpected arguments; function expects [real[, real]]"
-static int sem_vec2d( SGS_CTX )
-{
-	sgs_Real v[ 2 ] = { 0, 0 };
-	int argc = sgs_StackSize( C );
-	
-	if( argc > 2 ) _WARN( V2DARGERR )
-	if( argc >= 1 )
-	{
-		if( !sgs_ParseReal( C, 0, v ) )
-			_WARN( V2DARGERR )
-		if( argc > 1 )
-		{
-			if( !sgs_ParseReal( C, 1, v + 1 ) )
-				_WARN( V2DARGERR )
-		}
-		else
-			v[ 1 ] = v[ 0 ];
-	}
-	
-	return _make_v2d( C, v[ 0 ], v[ 1 ] ) == SUC ? 1 : 0;
-}
-#undef V2DARGERR
-
-static int sem_vec2d_dot( SGS_CTX )
-{
-	sgs_Real v1[2], v2[2];
-	
-	if( !stdlib_tovec2d( C, 0, v1, 1 ) || !stdlib_tovec2d( C, 1, v2, 1 ) )
-		_WARN( "vec2d_dot(): unexpected arguments; function expects vec2d, vec2d" )
-	
-	sgs_PushReal( C, v1[0] * v2[0] + v1[1] * v2[1] );
-	return 1;
-}
-
 /*
 	C O L O R
 */
@@ -335,25 +138,9 @@ int stdlib_tocolor4( SGS_CTX, int pos, sgs_Real* v4f )
 }
 
 
-int sem_randf( SGS_CTX )
-{
-	sgs_PushReal( C, (sgs_Real) rand() / (sgs_Real) RAND_MAX );
-	return 1;
-}
-
-sgs_RegFuncConst em_fconsts[] =
-{
-	FN( vec2d ), FN( vec2d_dot ),
-	FN( randf ),
-};
-
 int sgs_InitExtMath( SGS_CTX )
 {
-	int ret;
-	ret = sgs_RegFuncConsts( C, em_fconsts, ARRAY_SIZE( em_fconsts ) );
-	if( ret != SGS_SUCCESS ) return ret;
-	
-	return SGS_SUCCESS;
+	return xgm_module_entry_point( C );
 }
 
 
