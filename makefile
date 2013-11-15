@@ -1,4 +1,11 @@
 
+CC=gcc
+SRCDIR=src
+LIBDIR=lib
+EXTDIR=ext
+OUTDIR=bin
+OBJDIR=obj
+
 ifdef SystemRoot
 	RM = del /Q
 	CP = copy
@@ -9,7 +16,8 @@ ifdef SystemRoot
 	PLATPOST = $(CP) $(call FixPath,sdl-win/bin/SDL.dll bin) & \
 	           $(CP) $(call FixPath,freeimage/FreeImage.dll bin) & \
 	           $(CP) $(call FixPath,freetype/libfreetype-6.dll bin) & \
-	           $(CP) $(call FixPath,sgscript/bin/sgscript.dll bin)
+	           $(CP) $(call FixPath,sgscript/bin/sgscript.dll bin) & \
+	           $(CP) $(call FixPath,sgscript/bin/sgsxgmath.dll bin)
 	BINEXT=.exe
 	LIBPFX=
 	LIBEXT=.dll
@@ -20,24 +28,28 @@ else
 	PLATFLAGS = -lGL -lfreetype -lm -Wl,-rpath,'$$ORIGIN' -Wl,-z,origin
 	LINKPATHS = 
 	COMPATHS = -I/usr/include/freetype2
-	PLATPOST = $(CP) $(call FixPath,sgscript/bin/libsgscript.so bin)
+	PLATPOST = $(CP) $(call FixPath,sgscript/bin/libsgscript.so bin) & \
+	           $(CP) $(call FixPath,sgscript/bin/libsgsxgmath.so bin)
 	BINEXT=
 	LIBPFX=lib
 	LIBEXT=.so
 endif
 
-SRCDIR=src
-LIBDIR=lib
-EXTDIR=ext
-OUTDIR=bin
-OBJDIR=obj
+ifeq ($(arch),64)
+	ARCHFLAGS= -m64
+else
+	ifeq ($(arch),32)
+		ARCHFLAGS= -m32
+	else
+		ARCHFLAGS=
+	endif
+endif
 
-CC=gcc
 ifeq ($(mode),release)
-	CFLAGS = -O3 -Wall
+	CFLAGS = -O3 -Wall $(ARCHFLAGS)
 else
 	mode = debug
-	CFLAGS = -D_DEBUG -g -Wall
+	CFLAGS = -D_DEBUG -g -Wall $(ARCHFLAGS)
 endif
 
 C2FLAGS = $(CFLAGS) -DBUILDING_SGS_SDL
@@ -50,9 +62,9 @@ OBJ = $(patsubst %,$(OBJDIR)/%,$(_OBJ))
 
 
 $(OUTDIR)/sgs-sdl$(BINEXT): $(OBJ)
-	$(MAKE) -C sgscript
-	gcc -Wall -o $@ $(OBJ) -Lsgscript/bin $(LINKPATHS) $(PLATFLAGS) \
-		-lSDLmain -lSDL -lsgscript -lfreeimage
+	$(MAKE) -C sgscript xgmath
+	gcc -Wall -o $@ $(OBJ) $(C2FLAGS) -Lsgscript/bin $(LINKPATHS) $(PLATFLAGS) \
+		-lSDLmain -lSDL -lsgscript -lsgsxgmath -lfreeimage
 	$(PLATPOST)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPS)

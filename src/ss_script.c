@@ -7,7 +7,6 @@
 #include "ss_main.h"
 
 #undef ARRAY_SIZE
-#include "../sgscript/ext/sgsxgmath.c"
 #include "../sgscript/ext/sgs_prof.c"
 #include "../sgscript/ext/sgs_idbg.c"
 #undef ARRAY_SIZE
