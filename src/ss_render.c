@@ -1306,6 +1306,280 @@ int ss_draw_packed( SGS_CTX )
 }
 
 
+
+/*
+	-------------------
+	RENDERING SYSTEM v2
+	-------------------
+	
+	- renderbuffer
+*/
+
+typedef
+struct _ss_renderbuf
+{
+	MemBuf B;
+}
+ss_renderbuf;
+
+static sgs_ObjCallback renderbuf_iface[];
+
+
+#define RB_IHDR( funcname ) \
+	int method_call = sgs_Method( C ); \
+	sgs_FuncName( C, method_call ? "renderbuf." #funcname : "renderbuf_" #funcname ); \
+	if( !sgs_IsObject( C, 0, renderbuf_iface ) ) \
+		return sgs_ArgErrorExt( C, 0, method_call, "renderbuf", "" ); \
+	ss_renderbuf* rb = (ss_renderbuf*) sgs_GetObjectData( C, 0 );
+
+/* .begin() */
+static int ss_renderbuf_begin( SGS_CTX )
+{
+	RB_IHDR( begin );
+	
+	membuf_resize( &rb->B, C, 0 );
+	sgs_SetStackSize( C, 1 );
+	return 1;
+}
+
+/* .reserve( int bytes ) */
+static int ss_renderbuf_reserve( SGS_CTX )
+{
+	sgs_SizeVal numbytes;
+	
+	RB_IHDR( reserve );
+	if( !sgs_LoadArgs( C, "@>l", &numbytes ) )
+		return 0;
+	
+	membuf_reserve( &rb->B, C, numbytes );
+	sgs_SetStackSize( C, 1 );
+	return 1;
+}
+
+/* .f( real{1,64} ) - floats */
+static int ss_renderbuf_f( SGS_CTX )
+{
+	int argc, i;
+	float f[64];
+	
+	RB_IHDR( f );
+	argc = sgs_StackSize( C ) - 1;
+	if( argc > 0 )
+	{
+		if( argc > 64 )
+			argc = 64;
+		for( i = 1; i <= argc; ++i )
+			f[i-1] = sgs_ToReal( C, i );
+		
+		membuf_appbuf( &rb->B, C, f, sizeof(*f)*argc );
+	}
+	sgs_SetStackSize( C, 1 );
+	return 1;
+}
+
+/* .b( int{1,64} ) - bytes */
+static int ss_renderbuf_b( SGS_CTX )
+{
+	int argc, i;
+	uint8_t b[64];
+	
+	RB_IHDR( b );
+	argc = sgs_StackSize( C ) - 1;
+	if( argc > 0 )
+	{
+		if( argc > 64 )
+			argc = 64;
+		for( i = 1; i <= argc; ++i )
+			b[i-1] = (uint8_t) sgs_ToInt( C, i );
+		
+		membuf_appbuf( &rb->B, C, b, sizeof(*b)*argc );
+	}
+	sgs_SetStackSize( C, 1 );
+	return 1;
+}
+
+/* .cf2b( real{1,64} ) - clamped float to byte */
+static int ss_renderbuf_cf2b( SGS_CTX )
+{
+	int argc, i;
+	uint8_t b[64];
+	
+	RB_IHDR( cf2b );
+	argc = sgs_StackSize( C ) - 1;
+	if( argc > 0 )
+	{
+		if( argc > 64 )
+			argc = 64;
+		for( i = 1; i <= argc; ++i )
+		{
+			float f = sgs_ToReal( C, i );
+			if( f < 0 ) f = 0;
+			if( f > 1 ) f = 1;
+			b[i-1] = f * 255;
+		}
+		
+		membuf_appbuf( &rb->B, C, b, sizeof(*b)*argc );
+	}
+	sgs_SetStackSize( C, 1 );
+	return 1;
+}
+
+/* .pad( int ) - padding */
+static int ss_renderbuf_pad( SGS_CTX )
+{
+	sgs_SizeVal numbytes;
+	
+	RB_IHDR( pad );
+	if( !sgs_LoadArgs( C, "@>l", &numbytes ) )
+		return 0;
+	
+	if( rb->B.size + numbytes < 0 )
+		return sgs_Printf( C, SGS_WARNING, "padding so big that it's negative (overflow)" );
+	
+	membuf_resize( &rb->B, C, rb->B.size + numbytes );
+	sgs_SetStackSize( C, 1 );
+	return 1;
+}
+
+/* .draw( texture|null, vertex_format, int start, int count, int type ) */
+static int ss_renderbuf_draw( SGS_CTX )
+{
+	sgs_Texture* T = NULL;
+	vtxfmt* F = NULL;
+	sgs_SizeVal start, count, type;
+	char* data;
+	
+	RB_IHDR( draw );
+	if( !sgs_LoadArgs( C, "@>>olll", vertex_format_iface, &F, &start, &count, &type ) )
+		return 0;
+	if( sgs_ItemType( C, 1 ) != SVT_NULL )
+	{
+		if( !sgs_IsObject( C, 1, tex_iface ) )
+			return sgs_ArgErrorExt( C, 1, 1, "texture or null", "" );
+		T = (sgs_Texture*) sgs_GetObjectData( C, 1 );
+	}
+	data = rb->B.ptr;
+	
+	if( F->size * (start+count) > rb->B.size )
+		_WARN( "not enough data to draw with given start/count values" )
+	
+	/* DRAWING CODE */
+#ifdef SS_USED3D
+	IDirect3DDevice9_SetTexture( GD3DDev, 0, T ? T->obj : NULL );
+	if( T && T->obj )
+	{
+		sgs_Texture* tex = T;
+		int lin = !( tex->flags & CT_NOLERP );
+		int mip = ( tex->flags & CT_MIPMAPS );
+		int hr = ( tex->flags & CT_HREPEAT );
+		int vr = ( tex->flags & CT_VREPEAT );
+		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_MINFILTER, lin ? D3DTEXF_LINEAR : D3DTEXF_POINT );
+		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_MAGFILTER, lin ? D3DTEXF_LINEAR : D3DTEXF_POINT );
+		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_MIPFILTER, mip ? ( lin ? D3DTEXF_LINEAR : D3DTEXF_POINT ) : D3DTEXF_NONE );
+		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_ADDRESSU, hr ? D3DTADDRESS_WRAP : D3DTADDRESS_CLAMP );
+		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_ADDRESSV, vr ? D3DTADDRESS_WRAP : D3DTADDRESS_CLAMP );
+	}
+	
+	IDirect3DDevice9_SetVertexDeclaration( GD3DDev, F->vdecl );
+	IDirect3DDevice9_DrawPrimitiveUP( GD3DDev, type,
+		getprimitivecount( type, count ),
+		data, F->size );
+	IDirect3DDevice9_SetVertexDeclaration( GD3DDev, NULL );
+
+#else
+	if( F->P[0] ) glVertexPointer( F->P[3], F->P[2], F->size, data + F->P[1] );
+	if( F->T[0] ) glTexCoordPointer( F->T[3], F->T[2], F->size, data + F->T[1] );
+	if( F->C[0] ) glColorPointer( F->C[3], F->C[2], F->size, data + F->C[1] );
+	if( F->N[0] ) glNormalPointer( F->N[2], F->size, data + F->N[1] );
+	
+	if( T )
+	{
+		glBindTexture( GL_TEXTURE_2D, T->id );
+		glEnable( GL_TEXTURE_2D );
+	}
+	else
+		glDisable( GL_TEXTURE_2D );
+	
+	if( F->P[0] ) glEnableClientState( GL_VERTEX_ARRAY );
+	if( F->T[0] ) glEnableClientState( GL_TEXTURE_COORD_ARRAY );
+	if( F->C[0] ) glEnableClientState( GL_COLOR_ARRAY );
+	if( F->N[0] ) glEnableClientState( GL_NORMAL_ARRAY );
+	
+	glColor4f( 1, 1, 1, 1 );
+	glDrawArrays( type, start, count );
+	
+	if( F->P[0] ) glDisableClientState( GL_VERTEX_ARRAY );
+	if( F->T[0] ) glDisableClientState( GL_TEXTURE_COORD_ARRAY );
+	if( F->C[0] ) glDisableClientState( GL_COLOR_ARRAY );
+	if( F->N[0] ) glDisableClientState( GL_NORMAL_ARRAY );
+	
+#endif
+	
+	sgs_SetStackSize( C, 1 );
+	return 1;
+}
+
+
+#define RBHDR ss_renderbuf* rb = (ss_renderbuf*) data->data
+
+static int ss_renderbuf_destruct( SGS_CTX, sgs_VarObj* data, int unused )
+{
+	RBHDR;
+	UNUSED( unused );
+	membuf_destroy( &rb->B, C );
+	return SGS_SUCCESS;
+}
+
+static int ss_renderbuf_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
+{
+	char* str;
+	UNUSED( isprop );
+	if( sgs_ParseString( C, 0, &str, NULL ) )
+	{
+		if( !strcmp( str, "begin" ) ){ sgs_PushCFunction( C, ss_renderbuf_begin ); return SGS_SUCCESS; }
+		if( !strcmp( str, "reserve" ) ){ sgs_PushCFunction( C, ss_renderbuf_reserve ); return SGS_SUCCESS; }
+		if( !strcmp( str, "f" ) ){ sgs_PushCFunction( C, ss_renderbuf_f ); return SGS_SUCCESS; }
+		if( !strcmp( str, "b" ) ){ sgs_PushCFunction( C, ss_renderbuf_b ); return SGS_SUCCESS; }
+		if( !strcmp( str, "cf2b" ) ){ sgs_PushCFunction( C, ss_renderbuf_cf2b ); return SGS_SUCCESS; }
+		if( !strcmp( str, "pad" ) ){ sgs_PushCFunction( C, ss_renderbuf_pad ); return SGS_SUCCESS; }
+		if( !strcmp( str, "draw" ) ){ sgs_PushCFunction( C, ss_renderbuf_draw ); return SGS_SUCCESS; }
+		return SGS_ENOTFND;
+	}
+	return SGS_EINVAL;
+}
+
+static int ss_renderbuf_convert( SGS_CTX, sgs_VarObj* data, int type )
+{
+	if( type == SGS_CONVOP_TOTYPE )
+	{
+		UNUSED( data );
+		sgs_PushString( C, "renderbuf" );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
+}
+
+static sgs_ObjCallback renderbuf_iface[] =
+{
+	SOP_GETINDEX, ss_renderbuf_getindex,
+	SOP_DESTRUCT, ss_renderbuf_destruct,
+	SOP_CONVERT, ss_renderbuf_convert,
+	SOP_END
+};
+
+static int ss_create_renderbuf( SGS_CTX )
+{
+	ss_renderbuf* rb = (ss_renderbuf*) sgs_PushObjectIPA( C, sizeof(ss_renderbuf), renderbuf_iface );
+	rb->B = membuf_create();
+	return 1;
+}
+
+
+
+
+/*	-------------------  */
+
+
 static inline void Matrix4x4MultiplyBy4x4( float src1[4][4], float src2[4][4], float dest[4][4] )
 {
 	dest[0][0] = src1[0][0] * src2[0][0] + src1[0][1] * src2[1][0] + src1[0][2] * src2[2][0] + src1[0][3] * src2[3][0]; 
@@ -2083,6 +2357,7 @@ sgs_RegFuncConst gl_funcs[] =
 	FN( create_texture ),
 	FN( draw ),
 	FN( make_vertex_format ), FN( draw_packed ),
+	FN( create_renderbuf ),
 	FN( create_font ), FN( draw_text_line ), FN( is_font ),
 	FN( matrix_push ), FN( matrix_pop ),
 	FN( set_camera ), FN( set_cliprect ),

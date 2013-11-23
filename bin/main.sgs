@@ -87,6 +87,8 @@ function initialize()
 	println();
 	
 	global Font = create_font( "verdana.ttf", 16 );
+	
+	global g_RB = create_renderbuf().reserve( 512 );
 }
 
 global mpos = vec2(0,0);
@@ -112,6 +114,7 @@ function update()
 	
 	TM.render();
 	
+	// METHOD 1
 	vdata = fmt_pack( "5f12x 5f12x 5f12x 5f12x",
 		100, 100, 0, 0, 0,
 		200, 100, 0, 1, 0,
@@ -122,6 +125,14 @@ function update()
 	idata = fmt_pack( "4w", 1, 2, 3, 0 );
 	draw_packed( image, vfmt, vdata, 0, 4, PT_TRIANGLE_FAN );
 	draw_packed( image, vfmt, vdata, 0, 4, PT_TRIANGLE_FAN, idata );
+	
+	// METHOD 2
+	g_RB.begin()
+		.f( 400, 400, 0, 0, 0 ).pad( 12 )
+		.f( 500, 400, 0, 1, 0 ).pad( 12 )
+		.f( 600, 600, 0, 1, 1 ).pad( 12 )
+		.f( 400, 500, 0, 0, 1 ).pad( 12 )
+		.draw( image, vfmt, 0, 4, PT_TRIANGLE_FAN );
 	
 	set_camera_ui( 0, W, 0, H );
 	
