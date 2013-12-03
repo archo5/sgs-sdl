@@ -119,7 +119,8 @@ int sgs_InitAPI( SGS_CTX );
 
 /* Core interface */
 #define SS_PTR_SGSCTX 1
-#define SS_PTR_D3DDEV 2
+#define SS_PTR_WINDOW 2
+#define SS_PTR_D3DDEV 3
 int ss_Initialize( int argc, char* argv[] );
 int ss_Frame();
 int ss_Free();

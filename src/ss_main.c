@@ -1,4 +1,6 @@
 
+#include <SDL/SDL_syswm.h>
+
 #include "ss_main.h"
 
 #include "../sgscript/ext/sgs_idbg.h"
@@ -224,6 +226,12 @@ void* ss_GetPtr( int pid )
 	switch( pid )
 	{
 	case SS_PTR_SGSCTX: return C;
+	case SS_PTR_WINDOW:
+		{
+			SDL_SysWMinfo sysinfo;
+			SDL_GetWMInfo( &sysinfo );
+			return (void*) sysinfo.window;
+		}
 	case SS_PTR_D3DDEV: return GD3DDev;
 	}
 	return NULL;
