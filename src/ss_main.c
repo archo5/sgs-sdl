@@ -10,8 +10,11 @@ sys_exit = false;\
 ";
 
 
-int g_enabledProfiler = 0;
+SGS_CTX;
+sgs_IDbg D;
 sgs_Prof P;
+
+int g_enabledProfiler = 0;
 
 int ss_enable_profiler( SGS_CTX )
 {
@@ -34,12 +37,10 @@ int sgs_InitDebug( SGS_CTX )
 	return SGS_SUCCESS;
 }
 
-#undef main /* SDL */
-int main( int argc, char* argv[] )
+
+int ss_Initialize( int argc, char* argv[] )
 {
 	int ret;
-	sgs_Context* C;
-	sgs_IDbg D;
 	
 	C = sgs_CreateEngine();
 	sgs_InitIDbg( C, &D );
@@ -54,7 +55,7 @@ int main( int argc, char* argv[] )
 	if( sgs_GlobalCall( C, "loadtypeflags", 0, 0 ) != SGS_SUCCESS )
 	{
 		fprintf( stderr, "Failed to initialize the scripting engine\n" );
-		return 1;
+		return -1;
 	}
 
 	sgs_InitDebug( C );
@@ -68,7 +69,7 @@ int main( int argc, char* argv[] )
 	if( !ret )
 	{
 		fprintf( stderr, "Could not set up engine scripts.\n" );
-		return 1;
+		return -2;
 	}
 	
 	/* run the main file */
@@ -76,7 +77,7 @@ int main( int argc, char* argv[] )
 	if( !ret )
 	{
 		fprintf( stderr, "Could not execute 'main'.\n" );
-		return 1;
+		return -3;
 	}
 	
 	/* create some variables */
@@ -99,7 +100,7 @@ int main( int argc, char* argv[] )
 	if( sgs_GlobalCall( C, "configure", 0, 0 ) )
 	{
 		fprintf( stderr, "Failed to configure the framework.\n" );
-		return 1;
+		return -4;
 	}
 
 	if( g_enabledProfiler )
@@ -119,7 +120,7 @@ int main( int argc, char* argv[] )
 	if( SDL_Init( SDL_INIT_VIDEO ) < 0 )
 	{
 		fprintf( stderr, "Couldn't initialize SDL: %s\n", SDL_GetError() );
-		return 1;
+		return -5;
 	}
 	SDL_EnableUNICODE( 1 );
 	SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 8 );
@@ -131,24 +132,31 @@ int main( int argc, char* argv[] )
 	if( sgs_InitSDL( C ) )
 	{
 		fprintf( stderr, "Couldn't initialize SDL API\n" );
-		return 1;
+		return -6;
 	}
 	
 	/* initialize script-space rendering API */
 	if( sgs_InitGL( C ) )
 	{
 		fprintf( stderr, "Couldn't initialize rendering API\n" );
-		return 1;
+		return -7;
 	}
 	
 	/* initialize the application */
 	if( sgs_GlobalCall( C, "initialize", 0, 0 ) )
 	{
 		fprintf( stderr, "Failed to initialize the application.\n" );
-		return 1;
+		return -8;
 	}
 	
-	while( !sgs_GlobalInt( C, "sys_exit" ) )
+	return 1;
+}
+
+int ss_Frame()
+{
+	if( sgs_GlobalInt( C, "sys_exit" ) )
+		return 1;
+	
 	{
 		SDL_Event event;
 		while( SDL_PollEvent( &event ) )
@@ -169,27 +177,32 @@ int main( int argc, char* argv[] )
 				if( event.type == SDL_QUIT )
 				{
 					sgs_ExecString( C, "global sys_exit = true;" );
-					break;
+					return 1;
 				}
 			}
 		}
 		
 		if( sgs_GlobalInt( C, "sys_exit" ) )
-			break;
+			return 1;
 	
 		/* advance the application exactly one frame */
 		if( sgs_GlobalCall( C, "update", 0, 0 ) )
 		{
 			fprintf( stderr, "Failed to update the application.\n" );
-			return 1;
+			return -1;
 		}
 	}
 	
+	return 0;
+}
+
+int ss_Free()
+{
 	/* clean the application */
 	if( sgs_GlobalCall( C, "cleanup", 0, 0 ) )
 	{
 		fprintf( stderr, "Failed to clean the application.\n" );
-		return 1;
+		return -1;
 	}
 
 	if( g_enabledProfiler )
@@ -205,3 +218,14 @@ int main( int argc, char* argv[] )
 	
 	return 0;
 }
+
+void* ss_GetPtr( int pid )
+{
+	switch( pid )
+	{
+	case SS_PTR_SGSCTX: return C;
+	case SS_PTR_D3DDEV: return GD3DDev;
+	}
+	return NULL;
+}
+

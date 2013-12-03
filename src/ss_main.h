@@ -2,6 +2,14 @@
 #ifndef SS_MAIN_H_INCLUDED
 #define SS_MAIN_H_INCLUDED
 
+
+#ifndef SS_IS_LAUNCHER
+#  define SS_API __declspec(dllexport)
+#else
+#  define SS_API
+#endif
+
+
 #include "ss_cfg.h"
 
 #ifdef SS_USED3D
@@ -107,6 +115,15 @@ int ss_parse_texture( SGS_CTX, int item, sgs_Texture** out );
 void* ss_get_iface( int which );
 
 int sgs_InitAPI( SGS_CTX );
+
+
+/* Core interface */
+#define SS_PTR_SGSCTX 1
+#define SS_PTR_D3DDEV 2
+int ss_Initialize( int argc, char* argv[] );
+int ss_Frame();
+int ss_Free();
+void* ss_GetPtr( int pid );
 
 
 #endif /* SS_MAIN_H_INCLUDED */

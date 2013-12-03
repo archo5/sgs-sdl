@@ -10,7 +10,7 @@ ifdef SystemRoot
 	RM = del /Q
 	CP = copy
 	FixPath = $(subst /,\,$1)
-	PLATFLAGS = -lkernel32 -lOpenGL32 -ld3d9 -lmingw32 -lfreetype.dll
+	PLATFLAGS = -lkernel32 -lOpenGL32 -ld3d9 -lmingw32 -lfreetype-6
 	LINKPATHS = -Lsdl-win/lib -Lfreeimage -Lfreetype
 	COMPATHS = -Isdl-win/include -Ifreetype/include
 	PLATPOST = $(CP) $(call FixPath,sdl-win/bin/SDL.dll bin) & \
@@ -61,10 +61,13 @@ _OBJ = ss_main.o ss_script.o ss_sdl.o ss_render.o ss_image.o
 OBJ = $(patsubst %,$(OBJDIR)/%,$(_OBJ))
 
 
-$(OUTDIR)/sgs-sdl$(BINEXT): $(OBJ)
+$(OUTDIR)/sgs-sdl$(BINEXT): $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) src/ss_launcher.c
+	gcc -o $@ src/ss_launcher.c $(COMPATHS) -Isgscript/src $(C2FLAGS) -Lbin -lsgs-sdl -s
+
+$(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT): $(OBJ)
 	$(MAKE) -C sgscript xgmath
-	gcc -Wall -o $@ $(OBJ) $(C2FLAGS) -Lsgscript/bin $(LINKPATHS) $(PLATFLAGS) \
-		-lSDLmain -lSDL -lsgscript -lsgsxgmath -lfreeimage
+	gcc -o $@ $(OBJ) $(C2FLAGS) -Lsgscript/bin $(LINKPATHS) $(PLATFLAGS) \
+		-lSDLmain -lSDL -lsgscript -lsgsxgmath -lfreeimage -shared
 	$(PLATPOST)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPS)
