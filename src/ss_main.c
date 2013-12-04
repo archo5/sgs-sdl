@@ -229,7 +229,9 @@ void* ss_GetPtr( int pid )
 	case SS_PTR_WINDOW:
 		{
 			SDL_SysWMinfo sysinfo;
-			SDL_GetWMInfo( &sysinfo );
+			SDL_VERSION( &sysinfo.version );
+			if( SDL_GetWMInfo( &sysinfo ) <= 0 )
+				return NULL;
 			return (void*) sysinfo.window;
 		}
 	case SS_PTR_D3DDEV: return GD3DDev;
