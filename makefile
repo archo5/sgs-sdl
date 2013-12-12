@@ -10,9 +10,12 @@ ifdef SystemRoot
 	RM = del /Q
 	CP = copy
 	FixPath = $(subst /,\,$1)
-	PLATFLAGS = -lkernel32 -lOpenGL32 -ld3d9 -lmingw32 -lfreetype-6
+	LIBFLAGS = 
+	PLATFLAGS = -lkernel32 -lOpenGL32 -ld3d9 -lmingw32 -lfreetype-6 -lsgsxgmath
 	LINKPATHS = -Lsdl-win/lib -Lfreeimage -Lfreetype
 	COMPATHS = -Isdl-win/include -Ifreetype/include
+	LINUXHACKPRE =
+	LINUXHACKPOST =
 	PLATPOST = $(CP) $(call FixPath,sdl-win/bin/SDL.dll bin) & \
 	           $(CP) $(call FixPath,freeimage/FreeImage.dll bin) & \
 	           $(CP) $(call FixPath,freetype/libfreetype-6.dll bin) & \
@@ -25,11 +28,14 @@ else
 	RM = rm -f
 	CP = cp
 	FixPath = $1
-	PLATFLAGS = -lGL -lfreetype -lm -Wl,-rpath,'$$ORIGIN' -Wl,-z,origin
+	LIBFLAGS = -Wl,-rpath,'$$ORIGIN' -Wl,-z,origin -Wl,-rpath-link,bin
+	PLATFLAGS = -lGL -lfreetype -lm -Wl,-rpath,'$$ORIGIN' -Wl,-z,origin -l:sgsxgmath.so
 	LINKPATHS = 
 	COMPATHS = -I/usr/include/freetype2
+	LINUXHACKPRE = -ln -s sgscript/bin/sgsxgmath.so sgsxgmath.so
+	LINUXHACKPOST = -unlink sgsxgmath.so
 	PLATPOST = $(CP) $(call FixPath,sgscript/bin/libsgscript.so bin) & \
-	           $(CP) $(call FixPath,sgscript/bin/libsgsxgmath.so bin)
+	           $(CP) $(call FixPath,sgscript/bin/sgsxgmath.so bin)
 	BINEXT=
 	LIBPFX=lib
 	LIBEXT=.so
@@ -68,12 +74,16 @@ OBJ = $(patsubst %,$(OBJDIR)/%,$(_OBJ))
 
 
 $(OUTDIR)/sgs-sdl$(BINEXT): $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) src/ss_launcher.c
-	gcc -o $@ src/ss_launcher.c $(COMPATHS) -Isgscript/src $(C2FLAGS) -Lbin -lsgs-sdl -s
+	$(LINUXHACKPRE)
+	gcc -o $@ src/ss_launcher.c $(COMPATHS) $(LIBFLAGS) -Isgscript/src $(C2FLAGS) -Lbin -lsgs-sdl -s
+	$(LINUXHACKPOST)
 
 $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT): $(OBJ)
 	$(MAKE) -C sgscript xgmath
+	$(LINUXHACKPRE)
 	gcc -o $@ $(OBJ) $(C2FLAGS) -Lsgscript/bin $(LINKPATHS) $(PLATFLAGS) \
-		-lSDLmain -lSDL -lsgscript -lsgsxgmath -lfreeimage -shared
+		-lSDLmain -lSDL -lsgscript -lfreeimage -shared
+	$(LINUXHACKPOST)
 	$(PLATPOST)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPS)

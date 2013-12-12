@@ -232,7 +232,11 @@ void* ss_GetPtr( int pid )
 			SDL_VERSION( &sysinfo.version );
 			if( SDL_GetWMInfo( &sysinfo ) <= 0 )
 				return NULL;
+#if defined(SDL_VIDEO_DRIVER_X11)
+			return (void*) sysinfo.info.x11.window;
+#else
 			return (void*) sysinfo.window;
+#endif
 		}
 	case SS_PTR_D3DDEV: return GD3DDev;
 	}

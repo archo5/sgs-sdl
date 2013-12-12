@@ -4,11 +4,7 @@
 #include "ss_main.h"
 
 
-#ifdef _WIN32
-#  define ssGetProcAddress wglGetProcAddress
-#else
-#  define ssGetProcAddress glxGetProcAddress
-#endif
+#define ssGetProcAddress SDL_GL_GetProcAddress
 
 
 #ifndef SS_USED3D
