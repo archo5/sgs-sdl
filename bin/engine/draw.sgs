@@ -212,7 +212,7 @@ function get_camera_perspective( angle, aspect, znear, zfar )
 	xscale = yscale / aspect;
 	return
 	[
-		ss_using_d3d_signed * -xscale, 0, 0, 0,
+		-xscale, 0, 0, 0,
 		0, yscale, 0, 0,
 		0, 0, zfar/(zfar-znear), -znear*zfar/(zfar-znear),
 		0, 0, 1, 0,

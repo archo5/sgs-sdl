@@ -1707,10 +1707,12 @@ int ss_set_camera( SGS_CTX )
 		( ssz >= 2 && _parse_floatvec( C, 1, mtx2, 16 ) ) )
 		_WARN( "expected an array of 16 'real' values" )
 	
-#ifdef SS_USED3D
 	_mtx_transpose( mtx );
+	
+#ifdef SS_USED3D
 	IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_VIEW, (D3DMATRIX*) mtx );
 	if( ssz < 2 ){ mtx2[0] = 1; mtx2[5] = 1; mtx2[10] = 1; mtx2[15] = 1; }
+	else _mtx_transpose( mtx2 );
 	IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_PROJECTION, (D3DMATRIX*) mtx2 );
 	
 #else
@@ -1723,7 +1725,6 @@ int ss_set_camera( SGS_CTX )
 	else
 		glLoadIdentity();
 	glMatrixMode( GL_MODELVIEW );
-	_mtx_transpose( mtx );
 	glLoadMatrixf( mtx );
 	
 #endif

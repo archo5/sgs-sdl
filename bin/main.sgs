@@ -113,7 +113,10 @@ function update()
 	var cc = [0.1,0.2,0.4];
 	clear( cc );
 	
-	set_camera_2d( 500, 500, 500, W/H, 0 );
+	if( curtime % 2 < 1 )
+		set_camera_2d( 500, 500, 500, W/H, 0 );
+	else
+		set_camera_3d( [500,500,-500], [0,0,1], [0,-1,0], deg2rad(90), W/H, 1, 10000 );
 	
 	TM.render();
 	
