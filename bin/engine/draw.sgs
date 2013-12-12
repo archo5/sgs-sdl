@@ -1,4 +1,131 @@
 
+
+function drawfunc_init()
+{
+	global g_RB = create_renderbuf();
+	global g_VD_P2CC4 = make_vertex_format( "pf2cc4" );
+	global g_VD_P2T2 = make_vertex_format( "pf2tf2" );
+	global g_VD_P2T2CC4 = make_vertex_format( "pf2tf2cc4" );
+}
+
+function draw_color_rect( x1, y1, x2, y2, r, g, b, a )
+{
+	if( ss_using_d3d ){ tmp = r; r = b; b = tmp; }
+	g_RB.begin()
+		.f( x1, y1 ).cf2b( r, g, b, a )
+		.f( x2, y1 ).cf2b( r, g, b, a )
+		.f( x2, y2 ).cf2b( r, g, b, a )
+		.f( x1, y2 ).cf2b( r, g, b, a )
+		.draw( null, g_VD_P2CC4, 0, 4, PT_TRIANGLE_FAN );
+}
+function draw_color_rect_wh( x, y, w, h, r, g, b, a ){ draw_color_rect( x, y, x+w, y+h, r, g, b, a ); }
+
+function draw_tex_rect( x1, y1, x2, y2, tex )
+{
+	ty1 = ss_using_d3d;
+	ty2 = 1 - ty1;
+	g_RB.begin().f(
+		x1, y1, 0, ty1,
+		x2, y1, 1, ty1,
+		x2, y2, 1, ty2,
+		x1, y2, 0, ty2
+	).draw( tex, g_VD_P2T2, 0, 4, PT_TRIANGLE_FAN );
+}
+function draw_tex_rect_wh( x, y, w, h, tex ){ draw_tex_rect( x, y, x+w, y+h, tex ); }
+function draw_tex_box_wh( x, y, w, h, tex ){ w /= 2; h /= 2; draw_tex_rect( x-w, y-h, x+w, y+h, tex ); }
+function draw_tex_box_wh_rotated( x, y, w, h, angle, tex )
+{
+	w *= 0.5;
+	h *= 0.5;
+	
+	c = cos( angle );
+	s = sin( angle );
+	
+	ext1x = ( c - s ) * w;
+	ext1y = ( c + s ) * h;
+	ext2x = ( -c -s ) * w;
+	ext2y = ( c - s ) * h;
+	
+	ty1 = ss_using_d3d;
+	ty2 = 1 - ty1;
+	g_RB.begin().f(
+		x - ext1x, y - ext1y, 0, ty1, // pos - ext1
+		x - ext2x, y - ext2y, 1, ty1, // pos - ext2
+		x + ext1x, y + ext1y, 1, ty2, // pos + ext1
+		x + ext2x, y + ext2y, 0, ty2 // pos + ext2
+	).draw( tex, g_VD_P2T2, 0, 4, PT_TRIANGLE_FAN );
+}
+
+function draw_tex_color_rect( x1, y1, x2, y2, tex, r, g, b, a )
+{
+	if( ss_using_d3d ){ tmp = r; r = b; b = tmp; }
+	ty1 = ss_using_d3d;
+	ty2 = 1 - ty1;
+	g_RB.begin()
+		.f( x1, y1, 0, ty1 ).cf2b( r, g, b, a )
+		.f( x2, y1, 1, ty1 ).cf2b( r, g, b, a )
+		.f( x2, y2, 1, ty2 ).cf2b( r, g, b, a )
+		.f( x1, y2, 0, ty2 ).cf2b( r, g, b, a )
+		.draw( tex, g_VD_P2T2CC4, 0, 4, PT_TRIANGLE_FAN );
+}
+function draw_tex_color_rect_wh( x, y, w, h, tex, r, g, b, a ){ draw_tex_color_rect( x, y, x+w, y+h, tex, r, g, b, a ); }
+function draw_tex_color_box_wh( x, y, w, h, tex, r, g, b, a ){ w /= 2; h /= 2; draw_tex_color_rect( x-w, y-h, x+w, y+h, tex, r, g, b, a ); }
+function draw_tex_color_box_wh_rotated( x, y, w, h, angle, tex, r, g, b, a )
+{
+	w *= 0.5;
+	h *= 0.5;
+	
+	c = cos( angle );
+	s = sin( angle );
+	
+	ext1x = ( c - s ) * w;
+	ext1y = ( c + s ) * h;
+	ext2x = ( -c -s ) * w;
+	ext2y = ( c - s ) * h;
+	
+	if( ss_using_d3d ){ tmp = r; r = b; b = tmp; }
+	ty1 = ss_using_d3d;
+	ty2 = 1 - ty1;
+	
+	g_RB.begin()
+		.f( x - ext1x, y - ext1y, 0, ty1 ).cf2b( r, g, b, a ) // pos - ext1
+		.f( x - ext2x, y - ext2y, 1, ty1 ).cf2b( r, g, b, a ) // pos - ext2
+		.f( x + ext1x, y + ext1y, 1, ty2 ).cf2b( r, g, b, a ) // pos + ext1
+		.f( x + ext2x, y + ext2y, 0, ty2 ).cf2b( r, g, b, a ) // pos + ext2
+		.draw( tex, g_VD_P2T2CC4, 0, 4, PT_TRIANGLE_FAN );
+}
+
+function draw_color_poly_outlined( vertices, r, g, b, a, or, og, ob, oa )
+{
+	if( vertices.size < 3 )
+		return;
+	
+	if( ss_using_d3d ){ tmp = r; r = b; b = tmp; }
+	if( ss_using_d3d ){ tmp = or; or = ob; ob = tmp; }
+	
+	g_RB.begin();
+	foreach( v : vertices )
+		g_RB.f( v.x, v.y ).cf2b( r, g, b, a );
+	g_RB.draw( null, g_VD_P2CC4, 0, vertices.size, PT_TRIANGLE_FAN );
+	
+	g_RB.begin();
+	foreach( v : vertices )
+		g_RB.f( v.x, v.y ).cf2b( or, og, ob, oa );
+	v = vertices.first;
+	g_RB.f( v.x, v.y ).cf2b( or, og, ob, oa );
+	g_RB.draw( null, g_VD_P2CC4, 0, vertices.size + 1, PT_LINE_STRIP );
+}
+
+function draw_color_line( x1, y1, x2, y2, r, g, b, a )
+{
+	if( ss_using_d3d ){ tmp = r; r = b; b = tmp; }
+	g_RB.begin()
+		.f( x1, y1 ).cf2b( r, g, b, a )
+		.f( x2, y2 ).cf2b( r, g, b, a )
+		.draw( null, g_VD_P2CC4, 0, 2, PT_LINES );
+}
+
+
 function get_camera_2d_mtx( x, y, size, aspect, angle )
 {
 	size = 1.0/size;

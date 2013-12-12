@@ -89,6 +89,8 @@ function initialize()
 	global Font = create_font( "verdana.ttf", 16 );
 	
 	global g_RB = create_renderbuf().reserve( 512 );
+	
+	drawfunc_init();
 }
 
 global mpos = vec2(0,0);
@@ -133,6 +135,9 @@ function update()
 		.f( 600, 600, 0, 1, 1 ).pad( 12 )
 		.f( 400, 500, 0, 0, 1 ).pad( 12 )
 		.draw( image, vfmt, 0, 4, PT_TRIANGLE_FAN );
+	
+	// EXTENSIONS
+	draw_color_rect( 800, 200, 900, 250, 0.7, 0.5, 0.3, 0.5 );
 	
 	set_camera_ui( 0, W, 0, H );
 	
