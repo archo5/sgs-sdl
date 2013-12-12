@@ -52,7 +52,13 @@ else
 	CFLAGS = -D_DEBUG -g -Wall $(ARCHFLAGS)
 endif
 
-C2FLAGS = $(CFLAGS) -DBUILDING_SGS_SDL
+ifeq ($(video),gl)
+	VIDEOFLAGS = -DSGS_SDL_RENDERER_OPENGL
+else
+	VIDEOFLAGS = -DSGS_SDL_RENDERER_DIRECT3D
+endif
+
+C2FLAGS = $(CFLAGS) $(VIDEOFLAGS) -DBUILDING_SGS_SDL
 
 _DEPS = ss_main.h ss_api.h ss_cfg.h
 DEPS = $(patsubst %,$(SRCDIR)/%,$(_DEPS))

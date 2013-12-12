@@ -21,6 +21,8 @@ extern IDirect3D9* GD3D;
 extern IDirect3DDevice9* GD3DDev;
 #else
 #  include <GL/gl.h>
+extern void* GD3D;
+extern void* GD3DDev;
 #endif
 
 #undef TRUE
@@ -35,6 +37,8 @@ extern IDirect3DDevice9* GD3DDev;
 #ifndef SS_USED3D
 #  define GL_GLEXT_PROTOTYPES
 #  include "SDL/SDL_opengl.h"
+#  include "glext.h"
+extern PFNGLBLENDEQUATIONPROC ss_glBlendEquation;
 #endif
 
 #include "../sgscript/src/sgscript.h"

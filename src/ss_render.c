@@ -2314,7 +2314,7 @@ int ss_set_blending( SGS_CTX )
 	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_BLENDOP, blendfuncs[ func ] );
 #else
 	glBlendFunc( blendfactors[ src ], blendfactors[ dst ] );
-	glBlendEquation( blendfuncs[ func ] );
+	ss_glBlendEquation( blendfuncs[ func ] );
 #endif
 	return 0;
 }

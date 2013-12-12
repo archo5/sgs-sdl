@@ -4,6 +4,15 @@
 #include "ss_main.h"
 
 
+#ifdef _WIN32
+#  define ssGetProcAddress wglGetProcAddress
+#else
+#  define ssGetProcAddress glxGetProcAddress
+#endif
+
+
+PFNGLBLENDEQUATIONPROC ss_glBlendEquation;
+
 
 #define FN( f ) { #f, ss_##f }
 #define IC( i ) { #i, i }
@@ -65,6 +74,9 @@ int _ss_reset_device( SGS_CTX )
 	return 1;
 }
 
+#else
+void* GD3D = NULL;
+void* GD3DDev = NULL;
 #endif
 
 
@@ -162,6 +174,8 @@ int ss_set_video_mode( SGS_CTX )
 	IDirect3DDevice9_BeginScene( GD3DDev );
 	
 #else
+	ss_glBlendEquation = (PFNGLBLENDEQUATIONPROC) ssGetProcAddress( "glBlendEquation" );
+	
 	glDisable( GL_DEPTH_TEST );
 	glMatrixMode( GL_MODELVIEW );
 	glLoadIdentity();
