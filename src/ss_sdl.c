@@ -11,7 +11,9 @@
 #endif
 
 
+#ifndef SS_USED3D
 PFNGLBLENDEQUATIONPROC ss_glBlendEquation;
+#endif
 
 
 #define FN( f ) { #f, ss_##f }

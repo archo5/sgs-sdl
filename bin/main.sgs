@@ -91,6 +91,7 @@ function initialize()
 	global g_RB = create_renderbuf().reserve( 512 );
 	
 	drawfunc_init();
+	global g_edtex = create_texture( "editor/img/default_icon.png" );
 }
 
 global mpos = vec2(0,0);
@@ -138,6 +139,7 @@ function update()
 	
 	// EXTENSIONS
 	draw_color_rect( 800, 200, 900, 250, 0.7, 0.5, 0.3, 0.5 );
+	draw_tex_rect( 800, 300, 850, 350, g_edtex );
 	
 	set_camera_ui( 0, W, 0, H );
 	
