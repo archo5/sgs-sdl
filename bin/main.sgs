@@ -37,7 +37,7 @@ function configure()
 }
 
 // global W, H, W1 = 1024, H1 = 576, F1 = "", W2 = 1600, H2 = 900, F2 = "", which = 2;
-global W, H, W1 = 1024, H1 = 576, F1 = "", W2 = 1024, H2 = 576, F2 = "vsync", which = 2;
+global W, H, W1 = 1024, H1 = 576, F1 = "vsync", W2 = 1024, H2 = 576, F2 = "", which = 2;
 
 function switch()
 {
@@ -142,7 +142,13 @@ function update()
 	
 	// EXTENSIONS
 	draw_color_rect( 800, 200, 900, 250, 0.7, 0.5, 0.3, 0.5 );
-	draw_tex_rect( 800, 300, 850, 350, g_edtex );
+	for( y = 0; y < 12; ++y )
+	{
+		for( x = 0; x < 12; ++x )
+		{
+			draw_tex_rect( 800+x*32, 300+y*32, 832+x*32, 332+y*32, g_edtex );
+		}
+	}
 	
 	set_camera_ui( 0, W, 0, H );
 	
@@ -153,6 +159,7 @@ function update()
 	tx = "frame time: " $ ( ftime() - lasttime ) * 1000.0 $ " ms";
 	draw_text_line( tx, Font, 101, 1, [0,0,0,1] );
 	draw_text_line( tx, Font, 100, 0, [0.9,0.8,0.7,1] );
+println(tx);
 	
 	present();
 

@@ -119,7 +119,7 @@ int ss_Initialize( int argc, char* argv[] )
 	}
 	
 	/* initialize SDL */
-	if( SDL_Init( SDL_INIT_VIDEO ) < 0 )
+	if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE ) < 0 )
 	{
 		fprintf( stderr, "Couldn't initialize SDL: %s\n", SDL_GetError() );
 		return -5;

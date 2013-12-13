@@ -148,6 +148,7 @@ int ss_set_video_mode( SGS_CTX )
 	GD3DPP.PresentationInterval = vsync ? D3DPRESENT_INTERVAL_ONE : D3DPRESENT_INTERVAL_IMMEDIATE;
 #else
 	f |= SDL_OPENGL;
+	SDL_GL_SetAttribute( SDL_GL_SWAP_CONTROL, vsync ? 1 : 0 );
 #endif
 	
 	suc = !!SDL_SetVideoMode( w, h, b, f );
@@ -160,7 +161,7 @@ int ss_set_video_mode( SGS_CTX )
 	{
 		suc = !FAILED( IDirect3D9_CreateDevice( GD3D,
 			D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, GetActiveWindow(),
-			D3DCREATE_HARDWARE_VERTEXPROCESSING, &GD3DPP, &GD3DDev ) );
+			D3DCREATE_HARDWARE_VERTEXPROCESSING | D3DCREATE_FPU_PRESERVE, &GD3DPP, &GD3DDev ) );
 		
 		_ss_reset_states();
 	}
