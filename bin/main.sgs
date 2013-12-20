@@ -80,6 +80,8 @@ function initialize()
 		}
 	}
 	
+	global HG = Histogram.create(200);
+	
 	println();
 	global image = create_texture( "crosshair.png", "mipmaps" );
 	println( image );
@@ -142,11 +144,13 @@ function update()
 	
 	// EXTENSIONS
 	draw_color_rect( 800, 200, 900, 250, 0.7, 0.5, 0.3, 0.5 );
-	for( y = 0; y < 12; ++y )
+	ddd = 16;
+	ccc = 32;
+	for( y = 0; y < ccc; ++y )
 	{
-		for( x = 0; x < 12; ++x )
+		for( x = 0; x < ccc; ++x )
 		{
-			draw_tex_rect( 800+x*32, 300+y*32, 832+x*32, 332+y*32, g_edtex );
+			draw_tex_rect( 800+x*ddd, 300+y*ddd, 832+x*ddd, 332+y*ddd, g_edtex );
 		}
 	}
 	
@@ -156,10 +160,13 @@ function update()
 	
 	UI.draw();
 	
-	tx = "frame time: " $ ( ftime() - lasttime ) * 1000.0 $ " ms";
+	ftm = ( ftime() - lasttime ) * 1000.0;
+	HG.push( ftm );
+	tx = "frame time: " $ ftm $ " ms";
 	draw_text_line( tx, Font, 101, 1, [0,0,0,1] );
 	draw_text_line( tx, Font, 100, 0, [0.9,0.8,0.7,1] );
 println(tx);
+	HG.draw( 100, 500, 3, -2, 0xffcccccc, 1000/60 );
 	
 	present();
 
