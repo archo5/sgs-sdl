@@ -960,7 +960,7 @@ int ss_draw( SGS_CTX )
 			if( vt < vtex.data + vtex.size )
 			{
 				tmp.tex[0] = vt[0] + tox;
-				tmp.tex[1] = 1 - vt[1] + toy;
+				tmp.tex[1] = 1 - ( vt[1] + toy );
 				vt += 2;
 			}
 			if( vc < vcol.data + vcol.size )
