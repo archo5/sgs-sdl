@@ -1774,7 +1774,13 @@ int ss_font_init( ss_font* font, SGS_CTX, const char* filename, int size )
 		return 0;
 	font->size = size;
 	FT_Set_Pixel_Sizes( font->face, size, 0 );
-	
+	/*
+	puts( "FONT LOADED" );
+	printf( "size = %d\n", size );
+	puts( "-- face info --" );
+	printf( "ascender = %d\n", (int) font->face->size->metrics.ascender >> 6 );
+	printf( "descender = %d\n", (int) font->face->size->metrics.descender >> 6 );
+	*/
 	vht_init( &font->glyphs, C, 16, 16 );
 	
 	font->loaded = 1;
@@ -1824,6 +1830,13 @@ int ss_font_convert( SGS_CTX, sgs_VarObj* data, int type )
 	return SGS_ENOTSUP;
 }
 
+#define FONT_IHDR( method ) \
+	int method_call = sgs_Method( C ); \
+	sgs_FuncName( C, method_call ? "font." #method : "font_" #method ); \
+	if( !sgs_IsObject( C, 0, font_iface ) ) \
+	    return sgs_ArgErrorExt( C, 0, method_call, "font", "" ); \
+	ss_font* font = (ss_font*) sgs_GetObjectData( C, 0 );
+
 ss_glyph* ss_font_get_glyph( ss_font* font, SGS_CTX, uint32_t cp );
 int ss_fontI_get_advance( SGS_CTX )
 {
@@ -1857,13 +1870,57 @@ int ss_fontI_get_advance( SGS_CTX )
 	return 1;
 }
 
+int ss_fontI_get_text_length( SGS_CTX )
+{
+	char* str = NULL;
+	sgs_SizeVal size = 0;
+	sgs_Int length = 0;
+	ss_glyph *G, *G2 = NULL;
+	
+	FONT_IHDR( get_text_length );
+	if( !sgs_LoadArgs( C, "@>m", &str, &size ) )
+		return 0;
+	
+	while( size > 0 )
+	{
+		uint32_t cp = SGS_UNICODE_INVCHAR;
+		int ret = sgs_utf8_decode( str, size, &cp );
+		ret = abs( ret );
+		str += ret;
+		size -= ret;
+		
+		G = ss_font_get_glyph( font, C, cp );
+		if( G )
+		{
+			length += G->advx;
+			if( FT_HAS_KERNING( font->face ) && G2 )
+			{
+				FT_Vector delta;
+				FT_Get_Kerning( font->face, G2->glyph_id, G->glyph_id, FT_KERNING_DEFAULT, &delta );
+				length += delta.x >> 6;
+			}
+		}
+		G2 = G;
+	}
+	sgs_PushInt( C, length );
+	return 1;
+}
+
 int ss_font_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
 	char* str = sgs_ToString( C, 0 );
 	FONTHDR;
 
 	if( 0 == strcmp( str, "size" ) ){ sgs_PushInt( C, font->size ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "x_ppem" ) ){ sgs_PushInt( C, font->face->size->metrics.x_ppem ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "y_ppem" ) ){ sgs_PushInt( C, font->face->size->metrics.y_ppem ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "ascender" ) ){ sgs_PushInt( C, font->face->size->metrics.ascender >> 6 ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "descender" ) ){ sgs_PushInt( C, font->face->size->metrics.descender >> 6 ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "height" ) ){ sgs_PushInt( C, font->face->size->metrics.height >> 6 ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "max_advance" ) ){ sgs_PushInt( C, font->face->size->metrics.max_advance >> 6 ); return SGS_SUCCESS; }
+	
 	if( 0 == strcmp( str, "get_advance" ) ){ sgs_PushCFunction( C, ss_fontI_get_advance ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "get_text_length" ) ){ sgs_PushCFunction( C, ss_fontI_get_text_length ); return SGS_SUCCESS; }
 
 	return SGS_ENOTFND;
 }
@@ -2142,7 +2199,7 @@ int ss_is_font( SGS_CTX )
 	return 1;
 }
 
-int ss_draw_text_line( SGS_CTX )
+int ss_draw_text_line_int( SGS_CTX, int (*off_fn) (ss_font*) )
 {
 	int ret = 1;
 	char* str;
@@ -2173,7 +2230,7 @@ int ss_draw_text_line( SGS_CTX )
 		sgs_Printf( C, SGS_WARNING, "draw_text(): unloaded font detected" );
 		goto cleanup;
 	}
-	ss_int_drawtext_line( ssfont, C, str, strsize, X, Y, 0x7fffffff, color );
+	ss_int_drawtext_line( ssfont, C, str, strsize, X, Y + ( off_fn ? off_fn( ssfont ) : 0 ), 0x7fffffff, color );
 
 end:
 	sgs_PushBool( C, ret );
@@ -2182,6 +2239,23 @@ cleanup:
 	ret = 0;
 	goto end;
 }
+
+int offset_from_font_bl( ss_font* font ) { return -font->size; }
+int offset_from_font_vn( ss_font* font )
+{
+	FT_Size_Metrics m = font->face->size->metrics;
+	return -( ( ( m.ascender + abs( m.descender ) ) >> 6 ) - m.y_ppem ) / 2;
+}
+int offset_from_font_vc( ss_font* font )
+{
+	FT_Size_Metrics m = font->face->size->metrics;
+	return -( ( ( m.ascender + abs( m.descender ) ) >> 6 ) ) / 2;
+}
+
+int ss_draw_text_line( SGS_CTX ){ return ss_draw_text_line_int( C, NULL ); }
+int ss_draw_text_line_bl( SGS_CTX ){ return ss_draw_text_line_int( C, offset_from_font_bl ); }
+int ss_draw_text_line_vn( SGS_CTX ){ return ss_draw_text_line_int( C, offset_from_font_vn ); }
+int ss_draw_text_line_vc( SGS_CTX ){ return ss_draw_text_line_int( C, offset_from_font_vc ); }
 
 
 
@@ -2364,7 +2438,8 @@ sgs_RegFuncConst gl_funcs[] =
 	FN( draw ),
 	FN( make_vertex_format ), FN( draw_packed ),
 	FN( create_renderbuf ),
-	FN( create_font ), FN( draw_text_line ), FN( is_font ),
+	FN( create_font ), FN( is_font ),
+	FN( draw_text_line ), FN( draw_text_line_bl ), FN( draw_text_line_vn ), FN( draw_text_line_vc ),
 	FN( matrix_push ), FN( matrix_pop ),
 	FN( set_camera ), FN( set_cliprect ),
 	FN( set_depth_test ), FN( set_culling ),

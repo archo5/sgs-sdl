@@ -88,7 +88,8 @@ function initialize()
 	printvar( _Gtex );
 	println();
 	
-	global Font = create_font( "verdana.ttf", 16 );
+	global Font = create_font( "verdana.ttf", 12 );
+	global BigFont = create_font( "verdana.ttf", 72 );
 	
 	global g_RB = create_renderbuf().reserve( 512 );
 	
@@ -159,6 +160,26 @@ function update()
 	draw({ preset = "box", texture = image, position = mpos, scale = [128,128], angle = rotation * M_PI, color = [0.3,0.5,0.7,1] });
 	
 	UI.draw();
+	
+	println( "font data: " $ { ascender = BigFont.ascender, descender = BigFont.descender, y_ppem = BigFont.y_ppem } );
+	fof = ( BigFont.ascender + abs( BigFont.descender ) - BigFont.y_ppem ) / 2; // half of total side height is the offset to apply
+	
+	// DRAW VCENTERED TEXT
+	functions = [ "draw_text_line", "draw_text_line_bl", "draw_text_line_vn", "draw_text_line_vc" ];
+	tl = BigFont.get_text_length( "Mg" );
+	adv = tl + 1;
+	
+	x = 150;
+	y = 150;
+	foreach( fn : functions )
+	{
+		draw_color_rect( x, y, x + tl, y + BigFont.size, 0, 0, 0, 1 );
+		draw_color_line( x, y + BigFont.size * 0.5, x + tl, y + BigFont.size * 0.5, 0.5, 0, 0, 1 );
+		_G[ fn ]( "Mg", BigFont, x, y, [1,1,1,1] );
+		draw_color_rect( x, y + 1 + BigFont.size, x + tl, y + 1 + BigFont.size + Font.size, 0, 0, 0, 0.5 );
+		draw_text_line_vn( string_replace( fn, "draw_text_line", "DTL" ), Font, x, y + 1 + BigFont.size, [0.4, 0.8, 0.6, 1] );
+		x += adv;
+	}
 	
 	ftm = ( ftime() - lasttime ) * 1000.0;
 	HG.push( ftm );
