@@ -161,7 +161,7 @@ function update()
 	
 	UI.draw();
 	
-	println( "font data: " $ { ascender = BigFont.ascender, descender = BigFont.descender, y_ppem = BigFont.y_ppem } );
+//	println( "font data: " $ { ascender = BigFont.ascender, descender = BigFont.descender, y_ppem = BigFont.y_ppem } );
 	fof = ( BigFont.ascender + abs( BigFont.descender ) - BigFont.y_ppem ) / 2; // half of total side height is the offset to apply
 	
 	// DRAW VCENTERED TEXT
@@ -186,7 +186,7 @@ function update()
 	tx = "frame time: " $ ftm $ " ms";
 	draw_text_line( tx, Font, 101, 1, [0,0,0,1] );
 	draw_text_line( tx, Font, 100, 0, [0.9,0.8,0.7,1] );
-println(tx);
+//println(tx);
 	HG.draw( 100, 500, 3, -2, 0xffcccccc, 1000/60 );
 	
 	present();
