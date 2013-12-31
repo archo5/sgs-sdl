@@ -98,8 +98,8 @@ sgs_Image;
 int sgs_InitImage( SGS_CTX );
 int sgs_IsImageVar( sgs_Variable* var );
 int stdlib_toimage( SGS_CTX, int pos, sgs_Image** out );
-int sgs_CreateImageHelper( SGS_CTX, int16_t w, int16_t h, const void* bits, const char* func );
-int sgs_LoadImageHelper( SGS_CTX, char* str, int size, const char* func );
+int sgs_CreateImageHelper( SGS_CTX, int16_t w, int16_t h, const void* bits );
+int sgs_LoadImageHelper( SGS_CTX, char* str, int size );
 sgs_Image* sgs_ImageDS2X( sgs_Image* src, SGS_CTX );
 void sgs_DeleteImage( sgs_Image* img, SGS_CTX );
 

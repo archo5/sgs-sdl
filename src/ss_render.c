@@ -138,6 +138,8 @@ int ss_create_texture( SGS_CTX )
 	sgs_Image* ii;
 	int argc = sgs_StackSize( C ), bystr = 0;
 	
+	SGSFN( "create_texture" );
+	
 	static flag_string_item_t flagitems[] =
 	{
 		{ "hrepeat", CT_HREPEAT },
@@ -148,7 +150,7 @@ int ss_create_texture( SGS_CTX )
 	};
 	
 	if( argc < 1 || argc > 2 )
-		_WARN( "create_texture() - unexpected arguments; function expects 1-2 arguments: (image|string)[, string]" )
+		_WARN( "unexpected arguments; function expects 1-2 arguments: (image|string)[, string]" )
 	
 	flags = sgs_GetFlagString( C, 1, flagitems );
 	
@@ -172,7 +174,7 @@ int ss_create_texture( SGS_CTX )
 		sgs_Pop( C, 1 );
 		
 		/* convert string to image */
-		if( !sgs_LoadImageHelper( C, (char*) sgs_GetStringPtr( C, 0 ), sgs_GetStringSize( C, 0 ), "create_texture" ) )
+		if( !sgs_LoadImageHelper( C, (char*) sgs_GetStringPtr( C, 0 ), sgs_GetStringSize( C, 0 ) ) )
 			return 0; /* error printed by LIH */
 		
 		/* NAME [FLAGS] KEY IMAGE */
@@ -187,7 +189,7 @@ int ss_create_texture( SGS_CTX )
 	/* IMAGE [FLAGS] [KEY](if bystr) */
 	
 	if( !stdlib_toimage( C, 0, &ii ) )
-		_WARN( "create_texture() - unexpected arguments; function expects 1-2 arguments: (image|string)[, string]" )
+		_WARN( "unexpected arguments; function expects 1-2 arguments: (image|string)[, string]" )
 	
 	{
 		sgs_Texture* tt = (sgs_Texture*) sgs_PushObjectIPA( C, sizeof(sgs_Texture), tex_iface );
@@ -487,12 +489,12 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 	};
 	
 	if( !sgs_UnpackDict( C, 0, gi ) )
-		_WARN( "draw(): no geometry data found" )
+		_WARN( "no geometry data found" )
 	
 	if( gi[0].var && ( gi[1].var || gi[2].var ) )
 	{
 		sgs_UnpackFree( C, gi );
-		_WARN( "draw(): 'preset' doesn't work together with 'mode' or 'vertices'" )
+		_WARN( "'preset' doesn't work together with 'mode' or 'vertices'" )
 	}
 	
 	if( gi[0].var )
@@ -505,7 +507,7 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 		{
 			sgs_Pop( C, 1 );
 			sgs_UnpackFree( C, gi );
-			_WARN( "draw(): 'preset' must be a string" )
+			_WARN( "'preset' must be a string" )
 		}
 		sgs_Pop( C, 1 );
 		
@@ -551,7 +553,7 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 		
 		sgs_UnpackFree( C, gi );
 		if( !ret )
-			_WARN( "draw(): preset not found" )
+			_WARN( "preset not found" )
 		return ret;
 	}
 	else if( gi[2].var )
@@ -562,13 +564,13 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 		const char* res = _parse_floatbuf( C, gi[2].var, &pdata, 2, defcomp, 1 );
 		if( res )
 		{
-			sgs_Printf( C, SGS_WARNING, "draw(): failed to load vertices - %s", res );
+			sgs_Printf( C, SGS_WARNING, "failed to load vertices - %s", res );
 			goto cleanup;
 		}
 		
 		if( !gi[1].var )
 		{
-			sgs_Printf( C, SGS_WARNING, "draw(): 'mode' not found" );
+			sgs_Printf( C, SGS_WARNING, "'mode' not found" );
 			goto cleanup;
 		}
 		
@@ -586,7 +588,7 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 			res = _parse_floatbuf( C, gi[3].var, &cdata, 4, defcomp+4, 1 );
 			if( res )
 			{
-				sgs_Printf( C, SGS_WARNING, "draw(): failed to load vertex colors - %s", res );
+				sgs_Printf( C, SGS_WARNING, "failed to load vertex colors - %s", res );
 				goto cleanup;
 			}
 		}
@@ -596,7 +598,7 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 			res = _parse_floatbuf( C, gi[4].var, &tdata, 2, defcomp+8, 1 );
 			if( res )
 			{
-				sgs_Printf( C, SGS_WARNING, "draw(): failed to load vertex texcoords - %s", res );
+				sgs_Printf( C, SGS_WARNING, "failed to load vertex texcoords - %s", res );
 				goto cleanup;
 			}
 		}
@@ -616,7 +618,7 @@ cleanup:
 	}
 	
 	sgs_UnpackFree( C, gi );
-	_WARN( "draw(): no geometry data found" )
+	_WARN( "no geometry data found" )
 }
 int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 {
@@ -633,7 +635,7 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 	};
 	
 	if( !sgs_UnpackDict( C, 0, tfi ) )
-		_WARN( "draw(): no instancing data found" )
+		_WARN( "no instancing data found" )
 	
 	if( tfi[1].var ) /* found 'transforms', array of matrices */
 	{
@@ -662,7 +664,7 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 			const char* res = _parse_floatbuf( C, tfi[3].var, &posdata, 2, defcomp, 1 );
 			if( res )
 			{
-				sgs_Printf( C, SGS_WARNING, "draw(): failed to load positions - %s", res );
+				sgs_Printf( C, SGS_WARNING, "failed to load positions - %s", res );
 				goto cleanup;
 			}
 		}
@@ -671,13 +673,13 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 			const char* res = _parse_floatbuf( C, tfi[2].var, &posdata, 2, defcomp, 0 );
 			if( res )
 			{
-				sgs_Printf( C, SGS_WARNING, "draw(): failed to load position - %s", res );
+				sgs_Printf( C, SGS_WARNING, "failed to load position - %s", res );
 				goto cleanup;
 			}
 		}
 		else
 		{
-			sgs_Printf( C, SGS_WARNING, "draw(): no instance position data found" );
+			sgs_Printf( C, SGS_WARNING, "no instance position data found" );
 		}
 		
 		if( tfi[5].var ) /* found 'angles', array of real */
@@ -685,7 +687,7 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 			const char* res = _parse_floatbuf( C, tfi[5].var, &angdata, 1, defcomp, 1 );
 			if( res )
 			{
-				sgs_Printf( C, SGS_WARNING, "draw(): failed to load angles - %s", res );
+				sgs_Printf( C, SGS_WARNING, "failed to load angles - %s", res );
 				goto cleanup;
 			}
 		}
@@ -694,7 +696,7 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 			const char* res = _parse_floatbuf( C, tfi[4].var, &angdata, 1, defcomp, 0 );
 			if( res )
 			{
-				sgs_Printf( C, SGS_WARNING, "draw(): failed to load angle - %s", res );
+				sgs_Printf( C, SGS_WARNING, "failed to load angle - %s", res );
 				goto cleanup;
 			}
 		}
@@ -704,7 +706,7 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 			const char* res = _parse_floatbuf( C, tfi[7].var, &scaledata, 2, defcomp+4, 1 );
 			if( res )
 			{
-				sgs_Printf( C, SGS_WARNING, "draw(): failed to load scales - %s", res );
+				sgs_Printf( C, SGS_WARNING, "failed to load scales - %s", res );
 				goto cleanup;
 			}
 		}
@@ -713,7 +715,7 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 			const char* res = _parse_floatbuf( C, tfi[6].var, &scaledata, 2, defcomp+4, 0 );
 			if( res )
 			{
-				sgs_Printf( C, SGS_WARNING, "draw(): failed to load scale - %s", res );
+				sgs_Printf( C, SGS_WARNING, "failed to load scale - %s", res );
 				goto cleanup;
 			}
 		}
@@ -787,7 +789,7 @@ colors:
 			const char* res = _parse_floatbuf( C, tfi[9].var, icol, 4, defcomp, 1 );
 			if( res )
 			{
-				sgs_Printf( C, SGS_WARNING, "draw(): failed to load colors - %s", res );
+				sgs_Printf( C, SGS_WARNING, "failed to load colors - %s", res );
 				sgs_UnpackFree( C, tfi );
 				return 0;
 			}
@@ -797,7 +799,7 @@ colors:
 			const char* res = _parse_floatbuf( C, tfi[8].var, icol, 4, defcomp, 0 );
 			if( res )
 			{
-				sgs_Printf( C, SGS_WARNING, "draw(): failed to load color - %s", res );
+				sgs_Printf( C, SGS_WARNING, "failed to load color - %s", res );
 				sgs_UnpackFree( C, tfi );
 				return 0;
 			}
@@ -870,9 +872,11 @@ int ss_draw( SGS_CTX )
 		DUI_LAST,
 	};
 	
+	SGSFN( "draw" );
+	
 	if( sgs_StackSize( C ) != 1 ||
 		sgs_ItemType( C, 0 ) != SVT_OBJECT )
-		_WARN( "draw(): expected one dictionary argument" )
+		_WARN( "expected one dictionary argument" )
 	
 	sgs_UnpackDict( C, 0, mi );
 	
@@ -891,7 +895,7 @@ int ss_draw( SGS_CTX )
 		if( !texid )
 #endif
 		{
-			sgs_Printf( C, SGS_WARNING, "draw(): could not use texture" );
+			sgs_Printf( C, SGS_WARNING, "could not use texture" );
 		}
 	}
 	
@@ -960,7 +964,7 @@ int ss_draw( SGS_CTX )
 			if( vt < vtex.data + vtex.size )
 			{
 				tmp.tex[0] = vt[0] + tox;
-				tmp.tex[1] = 1 - ( vt[1] + toy );
+				tmp.tex[1] = vt[1] + toy;
 				vt += 2;
 			}
 			if( vc < vcol.data + vcol.size )
@@ -1843,13 +1847,15 @@ int ss_fontI_get_advance( SGS_CTX )
 	int adv = 0;
 	sgs_Integer a = 0, b = 0;
 	ss_font* font;
+	
+	SGSFN( "font.get_advance" );
 
 	if( !sgs_Method( C ) ||
 		sgs_StackSize( C ) != 3 ||
 		!sgs_IsObject( C, 0, font_iface ) ||
 		!( sgs_ItemType( C, 1 ) == SVT_NULL || sgs_ParseInt( C, 1, &a ) ) ||
 		!sgs_ParseInt( C, 2, &b ) )
-		_WARN( "font::get_advance(): unexpected arguments; "
+		_WARN( "unexpected arguments; "
 			"method expects this=font and 2 arguments: int|null, int" )
 
 	font = (ss_font*) sgs_GetObjectData( C, 0 );
@@ -1938,11 +1944,13 @@ int ss_create_font( SGS_CTX )
 	char* fontname;
 	sgs_SizeVal fnsize;
 	sgs_Integer fontsize;
+	
+	SGSFN( "create_font" );
 
 	if( sgs_StackSize( C ) != 2 ||
 		!sgs_ParseString( C, 0, &fontname, &fnsize ) ||
 		!sgs_ParseInt( C, 1, &fontsize ) )
-		_WARN( "create_font(): unexpected arguments; function expects 2 arguments: string, int" )
+		_WARN( "unexpected arguments; function expects 2 arguments: string, int" )
 
 	/* make key */
 	sgs_PushItem( C, 0 );
@@ -1964,7 +1972,7 @@ int ss_create_font( SGS_CTX )
 
 		if( sgs_PushGlobal( C, "ss_font_search_paths" ) ||
 			!sgs_ParseString( C, -1, &paths, NULL ) )
-			_WARN( "create_font(): could not load search paths" )
+			_WARN( "could not load search paths" )
 		sgs_Pop( C, 1 );
 
 		char* bp = paths, *bps = paths;
@@ -1988,7 +1996,7 @@ int ss_create_font( SGS_CTX )
 		membuf_destroy( &fpath, C );
 		if( !fn->loaded )
 		{
-			sgs_Printf( C, SGS_WARNING, "create_font(): "
+			sgs_Printf( C, SGS_WARNING,
 				"could not find font '%.*s', paths: %s", fnsize, fontname, paths );
 			return 0;
 		}
@@ -2192,8 +2200,9 @@ void ss_int_drawtext_line( ss_font* font, SGS_CTX, char* str,
 
 int ss_is_font( SGS_CTX )
 {
+	SGSFN( "is_font" );
 	if( sgs_StackSize( C ) != 1 )
-		_WARN( "is_font(): unexpected arguments; function expects 1 argument" )
+		_WARN( "unexpected arguments; function expects 1 argument" )
 
 	sgs_PushBool( C, sgs_IsObject( C, 0, font_iface ) );
 	return 1;
@@ -2210,24 +2219,24 @@ int ss_draw_text_line_int( SGS_CTX, int (*off_fn) (ss_font*) )
 	ss_font* ssfont;
 	
 	if( sgs_StackSize( C ) != 5 )
-		_WARN( "draw_text_line(): unexpected arguments; function expects 5 arguments" )
+		_WARN( "unexpected arguments; function expects 5 arguments" )
 
 	if( !sgs_ParseString( C, 0, &str, &strsize ) )
-		_WARN( "draw_text_line(): argument 1 (text) must be 'string'" )
+		_WARN( "argument 1 (text) must be 'string'" )
 	if( sgs_ItemType( C, 1 ) != SVT_OBJECT || !sgs_GetStackItem( C, 1, &fontvar )
 		|| fontvar.data.O->iface != font_iface )
-		_WARN( "draw_text_line(): argument 2 (font) has wrong type (must be 'font')" )
+		_WARN( "argument 2 (font) has wrong type (must be 'font')" )
 	if( !sgs_ParseInt( C, 2, &X ) )
-		_WARN( "draw_text_line(): could not parse argument 3 (X position)" )
+		_WARN( "could not parse argument 3 (X position)" )
 	if( !sgs_ParseInt( C, 3, &Y ) )
-		_WARN( "draw_text_line(): could not parse argument 4 (Y position)" )
+		_WARN( "could not parse argument 4 (Y position)" )
 	if( !stdlib_tocolor4( C, 4, color ) )
-		_WARN( "draw_text_line(): could not parse argument 5 (color)" )
+		_WARN( "could not parse argument 5 (color)" )
 	
 	ssfont = (ss_font*) fontvar.data.O->data;
 	if( !ssfont->loaded )
 	{
-		sgs_Printf( C, SGS_WARNING, "draw_text(): unloaded font detected" );
+		sgs_Printf( C, SGS_WARNING, "unloaded font detected" );
 		goto cleanup;
 	}
 	ss_int_drawtext_line( ssfont, C, str, strsize, X, Y + ( off_fn ? off_fn( ssfont ) : 0 ), 0x7fffffff, color );
@@ -2252,16 +2261,17 @@ int offset_from_font_vc( ss_font* font )
 	return -( ( ( m.ascender + abs( m.descender ) ) >> 6 ) ) / 2;
 }
 
-int ss_draw_text_line( SGS_CTX ){ return ss_draw_text_line_int( C, NULL ); }
-int ss_draw_text_line_bl( SGS_CTX ){ return ss_draw_text_line_int( C, offset_from_font_bl ); }
-int ss_draw_text_line_vn( SGS_CTX ){ return ss_draw_text_line_int( C, offset_from_font_vn ); }
-int ss_draw_text_line_vc( SGS_CTX ){ return ss_draw_text_line_int( C, offset_from_font_vc ); }
+int ss_draw_text_line( SGS_CTX ){ SGSFN("draw_text_line"); return ss_draw_text_line_int( C, NULL ); }
+int ss_draw_text_line_bl( SGS_CTX ){ SGSFN("draw_text_line_bl"); return ss_draw_text_line_int( C, offset_from_font_bl ); }
+int ss_draw_text_line_vn( SGS_CTX ){ SGSFN("draw_text_line_vn"); return ss_draw_text_line_int( C, offset_from_font_vn ); }
+int ss_draw_text_line_vc( SGS_CTX ){ SGSFN("draw_text_line_vc"); return ss_draw_text_line_int( C, offset_from_font_vc ); }
 
 
 
 int ss_set_cliprect( SGS_CTX )
 {
 	sgs_Integer x1, x2, y1, y2;
+	SGSFN( "set_cliprect" );
 	if( sgs_StackSize( C ) == 1 &&
 		sgs_ItemType( C, 0 ) == SVT_NULL )
 	{
@@ -2280,7 +2290,7 @@ int ss_set_cliprect( SGS_CTX )
 		sgs_ParseInt( C, 3, &y2 ) )
 	{
 		if( x2 < x1 || y2 < y1 )
-			_WARN( "set_cliprect(): invalid (negative) width and/or height" )
+			_WARN( "invalid (negative) width and/or height" )
 #ifdef SS_USED3D
 		{
 			RECT rect = { x1, y1, x2, y2 };
@@ -2295,7 +2305,7 @@ int ss_set_cliprect( SGS_CTX )
 		return 1;
 	}
 	else
-		_WARN( "set_cliprect(): unexpected arguments; function expects null or 4 int values" )
+		_WARN( "unexpected arguments; function expects null or 4 int values" )
 }
 
 

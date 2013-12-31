@@ -316,9 +316,10 @@ int ss_get_relative_mouse_state( SGS_CTX )
 int ss_clear( SGS_CTX )
 {
 	sgs_Real col[ 4 ];
+	SGSFN( "clear" );
 	if( sgs_StackSize( C ) != 1 ||
 		!stdlib_tocolor4( C, 0, col ) )
-		_WARN( "clear(): function expects 1 argument: array of 1-4 real values" )
+		_WARN( "function expects 1 argument: array of 1-4 real values" )
 	
 #ifndef SS_USED3D
 	glClearDepth( 1.0f );
@@ -336,6 +337,7 @@ int ss_clear( SGS_CTX )
 }
 int ss_present( SGS_CTX )
 {
+	SGSFN( "present" );
 #ifndef SS_USED3D
 	SDL_GL_SwapBuffers();
 #else

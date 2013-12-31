@@ -23,10 +23,10 @@ function draw_color_rect_wh( x, y, w, h, r, g, b, a ){ draw_color_rect( x, y, x+
 function draw_tex_rect( x1, y1, x2, y2, tex )
 {
 	g_RB.begin().f(
-		x1, y1, 0, 1,
-		x2, y1, 1, 1,
-		x2, y2, 1, 0,
-		x1, y2, 0, 0
+		x1, y1, 0, 0,
+		x2, y1, 1, 0,
+		x2, y2, 1, 1,
+		x1, y2, 0, 1
 	).draw( tex, g_VD_P2T2, 0, 4, PT_TRIANGLE_FAN );
 }
 function draw_tex_rect_wh( x, y, w, h, tex ){ draw_tex_rect( x, y, x+w, y+h, tex ); }
