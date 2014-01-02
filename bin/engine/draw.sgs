@@ -45,10 +45,10 @@ function draw_tex_box_wh_rotated( x, y, w, h, angle, tex )
 	ext2y = ( c - s ) * h;
 	
 	g_RB.begin().f(
-		x - ext1x, y - ext1y, 0, 1, // pos - ext1
-		x - ext2x, y - ext2y, 1, 1, // pos - ext2
-		x + ext1x, y + ext1y, 1, 0, // pos + ext1
-		x + ext2x, y + ext2y, 0, 0 // pos + ext2
+		x - ext1x, y - ext1y, 0, 0, // pos - ext1
+		x - ext2x, y - ext2y, 1, 0, // pos - ext2
+		x + ext1x, y + ext1y, 1, 1, // pos + ext1
+		x + ext2x, y + ext2y, 0, 1 // pos + ext2
 	).draw( tex, g_VD_P2T2, 0, 4, PT_TRIANGLE_FAN );
 }
 
@@ -56,10 +56,10 @@ function draw_tex_color_rect( x1, y1, x2, y2, tex, r, g, b, a )
 {
 	if( ss_using_d3d ){ tmp = r; r = b; b = tmp; }
 	g_RB.begin()
-		.f( x1, y1, 0, 1 ).cf2b( r, g, b, a )
-		.f( x2, y1, 1, 1 ).cf2b( r, g, b, a )
-		.f( x2, y2, 1, 0 ).cf2b( r, g, b, a )
-		.f( x1, y2, 0, 0 ).cf2b( r, g, b, a )
+		.f( x1, y1, 0, 0 ).cf2b( r, g, b, a )
+		.f( x2, y1, 1, 0 ).cf2b( r, g, b, a )
+		.f( x2, y2, 1, 1 ).cf2b( r, g, b, a )
+		.f( x1, y2, 0, 1 ).cf2b( r, g, b, a )
 		.draw( tex, g_VD_P2T2CC4, 0, 4, PT_TRIANGLE_FAN );
 }
 function draw_tex_color_rect_wh( x, y, w, h, tex, r, g, b, a ){ draw_tex_color_rect( x, y, x+w, y+h, tex, r, g, b, a ); }
