@@ -105,6 +105,7 @@ function initialize()
 	
 	drawfunc_init();
 	global g_edtex = create_texture( "editor/img/default_icon.png" );
+	global g_edtex_nl = create_texture( "editor/img/default_icon.png", "nolerp" );
 }
 
 global mpos = vec2(0,0);
@@ -167,8 +168,14 @@ function update()
 	
 	set_camera_ui( 0, W, 0, H );
 	
-	draw_tex_rect( 32, 96, 64, 128, g_edtex );
-	draw({ preset = "tile", texture = g_edtex, position = [65,96], scale = [32,32] });
+	PX = 32;
+	PY = 96;
+	SZ = 64;
+	DX = DY = SZ + 1;
+	draw_tex_rect( PX, PY, PX+SZ, PY+SZ, g_edtex );
+	draw({ preset = "tile", texture = g_edtex, position = [PX+DX,PY], scale = [SZ,SZ] });
+	draw_tex_rect( PX, PY+DY, PX+SZ, PY+DY+SZ, g_edtex_nl );
+	draw({ preset = "tile", texture = g_edtex_nl, position = [PX+DX,PY+DY], scale = [SZ,SZ] });
 	
 	draw_tex_rect( 32, 32, 64, 64, MIT );
 	

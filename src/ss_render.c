@@ -101,6 +101,11 @@ int sstex_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	if( !strcmp( str, "width" ) ){ sgs_PushInt( C, tex->width ); return SGS_SUCCESS; }
 	if( !strcmp( str, "height" ) ){ sgs_PushInt( C, tex->height ); return SGS_SUCCESS; }
 	
+	if( !strcmp( str, "is_hrepeat" ) ){ sgs_PushBool( C, sgs_HAS_FLAG( tex->flags, CT_HREPEAT ) ); return SGS_SUCCESS; }
+	if( !strcmp( str, "is_vrepeat" ) ){ sgs_PushBool( C, sgs_HAS_FLAG( tex->flags, CT_VREPEAT ) ); return SGS_SUCCESS; }
+	if( !strcmp( str, "is_nolerp" ) ){ sgs_PushBool( C, sgs_HAS_FLAG( tex->flags, CT_NOLERP ) ); return SGS_SUCCESS; }
+	if( !strcmp( str, "is_mipmaps" ) ){ sgs_PushBool( C, sgs_HAS_FLAG( tex->flags, CT_MIPMAPS ) ); return SGS_SUCCESS; }
+	
 	return SGS_ENOTFND;
 }
 
@@ -913,8 +918,11 @@ int ss_draw( SGS_CTX )
 		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_MIPFILTER, mip ? ( lin ? D3DTEXF_LINEAR : D3DTEXF_POINT ) : D3DTEXF_NONE );
 		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_ADDRESSU, hr ? D3DTADDRESS_WRAP : D3DTADDRESS_CLAMP );
 		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_ADDRESSV, vr ? D3DTADDRESS_WRAP : D3DTADDRESS_CLAMP );
-		tox = 0.5f / tex->width;
-		toy = 0.5f / tex->height;
+		if( lin )
+		{
+			tox = 0.5f / tex->width;
+			toy = 0.5f / tex->height;
+		}
 	}
 	
 	IDirect3DDevice9_GetTransform( GD3DDev, D3DTS_WORLD, (D3DMATRIX*) mtxbk );
@@ -1269,9 +1277,23 @@ int ss_draw_packed( SGS_CTX )
 			getprimitivecount( type, count ), idcs + start * 2, D3DFMT_INDEX16,
 			data, F->size );
 	else
-		IDirect3DDevice9_DrawPrimitiveUP( GD3DDev, type,
-			getprimitivecount( type, count ),
-			data, F->size );
+	{
+		if( type == PT_QUADS )
+		{
+			int i, cnt = count - 3;
+			for( i = 0; i < cnt; i += 4 )
+			{
+				IDirect3DDevice9_DrawPrimitiveUP( GD3DDev, D3DPT_TRIANGLEFAN,
+					2, data + F->size * i, F->size );
+			}
+		}
+		else
+		{
+			IDirect3DDevice9_DrawPrimitiveUP( GD3DDev, type,
+				getprimitivecount( type, count ),
+				data, F->size );
+		}
+	}
 	IDirect3DDevice9_SetVertexDeclaration( GD3DDev, NULL );
 
 #else
