@@ -8,10 +8,10 @@ function Tilemap.create( texture, tileWidth, tileHeight )
 		texture = texture,
 		tileW = tileWidth,
 		tileH = tileHeight,
-		tiles = {},
-		mesh = null,
+		tiles = map(),
 		revid = 1,
 		vfmt = make_vertex_format( "|pf2tf2cf4" ),
+		rb = create_renderbuf(),
 	},
 	Tilemap );
 }
@@ -41,7 +41,7 @@ function Tilemap.checkCache()
 	th = this.tileH;
 	itw = 1.0 / this.texture.width;
 	ith = 1.0 / this.texture.height;
-	mesh = "";
+	rb = this.rb.begin();
 	foreach( tile : this.tiles )
 	{
 		x = tile[0] * tw;
@@ -53,13 +53,15 @@ function Tilemap.checkCache()
 		col = tile[4];
 		if( col.size < 4 )
 			col.push( 1.0 );
-		v1 = fmt_pack( "8f", x, y, tx, ty, col[0], col[1], col[2], col[3] );
-		v2 = fmt_pack( "8f", x+tw, y, tx1, ty, col[0], col[1], col[2], col[3] );
-		v3 = fmt_pack( "8f", x+tw, y+th, tx1, ty1, col[0], col[1], col[2], col[3] );
-		v4 = fmt_pack( "8f", x, y+th, tx, ty1, col[0], col[1], col[2], col[3] );
-		mesh $= v1 $ v2 $ v3 $ v3 $ v4 $ v1;
+		
+		rb.f( x, y, tx, ty, col[0], col[1], col[2], col[3] );
+		rb.f( x+tw, y, tx1, ty, col[0], col[1], col[2], col[3] );
+		rb.f( x+tw, y+th, tx1, ty1, col[0], col[1], col[2], col[3] );
+		
+		rb.f( x+tw, y+th, tx1, ty1, col[0], col[1], col[2], col[3] );
+		rb.f( x, y+th, tx, ty1, col[0], col[1], col[2], col[3] );
+		rb.f( x, y, tx, ty, col[0], col[1], col[2], col[3] );
 	}
-	this.mesh = mesh;
 	this.revid = 0;
 }
 
@@ -67,6 +69,5 @@ function Tilemap.render()
 {
 	this.checkCache();
 	
-	draw_packed( this.texture, this.vfmt, this.mesh,
-		0, this.mesh.length / 32, PT_TRIANGLES );
+	this.rb.draw( this.texture, this.vfmt, 0, map_size( this.tiles ) * 6, PT_TRIANGLES );
 }

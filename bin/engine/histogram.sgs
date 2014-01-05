@@ -11,6 +11,7 @@ function Histogram.create( limit )
 		limit = limit,
 		data = [],
 		vfmt = make_vertex_format( "pf2cc4" ),
+		rb = create_renderbuf(),
 	};
 	return class( data, Histogram );
 }
@@ -33,11 +34,11 @@ function Histogram.draw( x, y, xscale, yscale, color, vlim )
 		x + this.limit * xscale, y + yscale * vlim, bc, x, y + yscale * vlim, bc );
 	draw_packed( null, this.vfmt, bg, 0, 4, PT_QUADS );
 	
-	verts = "";
+	rb = this.rb.begin();
 	foreach( px, py : this.data )
 	{
-		verts $= fmt_pack( "ffl", x + px * xscale, y + py * yscale, color );
+		rb.f( x + px * xscale, y + py * yscale ).dw( color );
 	}
-	if( verts.length > 0 )
-		draw_packed( null, this.vfmt, verts, 0, verts.length / 12, PT_LINE_STRIP );
+	if( this.data.size )
+		rb.draw( null, this.vfmt, 0, this.data.size, PT_LINE_STRIP );
 }

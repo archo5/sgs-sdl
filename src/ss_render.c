@@ -1424,6 +1424,27 @@ static int ss_renderbuf_b( SGS_CTX )
 	return 1;
 }
 
+/* .dw( int{1,64} ) - DoubleWord (4 bytes) */
+static int ss_renderbuf_dw( SGS_CTX )
+{
+	int argc, i;
+	uint32_t dw[64];
+	
+	RB_IHDR( dw );
+	argc = sgs_StackSize( C ) - 1;
+	if( argc > 0 )
+	{
+		if( argc > 64 )
+			argc = 64;
+		for( i = 1; i <= argc; ++i )
+			dw[i-1] = (uint32_t) sgs_ToInt( C, i );
+		
+		membuf_appbuf( &rb->B, C, dw, sizeof(*dw)*argc );
+	}
+	sgs_SetStackSize( C, 1 );
+	return 1;
+}
+
 /* .cf2b( real{1,64} ) - clamped float to byte */
 static int ss_renderbuf_cf2b( SGS_CTX )
 {
@@ -1566,6 +1587,7 @@ static int ss_renderbuf_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 		if( !strcmp( str, "reserve" ) ){ sgs_PushCFunction( C, ss_renderbuf_reserve ); return SGS_SUCCESS; }
 		if( !strcmp( str, "f" ) ){ sgs_PushCFunction( C, ss_renderbuf_f ); return SGS_SUCCESS; }
 		if( !strcmp( str, "b" ) ){ sgs_PushCFunction( C, ss_renderbuf_b ); return SGS_SUCCESS; }
+		if( !strcmp( str, "dw" ) ){ sgs_PushCFunction( C, ss_renderbuf_dw ); return SGS_SUCCESS; }
 		if( !strcmp( str, "cf2b" ) ){ sgs_PushCFunction( C, ss_renderbuf_cf2b ); return SGS_SUCCESS; }
 		if( !strcmp( str, "pad" ) ){ sgs_PushCFunction( C, ss_renderbuf_pad ); return SGS_SUCCESS; }
 		if( !strcmp( str, "draw" ) ){ sgs_PushCFunction( C, ss_renderbuf_draw ); return SGS_SUCCESS; }

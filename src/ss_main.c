@@ -20,7 +20,10 @@ int g_enabledProfiler = 0;
 
 int ss_enable_profiler( SGS_CTX )
 {
-	g_enabledProfiler = 1;
+	if( sgs_StackSize( C ) > 0 )
+		g_enabledProfiler = sgs_GetInt( C, 0 );
+	else
+		g_enabledProfiler = 1;
 	return 0;
 }
 

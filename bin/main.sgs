@@ -23,6 +23,11 @@ function configure()
 			enable_profiler2();
 			println( "PROFILER [mode 2] ENABLED" );
 		}
+		else if( arg == "-profile-mem" )
+		{
+			enable_profiler(3);
+			println( "PROFILER [mode 3] ENABLED" );
+		}
 		else if( arg == "-editor" )
 		{
 			editor = true;
