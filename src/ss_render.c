@@ -425,8 +425,8 @@ const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, int numc
 		out->size = numcomp;
 		if( !out->data )
 		{
-			out->data = sgs_Alloc_n( float, out->size );
-			out->my = 1;
+			out->data = (float*) ss_request_memory( out->size * sizeof(float) ); /* sgs_Alloc_n( float, out->size ); */
+			out->my = 0; /* 1; */
 		}
 		memcpy( out->data, defcomp, numcomp * sizeof(float) );
 		res = _parse_floatvec( C, -1, out->data, numcomp );
@@ -448,7 +448,8 @@ const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, int numc
 	asz = sgs_ArraySize( C, -1 );
 	out->cnt = asz;
 	out->size = asz * numcomp;
-	out->data = sgs_Alloc_n( float, out->size );
+	out->data = (float*) ss_request_memory( out->size * sizeof(float) ); /* sgs_Alloc_n( float, out->size ); */
+	out->my = 0; /* 1; */
 	
 	off = out->data;
 	for( i = 0; i < asz; ++i )
@@ -456,7 +457,8 @@ const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, int numc
 		const char* subres;
 		if( sgs_PushNumIndex( C, -1, i ) || sgs_ItemType( C, -1 ) != SVT_OBJECT )
 		{
-			sgs_Dealloc( out->data );
+			if( out->my )
+				sgs_Dealloc( out->data );
 			sgs_Pop( C, sgs_StackSize( C ) - ssz );
 			return "element was not an object";
 		}
@@ -468,15 +470,14 @@ const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, int numc
 		
 		if( subres )
 		{
-			sgs_Dealloc( out->data );
+			if( out->my )
+				sgs_Dealloc( out->data );
 			sgs_Pop( C, 1 );
 			return subres;
 		}
 		
 		off += numcomp;
 	}
-	
-	out->my = 1;
 	
 	sgs_Pop( C, 1 );
 	return NULL;
@@ -504,6 +505,12 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 	
 	if( gi[0].var )
 	{
+		static float boxbuf[] =
+		{
+			-0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f,
+			0, 0, 1, 0, 1, 1, 0, 1,
+		};
+		
 		int ret = 0;
 		char* str;
 		sgs_SizeVal size;
@@ -519,40 +526,27 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 		if( !strcmp( str, "box" ) )
 		{
 			*outmode = PT_QUADS;
-			static const float boxbuf[] =
-			{
-				-0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f,
-				0, 0, 1, 0, 1, 1, 0, 1,
-			};
-			vert->my = 1;
+			vert->my = 0;
 			vert->cnt = 4;
 			vert->size = 8;
-			vert->data = sgs_Alloc_n( float, 8 );
-			memcpy( vert->data, boxbuf, sizeof(float) * 8 );
-			vtex->my = 1;
+			vert->data = boxbuf;
+			vtex->my = 0;
 			vtex->cnt = 4;
 			vtex->size = 8;
-			vtex->data = sgs_Alloc_n( float, 8 );
-			memcpy( vtex->data, boxbuf + 8, sizeof(float) * 8 );
+			vtex->data = boxbuf + 8;
 			ret = 1;
 		}
 		if( !strcmp( str, "tile" ) )
 		{
 			*outmode = PT_QUADS;
-			static const float boxbuf[] =
-			{
-				0, 0, 1, 0, 1, 1, 0, 1,
-			};
-			vert->my = 1;
+			vert->my = 0;
 			vert->cnt = 4;
 			vert->size = 8;
-			vert->data = sgs_Alloc_n( float, 8 );
-			memcpy( vert->data, boxbuf, sizeof(float) * 8 );
-			vtex->my = 1;
+			vert->data = boxbuf + 8;
+			vtex->my = 0;
 			vtex->cnt = 4;
 			vtex->size = 8;
-			vtex->data = sgs_Alloc_n( float, 8 );
-			memcpy( vtex->data, boxbuf, sizeof(float) * 8 );
+			vtex->data = boxbuf + 8;
 			ret = 1;
 		}
 		
@@ -726,10 +720,10 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 		}
 		
 		/* mix-and-match */
-		xform->data = sgs_Alloc_n( float, 16 * posdata.cnt );
+		xform->data = (float*) ss_request_memory( sizeof(float) * 16 * posdata.cnt ); /* sgs_Alloc_n( float, 16 * posdata.cnt ); */
 		xform->size = 16 * posdata.cnt;
 		xform->cnt = posdata.cnt;
-		xform->my = 1;
+		xform->my = 0; /* 1; */
 		
 		for( i = 0; i < posdata.cnt; ++i )
 		{
@@ -877,6 +871,8 @@ int ss_draw( SGS_CTX )
 		DUI_LAST,
 	};
 	
+	ss_reset_buffer();
+	
 	SGSFN( "draw" );
 	
 	if( sgs_StackSize( C ) != 1 ||
@@ -943,6 +939,8 @@ int ss_draw( SGS_CTX )
 	glEnableClientState( GL_COLOR_ARRAY );
 
 #endif
+	
+	membuf_reserve( &B, C, vert.size / 2 * sizeof(tmp) );
 	
 	cc = icol.data;
 	for( tf = xform.data; tf < xform.data + xform.size; tf += 16 )

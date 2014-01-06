@@ -12,6 +12,10 @@ sys_exit = false;\
 ";
 
 
+sgs_MemBuf g_tmpbuf;
+
+
+
 SGS_CTX;
 sgs_IDbg D;
 sgs_Prof P;
@@ -43,6 +47,17 @@ int sgs_InitDebug( SGS_CTX )
 }
 
 
+void* ss_request_memory( size_t numbytes )
+{
+	sgs_membuf_resize( &g_tmpbuf, C, g_tmpbuf.size + numbytes );
+	return g_tmpbuf.ptr + g_tmpbuf.size - numbytes;
+}
+void ss_reset_buffer()
+{
+	sgs_membuf_resize( &g_tmpbuf, C, 0 );
+}
+
+
 int ss_Initialize( int argc, char* argv[] )
 {
 	int ret;
@@ -68,6 +83,10 @@ int ss_Initialize( int argc, char* argv[] )
 	sgs_InitExtMath( C );
 	sgs_InitImage( C );
 	sgs_InitAPI( C );
+	
+	/* preinit tmp buffer */
+	g_tmpbuf = sgs_membuf_create();
+	sgs_membuf_reserve( &g_tmpbuf, C, 1024 );
 
 	/* run the config file */
 	ret = sgs_Include( C, "engine/all" );
@@ -209,6 +228,8 @@ int ss_Free()
 		fprintf( stderr, "Failed to clean the application.\n" );
 		return -1;
 	}
+	
+	sgs_membuf_destroy( &g_tmpbuf, C );
 
 	if( g_enabledProfiler )
 	{

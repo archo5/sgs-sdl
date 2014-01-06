@@ -114,6 +114,11 @@ void sgs_FreeGraphics( SGS_CTX );
 int sgs_InitGL( SGS_CTX );
 
 
+/* utility */
+void* ss_request_memory( size_t numbytes );
+void ss_reset_buffer();
+
+
 /* API */
 int ss_parse_texture( SGS_CTX, int item, sgs_Texture** out );
 void* ss_get_iface( int which );
