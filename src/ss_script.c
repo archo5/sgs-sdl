@@ -57,9 +57,41 @@ uint32_t sgs_GlobalFlagString( SGS_CTX, const char* name, flag_string_item_t* it
 	return flags;
 }
 
+typedef struct _sgs_String32
+{
+	sgs_iStr data;
+	char buf[32];
+}
+sgs_String32;
+
+void sgs_PushStringBuf32( sgs_String32* S, SGS_CTX, const char* str, int len )
+{
+	sgs_BreakIf( len > 31 );
+	S->data.refcount = 1;
+	S->data.size = len;
+	S->data.hash = sgs_HashFunc( str, len );
+	S->data.isconst = 0;
+	memcpy( S->buf, str, len );
+	S->buf[ len ] = 0;
+	
+	{
+		sgs_Variable v;
+		v.type = SGS_VTC_STRING;
+		v.data.S = &S->data;
+		sgs_PushVariable( C, &v );
+	}
+}
+#define sgs_PushString32( S, C, str ) sgs_PushStringBuf32( S, C, str, SGS_STRINGLENGTHFUNC(str) );
+
+void sgs_CheckString32( sgs_String32* S )
+{
+	sgs_BreakIf( S->data.refcount > 1 );
+}
+
 int sgs_UnpackDict( SGS_CTX, int pos, dict_unpack_item_t* items )
 {
 	int ret = 0;
+	sgs_String32 S;
 	
 	if( sgs_ItemType( C, pos ) != SVT_OBJECT )
 		return ret;
@@ -67,7 +99,7 @@ int sgs_UnpackDict( SGS_CTX, int pos, dict_unpack_item_t* items )
 	while( items->name )
 	{
 		sgs_SizeVal sz = sgs_StackSize( C );
-		sgs_PushString( C, items->name );
+		sgs_PushString32( &S, C, items->name );
 		
 		assert( items->var != NULL );
 		if( sgs_PushIndex( C, pos, -1 ) || !sgs_GetStackItem( C, -1, items->var ) )
@@ -79,7 +111,8 @@ int sgs_UnpackDict( SGS_CTX, int pos, dict_unpack_item_t* items )
 		}
 		
 		items++;
-		sgs_Pop( C, sgs_StackSize( C ) - sz );
+		sgs_SetStackSize( C, sz );
+		sgs_CheckString32( &S );
 	}
 	return ret;
 }
