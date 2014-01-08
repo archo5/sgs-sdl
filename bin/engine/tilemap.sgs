@@ -35,8 +35,7 @@ function Tilemap.checkCache()
 {
 	if( !this.revid )
 		return;
-
-	P = [], T = [], C = [];
+	
 	tw = this.tileW;
 	th = this.tileH;
 	itw = 1.0 / this.texture.width;
@@ -51,16 +50,18 @@ function Tilemap.checkCache()
 		tx1 = tx + tw * itw;
 		ty1 = ty + th * itw;
 		col = tile[4];
-		if( col.size < 4 )
-			col.push( 1.0 );
+		col0 = col[0];
+		col1 = col[1];
+		col2 = col[2];
+		col3 = if( col.size >= 4, col[3], 1.0 );
 		
-		rb.f( x, y, tx, ty, col[0], col[1], col[2], col[3] );
-		rb.f( x+tw, y, tx1, ty, col[0], col[1], col[2], col[3] );
-		rb.f( x+tw, y+th, tx1, ty1, col[0], col[1], col[2], col[3] );
+		rb.f( x, y, tx, ty, col0, col1, col2, col3 );
+		rb.f( x+tw, y, tx1, ty, col0, col1, col2, col3 );
+		rb.f( x+tw, y+th, tx1, ty1, col0, col1, col2, col3 );
 		
-		rb.f( x+tw, y+th, tx1, ty1, col[0], col[1], col[2], col[3] );
-		rb.f( x, y+th, tx, ty1, col[0], col[1], col[2], col[3] );
-		rb.f( x, y, tx, ty, col[0], col[1], col[2], col[3] );
+		rb.f( x+tw, y+th, tx1, ty1, col0, col1, col2, col3 );
+		rb.f( x, y+th, tx, ty1, col0, col1, col2, col3 );
+		rb.f( x, y, tx, ty, col0, col1, col2, col3 );
 	}
 	this.revid = 0;
 }

@@ -127,6 +127,8 @@ function update()
 	if( delta > 1.0/15.0 )
 		delta = 1.0/15.0;
 	
+	numallocs = sys_stat(4);
+	
 	rotation += delta * 2;
 	
 	var cc = [0.1,0.2,0.4];
@@ -215,6 +217,8 @@ function update()
 	draw_text_line( tx, Font, 100, 0, [0.9,0.8,0.7,1] );
 //println(tx);
 	HG.draw( 100, 500, 3, -2, 0xffcccccc, 1000/60 );
+	
+	draw_text_line( "allocs per frame: " $ (sys_stat(4) - numallocs), Font, 4, 4, [1,1,1] );
 	
 	present();
 

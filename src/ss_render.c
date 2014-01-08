@@ -852,7 +852,8 @@ uint32_t getprimitivecount( int mode, uint32_t vcount )
 
 int ss_draw( SGS_CTX )
 {
-	MemBuf B = membuf_create();
+	char* Bptr;
+	sgs_SizeVal Bsize;
 	ssvtx tmp = { { 0, 0, 0 }, 0xffffffff, { 0, 0 }, {0,0} };
 	
 	float *tf, *cc, *vp, *vt, *vc, tox = 0, toy = 0;
@@ -940,11 +941,13 @@ int ss_draw( SGS_CTX )
 
 #endif
 	
-	membuf_reserve( &B, C, vert.size / 2 * sizeof(tmp) );
+	Bsize = vert.size / 2 * sizeof(tmp);
+	Bptr = (char*) ss_request_memory( Bsize );
 	
 	cc = icol.data;
 	for( tf = xform.data; tf < xform.data + xform.size; tf += 16 )
 	{
+		char* Biter = Bptr;
 #ifdef SS_USED3D
 		IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_WORLD, (D3DMATRIX*) tf );
 
@@ -960,8 +963,6 @@ int ss_draw( SGS_CTX )
 			tmp.col = col4f_pack( cc );
 			cc += 4;
 		}
-		
-		membuf_resize( &B, C, 0 );
 		
 		vt = vtex.data;
 		vc = vcol.data;
@@ -980,25 +981,27 @@ int ss_draw( SGS_CTX )
 			}
 			tmp.pos[0] = vp[0];
 			tmp.pos[1] = vp[1];
-			membuf_appbuf( &B, C, &tmp, sizeof(tmp) );
+			
+			memcpy( Biter, &tmp, sizeof(tmp) );
+			Biter += sizeof(tmp);
 		}
 		
 #ifdef SS_USED3D
 		IDirect3DDevice9_SetFVF( GD3DDev, D3DFVF_XYZ | D3DFVF_TEX1 | D3DFVF_DIFFUSE );
 		if( mode == PT_QUADS )
 		{
-			int i, cnt = B.size / sizeof(ssvtx) - 3;
+			int i, cnt = Bsize / sizeof(ssvtx) - 3;
 			for( i = 0; i < cnt; i += 4 )
 			{
 				IDirect3DDevice9_DrawPrimitiveUP( GD3DDev, D3DPT_TRIANGLEFAN,
-					2, B.ptr + sizeof(ssvtx) * i, sizeof(ssvtx) );
+					2, Bptr + sizeof(ssvtx) * i, sizeof(ssvtx) );
 			}
 		}
 		else
 		{
 			IDirect3DDevice9_DrawPrimitiveUP( GD3DDev, mode,
-				getprimitivecount( mode, B.size / sizeof(ssvtx) ),
-				B.ptr, sizeof(ssvtx) );
+				getprimitivecount( mode, Bsize / sizeof(ssvtx) ),
+				Bptr, sizeof(ssvtx) );
 		}
 	}
 	
@@ -1006,11 +1009,11 @@ int ss_draw( SGS_CTX )
 
 #else
 		/* TODO: fix hardcoded offsets, maybe */
-		glVertexPointer( 3, GL_FLOAT, sizeof(ssvtx), B.ptr );
-		glColorPointer( 4, GL_UNSIGNED_BYTE, sizeof(ssvtx), B.ptr + 12 );
-		glTexCoordPointer( 2, GL_FLOAT, sizeof(ssvtx), B.ptr + 16 );
+		glVertexPointer( 3, GL_FLOAT, sizeof(ssvtx), Bptr );
+		glColorPointer( 4, GL_UNSIGNED_BYTE, sizeof(ssvtx), Bptr + 12 );
+		glTexCoordPointer( 2, GL_FLOAT, sizeof(ssvtx), Bptr + 16 );
 		
-		glDrawArrays( mode, 0, B.size / sizeof(ssvtx) );
+		glDrawArrays( mode, 0, Bsize / sizeof(ssvtx) );
 		
 		glPopMatrix();
 	}
@@ -1020,8 +1023,6 @@ int ss_draw( SGS_CTX )
 	glDisableClientState( GL_COLOR_ARRAY );
 
 #endif
-	
-	membuf_destroy( &B, C );
 	
 end:
 	if( vert.my ) sgs_Dealloc( vert.data );
