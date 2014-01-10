@@ -30,9 +30,12 @@ function Histogram.draw( x, y, xscale, yscale, color, vlim )
 	bc = d3dcolor_fix( bc );
 	color = d3dcolor_fix( color );
 	
-	bg = fmt_pack( "ffl ffl ffl ffl", x, y, bc, x + this.limit * xscale, y, bc,
-		x + this.limit * xscale, y + yscale * vlim, bc, x, y + yscale * vlim, bc );
-	draw_packed( null, this.vfmt, bg, 0, 4, PT_QUADS );
+	rb = this.rb.begin();
+	rb.f( x, y ).dw( bc );
+	rb.f( x + this.limit * xscale, y ).dw( bc );
+	rb.f( x + this.limit * xscale, y + yscale * vlim ).dw( bc );
+	rb.f( x, y + yscale * vlim ).dw( bc );
+	rb.draw( null, this.vfmt, 0, 4, PT_TRIANGLE_FAN );
 	
 	rb = this.rb.begin();
 	foreach( px, py : this.data )

@@ -110,6 +110,7 @@ void sgs_UnpackFree( SGS_CTX, dict_unpack_item_t* items )
 */
 int stdlib_tocolor4( SGS_CTX, int pos, sgs_Real* v4f )
 {
+	float tmp[4];
 	if( sgs_ItemTypeExt( C, pos ) == VTC_ARRAY )
 	{
 		int i;
@@ -133,6 +134,14 @@ int stdlib_tocolor4( SGS_CTX, int pos, sgs_Real* v4f )
 		case 2: v4f[3] = v4f[1]; v4f[1] = v4f[2] = v4f[0]; break;
 		case 3: v4f[3] = 1.0; break;
 		}
+		return 1;
+	}
+	if( sgs_ParseColor( C, pos, tmp, 0 ) )
+	{
+		v4f[0] = tmp[0];
+		v4f[1] = tmp[1];
+		v4f[2] = tmp[2];
+		v4f[3] = tmp[3];
 		return 1;
 	}
 	return 0;

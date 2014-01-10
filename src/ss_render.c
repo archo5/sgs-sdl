@@ -379,10 +379,12 @@ floatbuf;
 */
 const char* _parse_floatvec( SGS_CTX, int stkitem, float* out, int numcomp )
 {
-	if( sgs_ParseVec2( C, stkitem, out, 0 ) )
-		return NULL;
-	
-	if( sgs_ItemTypeExt( C, stkitem ) == VTC_ARRAY )
+	int pnp = -1;
+	if( sgs_ParseVec2( C, stkitem, out, 0 ) ) pnp = 2;
+	else if( sgs_ParseVec3( C, stkitem, out, 0 ) ) pnp = 3;
+	else if( sgs_ParseVec4( C, stkitem, out, 0 ) ) pnp = 4;
+	else if( sgs_ParseColor( C, stkitem, out, 0 ) ) pnp = 4;
+	else if( sgs_ItemTypeExt( C, stkitem ) == VTC_ARRAY )
 	{
 		int32_t i, asz = sgs_ArraySize( C, stkitem );
 		if( asz > numcomp )
@@ -406,6 +408,13 @@ const char* _parse_floatvec( SGS_CTX, int stkitem, float* out, int numcomp )
 			out[ i ] = real;
 		}
 		
+		pnp = asz;
+	}
+	
+	if( pnp >= 0 )
+	{
+		while( pnp < numcomp )
+			out[pnp++] = 0;
 		return NULL;
 	}
 	

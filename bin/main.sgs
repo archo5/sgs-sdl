@@ -131,13 +131,13 @@ function update()
 	
 	rotation += delta * 2;
 	
-	var cc = [0.1,0.2,0.4];
+	var cc = color(0.1,0.2,0.4);
 	clear( cc );
 	
 	if( curtime % 2 < 1 )
 		set_camera_2d( 500, 500, 500, W/H, 0 );
 	else
-		set_camera_3d( [500,500,-500], [0,0,1], [0,-1,0], deg2rad(90), W/H, 1, 10000 );
+		set_camera_3d( vec3(500,500,-500), vec3(0,0,1), vec3(0,-1,0), deg2rad(90), W/H, 1, 10000 );
 	
 	TM.render();
 	
@@ -180,13 +180,13 @@ function update()
 	SZ = 64;
 	DX = DY = SZ + 1;
 	draw_tex_rect( PX, PY, PX+SZ, PY+SZ, g_edtex );
-	draw({ preset = "tile", texture = g_edtex, position = [PX+DX,PY], scale = [SZ,SZ] });
+	draw({ preset = "tile", texture = g_edtex, position = vec2(PX+DX,PY), scale = vec2(SZ,SZ) });
 	draw_tex_rect( PX, PY+DY, PX+SZ, PY+DY+SZ, g_edtex_nl );
-	draw({ preset = "tile", texture = g_edtex_nl, position = [PX+DX,PY+DY], scale = [SZ,SZ] });
+	draw({ preset = "tile", texture = g_edtex_nl, position = vec2(PX+DX,PY+DY), scale = vec2(SZ,SZ) });
 	
 	draw_tex_rect( 32, 32, 64, 64, MIT );
 	
-	draw({ preset = "box", texture = image, position = mpos, scale = [128,128], angle = rotation * M_PI, color = [0.3,0.5,0.7,1] });
+	draw({ preset = "box", texture = image, position = mpos, scale = vec2(128,128), angle = rotation * M_PI, color = color(0.3,0.5,0.7) });
 	
 	UI.draw();
 	
@@ -194,31 +194,32 @@ function update()
 	fof = ( BigFont.ascender + abs( BigFont.descender ) - BigFont.y_ppem ) / 2; // half of total side height is the offset to apply
 	
 	// DRAW VCENTERED TEXT
-	functions = [ "draw_text_line", "draw_text_line_bl", "draw_text_line_vn", "draw_text_line_vc" ];
+	if( !isset( _G, "dt_functions" ) )
+		global dt_functions = [ "draw_text_line", "draw_text_line_bl", "draw_text_line_vn", "draw_text_line_vc" ];
 	tl = BigFont.get_text_length( "Mg" );
 	adv = tl + 1;
 	
 	x = 150;
 	y = 150;
-	foreach( fn : functions )
+	foreach( fn : dt_functions )
 	{
 		draw_color_rect( x, y, x + tl, y + BigFont.size, 0, 0, 0, 1 );
 		draw_color_line( x, y + BigFont.size * 0.5, x + tl, y + BigFont.size * 0.5, 0.5, 0, 0, 1 );
-		_G[ fn ]( "Mg", BigFont, x, y, [1,1,1,1] );
+		_G[ fn ]( "Mg", BigFont, x, y, color(1,1,1) );
 		draw_color_rect( x, y + 1 + BigFont.size, x + tl, y + 1 + BigFont.size + Font.size, 0, 0, 0, 0.5 );
-		draw_text_line_vn( string_replace( fn, "draw_text_line", "DTL" ), Font, x, y + 1 + BigFont.size, [0.4, 0.8, 0.6, 1] );
+		draw_text_line_vn( string_replace( fn, "draw_text_line", "DTL" ), Font, x, y + 1 + BigFont.size, color(0.4, 0.8, 0.6) );
 		x += adv;
 	}
 	
 	ftm = ( ftime() - lasttime ) * 1000.0;
 	HG.push( ftm );
 	tx = "frame time: " $ ftm $ " ms";
-	draw_text_line( tx, Font, 101, 1, [0,0,0,1] );
-	draw_text_line( tx, Font, 100, 0, [0.9,0.8,0.7,1] );
+	draw_text_line( tx, Font, 101, 1, color(0,0,0) );
+	draw_text_line( tx, Font, 100, 0, color(0.9,0.8,0.7) );
 //println(tx);
 	HG.draw( 100, 500, 3, -2, 0xffcccccc, 1000/60 );
 	
-	draw_text_line( "allocs per frame: " $ (sys_stat(4) - numallocs), Font, 4, 4, [1,1,1] );
+	draw_text_line( "allocs per frame: " $ (sys_stat(4) - numallocs), Font, 4, 4, color(1,1,1) );
 	
 	present();
 

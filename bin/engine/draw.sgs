@@ -155,28 +155,9 @@ function set_camera_ui( x1, x2, y1, y2 )
 
 function multiply_point_matrix( mtx, x, y )
 {
-	return vec2d( mtx[0]*x + mtx[1]*y + mtx[3], mtx[4]*x + mtx[5]*y + mtx[7] );
+	return vec2( mtx[0]*x + mtx[1]*y + mtx[3], mtx[4]*x + mtx[5]*y + mtx[7] );
 }
 
-
-function vec3_normalized( v )
-{
-	len = sqrt( v[0]*v[0] + v[1]*v[1] + v[2]*v[2] );
-	if( !len )
-		return v;
-	return [ v[0]/len, v[1]/len, v[2]/len ];
-}
-function vec3_dot( a, b ){ return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]; }
-function vec3_cross( a, b )
-{
-	return
-	[
-		a[1] * b[2] - a[2] * b[1],
-		a[2] * b[0] - a[0] * b[2],
-		a[0] * b[1] - a[1] * b[0],
-	];
-}
-function vec3_sub( a, b ){ return [ a[0]-b[0], a[1]-b[1], a[2]-b[2] ]; }
 
 function mtx_transpose( m )
 {
@@ -191,8 +172,8 @@ function mtx_transpose( m )
 
 function get_camera_lookat( pos, dir, up )
 {
-	zaxis = vec3_normalized( dir );
-	xaxis = vec3_normalized( vec3_cross( up, zaxis ) );
+	zaxis = dir.normalized;
+	xaxis = vec3_cross( up, zaxis ).normalized;
 	yaxis = vec3_cross( zaxis, xaxis );
 	
 	return
