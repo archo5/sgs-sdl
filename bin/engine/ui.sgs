@@ -646,7 +646,7 @@ function UIControl.createMenu()
 		{
 			x += 2;
 			item.x = x;
-			item.width = get_text_length( item.name, this.font ) + 24;
+			item.width = this.font.get_text_length( item.name ) + 24;
 			item.height = this.font.size + 8;
 			x += item.width;
 			item.inview = x <= this.w;

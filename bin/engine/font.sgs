@@ -1,17 +1,4 @@
 
-function get_text_length( text, font )
-{
-	text_ucp = string_utf8_decode( text );
-	len = 0;
-	prevchar = null;
-	foreach( char : text_ucp )
-	{
-		len += font.get_advance( prevchar, char );
-		prevchar = char;
-	}
-	return len;
-}
-
 
 global
 	DT_LEFT    = 0b00000001,
@@ -25,12 +12,12 @@ global
 
 function calc_text_layout( text_ucp, font, width, height )
 {
-	lines = [];
+	lines = [].reserve(6); // TODO optimize to static instance
 	lineheight = font.size;
-
+	
 	SP = string_charcode( " " );
 	NL = string_charcode( "\n" );
-
+	
 	from = 0;
 	eol = 0;
 	curline = 0;
@@ -44,13 +31,16 @@ function calc_text_layout( text_ucp, font, width, height )
 		if( pcpos != null )
 			prevchar = text_ucp[ pcpos ];
 		cw = font.get_advance( prevchar, text_ucp[ i ] );
-
+		
 		if( c == NL )
 		{
 			curline += curword;
 			if( prevchar == SP )
 				numwords--;
-			lines.push({ from = from, to = i, width = curline, numwords = numwords });
+			
+		//	lines.push({ from = from, to = i, width = curline, numwords = numwords });
+			lines.push( from, i, curline );
+			
 			curline = 0;
 			curword = 0;
 			numwords = 1;
@@ -89,7 +79,10 @@ function calc_text_layout( text_ucp, font, width, height )
 				i = eol;
 			}
 			curline += curword;
-			lines.push({ from = from, to = i, width = curline, numwords = numwords });
+			
+		//	lines.push({ from = from, to = i, width = curline, numwords = numwords });
+			lines.push( from, i, curline );
+			
 			curline = 0;
 			curword = 0;
 			numwords = 1;
@@ -102,22 +95,15 @@ function calc_text_layout( text_ucp, font, width, height )
 			continue;
 		}
 	}
-
+	
 	curline += curword;
 	if( curline )
 	{
-		lines.push({ from = from, to = text_ucp.size, width = curline, numwords = numwords });
+	//	lines.push({ from = from, to = text_ucp.size, width = curline, numwords = numwords });
+		lines.push( from, text_ucp.size, curline );
 	}
-
+	
 	return lines;
-}
-
-function array_part( arr, from, to )
-{
-	out = [];
-	for( i = from; i < to; ++i )
-		out.push( arr[ i ] );
-	return out;
 }
 
 function draw_text_rect( text, font, color, placement, left, right, top, bottom )
@@ -125,7 +111,7 @@ function draw_text_rect( text, font, color, placement, left, right, top, bottom 
 	// validation
 	if( !is_font( font ) )
 	{
-		sys_print( SGS_WARNING, "draw_text(): invalid value for 'font'" );
+		WARNING( "draw_text(): invalid value for 'font'" );
 		return false;
 	}
 	hfc = !!( placement & DT_LEFT ) + !!( placement & DT_CENTER )
@@ -134,36 +120,39 @@ function draw_text_rect( text, font, color, placement, left, right, top, bottom 
 		+ !!( placement & DT_BOTTOM );
 	if( hfc != 1 || vfc != 1 )
 	{
-		sys_print( SGS_WARNING, "draw_text(): invalid placement flag combo" );
+		WARNING( "draw_text(): invalid placement flag combo" );
 		return false;
 	}
-
+	
 	// sizing
 	width = right - left;
 	height = bottom - top;
-
+	
 	lineheight = font.size;
 	if( height < lineheight )
 		return true;
-
+	
 	text_ucp = string_utf8_decode( text );
-
-	// preparations
-	hlindex = !!( placement & DT_CENTER ) + !!( placement & DT_RIGHT ) * 2;
-	vlindex = !!( placement & DT_VCENTER ) + !!( placement & DT_BOTTOM ) * 2;
-
+	
 	lines = calc_text_layout( text_ucp, font, width, height );
-
+	
 	vspace = height - lines.size * lineheight;
-	y = top + [ 0, vspace/2, vspace ][ vlindex ];
-	foreach( lnum, line : lines )
+	y = top;
+	if( placement & DT_VCENTER ) y += vspace / 2;
+	else if( placement & DT_BOTTOM ) y += vspace;
+	
+//	foreach( lnum, line : lines )
+	for( clo = 0; clo < lines.size; clo += 3 )
 	{
-		hspace = width - line.width;
-		x = left + [ 0, hspace/2, hspace ][ hlindex ];
-
-		ucppart = array_part( text_ucp, line.from, line.to );
+		hspace = width - lines[clo+2];//line.width;
+		x = left;
+		if( placement & DT_CENTER ) x += hspace / 2;
+		else if( placement & DT_RIGHT ) x += hspace;
+		
+		ucppart = text_ucp.part( lines[clo], lines[clo+1] - lines[clo] );
+	//	ucppart = text_ucp.part( line.from, line.to - line.from );
 		utf8part = string_utf8_encode( ucppart );
-
+		
 		draw_text_line_vn( utf8part, font, x, y, color );
 		y += lineheight;
 	}
