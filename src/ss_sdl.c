@@ -12,8 +12,9 @@ PFNGLBLENDEQUATIONPROC ss_glBlendEquation;
 #endif
 
 
-#define FN( f ) { #f, ss_##f }
+#define FN( f ) { "SS_" #f, SS_##f }
 #define IC( i ) { #i, i }
+#define IC_SDL( i ) { "SDL_" #i, i }
 #define ICX( n, i ) { #n, i }
 #define _WARN( err ) { sgs_Printf( C, SGS_WARNING, err ); return 0; }
 
@@ -78,10 +79,10 @@ void* GD3DDev = NULL;
 #endif
 
 
-int ss_sleep( SGS_CTX )
+int SS_Sleep( SGS_CTX )
 {
 	sgs_Integer time;
-	SGSFN( "sleep" );
+	SGSFN( "SS_Sleep" );
 	if( sgs_StackSize( C ) != 1 ||
 		!sgs_ParseInt( C, 0, &time ) )
 		_WARN( "function expects 1 argument: int" )
@@ -90,10 +91,10 @@ int ss_sleep( SGS_CTX )
 	return 0;
 }
 
-int ss_set_gl_attrib( SGS_CTX )
+int SS_SetGLAttrib( SGS_CTX )
 {
 	sgs_Integer attr, val;
-	SGSFN( "set_gl_attrib" );
+	SGSFN( "SS_SetGLAttrib" );
 	
 	if( !sgs_ParseInt( C, 0, &attr ) || !sgs_ParseInt( C, 1, &val ) )
 		_WARN( "function expects 2 arguments: int, int" )
@@ -112,7 +113,7 @@ flag_string_item_t setvideomode_flags[] =
 	{ "vsync", SDL_VSYNC },
 	FSI_LAST
 };
-int ss_set_video_mode( SGS_CTX )
+int SS_SetVideoMode( SGS_CTX )
 {
 	char* ts;
 	int suc = 0, vsync;
@@ -121,7 +122,7 @@ int ss_set_video_mode( SGS_CTX )
 	
 	UNUSED( vsync );
 	
-	SGSFN( "set_video_mode" );
+	SGSFN( "SS_SetVideoMode" );
 	
 	if( sgs_StackSize( C ) != 4 ||
 		!sgs_ParseInt( C, 0, &w ) ||
@@ -195,7 +196,7 @@ int ss_set_video_mode( SGS_CTX )
 	return 1;
 }
 
-int ss_list_video_modes( SGS_CTX )
+int SS_ListVideoModes( SGS_CTX )
 {
 	int i;
 	char* ts;
@@ -203,7 +204,7 @@ int ss_list_video_modes( SGS_CTX )
 	sgs_Integer f;
 	SDL_Rect** modes;
 	
-	SGSFN( "list_video_modes" );
+	SGSFN( "SS_ListVideoModes" );
 	
 	if( !sgs_ParseString( C, 0, &ts, &tss ) )
 		_WARN( "function expects 1 argument: string" )
@@ -232,12 +233,12 @@ int ss_list_video_modes( SGS_CTX )
 	return 1;
 }
 
-int ss_set_caption( SGS_CTX )
+int SS_SetCaption( SGS_CTX )
 {
 	char* str;
 	sgs_SizeVal size;
 	
-	SGSFN( "set_caption" );
+	SGSFN( "SS_SetCaption" );
 	
 	if( !sgs_ParseString( C, 0, &str, &size ) )
 		_WARN( "function expects 1 argument: string" );
@@ -246,19 +247,19 @@ int ss_set_caption( SGS_CTX )
 	return 0;
 }
 
-int ss_show_cursor( SGS_CTX )
+int SS_ShowCursor( SGS_CTX )
 {
 	int shc;
-	SGSFN( "show_cursor" );
+	SGSFN( "SS_ShowCursor" );
 	if( !sgs_ParseBool( C, 0, &shc ) )
 		_WARN( "function expects 1 argument: bool" )
 	SDL_ShowCursor( shc ? SDL_ENABLE : SDL_DISABLE );
 	return 0;
 }
 
-int ss_grab_input( SGS_CTX )
+int SS_GrabInput( SGS_CTX )
 {
-	SGSFN( "grab_input" );
+	SGSFN( "SS_GrabInput" );
 	if( !sgs_StackSize( C ) )
 	{
 		sgs_PushBool( C, SDL_WM_GrabInput( SDL_GRAB_QUERY ) == SDL_GRAB_ON );
@@ -275,10 +276,10 @@ int ss_grab_input( SGS_CTX )
 	}
 }
 
-int ss_warp_mouse( SGS_CTX )
+int SS_WarpMouse( SGS_CTX )
 {
 	sgs_Integer x, y;
-	SGSFN( "warp_mouse" );
+	SGSFN( "SS_WarpMouse" );
 	if( !sgs_ParseInt( C, 0, &x ) ||
 		!sgs_ParseInt( C, 1, &y ) )
 		_WARN( "function expects 2 argument: int, int" )
@@ -286,10 +287,10 @@ int ss_warp_mouse( SGS_CTX )
 	return 0;
 }
 
-int ss_get_mouse_state( SGS_CTX )
+int SS_GetMouseState( SGS_CTX )
 {
 	int x, y, btnmask;
-	SGSFN( "get_mouse_state" );
+	SGSFN( "SS_GetMouseState" );
 	btnmask = SDL_GetMouseState( &x, &y );
 	sgs_PushInt( C, x );
 	sgs_PushInt( C, y );
@@ -298,10 +299,10 @@ int ss_get_mouse_state( SGS_CTX )
 	return 1;
 }
 
-int ss_get_relative_mouse_state( SGS_CTX )
+int SS_GetRelativeMouseState( SGS_CTX )
 {
 	int x, y, btnmask;
-	SGSFN( "get_relative_mouse_state" );
+	SGSFN( "SS_GetRelativeMouseState" );
 	btnmask = SDL_GetRelativeMouseState( &x, &y );
 	sgs_PushInt( C, x );
 	sgs_PushInt( C, y );
@@ -313,10 +314,10 @@ int ss_get_relative_mouse_state( SGS_CTX )
 /*
 	the buffer control functions
 */
-int ss_clear( SGS_CTX )
+int SS_Clear( SGS_CTX )
 {
 	sgs_Real col[ 4 ];
-	SGSFN( "clear" );
+	SGSFN( "SS_Clear" );
 	if( sgs_StackSize( C ) != 1 ||
 		!stdlib_tocolor4( C, 0, col ) )
 		_WARN( "function expects 1 argument: array of 1-4 real values" )
@@ -335,9 +336,9 @@ int ss_clear( SGS_CTX )
 #endif
 	return 0;
 }
-int ss_present( SGS_CTX )
+int SS_Present( SGS_CTX )
 {
-	SGSFN( "present" );
+	SGSFN( "SS_Present" );
 #ifndef SS_USED3D
 	SDL_GL_SwapBuffers();
 #else
@@ -651,21 +652,19 @@ sgs_RegIntConst sdl_ints[] =
 
 	/* Add any other keys here */
 
-	IC( SDLK_LAST ),
-
 	/* key modifier flags */
-	IC( KMOD_NONE ),
-	IC( KMOD_NUM ),
-	IC( KMOD_CAPS ),
-	IC( KMOD_LCTRL ),
-	IC( KMOD_RCTRL ),
-	IC( KMOD_RSHIFT ),
-	IC( KMOD_LSHIFT ),
-	IC( KMOD_RALT ),
-	IC( KMOD_LALT ),
-	IC( KMOD_CTRL ),
-	IC( KMOD_SHIFT ),
-	IC( KMOD_ALT ),
+	IC_SDL( KMOD_NONE ),
+	IC_SDL( KMOD_NUM ),
+	IC_SDL( KMOD_CAPS ),
+	IC_SDL( KMOD_LCTRL ),
+	IC_SDL( KMOD_RCTRL ),
+	IC_SDL( KMOD_RSHIFT ),
+	IC_SDL( KMOD_LSHIFT ),
+	IC_SDL( KMOD_RALT ),
+	IC_SDL( KMOD_LALT ),
+	IC_SDL( KMOD_CTRL ),
+	IC_SDL( KMOD_SHIFT ),
+	IC_SDL( KMOD_ALT ),
 	
 	/* GL attributes */
 	IC( SDL_GL_RED_SIZE ),
@@ -692,12 +691,12 @@ sgs_RegIntConst sdl_ints[] =
 
 sgs_RegFuncConst sdl_funcs[] =
 {
-	FN( sleep ),
-	FN( set_gl_attrib ), FN( set_video_mode ), FN( list_video_modes ),
-	FN( set_caption ), FN( show_cursor ),
-	FN( grab_input ), FN( warp_mouse ),
-	FN( get_mouse_state ), FN( get_relative_mouse_state ),
-	FN( clear ), FN( present ),
+	FN( Sleep ),
+	FN( SetGLAttrib ), FN( SetVideoMode ), FN( ListVideoModes ),
+	FN( SetCaption ), FN( ShowCursor ),
+	FN( GrabInput ), FN( WarpMouse ),
+	FN( GetMouseState ), FN( GetRelativeMouseState ),
+	FN( Clear ), FN( Present ),
 };
 
 int sgs_InitSDL( SGS_CTX )

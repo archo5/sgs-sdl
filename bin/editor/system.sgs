@@ -51,9 +51,9 @@ function ED_createState()
 		redo_list = [],
 
 		default_icon = deficon,
-		default_itex = create_texture( deficon ),
-		mouseon_tex = create_texture( "editor/img/mouseon.png" ),
-		select_tex = create_texture( "editor/img/select.png" ),
+		default_itex = SS_CreateTexture( deficon ),
+		mouseon_tex = SS_CreateTexture( "editor/img/mouseon.png" ),
+		select_tex = SS_CreateTexture( "editor/img/select.png" ),
 	};
 
 	// additional helper links to current state
@@ -196,7 +196,7 @@ function ED_loadObjDefs()
 		def.v0 += eps;
 		def.v1 -= eps;
 
-		def.texture = create_texture( def.icon, "nolerp" );
+		def.texture = SS_CreateTexture( def.icon, "nolerp" );
 		if( !isset( def, "width" ) ){ def.width = def.texture.width; }
 		if( !isset( def, "height" ) ){ def.height = def.texture.height; }
 	}
@@ -232,8 +232,8 @@ function ED_draw()
 	set_camera( mtx );
 
 	/* OBJECTS */
-	fmt = make_vertex_format( "pf2tf2" );
-	fmt2 = make_vertex_format( "pf2tf2cf4" );
+	fmt = SS_MakeVertexFormat( "pf2tf2" );
+	fmt2 = SS_MakeVertexFormat( "pf2tf2cf4" );
 	foreach( oid, obj : ED.objects )
 	{
 		// 0 name, 1 x, 2 y, 3 data, 4 tex, 5 width, 6 height, (7 mesh?)
@@ -284,7 +284,7 @@ function ED_draw()
 	/* SELECTED / MOUSE-ON */
 	if( ED.mode == EM_EDIT )
 	{
-		set_camera_ui( 0, UI.w, 0, UI.h );
+		SS_SetCameraUI( 0, UI.w, 0, UI.h );
 		foreach( oid, obj : ED.selected )
 		{
 			x1 = obj.x;
@@ -300,7 +300,7 @@ function ED_draw()
 			p1 = transform_to_view( mtx, x1, y1, UI.w, UI.h );
 			p2 = transform_to_view( mtx, x2, y2, UI.w, UI.h );
 
-			draw_button( ED.select_tex, p1.x - 4, p2.x + 4, p1.y - 4, p2.y + 4, 4, 4 );
+			SS_DrawButton( ED.select_tex, p1.x - 4, p2.x + 4, p1.y - 4, p2.y + 4, 4, 4 );
 		}
 		if( ED.mouseon != -1 )
 		{
@@ -318,14 +318,14 @@ function ED_draw()
 			p1 = transform_to_view( mtx, x1, y1, UI.w, UI.h );
 			p2 = transform_to_view( mtx, x2, y2, UI.w, UI.h );
 
-			draw_button( ED.mouseon_tex, p1.x - 4, p2.x + 4, p1.y - 4, p2.y + 4, 4, 4 );
+			SS_DrawButton( ED.mouseon_tex, p1.x - 4, p2.x + 4, p1.y - 4, p2.y + 4, 4, 4 );
 		}
 	}
 
 	/* PAINTBRUSH OBSTRUCTIONS */
 	if( ED.mode == EM_PAINT )
 	{
-		set_camera_ui( 0, UI.w, 0, UI.h );
+		SS_SetCameraUI( 0, UI.w, 0, UI.h );
 		x = ED_getworldx( UI.lmpos_x );
 		y = ED_getworldy( UI.lmpos_y );
 
@@ -359,7 +359,7 @@ function ED_draw()
 			p1 = transform_to_view( mtx, x1, y1, UI.w, UI.h );
 			p2 = transform_to_view( mtx, x2, y2, UI.w, UI.h );
 
-			draw_button( ED.select_tex, p1.x - 4, p2.x + 4, p1.y - 4, p2.y + 4, 4, 4 );
+			SS_DrawButton( ED.select_tex, p1.x - 4, p2.x + 4, p1.y - 4, p2.y + 4, 4, 4 );
 		}
 	}
 

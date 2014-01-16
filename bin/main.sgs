@@ -51,22 +51,22 @@ function switch()
 	which = 3 - which;
 	if( which == 1 )
 	{
-		set_video_mode( W1, H1, 32, F1 );
+		SS_SetVideoMode( W1, H1, 32, F1 );
 		W = W1; H = H1;
 	}
 	else
 	{
-		set_video_mode( W2, H2, 32, F2 );
+		SS_SetVideoMode( W2, H2, 32, F2 );
 		W = W2; H = H2;
 	}
 }
 
 function initialize()
 {
-	set_caption( "The SGS-SDL Game Framework" );
-	printvar( list_video_modes("fullscreen") );
-	set_gl_attrib( SDL_GL_DEPTH_SIZE, 24 );
-	set_gl_attrib( SDL_GL_STENCIL_SIZE, 8 );
+	SS_SetCaption( "The SGS-SDL Game Framework" );
+	printvar( SS_ListVideoModes("fullscreen") );
+	SS_SetGLAttrib( SDL_GL_DEPTH_SIZE, 24 );
+	SS_SetGLAttrib( SDL_GL_STENCIL_SIZE, 8 );
 	switch();
 //	grab_input(true);
 //	show_cursor(false);
@@ -74,17 +74,17 @@ function initialize()
 	global UI = UIFrame.create( 1024, 576 );
 //	UI.addChild( UIControl.createButton( "Make it rain!", 10, 10, 120, 40, function(){} ) );
 	
-	global MI = create_image( 2, 2 );
+	global MI = SS_CreateImage( 2, 2 );
 	MI.clear( 0, 0, 0 );
-	MI.set_data( fmt_pack( "cccc cccc cccc cccc"
+	MI.setData( fmt_pack( "cccc cccc cccc cccc"
 		, 255, 0, 0, 255
 		, 255, 255, 0, 255
 		, 0, 255, 0, 255
 		, 0, 0, 255, 255
 	) );
-	global MIT = create_texture( MI, "nolerp" );
+	global MIT = SS_CreateTexture( MI, "nolerp" );
 
-	global TM = Tilemap.create( create_texture( "ntset.png", "nolerp" ), 32, 32 );
+	global TM = Tilemap.create( SS_CreateTexture( "ntset.png", "nolerp" ), 32, 32 );
 	floor = _G.floor;
 	randf = _G.randf;
 	for( y = 0; y < 64; ++y )
@@ -98,19 +98,19 @@ function initialize()
 	global HG = Histogram.create(200);
 	
 	println();
-	global image = create_texture( "crosshair.png", "mipmaps" );
+	global image = SS_CreateTexture( "crosshair.png", "mipmaps" );
 	println( image );
 	printvar( _Gtex );
 	println();
 	
-	global Font = create_font( "verdana.ttf", 12 );
-	global BigFont = create_font( "verdana.ttf", 72 );
+	global Font = SS_CreateFont( "verdana.ttf", 12 );
+	global BigFont = SS_CreateFont( "verdana.ttf", 72 );
 	
-	global g_RB = create_renderbuf().reserve( 512 );
+	global g_RB = SS_CreateRenderBuffer().reserve( 512 );
 	
-	drawfunc_init();
-	global g_edtex = create_texture( "editor/img/default_icon.png" );
-	global g_edtex_nl = create_texture( "editor/img/default_icon.png", "nolerp" );
+	SS_InitDrawFunctions();
+	global g_edtex = SS_CreateTexture( "editor/img/default_icon.png" );
+	global g_edtex_nl = SS_CreateTexture( "editor/img/default_icon.png", "nolerp" );
 }
 
 global mpos = vec2(0,0);
@@ -132,12 +132,12 @@ function update()
 	rotation += delta * 2;
 	
 	var cc = color(0.1,0.2,0.4);
-	clear( cc );
+	SS_Clear( cc );
 	
 	if( curtime % 2 < 1 )
-		set_camera_2d( 500, 500, 500, W/H, 0 );
+		SS_SetCamera2D( 500, 500, 500, W/H, 0 );
 	else
-		set_camera_3d( vec3(500,500,-500), vec3(0,0,1), vec3(0,-1,0), deg2rad(90), W/H, 1, 10000 );
+		SS_SetCamera3D( vec3(500,500,-500), vec3(0,0,1), vec3(0,-1,0), deg2rad(90), W/H, 1, 10000 );
 	
 	TM.render();
 	
@@ -148,10 +148,10 @@ function update()
 		300, 300, 0, 1, 1,
 		100, 200, 0, 0, 1
 	);
-	vfmt = make_vertex_format( "|pf3tf2" );
+	vfmt = SS_MakeVertexFormat( "|pf3tf2" );
 	idata = fmt_pack( "4w", 1, 2, 3, 0 );
-	draw_packed( image, vfmt, vdata, 0, 4, PT_TRIANGLE_FAN );
-	draw_packed( image, vfmt, vdata, 0, 4, PT_TRIANGLE_FAN, idata );
+	SS_DrawPacked( image, vfmt, vdata, 0, 4, PT_TRIANGLE_FAN );
+	SS_DrawPacked( image, vfmt, vdata, 0, 4, PT_TRIANGLE_FAN, idata );
 	
 	// METHOD 2
 	g_RB.begin()
@@ -162,31 +162,31 @@ function update()
 		.draw( image, vfmt, 0, 4, PT_TRIANGLE_FAN );
 	
 	// EXTENSIONS
-	draw_color_rect( 800, 200, 900, 250, 0.7, 0.5, 0.3, 0.5 );
+	SS_DrawColorRect( 800, 200, 900, 250, 0.7, 0.5, 0.3, 0.5 );
 	ddd = 16;
 	ccc = 32;
 	for( y = 0; y < ccc; ++y )
 	{
 		for( x = 0; x < ccc; ++x )
 		{
-			draw_tex_rect( 800+x*ddd, 300+y*ddd, 832+x*ddd, 332+y*ddd, g_edtex );
+			SS_DrawTexRect( 800+x*ddd, 300+y*ddd, 832+x*ddd, 332+y*ddd, g_edtex );
 		}
 	}
 	
-	set_camera_ui( 0, W, 0, H );
+	SS_SetCameraUI( 0, W, 0, H );
 	
 	PX = 32;
 	PY = 96;
 	SZ = 64;
 	DX = DY = SZ + 1;
-	draw_tex_rect( PX, PY, PX+SZ, PY+SZ, g_edtex );
-	draw({ preset = "tile", texture = g_edtex, position = vec2(PX+DX,PY), scale = vec2(SZ,SZ) });
-	draw_tex_rect( PX, PY+DY, PX+SZ, PY+DY+SZ, g_edtex_nl );
-	draw({ preset = "tile", texture = g_edtex_nl, position = vec2(PX+DX,PY+DY), scale = vec2(SZ,SZ) });
+	SS_DrawTexRect( PX, PY, PX+SZ, PY+SZ, g_edtex );
+	SS_Draw({ preset = "tile", texture = g_edtex, position = vec2(PX+DX,PY), scale = vec2(SZ,SZ) });
+	SS_DrawTexRect( PX, PY+DY, PX+SZ, PY+DY+SZ, g_edtex_nl );
+	SS_Draw({ preset = "tile", texture = g_edtex_nl, position = vec2(PX+DX,PY+DY), scale = vec2(SZ,SZ) });
 	
-	draw_tex_rect( 32, 32, 64, 64, MIT );
+	SS_DrawTexRect( 32, 32, 64, 64, MIT );
 	
-	draw({ preset = "box", texture = image, position = mpos, scale = vec2(128,128), angle = rotation * M_PI, color = color(0.3,0.5,0.7) });
+	SS_Draw({ preset = "box", texture = image, position = mpos, scale = vec2(128,128), angle = rotation * M_PI, color = color(0.3,0.5,0.7) });
 	
 	UI.draw();
 	
@@ -195,36 +195,36 @@ function update()
 	
 	// DRAW VCENTERED TEXT
 	if( !isset( _G, "dt_functions" ) )
-		global dt_functions = [ "draw_text_line", "draw_text_line_bl", "draw_text_line_vn", "draw_text_line_vc" ];
-	tl = BigFont.get_text_length( "Mg" );
+		global dt_functions = [ "SS_DrawTextLine", "SS_DrawTextLine_BL", "SS_DrawTextLine_VN", "SS_DrawTextLine_VC" ];
+	tl = BigFont.getTextLength( "Mg" );
 	adv = tl + 1;
 	
 	x = 150;
 	y = 150;
 	foreach( fn : dt_functions )
 	{
-		draw_color_rect( x, y, x + tl, y + BigFont.size, 0, 0, 0, 1 );
-		draw_color_line( x, y + BigFont.size * 0.5, x + tl, y + BigFont.size * 0.5, 0.5, 0, 0, 1 );
+		SS_DrawColorRect( x, y, x + tl, y + BigFont.size, 0, 0, 0, 1 );
+		SS_DrawColorLine( x, y + BigFont.size * 0.5, x + tl, y + BigFont.size * 0.5, 0.5, 0, 0, 1 );
 		_G[ fn ]( "Mg", BigFont, x, y, color(1,1,1) );
-		draw_color_rect( x, y + 1 + BigFont.size, x + tl, y + 1 + BigFont.size + Font.size, 0, 0, 0, 0.5 );
-		draw_text_line_vn( string_replace( fn, "draw_text_line", "DTL" ), Font, x, y + 1 + BigFont.size, color(0.4, 0.8, 0.6) );
+		SS_DrawColorRect( x, y + 1 + BigFont.size, x + tl, y + 1 + BigFont.size + Font.size, 0, 0, 0, 0.5 );
+		SS_DrawTextLine_VN( string_replace( fn, "SS_DrawTextLine", "DTL" ), Font, x, y + 1 + BigFont.size, color(0.4, 0.8, 0.6) );
 		x += adv;
 	}
 	
 	ftm = ( ftime() - lasttime ) * 1000.0;
 	HG.push( ftm );
 	tx = "frame time: " $ ftm $ " ms";
-	draw_text_line( tx, Font, 101, 1, color(0,0,0) );
-	draw_text_line( tx, Font, 100, 0, color(0.9,0.8,0.7) );
+	SS_DrawTextLine( tx, Font, 101, 1, color(0,0,0) );
+	SS_DrawTextLine( tx, Font, 100, 0, color(0.9,0.8,0.7) );
 //println(tx);
 	HG.draw( 100, 500, 3, -2, 0xffcccccc, 1000/60 );
 	
-	draw_text_line( "allocs per frame: " $ (sys_stat(4) - numallocs), Font, 4, 4, color(1,1,1) );
+	SS_DrawTextLine( "allocs per frame: " $ (sys_stat(4) - numallocs), Font, 4, 4, color(1,1,1) );
 	
-	present();
+	SS_Present();
 
 	sleeptime = 15 - ( ftime() - lasttime ) * 1000;
-//	if( sleeptime > 0 ) sleep( sleeptime );
+//	if( sleeptime > 0 ) SS_Sleep( sleeptime );
 }
 
 function on_event( e )

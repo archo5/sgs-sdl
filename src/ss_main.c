@@ -7,9 +7,17 @@
 #include "../sgscript/ext/sgs_prof.h"
 
 
-const char* scr_globalvars = "global \
-sys_exit = false;\
-";
+static const char* scr_preconfig =
+	"_dirname = function(s){p=string_find_rev(s,'/');\n"
+	"	if(p===null){ p=string_find(s,':'); if(p===null){ return ''; } p++; }\n"
+	"	return string_part(s,0,p);};\n"
+	"\n"
+	"global sys_exit = false;\n"
+	"global sys_initial_dir = io_getcwd();\n"
+	"global sys_executable_path = string_replace( io_getexecpath(), '\\\\', '/' );\n"
+	"global sys_executable_dir = _dirname( sys_executable_path );\n"
+	"io_setcwd( sys_executable_dir );\n"
+;
 
 
 sgs_MemBuf g_tmpbuf;
@@ -22,8 +30,9 @@ sgs_Prof P;
 
 int g_enabledProfiler = 0;
 
-int ss_enable_profiler( SGS_CTX )
+int SS_EnableProfiler( SGS_CTX )
 {
+	SGSFN( "SS_EnableProfiler" );
 	if( sgs_StackSize( C ) > 0 )
 		g_enabledProfiler = sgs_GetInt( C, 0 );
 	else
@@ -31,18 +40,10 @@ int ss_enable_profiler( SGS_CTX )
 	return 0;
 }
 
-int ss_enable_profiler2( SGS_CTX )
-{
-	g_enabledProfiler = 2;
-	return 0;
-}
-
 int sgs_InitDebug( SGS_CTX )
 {
-	sgs_PushCFunction( C, ss_enable_profiler );
-	sgs_StoreGlobal( C, "enable_profiler" );
-	sgs_PushCFunction( C, ss_enable_profiler2 );
-	sgs_StoreGlobal( C, "enable_profiler2" );
+	sgs_PushCFunction( C, SS_EnableProfiler );
+	sgs_StoreGlobal( C, "SS_EnableProfiler" );
 	return SGS_SUCCESS;
 }
 
@@ -72,11 +73,7 @@ int ss_Initialize( int argc, char* argv[] )
 	sgs_LoadLib_OS( C );
 	sgs_LoadLib_RE( C );
 	sgs_LoadLib_String( C );
-	if( sgs_GlobalCall( C, "loadtypeflags", 0, 0 ) != SGS_SUCCESS )
-	{
-		fprintf( stderr, "Failed to initialize the scripting engine\n" );
-		return -1;
-	}
+	sgs_GlobalCall( C, "loadtypeflags", 0, 0 );
 
 	sgs_InitDebug( C );
 	sgs_InitExtSys( C );
@@ -87,6 +84,20 @@ int ss_Initialize( int argc, char* argv[] )
 	/* preinit tmp buffer */
 	g_tmpbuf = sgs_membuf_create();
 	sgs_membuf_reserve( &g_tmpbuf, C, 1024 );
+	
+	/* load command line arguments */
+	{
+		int i;
+		for( i = 1; i < argc; ++i )
+		{
+			sgs_PushString( C, argv[ i ] );
+		}
+		sgs_PushArray( C, argc - 1 );
+		sgs_StoreGlobal( C, "sys_args" );
+	}
+	
+	/* run the preconfig script */
+	sgs_ExecString( C, scr_preconfig );
 
 	/* run the config file */
 	ret = sgs_Include( C, "engine/all" );
@@ -104,28 +115,8 @@ int ss_Initialize( int argc, char* argv[] )
 		return -3;
 	}
 	
-	/* create some variables */
-	sgs_ExecString( C, scr_globalvars );
-	{
-		int i;
-		
-		sgs_PushString( C, argv[ 0 ] );
-		sgs_StoreGlobal( C, "sys_execname" );
-		
-		for( i = 1; i < argc; ++i )
-		{
-			sgs_PushString( C, argv[ i ] );
-		}
-		sgs_PushArray( C, argc - 1 );
-		sgs_StoreGlobal( C, "sys_args" );
-	}
-	
 	/* configure the framework (optional) */
-	if( sgs_GlobalCall( C, "configure", 0, 0 ) )
-	{
-		fprintf( stderr, "Failed to configure the framework.\n" );
-		return -4;
-	}
+	sgs_GlobalCall( C, "configure", 0, 0 );
 
 	if( g_enabledProfiler )
 		sgs_ProfInit( C, &P, g_enabledProfiler );

@@ -119,7 +119,7 @@ function UIControl.create( override )
 {
 	var data = clone( UIControlDefaults );
 	data.children = []; // this one doesn't get cloned otherwise
-	data.font = create_font( "verdana.ttf", 12 );
+	data.font = SS_CreateFont( "verdana.ttf", 12 );
 	foreach( k, v : override )
 		data[ k ] = v;
 	return class( data, UIControl );
@@ -169,7 +169,7 @@ function ui_default_paint_button()
 {
 	mon = this.mouseon; if( this.clicked ) mon = 0;
 	tex = this.textures[ mon + this.clicked * 2 ];
-	draw_button( tex, this.ax - 4, this.ax + this.w + 4, this.ay - 4, this.ay + this.h + 4 );
+	SS_DrawButton( tex, this.ax - 4, this.ax + this.w + 4, this.ay - 4, this.ay + this.h + 4 );
 
 	if( this.icon != null )
 	{
@@ -199,9 +199,9 @@ function UIControl.createButton( name, x, y, w, h, onclick )
 		on_draw = ui_default_paint_button,
 		textures =
 		[
-			create_texture( "engine/img/buttonN.png" ),
-			create_texture( "engine/img/buttonH.png" ),
-			create_texture( "engine/img/buttonC.png" ),
+			SS_CreateTexture( "engine/img/buttonN.png" ),
+			SS_CreateTexture( "engine/img/buttonH.png" ),
+			SS_CreateTexture( "engine/img/buttonC.png" ),
 		],
 	});
 }
@@ -213,7 +213,7 @@ function ui_default_paint_radiobtn()
 		this.frame.formdata[ this.key ] == this.value );
 	mon = this.mouseon; if( clk ) mon = 0;
 	tex = this.textures[ mon + clk * 2 ];
-	draw_button( tex, this.ax - 4, this.ax + this.w + 4, this.ay - 4, this.ay + this.h + 4 );
+	SS_DrawButton( tex, this.ax - 4, this.ax + this.w + 4, this.ay - 4, this.ay + this.h + 4 );
 
 	draw_text_rect( this.name, this.font, [0.9,1], DT_CENTER | DT_VCENTER,
 		this.ax + 4, this.ax + this.w - 4, this.ay + 5, this.ay + this.h - 3 );
@@ -237,9 +237,9 @@ function UIControl.createRadioButton( name, key, value, x, y, w, h, onchange )
 		on_draw = ui_default_paint_radiobtn,
 		textures =
 		[
-			create_texture( "engine/img/buttonN.png" ),
-			create_texture( "engine/img/buttonH.png" ),
-			create_texture( "engine/img/buttonC.png" ),
+			SS_CreateTexture( "engine/img/buttonN.png" ),
+			SS_CreateTexture( "engine/img/buttonH.png" ),
+			SS_CreateTexture( "engine/img/buttonC.png" ),
 		],
 	};
 
@@ -271,9 +271,9 @@ function UIControl.createSwitch( name, key, x, y, w, h, onchange )
 		on_draw = ui_default_paint_radiobtn,
 		textures =
 		[
-			create_texture( "engine/img/buttonN.png" ),
-			create_texture( "engine/img/buttonH.png" ),
-			create_texture( "engine/img/buttonC.png" ),
+			SS_CreateTexture( "engine/img/buttonN.png" ),
+			SS_CreateTexture( "engine/img/buttonH.png" ),
+			SS_CreateTexture( "engine/img/buttonC.png" ),
 		],
 	};
 
@@ -321,7 +321,7 @@ function ui_default_paint_dropmenu()
 	var _fo = 3;
 	var _sepscl = [ this.w, 1 ];
 
-	draw_button( this.textures[2], this.x - _fo, this.x + this.w + _fo,
+	SS_DrawButton( this.textures[2], this.x - _fo, this.x + this.w + _fo,
 		this.y - _fo, this.y + this.h + _fo, 4, 4 );
 
 	foreach( iid, item : this.items )
@@ -337,7 +337,7 @@ function ui_default_paint_dropmenu()
 			if( item.mouseon && this.mouseon )
 			{
 				tex = this.textures[ item.clicked ];
-				draw_button( tex, x1, x2, y1, y2, 4, 4 );
+				SS_DrawButton( tex, x1, x2, y1, y2, 4, 4 );
 			}
 			draw_text_rect( item.name, this.font, [0.1,1], DT_LEFT | DT_VCENTER, x1 + 32, x2, y1, y2 - 4 );
 			if( item.icon === true )
@@ -364,9 +364,9 @@ function UIControl.createDropMenu()
 
 		textures =
 		[
-			create_texture( "engine/img/menuitemH.png" ),
-			create_texture( "engine/img/menuitemC.png" ),
-			create_texture( "engine/img/frame.png" ),
+			SS_CreateTexture( "engine/img/menuitemH.png" ),
+			SS_CreateTexture( "engine/img/menuitemC.png" ),
+			SS_CreateTexture( "engine/img/frame.png" ),
 		],
 
 		items = [],
@@ -489,7 +489,7 @@ function ui_default_paint_menu()
 	var _fo = 3;
 	var _scl = [ 200, 1 ];
 
-	draw_button( this.textures[2], this.x - _fo, this.x + this.w + _fo,
+	SS_DrawButton( this.textures[2], this.x - _fo, this.x + this.w + _fo,
 		this.y - _fo, this.y + this.h + _fo, 4, 4 );
 	
 	foreach( iid, item : this.items )
@@ -502,7 +502,7 @@ function ui_default_paint_menu()
 			h = item.height;
 			tex = this.textures[ this.open_item == iid ];
 			if( item.mouseon || iid == this.open_item )
-				draw_button( tex, x, x + w, y, y + h, 4, 4 );
+				SS_DrawButton( tex, x, x + w, y, y + h, 4, 4 );
 			draw_text_rect( item.name, this.font, [0.1,1], DT_CENTER | DT_VCENTER, x, x + w, y - 2, y + h - 2 );
 		}
 	}
@@ -525,9 +525,9 @@ function UIControl.createMenu()
 
 		textures =
 		[
-			create_texture( "engine/img/menuitemH.png" ),
-			create_texture( "engine/img/menuitemC.png" ),
-			create_texture( "engine/img/frame.png" ),
+			SS_CreateTexture( "engine/img/menuitemH.png" ),
+			SS_CreateTexture( "engine/img/menuitemC.png" ),
+			SS_CreateTexture( "engine/img/frame.png" ),
 		],
 
 		items = [],
@@ -692,14 +692,14 @@ function UIControl.createVScroll( x, y, w, h, onchange )
 		btnh = btnh,
 		visible = true,
 		onchange = onchange,
-		texture = create_texture( "engine/img/frame.png" ),
+		texture = SS_CreateTexture( "engine/img/frame.png" ),
 	};
 
 	function UIVScroll.on_draw()
 	{
 		if( !this.visible )
 			return;
-		draw_button( this.texture, this.ax - 2, this.ax + this.w + 2,
+		SS_DrawButton( this.texture, this.ax - 2, this.ax + this.w + 2,
 			this.ay - 2, this.ay + this.h + 2, 4, 4 );
 		foreach( c : this.children )
 			c.on_draw();
@@ -751,8 +751,8 @@ function UIControl.createVScroll( x, y, w, h, onchange )
 		w, ( h - btnh * 2 - 4 ) * hvcaspect ) );
 	ctl.addChild( vsdb = UIControl.createButton( "D", 0, h - btnh, w, btnh ) );
 
-	vsub.icon = create_texture( "engine/img/btnup.png" );
-	vsdb.icon = create_texture( "engine/img/btndn.png" );
+	vsub.icon = SS_CreateTexture( "engine/img/btnup.png" );
+	vsdb.icon = SS_CreateTexture( "engine/img/btndn.png" );
 
 	function vssb.onmousedown( x, y, bid )
 	{
@@ -819,9 +819,9 @@ function UIControl.createListBox( key, options, selected, x, y, w, h, onchange )
 		hover = -1,
 		textures =
 		[
-			create_texture( "engine/img/menuitemH.png" ),
-			create_texture( "engine/img/menuitemC.png" ),
-			create_texture( "engine/img/frame.png" ),
+			SS_CreateTexture( "engine/img/menuitemH.png" ),
+			SS_CreateTexture( "engine/img/menuitemC.png" ),
+			SS_CreateTexture( "engine/img/frame.png" ),
 		],
 	};
 
@@ -829,7 +829,7 @@ function UIControl.createListBox( key, options, selected, x, y, w, h, onchange )
 	{
 		if( this.open )
 		{
-			draw_button( this.textures[2], this.ax - 2, this.ax + this.w + 2,
+			SS_DrawButton( this.textures[2], this.ax - 2, this.ax + this.w + 2,
 				this.ay - 2, this.ay + this.hbase + this.hopen + 2, 4, 4 );
 			if( this.frame.pushRect( this.ax, this.ax + this.w, this.ay + this.hbase, this.ay + this.h ) )
 			{
@@ -840,7 +840,7 @@ function UIControl.createListBox( key, options, selected, x, y, w, h, onchange )
 					y1 = this.ay + this.hbase + i * 24 - this.children[1].pos * ( this.hfull - this.hopen );
 					y2 = y1 + 24;
 					if( i == this.hover && this.mouseon )
-						draw_button( this.textures[ this.clicked ], x1 + 2, x2 - 2, y1 + 2, y2 - 2, 4, 4 );
+						SS_DrawButton( this.textures[ this.clicked ], x1 + 2, x2 - 2, y1 + 2, y2 - 2, 4, 4 );
 					draw_text_rect( opt, this.font, [0.1,1.0],
 						DT_LEFT | DT_VCENTER, x1 + 4, x2 - 4, y1 + 2, y2 - 4 );
 				}
@@ -932,13 +932,13 @@ function UIControl.createListBox( key, options, selected, x, y, w, h, onchange )
 			this.parent.close();
 	};
 	ctl.addChild( lb_btn = UIControl.createButton( name, 0, 0, w, 24, onclk ) );
-	lb_btn.icon = create_texture( "engine/img/btndn.png" );
+	lb_btn.icon = SS_CreateTexture( "engine/img/btndn.png" );
 	function lb_btn.on_draw()
 	{
 		clk = this.clicked || this.parent.open;
 		mon = this.mouseon; if( clk ) mon = 0;
 		tex = this.textures[ mon + clk * 2 ];
-		draw_button( tex, this.ax - 4, this.ax + this.w + 4, this.ay - 4, this.ay + this.h + 4 );
+		SS_DrawButton( tex, this.ax - 4, this.ax + this.w + 4, this.ay - 4, this.ay + this.h + 4 );
 
 		draw_text_rect( this.name, this.font, [0.9,1], DT_LEFT | DT_VCENTER,
 			this.ax + 4, this.ax + this.w - 4, this.ay + 5, this.ay + this.h - 3 );
@@ -1015,12 +1015,12 @@ function UIDialog.createWrapper( x, y, w, h )
 		y = y,
 		w = w,
 		h = h,
-		texture = create_texture( "engine/img/frame.png" ),
+		texture = SS_CreateTexture( "engine/img/frame.png" ),
 	};
 
 	function UIWrapper.on_draw()
 	{
-		draw_button( this.texture, this.x - 4, this.x + this.w + 4,
+		SS_DrawButton( this.texture, this.x - 4, this.x + this.w + 4,
 			this.y - 4, this.y + this.h + 4, 4, 4 );
 		foreach( c : this.children )
 			c.on_draw();
@@ -1177,7 +1177,7 @@ function UIFrame.draw()
 		WARNING( "UIFrame::draw - invalid frame size" );
 		return;
 	}
-	set_camera_ui( this.x, this.x+this.w, this.y, this.y+this.h );
+	SS_SetCameraUI( this.x, this.x+this.w, this.y, this.y+this.h );
 	foreach( ch : this.children )
 	{
 		if( ch.on_draw )

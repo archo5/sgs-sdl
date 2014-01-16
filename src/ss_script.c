@@ -96,15 +96,6 @@ void sgs_UnpackFree( SGS_CTX, dict_unpack_item_t* items )
 	}
 }
 
-
-/* extended math utilities */
-/*
-	A note on atan2 usage:
-	I know it's 'wrong' and I don't care. This is easier.
-	This is the 'tau' of 'tau vs pi', this is how the clock works, this is real life.
-	Consider that.
-*/
-
 /*
 	C O L O R
 */
@@ -186,8 +177,6 @@ int sgs_InitExtSys( SGS_CTX )
 	API
 */
 
-static sgs_ObjCallback apiobj_iface[] = { SOP_END };
-
 extern sgs_ObjCallback tex_iface[];
 
 int ss_parse_texture( SGS_CTX, int item, sgs_Texture** tex )
@@ -216,13 +205,13 @@ int sgs_InitAPI( SGS_CTX )
 {
 	int ret;
 	
-	sgs_RegisterType( C, "ss_texture", tex_iface );
+	sgs_RegisterType( C, "texture", tex_iface );
 	
-	sgs_PushObject( C, ss_parse_texture, apiobj_iface );
+	sgs_PushPtr( C, ss_parse_texture );
 	ret = sgs_StoreGlobal( C, SS_PARSE_TEXTURE_KEY );
 	if( ret != SGS_SUCCESS ) return ret;
 	
-	sgs_PushObject( C, ss_get_iface, apiobj_iface );
+	sgs_PushPtr( C, ss_get_iface );
 	ret = sgs_StoreGlobal( C, SS_GET_IFACE_KEY );
 	if( ret != SGS_SUCCESS ) return ret;
 	
@@ -233,8 +222,8 @@ int sgs_InitAPI( SGS_CTX )
 	sgs_PushInt( C, -1 );
 	sgs_PushInt( C, 0 );
 #endif
-	sgs_StoreGlobal( C, "ss_using_d3d" );
-	sgs_StoreGlobal( C, "ss_using_d3d_signed" );
+	sgs_StoreGlobal( C, "sys_using_d3d" );
+	sgs_StoreGlobal( C, "sys_using_d3d_signed" );
 	
 	return SGS_SUCCESS;
 }

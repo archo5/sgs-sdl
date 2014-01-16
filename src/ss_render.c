@@ -11,7 +11,7 @@
 
 #include "ss_main.h"
 
-#define FN( f ) { #f, ss_##f }
+#define FN( f ) { "SS_" #f, SS_##f }
 #define IC( i ) { #i, i }
 #define _WARN( err ) return sgs_Printf( C, SGS_WARNING, err );
 
@@ -137,13 +137,13 @@ sgs_ObjCallback tex_iface[] =
 		- if function doesn't exist or it simply returns null, texture creation fails
 */
 
-int ss_create_texture( SGS_CTX )
+int SS_CreateTexture( SGS_CTX )
 {
 	uint32_t flags;
 	sgs_Image* ii;
 	int argc = sgs_StackSize( C ), bystr = 0;
 	
-	SGSFN( "create_texture" );
+	SGSFN( "SS_CreateTexture" );
 	
 	static flag_string_item_t flagitems[] =
 	{
@@ -859,7 +859,7 @@ uint32_t getprimitivecount( int mode, uint32_t vcount )
 	return 0;
 }
 
-int ss_draw( SGS_CTX )
+int SS_Draw( SGS_CTX )
 {
 	char* Bptr;
 	sgs_SizeVal Bsize;
@@ -883,7 +883,7 @@ int ss_draw( SGS_CTX )
 	
 	ss_reset_buffer();
 	
-	SGSFN( "draw" );
+	SGSFN( "SS_Draw" );
 	
 	if( sgs_StackSize( C ) != 1 ||
 		sgs_ItemType( C, 0 ) != SVT_OBJECT )
@@ -1144,12 +1144,12 @@ sgs_ObjCallback vertex_format_iface[] =
 	SOP_END,
 };
 
-int ss_make_vertex_format( SGS_CTX )
+int SS_MakeVertexFormat( SGS_CTX )
 {
 	char *fmt;
 	sgs_SizeVal fmtsize;
 	
-	SGSFN( "make_vertex_format" );
+	SGSFN( "SS_MakeVertexFormat" );
 	
 	if( sgs_StackSize( C ) != 1 ||
 		!sgs_ParseString( C, 0, &fmt, &fmtsize ) )
@@ -1225,7 +1225,7 @@ int ss_make_vertex_format( SGS_CTX )
 	- format
 	- data
 */
-int ss_draw_packed( SGS_CTX )
+int SS_DrawPacked( SGS_CTX )
 {
 	sgs_Integer start, count, type;
 	sgs_Texture* T = NULL;
@@ -1234,7 +1234,7 @@ int ss_draw_packed( SGS_CTX )
 	sgs_SizeVal datasize, idcsize = 0;
 	int ssz = sgs_StackSize( C );
 	
-	SGSFN( "draw_packed" );
+	SGSFN( "SS_DrawPacked" );
 	
 	if( !( ssz == 6 || ssz == 7 ) ||
 		!( sgs_ItemType( C, 0 ) == SVT_NULL || sgs_IsObject( C, 0, tex_iface ) ) ||
@@ -1609,7 +1609,7 @@ static int ss_renderbuf_convert( SGS_CTX, sgs_VarObj* data, int type )
 	if( type == SGS_CONVOP_TOTYPE )
 	{
 		UNUSED( data );
-		sgs_PushString( C, "renderbuf" );
+		sgs_PushString( C, "renderbuffer" );
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
@@ -1623,9 +1623,11 @@ static sgs_ObjCallback renderbuf_iface[] =
 	SOP_END
 };
 
-static int ss_create_renderbuf( SGS_CTX )
+static int SS_CreateRenderBuffer( SGS_CTX )
 {
-	ss_renderbuf* rb = (ss_renderbuf*) sgs_PushObjectIPA( C, sizeof(ss_renderbuf), renderbuf_iface );
+	ss_renderbuf* rb;
+	SGSFN( "SS_CreateRenderBuffer" );
+	rb = (ss_renderbuf*) sgs_PushObjectIPA( C, sizeof(ss_renderbuf), renderbuf_iface );
 	rb->B = membuf_create();
 	return 1;
 }
@@ -1661,13 +1663,13 @@ typedef float mat4x4[4][4];
 mat4x4 matrices[8];
 int curmtx = 0;
 
-int ss_matrix_push( SGS_CTX )
+int SS_MatrixPush( SGS_CTX )
 {
 	int set = 0;
 	float mtx[ 16 ] = {0};
 	int ssz = sgs_StackSize( C );
 	
-	SGSFN( "matrix_push" );
+	SGSFN( "SS_MatrixPush" );
 	
 	if( ssz < 1 || ssz > 2 ||
 		_parse_floatvec( C, 0, mtx, 16 ) ||
@@ -1702,9 +1704,9 @@ int ss_matrix_push( SGS_CTX )
 	return 0;
 }
 
-int ss_matrix_pop( SGS_CTX )
+int SS_MatrixPop( SGS_CTX )
 {
-	SGSFN( "matrix_pop" );
+	SGSFN( "SS_MatrixPop" );
 	
 	if( sgs_StackSize( C ) )
 		_WARN( "unexpected arguments" )
@@ -1725,11 +1727,11 @@ int ss_matrix_pop( SGS_CTX )
 	return 0;
 }
 
-int ss_set_depth_test( SGS_CTX )
+int SS_SetDepthTest( SGS_CTX )
 {
 	int set;
 	
-	SGSFN( "set_depth_test" );
+	SGSFN( "SS_SetDepthTest" );
 	
 	if( sgs_StackSize( C ) != 1 ||
 		!sgs_ParseBool( C, 0, &set ) )
@@ -1750,13 +1752,13 @@ int ss_set_depth_test( SGS_CTX )
 }
 
 
-int ss_set_camera( SGS_CTX )
+int SS_SetCamera( SGS_CTX )
 {
 	float mtx[ 16 ] = {0};
 	float mtx2[ 16 ] = {0};
 	int ssz = sgs_StackSize( C );
 	
-	SGSFN( "set_camera" );
+	SGSFN( "SS_SetCamera" );
 
 	if( ssz < 1 || ssz > 2 ||
 		_parse_floatvec( C, 0, mtx, 16 ) ||
@@ -1900,7 +1902,7 @@ int ss_fontI_get_advance( SGS_CTX )
 	sgs_Integer a = 0, b = 0;
 	ss_font* font;
 	
-	SGSFN( "font.get_advance" );
+	SGSFN( "Font.getAdvance" );
 
 	if( !sgs_Method( C ) ||
 		sgs_StackSize( C ) != 3 ||
@@ -1935,7 +1937,7 @@ int ss_fontI_get_text_length( SGS_CTX )
 	sgs_Int length = 0;
 	ss_glyph *G, *G2 = NULL;
 	
-	FONT_IHDR( get_text_length );
+	FONT_IHDR( getTextLength );
 	if( !sgs_LoadArgs( C, "@>m", &str, &size ) )
 		return 0;
 	
@@ -1977,8 +1979,8 @@ int ss_font_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	if( 0 == strcmp( str, "height" ) ){ sgs_PushInt( C, font->face->size->metrics.height >> 6 ); return SGS_SUCCESS; }
 	if( 0 == strcmp( str, "max_advance" ) ){ sgs_PushInt( C, font->face->size->metrics.max_advance >> 6 ); return SGS_SUCCESS; }
 	
-	if( 0 == strcmp( str, "get_advance" ) ){ sgs_PushCFunction( C, ss_fontI_get_advance ); return SGS_SUCCESS; }
-	if( 0 == strcmp( str, "get_text_length" ) ){ sgs_PushCFunction( C, ss_fontI_get_text_length ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "getAdvance" ) ){ sgs_PushCFunction( C, ss_fontI_get_advance ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "getTextLength" ) ){ sgs_PushCFunction( C, ss_fontI_get_text_length ); return SGS_SUCCESS; }
 
 	return SGS_ENOTFND;
 }
@@ -1991,13 +1993,13 @@ sgs_ObjCallback font_iface[] =
 	SOP_END,
 };
 
-int ss_create_font( SGS_CTX )
+int SS_CreateFont( SGS_CTX )
 {
 	char* fontname;
 	sgs_SizeVal fnsize;
 	sgs_Integer fontsize;
 	
-	SGSFN( "create_font" );
+	SGSFN( "SS_CreateFont" );
 
 	if( sgs_StackSize( C ) != 2 ||
 		!sgs_ParseString( C, 0, &fontname, &fnsize ) ||
@@ -2250,9 +2252,9 @@ void ss_int_drawtext_line( ss_font* font, SGS_CTX, char* str,
 	}
 }
 
-int ss_is_font( SGS_CTX )
+int SS_IsFont( SGS_CTX )
 {
-	SGSFN( "is_font" );
+	SGSFN( "SS_IsFont" );
 	if( sgs_StackSize( C ) != 1 )
 		_WARN( "unexpected arguments; function expects 1 argument" )
 
@@ -2313,17 +2315,17 @@ int offset_from_font_vc( ss_font* font )
 	return -( ( ( m.ascender + abs( m.descender ) ) >> 6 ) ) / 2;
 }
 
-int ss_draw_text_line( SGS_CTX ){ SGSFN("draw_text_line"); return ss_draw_text_line_int( C, NULL ); }
-int ss_draw_text_line_bl( SGS_CTX ){ SGSFN("draw_text_line_bl"); return ss_draw_text_line_int( C, offset_from_font_bl ); }
-int ss_draw_text_line_vn( SGS_CTX ){ SGSFN("draw_text_line_vn"); return ss_draw_text_line_int( C, offset_from_font_vn ); }
-int ss_draw_text_line_vc( SGS_CTX ){ SGSFN("draw_text_line_vc"); return ss_draw_text_line_int( C, offset_from_font_vc ); }
+int SS_DrawTextLine   ( SGS_CTX ){ SGSFN("DrawTextLine"); return ss_draw_text_line_int( C, NULL ); }
+int SS_DrawTextLine_BL( SGS_CTX ){ SGSFN("DrawTextLine_BL"); return ss_draw_text_line_int( C, offset_from_font_bl ); }
+int SS_DrawTextLine_VN( SGS_CTX ){ SGSFN("DrawTextLine_VN"); return ss_draw_text_line_int( C, offset_from_font_vn ); }
+int SS_DrawTextLine_VC( SGS_CTX ){ SGSFN("DrawTextLine_VC"); return ss_draw_text_line_int( C, offset_from_font_vc ); }
 
 
 
-int ss_set_cliprect( SGS_CTX )
+int SS_SetClipRect( SGS_CTX )
 {
 	sgs_Integer x1, x2, y1, y2;
-	SGSFN( "set_cliprect" );
+	SGSFN( "SS_SetClipRect" );
 	if( sgs_StackSize( C ) == 1 &&
 		sgs_ItemType( C, 0 ) == SVT_NULL )
 	{
@@ -2361,9 +2363,10 @@ int ss_set_cliprect( SGS_CTX )
 }
 
 
-int ss_set_culling( SGS_CTX )
+int SS_SetCulling( SGS_CTX )
 {
 	sgs_Integer ii;
+	SGSFN( "SS_SetCulling" );
 	if( !sgs_LoadArgs( C, "i", &ii ) )
 		return 0;
 #ifdef SS_USED3D
@@ -2381,7 +2384,7 @@ int ss_set_culling( SGS_CTX )
 }
 
 
-int ss_set_blending( SGS_CTX )
+int SS_SetBlending( SGS_CTX )
 {
 	sgs_Integer func = 0, src, dst;
 
@@ -2440,6 +2443,7 @@ int ss_set_blending( SGS_CTX )
 #endif
 	};
 	
+	SGSFN( "SS_SetBlending" );
 	if( !sgs_LoadArgs( C, "iii", &func, &src, &dst ) )
 		return 0;
 	
@@ -2496,16 +2500,15 @@ sgs_RegIntConst gl_ints[] =
 
 sgs_RegFuncConst gl_funcs[] =
 {
-	FN( create_texture ),
-	FN( draw ),
-	FN( make_vertex_format ), FN( draw_packed ),
-	FN( create_renderbuf ),
-	FN( create_font ), FN( is_font ),
-	FN( draw_text_line ), FN( draw_text_line_bl ), FN( draw_text_line_vn ), FN( draw_text_line_vc ),
-	FN( matrix_push ), FN( matrix_pop ),
-	FN( set_camera ), FN( set_cliprect ),
-	FN( set_depth_test ), FN( set_culling ),
-	FN( set_blending ),
+	FN( CreateTexture ),
+	FN( Draw ),
+	FN( MakeVertexFormat ), FN( DrawPacked ),
+	FN( CreateRenderBuffer ),
+	FN( CreateFont ), FN( IsFont ),
+	FN( DrawTextLine ), FN( DrawTextLine_BL ), FN( DrawTextLine_VN ), FN( DrawTextLine_VC ),
+	FN( MatrixPush ), FN( MatrixPop ),
+	FN( SetCamera ), FN( SetClipRect ),
+	FN( SetDepthTest ), FN( SetCulling ), FN( SetBlending ),
 };
 
 const char* gl_init = "global _Gtex = {}, _Gfonts = {};";

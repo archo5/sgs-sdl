@@ -10,8 +10,8 @@ function Histogram.create( limit )
 	{
 		limit = limit,
 		data = [],
-		vfmt = make_vertex_format( "pf2cc4" ),
-		rb = create_renderbuf(),
+		vfmt = SS_MakeVertexFormat( "pf2cc4" ),
+		rb = SS_CreateRenderBuffer(),
 	};
 	return class( data, Histogram );
 }

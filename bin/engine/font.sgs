@@ -153,7 +153,7 @@ function draw_text_rect( text, font, color, placement, left, right, top, bottom 
 	//	ucppart = text_ucp.part( line.from, line.to - line.from );
 		utf8part = string_utf8_encode( ucppart );
 		
-		draw_text_line_vn( utf8part, font, x, y, color );
+		SS_DrawTextLine_VN( utf8part, font, x, y, color );
 		y += lineheight;
 	}
 }

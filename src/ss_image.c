@@ -8,7 +8,7 @@
 #include "../freeimage/FreeImage.h"
 
 
-#define FN( f ) { #f, ss_##f }
+#define FN( f ) { "SS_" #f, SS_##f }
 #define FNP( f ) { #f, f }
 #define IC( i ) { #i, i }
 #define _WARN( err ) { sgs_Printf( C, SGS_WARNING, err ); return 0; }
@@ -106,14 +106,14 @@ int ss_image_clear( SGS_CTX )
 	return 0;
 }
 
-int ss_image_set_data( SGS_CTX )
+int ss_image_setData( SGS_CTX )
 {
 	int ret = 0;
 	sgs_Image* ii = NULL;
 	char* buf = NULL;
 	sgs_SizeVal size = 0, i = 0, pxcnt = 0;
 	
-	SGSFN( "image.set_data" );
+	SGSFN( "image.setData" );
 	
 	sgs_Method( C );
 	if( !stdlib_toimage( C, 0, &ii ) )
@@ -160,7 +160,7 @@ int ss_image_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	if( !strcmp( str, "height" ) ){ sgs_PushInt( C, img->height ); return SGS_SUCCESS; }
 	if( !strcmp( str, "resize" ) ){ sgs_PushCFunction( C, ss_image_resize ); return SGS_SUCCESS; }
 	if( !strcmp( str, "clear" ) ){ sgs_PushCFunction( C, ss_image_clear ); return SGS_SUCCESS; }
-	if( !strcmp( str, "set_data" ) ){ sgs_PushCFunction( C, ss_image_set_data ); return SGS_SUCCESS; }
+	if( !strcmp( str, "setData" ) ){ sgs_PushCFunction( C, ss_image_setData ); return SGS_SUCCESS; }
 	
 	return SGS_ENOTFND;
 }
@@ -198,12 +198,12 @@ sgs_ObjCallback image_iface[] =
 	SOP_END
 };
 
-int ss_create_image( SGS_CTX )
+int SS_CreateImage( SGS_CTX )
 {
 	sgs_Integer w, h;
 	int argc = sgs_StackSize( C );
 	
-	SGSFN( "create_image" );
+	SGSFN( "SS_CreateImage" );
 	
 	if( argc < 1 || argc > 2 ||
 		!sgs_ParseInt( C, 0, &w ) ||
@@ -251,12 +251,12 @@ int sgs_LoadImageHelper( SGS_CTX, char* str, int size )
 	return 1;
 }
 
-int ss_load_image( SGS_CTX )
+int SS_LoadImage( SGS_CTX )
 {
 	char *str;
 	sgs_SizeVal size;
 	
-	SGSFN( "load_image" );
+	SGSFN( "SS_LoadImage" );
 	
 	if( sgs_StackSize( C ) != 1 || !sgs_ParseString( C, 0, &str, &size ) )
 		_WARN( "unexpected arguments; function expects 1 argument: string" )
@@ -317,10 +317,10 @@ int ss_load_image_( SGS_CTX, int type1, int type2 )
 		return ret;
 	}
 }
-int ss_load_image_png( SGS_CTX ){ SGSFN( "sgs_load_image_png" ); return ss_load_image_( C, FIF_PNG, PNG_DEFAULT ); }
-int ss_load_image_jpg( SGS_CTX ){ SGSFN( "sgs_load_image_jpg" ); return ss_load_image_( C, FIF_JPEG, PNG_DEFAULT ); }
-int ss_load_image_jpeg( SGS_CTX ){ SGSFN( "sgs_load_image_jpeg" ); return ss_load_image_( C, FIF_JPEG, PNG_DEFAULT ); }
-int ss_load_image_dds( SGS_CTX ){ SGSFN( "sgs_load_image_dds" ); return ss_load_image_( C, FIF_DDS, DDS_DEFAULT ); }
+int ss_load_image_png( SGS_CTX ){ SGSFN( "ss_load_image_png" ); return ss_load_image_( C, FIF_PNG, PNG_DEFAULT ); }
+int ss_load_image_jpg( SGS_CTX ){ SGSFN( "ss_load_image_jpg" ); return ss_load_image_( C, FIF_JPEG, PNG_DEFAULT ); }
+int ss_load_image_jpeg( SGS_CTX ){ SGSFN( "ss_load_image_jpeg" ); return ss_load_image_( C, FIF_JPEG, PNG_DEFAULT ); }
+int ss_load_image_dds( SGS_CTX ){ SGSFN( "ss_load_image_dds" ); return ss_load_image_( C, FIF_DDS, DDS_DEFAULT ); }
 
 
 sgs_RegIntConst img_ints[] =
@@ -329,8 +329,8 @@ sgs_RegIntConst img_ints[] =
 
 sgs_RegFuncConst img_funcs[] =
 {
-	FN( create_image ),
-	FN( load_image ),
+	FN( CreateImage ),
+	FN( LoadImage ),
 	
 	FNP( ss_load_image_png ),
 	FNP( ss_load_image_jpg ),

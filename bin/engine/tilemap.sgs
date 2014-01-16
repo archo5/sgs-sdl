@@ -10,8 +10,8 @@ function Tilemap.create( texture, tileWidth, tileHeight )
 		tileH = tileHeight,
 		tiles = map(),
 		revid = 1,
-		vfmt = make_vertex_format( "|pf2tf2cf4" ),
-		rb = create_renderbuf(),
+		vfmt = SS_MakeVertexFormat( "|pf2tf2cf4" ),
+		rb = SS_CreateRenderBuffer(),
 	},
 	Tilemap );
 }

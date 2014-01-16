@@ -1,16 +1,16 @@
 
 
-function drawfunc_init()
+function SS_InitDrawFunctions()
 {
-	global g_RB = create_renderbuf();
-	global g_VD_P2CC4 = make_vertex_format( "pf2cc4" );
-	global g_VD_P2T2 = make_vertex_format( "pf2tf2" );
-	global g_VD_P2T2CC4 = make_vertex_format( "pf2tf2cc4" );
+	global g_RB = SS_CreateRenderBuffer();
+	global g_VD_P2CC4 = SS_MakeVertexFormat( "pf2cc4" );
+	global g_VD_P2T2 = SS_MakeVertexFormat( "pf2tf2" );
+	global g_VD_P2T2CC4 = SS_MakeVertexFormat( "pf2tf2cc4" );
 }
 
-function draw_color_rect( x1, y1, x2, y2, r, g, b, a )
+function SS_DrawColorRect( x1, y1, x2, y2, r, g, b, a )
 {
-	if( ss_using_d3d ){ tmp = r; r = b; b = tmp; }
+	if( sys_using_d3d ){ tmp = r; r = b; b = tmp; }
 	g_RB.begin()
 		.f( x1, y1 ).cf2b( r, g, b, a )
 		.f( x2, y1 ).cf2b( r, g, b, a )
@@ -18,9 +18,9 @@ function draw_color_rect( x1, y1, x2, y2, r, g, b, a )
 		.f( x1, y2 ).cf2b( r, g, b, a )
 		.draw( null, g_VD_P2CC4, 0, 4, PT_TRIANGLE_FAN );
 }
-function draw_color_rect_wh( x, y, w, h, r, g, b, a ){ draw_color_rect( x, y, x+w, y+h, r, g, b, a ); }
+function SS_DrawColorRect_WH( x, y, w, h, r, g, b, a ){ SS_DrawColorRect( x, y, x+w, y+h, r, g, b, a ); }
 
-function draw_tex_rect( x1, y1, x2, y2, tex )
+function SS_DrawTexRect( x1, y1, x2, y2, tex )
 {
 	g_RB.begin().f(
 		x1, y1, 0, 0,
@@ -29,9 +29,9 @@ function draw_tex_rect( x1, y1, x2, y2, tex )
 		x1, y2, 0, 1
 	).draw( tex, g_VD_P2T2, 0, 4, PT_TRIANGLE_FAN );
 }
-function draw_tex_rect_wh( x, y, w, h, tex ){ draw_tex_rect( x, y, x+w, y+h, tex ); }
-function draw_tex_box_wh( x, y, w, h, tex ){ w /= 2; h /= 2; draw_tex_rect( x-w, y-h, x+w, y+h, tex ); }
-function draw_tex_box_wh_rotated( x, y, w, h, angle, tex )
+function SS_DrawTexRect_WH( x, y, w, h, tex ){ SS_DrawTexRect( x, y, x+w, y+h, tex ); }
+function SS_DrawTexBox( x, y, w, h, tex ){ w /= 2; h /= 2; SS_DrawTexRect( x-w, y-h, x+w, y+h, tex ); }
+function SS_DrawTexBox_Rotated( x, y, w, h, angle, tex )
 {
 	w *= 0.5;
 	h *= 0.5;
@@ -52,9 +52,9 @@ function draw_tex_box_wh_rotated( x, y, w, h, angle, tex )
 	).draw( tex, g_VD_P2T2, 0, 4, PT_TRIANGLE_FAN );
 }
 
-function draw_tex_color_rect( x1, y1, x2, y2, tex, r, g, b, a )
+function SS_DrawTexColorRect( x1, y1, x2, y2, tex, r, g, b, a )
 {
-	if( ss_using_d3d ){ tmp = r; r = b; b = tmp; }
+	if( sys_using_d3d ){ tmp = r; r = b; b = tmp; }
 	g_RB.begin()
 		.f( x1, y1, 0, 0 ).cf2b( r, g, b, a )
 		.f( x2, y1, 1, 0 ).cf2b( r, g, b, a )
@@ -62,9 +62,9 @@ function draw_tex_color_rect( x1, y1, x2, y2, tex, r, g, b, a )
 		.f( x1, y2, 0, 1 ).cf2b( r, g, b, a )
 		.draw( tex, g_VD_P2T2CC4, 0, 4, PT_TRIANGLE_FAN );
 }
-function draw_tex_color_rect_wh( x, y, w, h, tex, r, g, b, a ){ draw_tex_color_rect( x, y, x+w, y+h, tex, r, g, b, a ); }
-function draw_tex_color_box_wh( x, y, w, h, tex, r, g, b, a ){ w /= 2; h /= 2; draw_tex_color_rect( x-w, y-h, x+w, y+h, tex, r, g, b, a ); }
-function draw_tex_color_box_wh_rotated( x, y, w, h, angle, tex, r, g, b, a )
+function SS_DrawTexColorRect_WH( x, y, w, h, tex, r, g, b, a ){ SS_DrawTexColorRect( x, y, x+w, y+h, tex, r, g, b, a ); }
+function SS_DrawTexColorBox( x, y, w, h, tex, r, g, b, a ){ w /= 2; h /= 2; SS_DrawTexColorRect( x-w, y-h, x+w, y+h, tex, r, g, b, a ); }
+function SS_DrawTexColorBox_Rotated( x, y, w, h, angle, tex, r, g, b, a )
 {
 	w *= 0.5;
 	h *= 0.5;
@@ -77,7 +77,7 @@ function draw_tex_color_box_wh_rotated( x, y, w, h, angle, tex, r, g, b, a )
 	ext2x = ( -c -s ) * w;
 	ext2y = ( c - s ) * h;
 	
-	if( ss_using_d3d ){ tmp = r; r = b; b = tmp; }
+	if( sys_using_d3d ){ tmp = r; r = b; b = tmp; }
 	
 	g_RB.begin()
 		.f( x - ext1x, y - ext1y, 0, 1 ).cf2b( r, g, b, a ) // pos - ext1
@@ -87,13 +87,13 @@ function draw_tex_color_box_wh_rotated( x, y, w, h, angle, tex, r, g, b, a )
 		.draw( tex, g_VD_P2T2CC4, 0, 4, PT_TRIANGLE_FAN );
 }
 
-function draw_color_poly_outlined( vertices, r, g, b, a, or, og, ob, oa )
+function SS_DrawColorPolyOutlined( vertices, r, g, b, a, or, og, ob, oa )
 {
 	if( vertices.size < 3 )
 		return;
 	
-	if( ss_using_d3d ){ tmp = r; r = b; b = tmp; }
-	if( ss_using_d3d ){ tmp = or; or = ob; ob = tmp; }
+	if( sys_using_d3d ){ tmp = r; r = b; b = tmp; }
+	if( sys_using_d3d ){ tmp = or; or = ob; ob = tmp; }
 	
 	g_RB.begin();
 	foreach( v : vertices )
@@ -108,9 +108,9 @@ function draw_color_poly_outlined( vertices, r, g, b, a, or, og, ob, oa )
 	g_RB.draw( null, g_VD_P2CC4, 0, vertices.size + 1, PT_LINE_STRIP );
 }
 
-function draw_color_line( x1, y1, x2, y2, r, g, b, a )
+function SS_DrawColorLine( x1, y1, x2, y2, r, g, b, a )
 {
-	if( ss_using_d3d ){ tmp = r; r = b; b = tmp; }
+	if( sys_using_d3d ){ tmp = r; r = b; b = tmp; }
 	g_RB.begin()
 		.f( x1, y1 ).cf2b( r, g, b, a )
 		.f( x2, y2 ).cf2b( r, g, b, a )
@@ -118,7 +118,7 @@ function draw_color_line( x1, y1, x2, y2, r, g, b, a )
 }
 
 
-function get_camera_2d_mtx( x, y, size, aspect, angle )
+function SS_GetCamera2DMatrix( x, y, size, aspect, angle )
 {
 	size = 1.0/size;
 	x *= size/aspect;
@@ -131,12 +131,12 @@ function get_camera_2d_mtx( x, y, size, aspect, angle )
 		0, 0, 0, 1,
 	];
 }
-function set_camera_2d( x, y, size, aspect, angle )
+function SS_SetCamera2D( x, y, size, aspect, angle )
 {
-	set_camera( get_camera_2d_mtx( x, y, size, aspect, angle ) );
+	SS_SetCamera( SS_GetCamera2DMatrix( x, y, size, aspect, angle ) );
 }
 
-function get_camera_ui_mtx( x1, x2, y1, y2 )
+function SS_GetCameraUIMatrix( x1, x2, y1, y2 )
 {
 	w = x2 - x1;
 	h = y2 - y1;
@@ -148,18 +148,18 @@ function get_camera_ui_mtx( x1, x2, y1, y2 )
 		0, 0, 0, 1,
 	];
 }
-function set_camera_ui( x1, x2, y1, y2 )
+function SS_SetCameraUI( x1, x2, y1, y2 )
 {
-	set_camera( get_camera_ui_mtx( x1, x2, y1, y2 ) );
+	SS_SetCamera( SS_GetCameraUIMatrix( x1, x2, y1, y2 ) );
 }
 
-function multiply_point_matrix( mtx, x, y )
+function SS_MultiplyPointMatrix( mtx, x, y )
 {
 	return vec2( mtx[0]*x + mtx[1]*y + mtx[3], mtx[4]*x + mtx[5]*y + mtx[7] );
 }
 
 
-function mtx_transpose( m )
+function SS_MatrixTranspose( m )
 {
 	return
 	[
@@ -170,7 +170,7 @@ function mtx_transpose( m )
 	];
 }
 
-function get_camera_lookat( pos, dir, up )
+function SS_GetCameraLookAt( pos, dir, up )
 {
 	zaxis = dir.normalized;
 	xaxis = vec3_cross( up, zaxis ).normalized;
@@ -187,7 +187,7 @@ function get_camera_lookat( pos, dir, up )
 		1,
 	];
 }
-function get_camera_perspective( angle, aspect, znear, zfar )
+function SS_GetCameraPerspective( angle, aspect, znear, zfar )
 {
 	yscale = 1 / tan( angle / 2 );
 	xscale = yscale / aspect;
@@ -199,24 +199,24 @@ function get_camera_perspective( angle, aspect, znear, zfar )
 		0, 0, 1, 0,
 	];
 }
-function set_camera_3d( pos, dir, up, angle, aspect, znear, zfar )
+function SS_SetCamera3D( pos, dir, up, angle, aspect, znear, zfar )
 {
-	set_camera
+	SS_SetCamera
 	(
-		mtx_transpose( get_camera_lookat( pos, dir, up ) )
-		,get_camera_perspective( angle, aspect, znear, zfar )
+		SS_MatrixTranspose( SS_GetCameraLookAt( pos, dir, up ) )
+		,SS_GetCameraPerspective( angle, aspect, znear, zfar )
 	);
 }
-function get_camera_3d( pos, dir, up, angle, aspect, znear, zfar )
+function SS_GetCamera3D( pos, dir, up, angle, aspect, znear, zfar )
 {
 	return
 	[
-		get_camera_lookat( pos, dir, up )
-		,get_camera_perspective( angle, aspect, znear, zfar )
+		SS_GetCameraLookAt( pos, dir, up )
+		,SS_GetCameraPerspective( angle, aspect, znear, zfar )
 	];
 }
 
-function draw_fitted( tex, left, right, top, bottom, placement )
+function SS_DrawFitted( tex, left, right, top, bottom, placement )
 {
 	xq = 1;
 	yq = 1;
@@ -245,14 +245,14 @@ function draw_fitted( tex, left, right, top, bottom, placement )
 			ih = rh;
 		}
 	}
-	draw({
+	SS_Draw({
 		preset = "tile", texture = tex,
 		position = [ ( rw - iw ) / 2 * xq + left, ( rh - ih ) / 2 * yq + top ],
 		scale = [ iw, ih ],
 	});
 }
 
-function draw_button( tex, left, right, top, bottom, off, texoff )
+function SS_DrawButton( tex, left, right, top, bottom, off, texoff )
 {
 	off ||= 8;
 	texoff ||= off;
@@ -294,6 +294,6 @@ function draw_button( tex, left, right, top, bottom, off, texoff )
 		[1-tox, 1-toy], [1, 1-toy], [1, 1], [1-tox, 1],
 	];
 
-	draw({ texture = tex, mode = PT_QUADS, vertices = V, vtexcoords = T, position=[0,0] });
+	SS_Draw({ texture = tex, mode = PT_QUADS, vertices = V, vtexcoords = T, position=[0,0] });
 }
 
