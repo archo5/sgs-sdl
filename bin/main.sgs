@@ -96,6 +96,7 @@ function initialize()
 	}
 	
 	global HG = Histogram.create(200);
+	global HG2 = Histogram.create(200);
 	
 	println();
 	global image = SS_CreateTexture( "crosshair.png", "mipmaps" );
@@ -163,8 +164,11 @@ function update()
 	
 	// EXTENSIONS
 	SS_DrawColorRect( 800, 200, 900, 250, 0.7, 0.5, 0.3, 0.5 );
-	ddd = 16;
-	ccc = 32;
+	ddd = 32;
+	ccc = 16;
+	
+	hg2t0 = ftime();
+	
 	for( y = 0; y < ccc; ++y )
 	{
 		for( x = 0; x < ccc; ++x )
@@ -172,6 +176,8 @@ function update()
 			SS_DrawTexRect( 800+x*ddd, 300+y*ddd, 832+x*ddd, 332+y*ddd, g_edtex );
 		}
 	}
+	
+	hg2t1 = ftime();
 	
 	SS_SetCameraUI( 0, W, 0, H );
 	
@@ -213,11 +219,13 @@ function update()
 	
 	ftm = ( ftime() - lasttime ) * 1000.0;
 	HG.push( ftm );
+	HG2.push( ( hg2t1 - hg2t0 ) * 1000.0 );
 	tx = "frame time: " $ ftm $ " ms";
 	SS_DrawTextLine( tx, Font, 101, 1, color(0,0,0) );
 	SS_DrawTextLine( tx, Font, 100, 0, color(0.9,0.8,0.7) );
 //println(tx);
 	HG.draw( 100, 500, 3, -2, 0xffcccccc, 1000/60 );
+	HG2.draw( 100, 500, 3, -2, 0xffcccccc, 1000/60 );
 	
 	SS_DrawTextLine( "allocs per frame: " $ (sys_stat(4) - numallocs), Font, 4, 4, color(1,1,1) );
 	
