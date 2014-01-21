@@ -12,6 +12,7 @@
 
 #include "ss_cfg.h"
 
+#include <stdio.h>
 #ifdef SS_USED3D
 #  undef VT_NULL
 #  undef VT_BOOL
@@ -30,13 +31,13 @@ extern void* GD3DDev;
 #undef MIN
 #undef MAX
 
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 
-#define SDL_VIDEO_DEVICELOST SDL_USEREVENT + 1
-#define SDL_VIDEO_DEVICERESET SDL_USEREVENT + 2
+#define SDL_VIDEODEVICELOST SDL_USEREVENT + 1
+#define SDL_VIDEODEVICERESET SDL_USEREVENT + 2
 #ifndef SS_USED3D
 #  define GL_GLEXT_PROTOTYPES
-#  include "SDL/SDL_opengl.h"
+#  include "SDL2/SDL_opengl.h"
 #  include "glext.h"
 extern PFNGLBLENDEQUATIONPROC ss_glBlendEquation;
 #endif

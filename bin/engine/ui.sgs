@@ -1112,11 +1112,11 @@ function UIFrame.moved( me )
 
 function UIFrame.event( e )
 {
-	if( e.type == SDL_VIDEORESIZE )
+	if( e.type == SDL_WINDOWEVENT && e.event == SDL_WINDOWEVENT_RESIZED )
 	{
-		this.w = e.w;
-		this.h = e.h;
-		this.onresize( e.w, e.h );
+		this.w = e.data1;
+		this.h = e.data2;
+		this.onresize( this.w, this.h );
 		this.onlayout();
 	}
 	if( e.type == SDL_MOUSEMOTION )

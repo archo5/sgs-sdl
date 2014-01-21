@@ -1,6 +1,4 @@
 
-#include <SDL/SDL_syswm.h>
-
 #include "ss_main.h"
 
 #include "../sgscript/ext/sgs_idbg.h"
@@ -137,7 +135,7 @@ int ss_Initialize( int argc, char* argv[] )
 		fprintf( stderr, "Couldn't initialize SDL: %s\n", SDL_GetError() );
 		return -5;
 	}
-	SDL_EnableUNICODE( 1 );
+	
 	SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 8 );
 	SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 8 );
 	SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 8 );
@@ -241,18 +239,6 @@ void* ss_GetPtr( int pid )
 	switch( pid )
 	{
 	case SS_PTR_SGSCTX: return C;
-	case SS_PTR_WINDOW:
-		{
-			SDL_SysWMinfo sysinfo;
-			SDL_VERSION( &sysinfo.version );
-			if( SDL_GetWMInfo( &sysinfo ) <= 0 )
-				return NULL;
-#if defined(SDL_VIDEO_DRIVER_X11)
-			return (void*) sysinfo.info.x11.window;
-#else
-			return (void*) sysinfo.window;
-#endif
-		}
 	case SS_PTR_D3DDEV: return GD3DDev;
 	}
 	return NULL;

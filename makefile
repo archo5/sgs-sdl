@@ -16,7 +16,7 @@ ifdef SystemRoot
 	COMPATHS = -Isdl-win/include -Ifreetype/include
 	LINUXHACKPRE =
 	LINUXHACKPOST =
-	PLATPOST = $(CP) $(call FixPath,sdl-win/bin/SDL.dll bin) & \
+	PLATPOST = $(CP) $(call FixPath,sdl-win/bin/SDL2.dll bin) & \
 	           $(CP) $(call FixPath,freeimage/FreeImage.dll bin) & \
 	           $(CP) $(call FixPath,freetype/libfreetype-6.dll bin) & \
 	           $(CP) $(call FixPath,sgscript/bin/sgscript.dll bin) & \
@@ -82,7 +82,7 @@ $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT): $(OBJ)
 	$(MAKE) -C sgscript xgmath
 	$(LINUXHACKPRE)
 	gcc -o $@ $(OBJ) $(C2FLAGS) -Lsgscript/bin $(LINKPATHS) $(PLATFLAGS) \
-		-lSDLmain -lSDL -lsgscript -lfreeimage -shared
+		-lSDL2main -lSDL2 -lsgscript -lfreeimage -shared
 	$(LINUXHACKPOST)
 	$(PLATPOST)
 

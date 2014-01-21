@@ -63,13 +63,24 @@ function switch()
 
 function initialize()
 {
-	SS_SetCaption( "The SGS-SDL Game Framework" );
-	printvar( SS_ListVideoModes("fullscreen") );
+	printvar( SS_GetPlatformInfo() );
+	printvar( SS_GetPowerInfo() );
+	printvar( SS_GetVideoDrivers() );
+	dmodes = [];
+	cnt = SS_GetNumDisplays();
+	for( i = 0; i < cnt; ++i )
+		dmodes.push({ name = SS_GetDisplayName( i ), modes = SS_GetDisplayModes( i ) });
+	printvar( dmodes );
+	
+//	SS_SetCaption( "The SGS-SDL Game Framework" );
 	SS_SetGLAttrib( SDL_GL_DEPTH_SIZE, 24 );
 	SS_SetGLAttrib( SDL_GL_STENCIL_SIZE, 8 );
-	switch();
+//	switch();
 //	grab_input(true);
 //	show_cursor(false);
+	global Window = SS_CreateWindow( "SGS-SDL Game Framework", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 576 );
+	global W = 1024;
+	global H = 576;
 	
 	global UI = UIFrame.create( 1024, 576 );
 //	UI.addChild( UIControl.createButton( "Make it rain!", 10, 10, 120, 40, function(){} ) );
@@ -229,7 +240,7 @@ function update()
 	
 	SS_DrawTextLine( "allocs per frame: " $ (sys_stat(4) - numallocs), Font, 4, 4, color(1,1,1) );
 	
-	SS_Present();
+	Window.swap();
 
 	sleeptime = 15 - ( ftime() - lasttime ) * 1000;
 //	if( sleeptime > 0 ) SS_Sleep( sleeptime );
@@ -246,8 +257,8 @@ function on_event( e )
 	}
 	if( e.type == SDL_KEYDOWN && e.keycode == SDLK_F11 )
 		switch();
-	if( e.type == SDL_VIDEO_DEVICELOST ) println( "Device lost!" );
-	if( e.type == SDL_VIDEO_DEVICERESET ) println( "Device reset!" );
+	if( e.type == SDL_VIDEODEVICELOST ) println( "Device lost!" );
+	if( e.type == SDL_VIDEODEVICERESET ) println( "Device reset!" );
 
 	UI.event( e );
 }
