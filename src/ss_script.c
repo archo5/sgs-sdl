@@ -15,7 +15,7 @@
 
 #define _WARN( err ) return sgs_Printf( C, SGS_WARNING, err );
 
-sgs_Integer sgs_GlobalInt( SGS_CTX, const char* name )
+sgs_Integer ss_GlobalInt( SGS_CTX, const char* name )
 {
 	sgs_Integer v;
 	if( sgs_PushGlobal( C, name ) != SGS_SUCCESS )
@@ -25,7 +25,7 @@ sgs_Integer sgs_GlobalInt( SGS_CTX, const char* name )
 	return v;
 }
 
-uint32_t sgs_GetFlagString( SGS_CTX, int pos, flag_string_item_t* items )
+uint32_t ss_GetFlagString( SGS_CTX, int pos, flag_string_item_t* items )
 {
 	char* str;
 	uint32_t flags = 0;
@@ -47,17 +47,17 @@ uint32_t sgs_GetFlagString( SGS_CTX, int pos, flag_string_item_t* items )
 	return flags;
 }
 
-uint32_t sgs_GlobalFlagString( SGS_CTX, const char* name, flag_string_item_t* items )
+uint32_t ss_GlobalFlagString( SGS_CTX, const char* name, flag_string_item_t* items )
 {
 	uint32_t flags = 0;
 	if( sgs_PushGlobal( C, name ) != SGS_SUCCESS )
 		return 0;
-	flags = sgs_GetFlagString( C, -1, items );
+	flags = ss_GetFlagString( C, -1, items );
 	sgs_Pop( C, 1 );
 	return flags;
 }
 
-int sgs_UnpackDict( SGS_CTX, int pos, dict_unpack_item_t* items )
+int ss_UnpackDict( SGS_CTX, int pos, dict_unpack_item_t* items )
 {
 	int ret = 0;
 	sgs_String32 S;
@@ -86,7 +86,7 @@ int sgs_UnpackDict( SGS_CTX, int pos, dict_unpack_item_t* items )
 	return ret;
 }
 
-void sgs_UnpackFree( SGS_CTX, dict_unpack_item_t* items )
+void ss_UnpackFree( SGS_CTX, dict_unpack_item_t* items )
 {
 	while( items->name )
 	{
@@ -99,9 +99,8 @@ void sgs_UnpackFree( SGS_CTX, dict_unpack_item_t* items )
 /*
 	C O L O R
 */
-int stdlib_tocolor4( SGS_CTX, int pos, sgs_Real* v4f )
+int ss_ParseColor( SGS_CTX, int pos, float* v4f )
 {
-	float tmp[4];
 	if( sgs_ItemTypeExt( C, pos ) == VTC_ARRAY )
 	{
 		int i;
@@ -110,10 +109,12 @@ int stdlib_tocolor4( SGS_CTX, int pos, sgs_Real* v4f )
 			return 0;
 		for( i = 0; i < size; ++i )
 		{
+			sgs_Real tmp;
 			if( sgs_PushNumIndex( C, pos, i ) )
 				return 0;
-			if( !sgs_ParseReal( C, -1, v4f + i ) )
+			if( !sgs_ParseReal( C, -1, &tmp ) )
 			{
+				v4f[ i ] = tmp;
 				sgs_Pop( C, 1 );
 				return 0;
 			}
@@ -127,19 +128,13 @@ int stdlib_tocolor4( SGS_CTX, int pos, sgs_Real* v4f )
 		}
 		return 1;
 	}
-	if( sgs_ParseColor( C, pos, tmp, 0 ) )
-	{
-		v4f[0] = tmp[0];
-		v4f[1] = tmp[1];
-		v4f[2] = tmp[2];
-		v4f[3] = tmp[3];
+	if( sgs_ParseColor( C, pos, v4f, 0 ) )
 		return 1;
-	}
 	return 0;
 }
 
 
-int sgs_InitExtMath( SGS_CTX )
+int ss_InitExtMath( SGS_CTX )
 {
 	return xgm_module_entry_point( C );
 }
@@ -160,7 +155,7 @@ sgs_RegFuncConst es_fconsts[] =
 	FN( sgs_objcount ),
 };
 
-int sgs_InitExtSys( SGS_CTX )
+int ss_InitExtSys( SGS_CTX )
 {
 	int ret;
 	ret = sgs_RegFuncConsts( C, es_fconsts, ARRAY_SIZE( es_fconsts ) );
@@ -177,44 +172,8 @@ int sgs_InitExtSys( SGS_CTX )
 	API
 */
 
-extern sgs_ObjCallback tex_iface[];
-
-int ss_parse_texture( SGS_CTX, int item, sgs_Texture** tex )
+int ss_InitAPI( SGS_CTX )
 {
-	if( !sgs_IsObject( C, item, tex_iface ) )
-		return 0;
-	if( tex )
-		*tex = (sgs_Texture*) sgs_GetObjectData( C, item );
-	return 1;
-}
-
-void* ss_get_iface( int which )
-{
-	switch( which )
-	{
-#ifdef SS_USED3D
-	case SSI_D3D: return GD3D;
-	case SSI_D3D_DEVICE: return GD3DDev;
-#endif
-	case SSI_TEX_IFACE: return tex_iface;
-	}
-	return NULL;
-}
-
-int sgs_InitAPI( SGS_CTX )
-{
-	int ret;
-	
-	sgs_RegisterType( C, "texture", tex_iface );
-	
-	sgs_PushPtr( C, ss_parse_texture );
-	ret = sgs_StoreGlobal( C, SS_PARSE_TEXTURE_KEY );
-	if( ret != SGS_SUCCESS ) return ret;
-	
-	sgs_PushPtr( C, ss_get_iface );
-	ret = sgs_StoreGlobal( C, SS_GET_IFACE_KEY );
-	if( ret != SGS_SUCCESS ) return ret;
-	
 #ifdef SS_USED3D
 	sgs_PushInt( C, 1 );
 	sgs_PushInt( C, 1 );

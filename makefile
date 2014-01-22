@@ -39,6 +39,7 @@ else
 	BINEXT=
 	LIBPFX=lib
 	LIBEXT=.so
+	video=nod3d
 endif
 
 ifeq ($(arch),64)
@@ -58,18 +59,18 @@ else
 	CFLAGS = -D_DEBUG -g -Wall $(ARCHFLAGS)
 endif
 
-ifeq ($(video),gl)
-	VIDEOFLAGS = -DSGS_SDL_RENDERER_OPENGL
-else
-	VIDEOFLAGS = -DSGS_SDL_RENDERER_DIRECT3D
-endif
-
 C2FLAGS = $(CFLAGS) $(VIDEOFLAGS) -DBUILDING_SGS_SDL
 
-_DEPS = ss_main.h ss_api.h ss_cfg.h
-DEPS = $(patsubst %,$(SRCDIR)/%,$(_DEPS))
+_DEPS = ss_main.h ss_cfg.h
+_OBJ = ss_main.o ss_script.o ss_sdl.o ss_render.o ss_image.o ss_render_gl.o
 
-_OBJ = ss_main.o ss_script.o ss_sdl.o ss_render.o ss_image.o
+ifneq ($(video),nod3d)
+	VIDEOFLAGS = -DSGS_SDL_HAS_DIRECT3D
+	_OBJ += ss_render_d3d9.o
+endif
+
+
+DEPS = $(patsubst %,$(SRCDIR)/%,$(_DEPS))
 OBJ = $(patsubst %,$(OBJDIR)/%,$(_OBJ))
 
 

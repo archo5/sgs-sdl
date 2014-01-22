@@ -79,6 +79,7 @@ function initialize()
 //	grab_input(true);
 //	show_cursor(false);
 	global Window = SS_CreateWindow( "SGS-SDL Game Framework", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 576 );
+	Window.initRenderer();
 	global W = 1024;
 	global H = 576;
 	

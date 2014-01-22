@@ -6,14 +6,6 @@
 #include "ss_main.h"
 
 
-#define ssGetProcAddress SDL_GL_GetProcAddress
-
-
-#ifndef SS_USED3D
-PFNGLBLENDEQUATIONPROC ss_glBlendEquation;
-#endif
-
-
 #define FN( f ) { "SS_" #f, SS_##f }
 #define IC( i ) { #i, i }
 #define IC_SDL( i ) { "SDL_" #i, i }
@@ -22,64 +14,35 @@ PFNGLBLENDEQUATIONPROC ss_glBlendEquation;
 
 
 
-int g_width = 0;
-int g_height = 0;
-
-
+extern SS_RenderInterface GRI_GL;
 #ifdef SS_USED3D
-IDirect3D9* GD3D = NULL;
-IDirect3DDevice9* GD3DDev = NULL;
-D3DPRESENT_PARAMETERS GD3DPP;
-
-
-static void _ss_reset_states()
-{
-	IDirect3DDevice9_SetTextureStageState( GD3DDev, 0, D3DTSS_COLORARG2, D3DTA_DIFFUSE );
-	IDirect3DDevice9_SetTextureStageState( GD3DDev, 0, D3DTSS_ALPHAOP, D3DTOP_MODULATE );
-	IDirect3DDevice9_SetTextureStageState( GD3DDev, 0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE );
-	IDirect3DDevice9_SetTextureStageState( GD3DDev, 0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE );
-	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_LIGHTING, 0 );
-	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_CULLMODE, D3DCULL_NONE );
-	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_ZENABLE, 0 );
-	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_ALPHABLENDENABLE, 1 );
-	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
-	IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
-	{
-		float wm[ 16 ] = { 1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1 };
-		float vm[ 16 ] = { 1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 100,  0, 0, 0, 1 };
-		float pm[ 16 ] = { 2.0f/1024.0f, 0, 0, 0,  0, 2.0f/576.0f, 0, 0,  0, 0, 1.0f/999.0f, 1.0f/-999.0f,  0, 0, 0, 1 };
-		IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_WORLD, (D3DMATRIX*) wm );
-		IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_VIEW, (D3DMATRIX*) vm );
-		IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_PROJECTION, (D3DMATRIX*) pm );
-	}
-}
-
-static int _ss_reset_device( SGS_CTX )
-{
-	D3DPRESENT_PARAMETERS npp;
-	SDL_Event event;
-	
-	npp = GD3DPP;
-	
-	event.type = SDL_VIDEO_DEVICELOST;
-	sgs_CreateSDLEvent( C, &event );
-	sgs_GlobalCall( C, "on_event", 1, 0 );
-	
-	IDirect3DDevice9_Reset( GD3DDev, &npp );
-	
-	_ss_reset_states();
-	
-	event.type = SDL_VIDEO_DEVICERESET;
-	sgs_CreateSDLEvent( C, &event );
-	sgs_GlobalCall( C, "on_event", 1, 0 );
-	
-	return 1;
-}
-
-#else
-void* GD3D = NULL;
-void* GD3DDev = NULL;
+extern SS_RenderInterface GRI_D3D9;
 #endif
+
+static SS_RenderInterface* ri_pick( int id )
+{
+	if( id == SS_RENDERER_OPENGL ) return &GRI_GL;
+#ifdef SS_USED3D
+	if( id == SS_RENDERER_DIRECT3D9 ) return &GRI_D3D9;
+#endif
+	return NULL;
+}
+
+static void ri_init()
+{
+	GRI_GL.init();
+#ifdef SS_USED3D
+	GRI_D3D9.init();
+#endif
+}
+
+static void ri_free()
+{
+	GRI_GL.free();
+#ifdef SS_USED3D
+	GRI_D3D9.free();
+#endif
+}
 
 
 
@@ -161,18 +124,6 @@ int SS_Sleep( SGS_CTX )
 	
 	SDL_Delay( time );
 	return 0;
-}
-
-int SS_SetGLAttrib( SGS_CTX )
-{
-	sgs_Integer attr, val;
-	SGSFN( "SS_SetGLAttrib" );
-	
-	if( !sgs_ParseInt( C, 0, &attr ) || !sgs_ParseInt( C, 1, &val ) )
-		_WARN( "function expects 2 arguments: int, int" )
-	
-	sgs_PushBool( C, SDL_GL_SetAttribute( attr, val ) == 0 );
-	return 1;
 }
 
 int SS_EnableScreenSaver( SGS_CTX ){ SGSFN( "SS_EnableScreenSaver" ); SDL_EnableScreenSaver(); return 0; }
@@ -432,8 +383,8 @@ static int SS_GetDesktopDisplayMode( SGS_CTX )
 typedef struct _ss_window
 {
 	SDL_Window* window;
-	SDL_Renderer* renderer;
-	SDL_GLContext* gl_context;
+	SS_RenderInterface* riface;
+	SS_Renderer* renderer;
 }
 ss_window;
 
@@ -539,11 +490,44 @@ static int ss_windowI_warpMouse( SGS_CTX )
 	return 0;
 }
 
-static int ss_windowI_swap( SGS_CTX )
+static int ss_windowI_initRenderer( SGS_CTX )
 {
-	WND_IHDR( swap );
-	SDL_GL_SwapWindow( W->window );
-	return 0;
+	sgs_Int renderer = SS_RENDERER_DONTCARE, version = SS_RENDERER_DONTCARE, flags = 0;
+	SS_RenderInterface* riface;
+	SS_Renderer* R;
+	WND_IHDR( initRenderer );
+	
+	if( !sgs_LoadArgs( C, "@>|iii", &renderer, &version, &flags ) )
+		return 0;
+	
+	if( W->riface )
+		return sgs_Printf( C, SGS_WARNING, "free the current renderer to initialize a new one" );
+	
+	if( renderer != SS_RENDERER_DONTCARE &&
+		renderer != SS_RENDERER_OPENGL &&
+		renderer != SS_RENDERER_DIRECT3D9 )
+		return sgs_Printf( C, SGS_WARNING, "invalid renderer specified" );
+	
+	if( renderer == SS_RENDERER_DONTCARE )
+#ifdef SS_USED3D
+		renderer = SS_RENDERER_DIRECT3D9;
+#else
+		renderer = SS_RENDERER_OPENGL;
+#endif
+	
+	riface = ri_pick( renderer );
+	if( !riface )
+		return sgs_Printf( C, SGS_WARNING, "specified renderer is unavailable" );
+	
+	R = riface->create( W->window, version, flags );
+	if( !R )
+		return sgs_Printf( C, SGS_WARNING, "failed to create the renderer: %s", riface->last_error );
+	
+	W->riface = riface;
+	W->renderer = R;
+	
+	sgs_PushBool( C, 1 );
+	return 1;
 }
 
 
@@ -567,7 +551,7 @@ static int ss_window_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 		if( !strcmp( str, "setMaxSize" ) ){ sgs_PushCFunction( C, ss_windowI_setMaxSize ); return SGS_SUCCESS; }
 		if( !strcmp( str, "setMinSize" ) ){ sgs_PushCFunction( C, ss_windowI_setMinSize ); return SGS_SUCCESS; }
 		if( !strcmp( str, "warpMouse" ) ){ sgs_PushCFunction( C, ss_windowI_warpMouse ); return SGS_SUCCESS; }
-		if( !strcmp( str, "swap" ) ){ sgs_PushCFunction( C, ss_windowI_swap ); return SGS_SUCCESS; }
+		if( !strcmp( str, "initRenderer" ) ){ sgs_PushCFunction( C, ss_windowI_initRenderer ); return SGS_SUCCESS; }
 		
 		/* data properties */
 		if( !strcmp( str, "brightness" ) ){ sgs_PushReal( C, SDL_GetWindowBrightness( W->window ) ); return SGS_SUCCESS; }
@@ -638,7 +622,7 @@ static int ss_window_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 		if( !strcmp( str, "title" ) ){ sgs_PushString( C, SDL_GetWindowTitle( W->window ) ); return SGS_SUCCESS; }
 		
 		/* special properties */
-		if( !strcmp( str, "window" ) )
+		if( !strcmp( str, "nativeWindow" ) )
 		{
 			SDL_SysWMinfo sysinfo;
 			SDL_VERSION( &sysinfo.version );
@@ -660,6 +644,16 @@ static int ss_window_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 #endif
 			return SGS_SUCCESS;
 		}
+		
+		/*
+#ifdef SS_USED3D
+		if( !strcmp( str, "nativeD3D9" ) ){ sgs_PushPtr( C, W->d3d9 ); return SGS_SUCCESS; }
+		if( !strcmp( str, "nativeD3D9Device" ) ){ sgs_PushPtr( C, W->d3d9_dev ); return SGS_SUCCESS; }
+#else
+		if( !strcmp( str, "nativeD3D9" ) ){ sgs_PushPtr( C, NULL ); return SGS_SUCCESS; }
+		if( !strcmp( str, "nativeD3D9Device" ) ){ sgs_PushPtr( C, NULL ); return SGS_SUCCESS; }
+#endif
+		*/
 	}
 	
 	return SGS_ENOTFND;
@@ -744,10 +738,8 @@ static int ss_window_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 {
 	WND_HDR;
 	UNUSED( unused );
-	if( W->gl_context )
-		SDL_GL_DeleteContext( W->gl_context );
 	if( W->renderer )
-		SDL_DestroyRenderer( W->renderer );
+		W->riface->destroy( W->renderer );
 	SDL_DestroyWindow( W->window );
 	return SGS_SUCCESS;
 }
@@ -774,31 +766,49 @@ static int SS_CreateWindow( SGS_CTX )
 	W = (ss_window*) sgs_PushObjectIPA( C, sizeof(ss_window), ss_window_iface );
 	W->window = SDL_CreateWindow( str, x, y, w, h, f );
 	W->renderer = NULL;
-	W->gl_context = NULL;
+	W->riface = NULL;
 	if( !W->window )
 		return sgs_Printf( C, SGS_WARNING, "failed to create a window" );
-	
-	W->gl_context = SDL_GL_CreateContext( W->window );
-	if( !W->gl_context )
-		return sgs_Printf( C, SGS_WARNING, "failed to create OpenGL context" );
-	
-	ss_glBlendEquation = (PFNGLBLENDEQUATIONPROC) ssGetProcAddress( "glBlendEquation" );
-	
-	glDisable( GL_DEPTH_TEST );
-	glMatrixMode( GL_MODELVIEW );
-	glLoadIdentity();
-	glTranslatef( 0, 0, -100 );
-	glMatrixMode( GL_PROJECTION );
-	glLoadIdentity();
-	glOrtho( 0, w, h, 0, 1, 1000 );
-	
-	glEnable( GL_BLEND );
-	glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-	
-	glEnable( GL_ALPHA_TEST );
-	glAlphaFunc( GL_GREATER, 0 );
+	SDL_SetWindowData( W->window, "sgsobj", sgs_GetObjectStruct( C, -1 ) );
 	
 	return 1;
+}
+
+static int SS_GetWindowFromID( SGS_CTX )
+{
+	sgs_VarObj* obj;
+	SDL_Window* win;
+	sgs_Int id;
+	SGSFN( "SS_GetWindowFromID" );
+	if( !sgs_LoadArgs( C, "i", &id ) )
+		return 0;
+	win = SDL_GetWindowFromID( id );
+	if( !win )
+		return 0;
+	obj = (sgs_VarObj*) SDL_GetWindowData( win, "sgsobj" );
+	if( !obj )
+		sgs_PushPtr( C, win );
+	else
+	{
+		sgs_Variable var;
+		var.type = SGS_VTC_OBJECT;
+		var.data.O = obj;
+		sgs_PushVariable( C, &var );
+	}
+	return 1;
+}
+
+static ss_window* ss_window_from_id( Uint32 id )
+{
+	sgs_VarObj* obj;
+	SDL_Window* win;
+	win = SDL_GetWindowFromID( id );
+	if( !win )
+		return NULL;
+	obj = (sgs_VarObj*) SDL_GetWindowData( win, "sgsobj" );
+	if( !obj )
+		return NULL;
+	return (ss_window*) obj->data;
 }
 
 
@@ -941,52 +951,42 @@ int SS_GetRelativeMouseState( SGS_CTX )
 	return 1;
 }
 
-/*
-	the buffer control functions
-*/
+
+int SS_SetGLAttrib( SGS_CTX )
+{
+	sgs_Integer attr, val;
+	SGSFN( "SS_SetGLAttrib" );
+	
+	if( !sgs_ParseInt( C, 0, &attr ) || !sgs_ParseInt( C, 1, &val ) )
+		_WARN( "function expects 2 arguments: int, int" )
+	
+	sgs_PushBool( C, SDL_GL_SetAttribute( attr, val ) == 0 );
+	return 1;
+}
+
 int SS_Clear( SGS_CTX )
 {
-	sgs_Real col[ 4 ];
+	float col[ 4 ];
 	SGSFN( "SS_Clear" );
+	SCRFN_NEEDS_RENDER_CONTEXT;
+	
 	if( sgs_StackSize( C ) != 1 ||
-		!stdlib_tocolor4( C, 0, col ) )
+		!ss_ParseColor( C, 0, col ) )
 		_WARN( "function expects 1 argument: array of 1-4 real values" )
 	
-#ifndef SS_USED3D
-	glClearDepth( 1.0f );
-	glClearColor( col[0], col[1], col[2], col[3] );
-	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-#else
-	if( GD3DDev )
-	{
-		uint32_t cc = (((uint8_t)(col[3]*255))<<24) | (((uint8_t)(col[0]*255))<<16) |
-			(((uint8_t)(col[1]*255))<<8) | (((uint8_t)(col[2]*255)));
-		IDirect3DDevice9_Clear( GD3DDev, 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, cc, 1.0f, 0 );
-	}
-#endif
+	GCurRI->clear( GCurRr, col );
 	return 0;
 }
 
-/*
 int SS_Present( SGS_CTX )
 {
 	SGSFN( "SS_Present" );
-#ifndef SS_USED3D
-	SDL_GL_SwapBuffers();
-#else
-	IDirect3DDevice9_EndScene( GD3DDev );
-	if( IDirect3DDevice9_Present( GD3DDev, NULL, NULL, NULL, NULL ) == D3DERR_DEVICELOST )
-	{
-		if( IDirect3DDevice9_TestCooperativeLevel( GD3DDev ) == D3DERR_DEVICENOTRESET )
-		{
-			_ss_reset_device( C );
-		}
-	}
-	IDirect3DDevice9_BeginScene( GD3DDev );
-#endif
+	SCRFN_NEEDS_RENDER_CONTEXT;
+	
+	GCurRI->swap( GCurRr );
 	return 0;
 }
-*/
+
 
 sgs_RegIntConst sdl_ints[] =
 {
@@ -1461,16 +1461,17 @@ sgs_RegFuncConst sdl_funcs[] =
 	{ "SDL_WINDOWPOS_UNDEFINED_DISPLAY", SS_SDL_WINDOWPOS_UNDEFINED_DISPLAY },
 	{ "SDL_WINDOWPOS_CENTERED_DISPLAY", SS_SDL_WINDOWPOS_CENTERED_DISPLAY },
 	
-	FN( SetGLAttrib ),
-	FN( CreateWindow ),
-/*	FN( SetVideoMode ), FN( ListVideoModes ), */
+	FN( CreateWindow ), FN( GetWindowFromID ),
+	
 	FN( ShowCursor ),
 	FN( WarpMouse ),
 	FN( GetMouseState ), FN( GetRelativeMouseState ),
-	FN( Clear ),
+	
+	FN( SetGLAttrib ),
+	FN( Clear ), FN( Present ),
 };
 
-int sgs_InitSDL( SGS_CTX )
+int ss_InitSDL( SGS_CTX )
 {
 	int ret;
 	ret = sgs_RegIntConsts( C, sdl_ints, ARRAY_SIZE( sdl_ints ) );
@@ -1478,20 +1479,19 @@ int sgs_InitSDL( SGS_CTX )
 	ret = sgs_RegFuncConsts( C, sdl_funcs, ARRAY_SIZE( sdl_funcs ) );
 	if( ret != SGS_SUCCESS ) return ret;
 	
+	ri_init();
+	
 	return SGS_SUCCESS;
 }
 
 
-void sgs_FreeGraphics( SGS_CTX )
+void ss_FreeGraphics( SGS_CTX )
 {
-#ifdef SS_USED3D
-	IDirect3DDevice9_Release( GD3DDev );
-	IDirect3D9_Release( GD3D );
-#endif
+	ri_free();
 }
 
 
-int sgs_CreateSDLEvent( SGS_CTX, SDL_Event* event )
+int ss_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 {
 	int osz, ret;
 	
@@ -1571,16 +1571,10 @@ int sgs_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 		sgs_PushInt( C, event->window.windowID );
 		if( event->window.event == SDL_WINDOWEVENT_RESIZED )
 		{
-#ifdef SS_USED3D
-			if( GD3DPP.BackBufferWidth != event->window.data1 || GD3DPP.BackBufferHeight != event->window.data2 )
-			{
-				GD3DPP.BackBufferWidth = event->window.data1;
-				GD3DPP.BackBufferHeight = event->window.data2;
-				_ss_reset_device( C );
-			}
-#else
-			glViewport( 0, 0, event->window.data1, event->window.data2 );
-#endif
+			int modlist[] = { SS_RMOD_WIDTH, event->window.data1, SS_RMOD_HEIGHT, event->window.data2, 0 };
+			ss_window* W = ss_window_from_id( event->window.windowID );
+			if( W )
+				W->riface->modify( W->renderer, modlist );
 		}
 		sgs_PushString( C, "event" );
 		sgs_PushBool( C, event->window.event );

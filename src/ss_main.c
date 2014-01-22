@@ -26,6 +26,10 @@ SGS_CTX;
 sgs_IDbg D;
 sgs_Prof P;
 
+
+sgs_Context* ss_GetContext(){ return C; }
+
+
 int g_enabledProfiler = 0;
 
 int SS_EnableProfiler( SGS_CTX )
@@ -38,7 +42,7 @@ int SS_EnableProfiler( SGS_CTX )
 	return 0;
 }
 
-int sgs_InitDebug( SGS_CTX )
+int ss_InitDebug( SGS_CTX )
 {
 	sgs_PushCFunction( C, SS_EnableProfiler );
 	sgs_StoreGlobal( C, "SS_EnableProfiler" );
@@ -73,11 +77,11 @@ int ss_Initialize( int argc, char* argv[] )
 	sgs_LoadLib_String( C );
 	sgs_GlobalCall( C, "loadtypeflags", 0, 0 );
 
-	sgs_InitDebug( C );
-	sgs_InitExtSys( C );
-	sgs_InitExtMath( C );
-	sgs_InitImage( C );
-	sgs_InitAPI( C );
+	ss_InitDebug( C );
+	ss_InitExtSys( C );
+	ss_InitExtMath( C );
+	ss_InitImage( C );
+	ss_InitAPI( C );
 	
 	/* preinit tmp buffer */
 	g_tmpbuf = sgs_membuf_create();
@@ -93,6 +97,10 @@ int ss_Initialize( int argc, char* argv[] )
 		sgs_PushArray( C, argc - 1 );
 		sgs_StoreGlobal( C, "sys_args" );
 	}
+	
+	/* push some system info */
+	sgs_PushPtr( C, C );
+	sgs_StoreGlobal( C, "sys_scripting_engine" );
 	
 	/* run the preconfig script */
 	sgs_ExecString( C, scr_preconfig );
@@ -142,14 +150,14 @@ int ss_Initialize( int argc, char* argv[] )
 	SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 	
 	/* initialize script-space SDL API */
-	if( sgs_InitSDL( C ) )
+	if( ss_InitSDL( C ) )
 	{
 		fprintf( stderr, "Couldn't initialize SDL API\n" );
 		return -6;
 	}
 	
 	/* initialize script-space rendering API */
-	if( sgs_InitGL( C ) )
+	if( ss_InitGraphics( C ) )
 	{
 		fprintf( stderr, "Couldn't initialize rendering API\n" );
 		return -7;
@@ -167,7 +175,7 @@ int ss_Initialize( int argc, char* argv[] )
 
 int ss_Frame()
 {
-	if( sgs_GlobalInt( C, "sys_exit" ) )
+	if( ss_GlobalInt( C, "sys_exit" ) )
 		return 1;
 	
 	{
@@ -181,7 +189,7 @@ int ss_Frame()
 				sgs_ExecString( C, "global sys_exit = true;" );
 				break;
 			}
-			if( sgs_CreateSDLEvent( C, &event ) || sgs_GlobalCall( C, "on_event", 1, 0 ) )
+			if( ss_CreateSDLEvent( C, &event ) || sgs_GlobalCall( C, "on_event", 1, 0 ) )
 			{
 				fprintf( stderr, "error in event creation\n" );
 				sgs_Pop( C, sgs_StackSize( C ) - ssz );
@@ -195,7 +203,7 @@ int ss_Frame()
 			}
 		}
 		
-		if( sgs_GlobalInt( C, "sys_exit" ) )
+		if( ss_GlobalInt( C, "sys_exit" ) )
 			return 1;
 	
 		/* advance the application exactly one frame */
@@ -229,18 +237,8 @@ int ss_Free()
 	sgs_CloseIDbg( C, &D );
 	sgs_DestroyEngine( C );
 	
-	sgs_FreeGraphics( C );
+	ss_FreeGraphics( C );
 	
 	return 0;
-}
-
-void* ss_GetPtr( int pid )
-{
-	switch( pid )
-	{
-	case SS_PTR_SGSCTX: return C;
-	case SS_PTR_D3DDEV: return GD3DDev;
-	}
-	return NULL;
 }
 

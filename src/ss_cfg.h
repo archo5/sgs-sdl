@@ -10,7 +10,7 @@
 # endif
 #endif
 
-#if defined(_WIN32) && defined(SGS_SDL_RENDERER_DIRECT3D)
+#if defined(_WIN32) && defined(SGS_SDL_HAS_DIRECT3D)
 #  define SS_USED3D 1
 #endif
 

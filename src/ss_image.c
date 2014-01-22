@@ -15,11 +15,11 @@
 
 
 sgs_ObjCallback image_iface[];
-#define IMGHDR sgs_Image* img = (sgs_Image*) data->data
+#define IMGHDR SS_Image* img = (SS_Image*) data->data
 
 int _make_image( SGS_CTX, int16_t w, int16_t h, const void* src )
 {
-	sgs_Image* ii = sgs_Alloc( sgs_Image );
+	SS_Image* ii = sgs_Alloc( SS_Image );
 	ii->width = w;
 	ii->height = h;
 	ii->data = sgs_Alloc_n( uint32_t, w * h );
@@ -41,13 +41,13 @@ int ss_image_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 
 int ss_image_resize( SGS_CTX )
 {
-	sgs_Image* ii = NULL;
+	SS_Image* ii = NULL;
 	sgs_Integer w = 0, h = 0;
 	
 	SGSFN( "image.resize" );
 	
 	sgs_Method( C );
-	if( !stdlib_toimage( C, 0, &ii ) )
+	if( !ss_ParseImage( C, 0, &ii ) )
 		_WARN( "'this' is not an image" )
 	
 	if( !sgs_LoadArgs( C, "@>ii", &w, &h ) )
@@ -86,14 +86,14 @@ end:
 
 int ss_image_clear( SGS_CTX )
 {
-	sgs_Image* ii = NULL;
+	SS_Image* ii = NULL;
 	uint32_t i = 0, cc = 0;
 	uint8_t r = 0, g = 0, b = 0, a = 255;
 	
 	SGSFN( "image.clear" );
 	
 	sgs_Method( C );
-	if( !stdlib_toimage( C, 0, &ii ) )
+	if( !ss_ParseImage( C, 0, &ii ) )
 		_WARN( "'this' is not an image" )
 	
 	if( !sgs_LoadArgs( C, "@>^+ccc|c", &r, &g, &b, &a ) )
@@ -109,14 +109,14 @@ int ss_image_clear( SGS_CTX )
 int ss_image_setData( SGS_CTX )
 {
 	int ret = 0;
-	sgs_Image* ii = NULL;
+	SS_Image* ii = NULL;
 	char* buf = NULL;
 	sgs_SizeVal size = 0, i = 0, pxcnt = 0;
 	
 	SGSFN( "image.setData" );
 	
 	sgs_Method( C );
-	if( !stdlib_toimage( C, 0, &ii ) )
+	if( !ss_ParseImage( C, 0, &ii ) )
 		_WARN( "'this' is not an image" )
 	
 	if( !sgs_LoadArgs( C, "@>m", &buf, &size ) )
@@ -221,7 +221,7 @@ int SS_CreateImage( SGS_CTX )
 }
 
 
-int sgs_LoadImageHelper( SGS_CTX, char* str, int size )
+int ss_LoadImageHelper( SGS_CTX, char* str, int size )
 {
 	char *ptr, *pp, buf[ 64 ];
 	ptr = str + size;
@@ -261,11 +261,11 @@ int SS_LoadImage( SGS_CTX )
 	if( sgs_StackSize( C ) != 1 || !sgs_ParseString( C, 0, &str, &size ) )
 		_WARN( "unexpected arguments; function expects 1 argument: string" )
 	
-	return sgs_LoadImageHelper( C, str, size );
+	return ss_LoadImageHelper( C, str, size );
 }
 
 
-int sgs_CreateImageHelper( SGS_CTX, int16_t w, int16_t h, const void* bits )
+int ss_CreateImageHelper( SGS_CTX, int16_t w, int16_t h, const void* bits )
 {
 	int ret;
 	
@@ -311,7 +311,7 @@ int ss_load_image_( SGS_CTX, int type1, int type2 )
 				_WARN( "failed to prepare image" )
 		}
 		
-		ret = sgs_CreateImageHelper( C, w, h, FreeImage_GetBits( dib ) );
+		ret = ss_CreateImageHelper( C, w, h, FreeImage_GetBits( dib ) );
 		
 		FreeImage_Unload( dib );
 		return ret;
@@ -338,7 +338,7 @@ sgs_RegFuncConst img_funcs[] =
 	FNP( ss_load_image_dds ),
 };
 
-int sgs_InitImage( SGS_CTX )
+int ss_InitImage( SGS_CTX )
 {
 	int ret;
 	ret = sgs_RegIntConsts( C, img_ints, ARRAY_SIZE( img_ints ) );
@@ -349,25 +349,25 @@ int sgs_InitImage( SGS_CTX )
 	return SGS_SUCCESS;
 }
 
-int sgs_IsImageVar( sgs_Variable* var )
+int ss_IsImageVar( sgs_Variable* var )
 {
 	return BASETYPE(var->type) == SVT_OBJECT && var->data.O->iface == image_iface;
 }
 
-int stdlib_toimage( SGS_CTX, int pos, sgs_Image** out )
+int ss_ParseImage( SGS_CTX, int pos, SS_Image** out )
 {
 	if( !sgs_IsObject( C, pos, image_iface ) )
 		return 0;
 	
-	*out = (sgs_Image*) sgs_GetObjectData( C, pos );
+	*out = (SS_Image*) sgs_GetObjectData( C, pos );
 	return 1;
 }
 
 
-sgs_Image* sgs_ImageDS2X( sgs_Image* src, SGS_CTX )
+SS_Image* ss_ImageDS2X( SS_Image* src, SGS_CTX )
 {
 	int x, y;
-	sgs_Image* img;
+	SS_Image* img;
 	uint32_t* data, *srcdata = (uint32_t*) src->data;
 	int w = src->width / 2;
 	int h = src->height / 2;
@@ -375,7 +375,7 @@ sgs_Image* sgs_ImageDS2X( sgs_Image* src, SGS_CTX )
 	if( w < 1 ) w = 1;
 	if( h < 1 ) h = 1;
 	
-	img = sgs_Alloc( sgs_Image );
+	img = sgs_Alloc( SS_Image );
 	img->width = w;
 	img->height = h;
 	img->data = data = sgs_Alloc_n( uint32_t, w * h );
@@ -401,7 +401,7 @@ sgs_Image* sgs_ImageDS2X( sgs_Image* src, SGS_CTX )
 	return img;
 }
 
-void sgs_DeleteImage( sgs_Image* img, SGS_CTX )
+void ss_DeleteImage( SS_Image* img, SGS_CTX )
 {
 	sgs_Dealloc( img->data );
 	sgs_Dealloc( img );
