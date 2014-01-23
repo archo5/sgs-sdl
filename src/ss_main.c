@@ -50,7 +50,11 @@ int ss_InitDebug( SGS_CTX )
 }
 
 
-void* ss_request_memory( size_t numbytes )
+char* ss_get_buffer_ptr()
+{
+	return g_tmpbuf.ptr;
+}
+char* ss_request_memory( size_t numbytes )
 {
 	sgs_membuf_resize( &g_tmpbuf, C, g_tmpbuf.size + numbytes );
 	return g_tmpbuf.ptr + g_tmpbuf.size - numbytes;

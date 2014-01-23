@@ -320,15 +320,20 @@ int ss_ApplyTexture( sgs_Variable* texvar, float* tox, float* toy )
 	>> CHANGES
 	- renamed "shape" to "preset"
 */
+#define BUFIDX_NONE -1
 typedef struct floatbuf_s
 {
-	float* data; /* this can point to stack, if so - 'my' = 0 as with all cases where no allocations are done */
+	float* data_static;
+	ptrdiff_t data_off;
 	int32_t size;
 	int32_t cnt;
-	int my;
 }
 floatbuf;
-#define NFB { NULL, 0, 0, 0 }
+static float* floatbuf_get_ptr( floatbuf* buf )
+{
+	return buf->data_off != BUFIDX_NONE ? ((float*)(ss_get_buffer_ptr() + buf->data_off)) : buf->data_static;
+}
+#define NFB { NULL, BUFIDX_NONE, 0, 0 }
 /*
 	the floating point buffer parser
 	supports:
@@ -402,18 +407,10 @@ const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, int numc
 		const char* res;
 		out->cnt = 1;
 		out->size = numcomp;
-		if( !out->data )
-		{
-			out->data = (float*) ss_request_memory( out->size * sizeof(float) ); /* sgs_Alloc_n( float, out->size ); */
-			out->my = 0; /* 1; */
-		}
-		memcpy( out->data, defcomp, numcomp * sizeof(float) );
-		res = _parse_floatvec( C, -1, out->data, numcomp );
-		if( res && out->my )
-		{
-			sgs_Dealloc( out->data );
-			out->my = 0;
-		}
+		out->data_off = ss_request_memory_idx( out->size * sizeof(float) );
+		out->data_static = NULL;
+		memcpy( ss_get_buffer_ptr() + out->data_off, defcomp, numcomp * sizeof(float) );
+		res = _parse_floatvec( C, -1, (float*)( ss_get_buffer_ptr() + out->data_off ), numcomp );
 		sgs_Pop( C, 1 );
 		return res;
 	}
@@ -427,17 +424,15 @@ const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, int numc
 	asz = sgs_ArraySize( C, -1 );
 	out->cnt = asz;
 	out->size = asz * numcomp;
-	out->data = (float*) ss_request_memory( out->size * sizeof(float) ); /* sgs_Alloc_n( float, out->size ); */
-	out->my = 0; /* 1; */
+	out->data_off = ss_request_memory_idx( out->size * sizeof(float) );
+	out->data_static = NULL;
 	
-	off = out->data;
+	off = (float*)( ss_get_buffer_ptr() + out->data_off );
 	for( i = 0; i < asz; ++i )
 	{
 		const char* subres;
 		if( sgs_PushNumIndex( C, -1, i ) || sgs_ItemType( C, -1 ) != SVT_OBJECT )
 		{
-			if( out->my )
-				sgs_Dealloc( out->data );
 			sgs_Pop( C, sgs_StackSize( C ) - ssz );
 			return "element was not an object";
 		}
@@ -449,8 +444,6 @@ const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, int numc
 		
 		if( subres )
 		{
-			if( out->my )
-				sgs_Dealloc( out->data );
 			sgs_Pop( C, 1 );
 			return subres;
 		}
@@ -505,27 +498,27 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 		if( !strcmp( str, "box" ) )
 		{
 			*outmode = SS_PT_QUADS;
-			vert->my = 0;
 			vert->cnt = 4;
 			vert->size = 8;
-			vert->data = boxbuf;
-			vtex->my = 0;
+			vert->data_static = boxbuf;
+			vert->data_off = BUFIDX_NONE;
 			vtex->cnt = 4;
 			vtex->size = 8;
-			vtex->data = boxbuf + 8;
+			vtex->data_static = boxbuf + 8;
+			vtex->data_off = BUFIDX_NONE;
 			ret = 1;
 		}
 		if( !strcmp( str, "tile" ) )
 		{
 			*outmode = SS_PT_QUADS;
-			vert->my = 0;
 			vert->cnt = 4;
 			vert->size = 8;
-			vert->data = boxbuf + 8;
-			vtex->my = 0;
+			vert->data_static = boxbuf + 8;
+			vert->data_off = BUFIDX_NONE;
 			vtex->cnt = 4;
 			vtex->size = 8;
-			vtex->data = boxbuf + 8;
+			vtex->data_static = boxbuf + 8;
+			vtex->data_off = BUFIDX_NONE;
 			ret = 1;
 		}
 		
@@ -582,16 +575,13 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 		}
 		
 		ss_UnpackFree( C, gi );
-		if( pdata.data ) *vert = pdata;
-		if( cdata.data ) *vcol = cdata;
-		if( tdata.data ) *vtex = tdata;
+		if( pdata.data_off != BUFIDX_NONE ) *vert = pdata;
+		if( cdata.data_off != BUFIDX_NONE ) *vcol = cdata;
+		if( tdata.data_off != BUFIDX_NONE ) *vtex = tdata;
 		return 1;
 		
 cleanup:
 		ss_UnpackFree( C, gi );
-		if( pdata.my ) sgs_Dealloc( pdata.data );
-		if( cdata.my ) sgs_Dealloc( cdata.data );
-		if( tdata.my ) sgs_Dealloc( tdata.data );
 		return 0;
 	}
 	
@@ -629,14 +619,15 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 	
 	else
 	{
+		float *pdata, *adata, *sdata, *xdata;
 		int ret = 1;
 		int32_t i;
 		float defcomp[] = { 0, 0, 0, 0, 1, 1, 1, 1 };
 		float tmpfloats[ 5 ];
 		floatbuf posdata = NFB, angdata = NFB, scaledata = NFB;
-		posdata.data = tmpfloats;
-		angdata.data = tmpfloats + 2;
-		scaledata.data = tmpfloats + 3;
+		posdata.data_static = tmpfloats;
+		angdata.data_static = tmpfloats + 2;
+		scaledata.data_static = tmpfloats + 3;
 		if( tfi[3].var ) /* found 'positions', array of vec2d */
 		{
 			const char* res = _parse_floatbuf( C, tfi[3].var, &posdata, 2, defcomp, 1 );
@@ -699,26 +690,31 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 		}
 		
 		/* mix-and-match */
-		xform->data = (float*) ss_request_memory( sizeof(float) * 16 * posdata.cnt ); /* sgs_Alloc_n( float, 16 * posdata.cnt ); */
+		xform->data_static = NULL;
+		xform->data_off = ss_request_memory_idx( sizeof(float) * 16 * posdata.cnt );
 		xform->size = 16 * posdata.cnt;
 		xform->cnt = posdata.cnt;
-		xform->my = 0; /* 1; */
+		
+		pdata = floatbuf_get_ptr( &posdata );
+		adata = floatbuf_get_ptr( &angdata );
+		sdata = floatbuf_get_ptr( &scaledata );
+		xdata = floatbuf_get_ptr( xform );
 		
 		for( i = 0; i < posdata.cnt; ++i )
 		{
-			float* mtx = xform->data + i * 16;
-			float posx = posdata.data[ i * 2 ];
-			float posy = posdata.data[ i * 2 + 1 ];
+			float* mtx = xdata + i * 16;
+			float posx = pdata[ i * 2 ];
+			float posy = pdata[ i * 2 + 1 ];
 			float angle = 0;
 			float sclx = 1;
 			float scly = 1;
 			if( angdata.size )
-				angle = angdata.data[ i % angdata.cnt ];
+				angle = adata[ i % angdata.cnt ];
 			if( scaledata.size )
 			{
 				int32_t off = i % scaledata.cnt;
-				sclx = scaledata.data[ off * 2 ];
-				scly = scaledata.data[ off * 2 + 1 ];
+				sclx = sdata[ off * 2 ];
+				scly = sdata[ off * 2 + 1 ];
 			}
 			
 			/* generate matrix from tf2d
@@ -744,9 +740,6 @@ int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 		}
 		
 end:
-		if( posdata.my ) sgs_Dealloc( posdata.data );
-		if( angdata.my ) sgs_Dealloc( angdata.data );
-		if( scaledata.my ) sgs_Dealloc( scaledata.data );
 		if( !ret )
 		{
 			ss_UnpackFree( C, tfi );
@@ -813,7 +806,7 @@ int SS_Draw( SGS_CTX )
 	sgs_SizeVal Bsize;
 	SS_BasicVertex tmp = { { 0, 0, 0 }, 0xffffffff, { 0, 0 }, {0,0} };
 	
-	float *tf, *cc, *vp, *vt, *vc, tox = 0, toy = 0;
+	float *tf, *tfend, *cc, *ccend, *vp, *vpstart, *vpend, *vt, *vtstart, *vtend, *vc, *vcstart, *vcend, tox = 0, toy = 0;
 	int mode = SS_PT_TRIANGLES, ret = 1;
 	
 	floatbuf vert = NFB, vcol = NFB, vtex = NFB, xform = NFB, icol = NFB;
@@ -846,31 +839,40 @@ int SS_Draw( SGS_CTX )
 	Bsize = vert.size / 2 * sizeof(tmp);
 	Bptr = (char*) ss_request_memory( Bsize );
 	
-	cc = icol.data;
-	for( tf = xform.data; tf < xform.data + xform.size; tf += 16 )
+	cc = floatbuf_get_ptr( &icol );
+	ccend = cc + icol.size;
+	tf = floatbuf_get_ptr( &xform );
+	tfend = tf + xform.size;
+	vpstart = floatbuf_get_ptr( &vert );
+	vpend = vpstart + vert.size;
+	vtstart = floatbuf_get_ptr( &vtex );
+	vtend = vtstart + vtex.size;
+	vcstart = floatbuf_get_ptr( &vcol );
+	vcend = vcstart + vcol.size;
+	for( ; tf < tfend; tf += 16 )
 	{
 		char* Biter = Bptr;
 		
 		GCurRI->set_matrix( GCurRr, SS_RMAT_WORLD, tf );
 		
-		if( cc < icol.data + icol.size )
+		if( cc < ccend )
 		{
 			/* TODO: color multiplication */
 			tmp.col = col4f_pack_native( cc );
 			cc += 4;
 		}
 		
-		vt = vtex.data;
-		vc = vcol.data;
-		for( vp = vert.data; vp < vert.data + vert.size; vp += 2 )
+		vt = vtstart;
+		vc = vcstart;
+		for( vp = vpstart; vp < vpend; vp += 2 )
 		{
-			if( vt < vtex.data + vtex.size )
+			if( vt < vtend )
 			{
 				tmp.tex[0] = vt[0] + tox;
 				tmp.tex[1] = vt[1] + toy;
 				vt += 2;
 			}
-			if( vc < vcol.data + vcol.size )
+			if( vc < vcend )
 			{
 				tmp.col = col4f_pack_native( vc );
 				vc += 4;
@@ -888,11 +890,6 @@ int SS_Draw( SGS_CTX )
 	GCurRI->set_matrix( GCurRr, SS_RMAT_WORLD, (float*) GRWorldMatrices[ GRCurMatrix ] );
 	
 end:
-	if( vert.my ) sgs_Dealloc( vert.data );
-	if( vcol.my ) sgs_Dealloc( vcol.data );
-	if( vtex.my ) sgs_Dealloc( vtex.data );
-	if( xform.my ) sgs_Dealloc( xform.data );
-	if( icol.my ) sgs_Dealloc( icol.data );
 	ss_UnpackFree( C, mi );
 	
 	sgs_PushBool( C, ret );

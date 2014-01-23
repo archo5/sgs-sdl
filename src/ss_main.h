@@ -275,8 +275,10 @@ void ss_TmpRestoreCurrent( SS_TmpCtx* ctx );
 
 
 /* utility */
-void* ss_request_memory( size_t numbytes );
+char* ss_get_buffer_ptr();
+char* ss_request_memory( size_t numbytes );
 void ss_reset_buffer();
+#define ss_request_memory_idx( numbytes ) (ss_request_memory( numbytes ) - ss_get_buffer_ptr())
 
 
 /* API */
