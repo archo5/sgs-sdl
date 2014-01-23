@@ -81,7 +81,6 @@ int ss_Initialize( int argc, char* argv[] )
 	ss_InitExtSys( C );
 	ss_InitExtMath( C );
 	ss_InitImage( C );
-	ss_InitAPI( C );
 	
 	/* preinit tmp buffer */
 	g_tmpbuf = sgs_membuf_create();

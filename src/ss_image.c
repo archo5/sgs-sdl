@@ -1,5 +1,6 @@
 
 #include <math.h>
+#include <ctype.h>
 
 #define SGS_INTERNAL
 

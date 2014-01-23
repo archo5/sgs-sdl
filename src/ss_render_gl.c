@@ -17,6 +17,9 @@ struct _SS_Renderer
 	SDL_GLContext* ctx;
 	PFNGLBLENDEQUATIONPROC glBlendEquation;
 	int height;
+	float world_matrix[16];
+	float view_matrix[16];
+	sgs_VHTable rsrc_table;
 };
 
 
@@ -27,14 +30,21 @@ static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t version, uint3
 static void ss_ri_gl_destroy( SS_Renderer* R );
 static void ss_ri_gl_modify( SS_Renderer* R, int* modlist );
 static void ss_ri_gl_set_current( SS_Renderer* R );
-static void ss_ri_gl_swap( SS_Renderer* R, SGS_CTX );
+static void ss_ri_gl_poke_resource( SS_Renderer* R, sgs_VarObj* obj, int add );
+static void ss_ri_gl_swap( SS_Renderer* R );
 static void ss_ri_gl_clear( SS_Renderer* R, float* col4f );
 static void ss_ri_gl_set_render_state( SS_Renderer* R, int which, int arg0, int arg1, int arg2, int arg3 );
+static void ss_ri_gl_set_matrix( SS_Renderer* R, int which, float* data );
 
-static int ss_ri_gl_create_texture_argb8( SS_Renderer* R, SGS_CTX, SS_Texture* T, SS_Image* I, uint32_t flags );
+static int ss_ri_gl_create_texture_argb8( SS_Renderer* R, SS_Texture* T, SS_Image* I, uint32_t flags );
 static int ss_ri_gl_create_texture_a8( SS_Renderer* R, SS_Texture* T, uint8_t* data, int width, int height, int pitch );
 static int ss_ri_gl_destroy_texture( SS_Renderer* R, SS_Texture* T );
 static int ss_ri_gl_apply_texture( SS_Renderer* R, SS_Texture* T );
+
+static int ss_ri_gl_init_vertex_format( SS_Renderer* R, SS_VertexFormat* F );
+static int ss_ri_gl_free_vertex_format( SS_Renderer* R, SS_VertexFormat* F );
+static int ss_ri_gl_draw_basic_vertices( SS_Renderer* R, void* data, uint32_t count, int ptype );
+static int ss_ri_gl_draw_ext( SS_Renderer* R, SS_VertexFormat* F, void* vdata, uint32_t vdsize, void* idata, uint32_t idsize, int i32, uint32_t start, uint32_t count, int ptype );
 
 
 SS_RenderInterface GRI_GL =
@@ -46,17 +56,26 @@ SS_RenderInterface GRI_GL =
 	ss_ri_gl_destroy,
 	ss_ri_gl_modify,
 	ss_ri_gl_set_current,
+	ss_ri_gl_poke_resource,
 	ss_ri_gl_swap,
 	ss_ri_gl_clear,
 	ss_ri_gl_set_render_state,
+	ss_ri_gl_set_matrix,
 	
 	ss_ri_gl_create_texture_argb8,
 	ss_ri_gl_create_texture_a8,
 	ss_ri_gl_destroy_texture,
 	ss_ri_gl_apply_texture,
 	
-	0,
+	ss_ri_gl_init_vertex_format,
+	ss_ri_gl_free_vertex_format,
+	ss_ri_gl_draw_basic_vertices,
+	ss_ri_gl_draw_ext,
 	
+	/* flags */
+	SS_RI_COLOR_RGBA,
+	
+	/* last error */
 	"no error",
 };
 
@@ -76,7 +95,7 @@ static int ss_ri_gl_available()
 
 static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t version, uint32_t flags )
 {
-	int w, h;
+	int w, h, x, y;
 	SDL_GLContext* ctx, *origctx;
 	SDL_Window* origwin;
 	SS_Renderer* R;
@@ -98,10 +117,19 @@ static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t version, uint3
 	R->glBlendEquation = (PFNGLBLENDEQUATIONPROC) SDL_GL_GetProcAddress( "glBlendEquation" );
 	R->height = h;
 	
+	for( y = 0; y < 4; ++y )
+	{
+		for( x = 0; x < 4; ++x )
+		{
+			R->world_matrix[ x + 4 * y ] =
+			R->view_matrix[ x + 4 * y ] =
+				x == y ? 1 : 0;
+		}
+	}
+	R->view_matrix[ 11 ] = -100;
 	glDisable( GL_DEPTH_TEST );
 	glMatrixMode( GL_MODELVIEW );
-	glLoadIdentity();
-	glTranslatef( 0, 0, -100 );
+	glLoadMatrixf( R->view_matrix );
 	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity();
 	glOrtho( 0, w, h, 0, 1, 1000 );
@@ -112,19 +140,30 @@ static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t version, uint3
 	glEnable( GL_ALPHA_TEST );
 	glAlphaFunc( GL_GREATER, 0 );
 	
-	SDL_GL_MakeCurrent( origwin, origctx );
-	
 	if( flags & SS_RENDERER_VSYNC )
 	{
 		if( 0 != SDL_GL_SetSwapInterval( -1 ) )
 			SDL_GL_SetSwapInterval( 1 );
 	}
 	
+	SDL_GL_MakeCurrent( origwin, origctx );
+	
+	sgs_vht_init( &R->rsrc_table, ss_GetContext(), 64, 64 );
+	
 	return R;
 }
 
 static void ss_ri_gl_destroy( SS_Renderer* R )
 {
+	int i;
+	SGS_CTX = ss_GetContext();
+	for( i = 0; i < R->rsrc_table.size; ++i )
+	{
+		sgs_VarObj* obj = (sgs_VarObj*) R->rsrc_table.vars[ i ].val.data.P;
+		ss_CallDtor( C, obj );
+	}
+	sgs_vht_free( &R->rsrc_table, C );
+	
 	if( GCurRr == R )
 	{
 		GCurRr = NULL;
@@ -138,7 +177,7 @@ static void ss_ri_gl_modify( SS_Renderer* R, int* modlist )
 {
 	int w, h;
 	int resize = 0;
-	SDL_GetWindowSize( window, &w, &h );
+	SDL_GetWindowSize( R->window, &w, &h );
 	
 	while( *modlist )
 	{
@@ -155,6 +194,20 @@ static void ss_ri_gl_modify( SS_Renderer* R, int* modlist )
 static void ss_ri_gl_set_current( SS_Renderer* R )
 {
 	SDL_GL_MakeCurrent( R->window, R->ctx );
+}
+
+static void ss_ri_gl_poke_resource( SS_Renderer* R, sgs_VarObj* obj, int add )
+{
+	SGS_CTX = ss_GetContext();
+	sgs_Variable K;
+	
+	K.type = SGS_VT_PTR;
+	K.data.P = obj;
+	
+	if( add )
+		sgs_vht_set( &R->rsrc_table, C, &K, &K );
+	else
+		sgs_vht_unset( &R->rsrc_table, C, &K );
 }
 
 static void ss_ri_gl_swap( SS_Renderer* R )
@@ -189,7 +242,7 @@ static void ss_ri_gl_set_render_state( SS_Renderer* R, int which, int arg0, int 
 		};
 		if( arg0 < 0 || arg0 >= SS_BLEND__COUNT ) arg0 = SS_BLEND_SRCALPHA;
 		if( arg1 < 0 || arg1 >= SS_BLEND__COUNT ) arg1 = SS_BLEND_INVSRCALPHA;
-		glBlendFunc( blendfactors[ src ], blendfactors[ dst ] );
+		glBlendFunc( blendfactors[ arg0 ], blendfactors[ arg1 ] );
 	}
 	else if( which == SS_RS_BLENDOP )
 	{
@@ -229,6 +282,23 @@ static void ss_ri_gl_set_render_state( SS_Renderer* R, int which, int arg0, int 
 		else
 			glDisable( GL_DEPTH_TEST );
 	}
+}
+
+static void ss_ri_gl_set_matrix( SS_Renderer* R, int which, float* mtx )
+{
+	if( which == SS_RMAT_PROJ )
+	{
+		glMatrixMode( GL_PROJECTION );
+		glLoadMatrixf( mtx );
+	}
+	else
+	{
+		memcpy( which == SS_RMAT_VIEW ? R->view_matrix : R->world_matrix, mtx, sizeof(R->view_matrix) );
+		glMatrixMode( GL_MODELVIEW );
+		glLoadMatrixf( R->view_matrix );
+		glMultMatrixf( R->world_matrix );
+	}
+	glMatrixMode( which == SS_RMAT_PROJ ? GL_PROJECTION : GL_MODELVIEW );
 }
 
 
@@ -275,8 +345,8 @@ static int ss_ri_gl_create_texture_argb8( SS_Renderer* R, SS_Texture* T, SS_Imag
 	
 	T->riface = &GRI_GL;
 	T->renderer = R;
-	T->width = ii->width;
-	T->height = ii->height;
+	T->width = I->width;
+	T->height = I->height;
 	T->flags = flags;
 	T->handle.id = id;
 	return 1;
@@ -284,27 +354,28 @@ static int ss_ri_gl_create_texture_argb8( SS_Renderer* R, SS_Texture* T, SS_Imag
 
 static int ss_ri_gl_create_texture_a8( SS_Renderer* R, SS_Texture* T, uint8_t* data, int width, int height, int pitch )
 {
-	SGS_CTX = ss_GetContext();
+	int x, y;
+	uint8_t* imgdata;
 	GLuint tex = 0;
+	SGS_CTX = ss_GetContext();
 	
 	glGenTextures( 1, &tex );
 	glBindTexture( GL_TEXTURE_2D, tex );
 	
-	imgdata = sgs_Alloc_n( uint8_t, glyph->bitmap.width * glyph->bitmap.rows * 4 );
-	pp = glyph->bitmap.buffer;
-	for( y = 0; y < glyph->bitmap.rows; ++y )
+	imgdata = sgs_Alloc_n( uint8_t, width * height * 4 );
+	for( y = 0; y < height; ++y )
 	{
-		for( x = 0; x < glyph->bitmap.width; ++x )
+		for( x = 0; x < width; ++x )
 		{
-			int off = y * glyph->bitmap.width * 4;
-			imgdata[ off + x * 4 ] = 0xff;
-			imgdata[ off + x * 4 + 1 ] = 0xff;
-			imgdata[ off + x * 4 + 2 ] = 0xff;
-			imgdata[ off + x * 4 + 3 ] = pp[ x ];
+			int off = y * width * 4 + x * 4;
+			imgdata[ off ] = 0xff;
+			imgdata[ off + 1 ] = 0xff;
+			imgdata[ off + 2 ] = 0xff;
+			imgdata[ off + 3 ] = data[ x ];
 		}
-		pp += glyph->bitmap.pitch;
+		data += pitch;
 	}
-	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, glyph->bitmap.width, glyph->bitmap.rows,
+	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, width, height,
 		0, GL_RGBA, GL_UNSIGNED_BYTE, imgdata );
 	sgs_Dealloc( imgdata );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
@@ -315,7 +386,7 @@ static int ss_ri_gl_create_texture_a8( SS_Renderer* R, SS_Texture* T, uint8_t* d
 	T->width = width;
 	T->height = height;
 	T->flags = 0;
-	T->handle.id = id;
+	T->handle.id = tex;
 	return 1;
 }
 
@@ -334,6 +405,95 @@ static int ss_ri_gl_apply_texture( SS_Renderer* R, SS_Texture* T )
 	}
 	else
 		glDisable( GL_TEXTURE_2D );
+	return 1;
+}
+
+
+static int ss_ri_gl_init_vertex_format( SS_Renderer* R, SS_VertexFormat* F )
+{
+	return 1;
+}
+
+static int ss_ri_gl_free_vertex_format( SS_Renderer* R, SS_VertexFormat* F )
+{
+	return 1;
+}
+
+static const int primtypes[] =
+{
+	GL_POINTS,
+	GL_LINES,
+	GL_LINE_STRIP,
+	GL_TRIANGLES,
+	GL_TRIANGLE_FAN,
+	GL_TRIANGLE_STRIP,
+	GL_QUADS,
+};
+
+static int ss_ri_gl_draw_basic_vertices( SS_Renderer* R, void* data, uint32_t count, int ptype )
+{
+	int mode;
+	char* Bptr = (char*) data;
+	
+	if( ptype < 0 || ptype >= SS_PT__COUNT )
+		return 0;
+	mode = primtypes[ ptype ];
+	
+	glEnableClientState( GL_VERTEX_ARRAY );
+	glEnableClientState( GL_TEXTURE_COORD_ARRAY );
+	glEnableClientState( GL_COLOR_ARRAY );
+	
+	glVertexPointer( 3, GL_FLOAT, sizeof(SS_BasicVertex), Bptr );
+	glColorPointer( 4, GL_UNSIGNED_BYTE, sizeof(SS_BasicVertex), Bptr + 12 );
+	glTexCoordPointer( 2, GL_FLOAT, sizeof(SS_BasicVertex), Bptr + 16 );
+	
+	glDrawArrays( mode, 0, count );
+	
+	glDisableClientState( GL_VERTEX_ARRAY );
+	glDisableClientState( GL_TEXTURE_COORD_ARRAY );
+	glDisableClientState( GL_COLOR_ARRAY );
+	
+	return 1;
+}
+
+static int datatype( int setype )
+{
+	if( setype == SS_RSET_FLOAT ) return GL_FLOAT;
+	if( setype == SS_RSET_BYTE ) return GL_UNSIGNED_BYTE;
+	return 0;
+}
+
+static int ss_ri_gl_draw_ext( SS_Renderer* R, SS_VertexFormat* F, void* vdata, uint32_t vdsize, void* idata, uint32_t idsize, int i32, uint32_t start, uint32_t count, int ptype )
+{
+	int mode;
+	char* BVptr = (char*) vdata;
+	char* idcs = (char*) idata;
+	
+	if( ptype < 0 || ptype >= SS_PT__COUNT )
+		return 0;
+	mode = primtypes[ ptype ];
+	
+	if( F->P[0] ) glVertexPointer( F->P[3], datatype( F->P[2] ), F->size, BVptr + F->P[1] );
+	if( F->T[0] ) glTexCoordPointer( F->T[3], datatype( F->T[2] ), F->size, BVptr + F->T[1] );
+	if( F->C[0] ) glColorPointer( F->C[3], datatype( F->C[2] ), F->size, BVptr + F->C[1] );
+	if( F->N[0] ) glNormalPointer( F->N[2], F->size, BVptr + F->N[1] );
+	
+	if( F->P[0] ) glEnableClientState( GL_VERTEX_ARRAY );
+	if( F->T[0] ) glEnableClientState( GL_TEXTURE_COORD_ARRAY );
+	if( F->C[0] ) glEnableClientState( GL_COLOR_ARRAY );
+	if( F->N[0] ) glEnableClientState( GL_NORMAL_ARRAY );
+	
+	glColor4f( 1, 1, 1, 1 );
+	if( idcs )
+		glDrawElements( mode, count, GL_UNSIGNED_SHORT, idcs + start * 2 );
+	else
+		glDrawArrays( mode, start, count );
+	
+	if( F->P[0] ) glDisableClientState( GL_VERTEX_ARRAY );
+	if( F->T[0] ) glDisableClientState( GL_TEXTURE_COORD_ARRAY );
+	if( F->C[0] ) glDisableClientState( GL_COLOR_ARRAY );
+	if( F->N[0] ) glDisableClientState( GL_NORMAL_ARRAY );
+	
 	return 1;
 }
 

@@ -463,7 +463,7 @@ static int ss_windowI_setSize( SGS_CTX )
 static int ss_windowI_setMaxSize( SGS_CTX )
 {
 	sgs_Int w, h;
-	WND_IHDR( setSize );
+	WND_IHDR( setMaxSize );
 	if( !sgs_LoadArgs( C, "@>ii", &w, &h ) )
 		return 0;
 	SDL_SetWindowMaximumSize( W->window, w, h );
@@ -473,7 +473,7 @@ static int ss_windowI_setMaxSize( SGS_CTX )
 static int ss_windowI_setMinSize( SGS_CTX )
 {
 	sgs_Int w, h;
-	WND_IHDR( setSize );
+	WND_IHDR( setMinSize );
 	if( !sgs_LoadArgs( C, "@>ii", &w, &h ) )
 		return 0;
 	SDL_SetWindowMinimumSize( W->window, w, h );
@@ -483,7 +483,7 @@ static int ss_windowI_setMinSize( SGS_CTX )
 static int ss_windowI_warpMouse( SGS_CTX )
 {
 	sgs_Int x, y;
-	WND_IHDR( setSize );
+	WND_IHDR( warpMouse );
 	if( !sgs_LoadArgs( C, "@>ii", &x, &y ) )
 		return 0;
 	SDL_WarpMouseInWindow( W->window, x, y );
@@ -526,7 +526,19 @@ static int ss_windowI_initRenderer( SGS_CTX )
 	W->riface = riface;
 	W->renderer = R;
 	
+	ss_MakeCurrent( riface, R );
+	
 	sgs_PushBool( C, 1 );
+	return 1;
+}
+
+static int ss_windowI_makeCurrent( SGS_CTX )
+{
+	WND_IHDR( makeCurrent );
+	if( W->riface && W->renderer )
+		ss_MakeCurrent( W->riface, W->renderer );
+	
+	sgs_PushBool( C, W->riface && W->renderer );
 	return 1;
 }
 
@@ -552,6 +564,7 @@ static int ss_window_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 		if( !strcmp( str, "setMinSize" ) ){ sgs_PushCFunction( C, ss_windowI_setMinSize ); return SGS_SUCCESS; }
 		if( !strcmp( str, "warpMouse" ) ){ sgs_PushCFunction( C, ss_windowI_warpMouse ); return SGS_SUCCESS; }
 		if( !strcmp( str, "initRenderer" ) ){ sgs_PushCFunction( C, ss_windowI_initRenderer ); return SGS_SUCCESS; }
+		if( !strcmp( str, "makeCurrent" ) ){ sgs_PushCFunction( C, ss_windowI_makeCurrent ); return SGS_SUCCESS; }
 		
 		/* data properties */
 		if( !strcmp( str, "brightness" ) ){ sgs_PushReal( C, SDL_GetWindowBrightness( W->window ) ); return SGS_SUCCESS; }
@@ -644,16 +657,6 @@ static int ss_window_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 #endif
 			return SGS_SUCCESS;
 		}
-		
-		/*
-#ifdef SS_USED3D
-		if( !strcmp( str, "nativeD3D9" ) ){ sgs_PushPtr( C, W->d3d9 ); return SGS_SUCCESS; }
-		if( !strcmp( str, "nativeD3D9Device" ) ){ sgs_PushPtr( C, W->d3d9_dev ); return SGS_SUCCESS; }
-#else
-		if( !strcmp( str, "nativeD3D9" ) ){ sgs_PushPtr( C, NULL ); return SGS_SUCCESS; }
-		if( !strcmp( str, "nativeD3D9Device" ) ){ sgs_PushPtr( C, NULL ); return SGS_SUCCESS; }
-#endif
-		*/
 	}
 	
 	return SGS_ENOTFND;
@@ -739,7 +742,11 @@ static int ss_window_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 	WND_HDR;
 	UNUSED( unused );
 	if( W->renderer )
+	{
+		SS_TmpCtx ctx = ss_TmpMakeCurrent( W->riface, W->renderer );
 		W->riface->destroy( W->renderer );
+		ss_TmpRestoreCurrent( &ctx );
+	}
 	SDL_DestroyWindow( W->window );
 	return SGS_SUCCESS;
 }
@@ -812,100 +819,6 @@ static ss_window* ss_window_from_id( Uint32 id )
 }
 
 
-/*
-#define SDL_VSYNC 0x10000
-
-flag_string_item_t setvideomode_flags[] =
-{
-	{ "fullscreen", SDL_FULLSCREEN },
-	{ "resizable", SDL_RESIZABLE },
-	{ "noframe", SDL_NOFRAME },
-	{ "vsync", SDL_VSYNC },
-	FSI_LAST
-};
-int SS_SetVideoMode( SGS_CTX )
-{
-	char* ts;
-	int suc = 0, vsync;
-	sgs_Integer w, h, b, f;
-	sgs_SizeVal tss;
-	
-	UNUSED( vsync );
-	
-	SGSFN( "SS_SetVideoMode" );
-	
-	if( sgs_StackSize( C ) != 4 ||
-		!sgs_ParseInt( C, 0, &w ) ||
-		!sgs_ParseInt( C, 1, &h ) ||
-		!sgs_ParseInt( C, 2, &b ) ||
-		!sgs_ParseString( C, 3, &ts, &tss ) )
-		_WARN( "function expects 4 arguments: int, int, int, string" )
-	
-	f = sgs_GetFlagString( C, 3, setvideomode_flags );
-	vsync = ( f & SDL_VSYNC ) != 0;
-	f &= ~SDL_VSYNC;
-	
-#ifdef SS_USED3D
-	ZeroMemory( &GD3DPP, sizeof(GD3DPP) );
-	GD3DPP.Windowed = 1;
-	GD3DPP.SwapEffect = D3DSWAPEFFECT_DISCARD;
-	GD3DPP.EnableAutoDepthStencil = 1;
-	GD3DPP.AutoDepthStencilFormat = D3DFMT_D16;
-	GD3DPP.hDeviceWindow = GetActiveWindow();
-	GD3DPP.BackBufferWidth = w;
-	GD3DPP.BackBufferHeight = h;
-	GD3DPP.BackBufferFormat = b == 32 ? D3DFMT_X8R8G8B8 : D3DFMT_R5G6B5;
-	GD3DPP.MultiSampleType = D3DMULTISAMPLE_NONE;
-	GD3DPP.PresentationInterval = vsync ? D3DPRESENT_INTERVAL_ONE : D3DPRESENT_INTERVAL_IMMEDIATE;
-#else
-	f |= SDL_OPENGL;
-	SDL_GL_SetAttribute( SDL_GL_SWAP_CONTROL, vsync ? 1 : 0 );
-#endif
-	
-	suc = !!SDL_SetVideoMode( w, h, b, f );
-	
-#ifdef SS_USED3D
-	if( !GD3D )
-		GD3D = Direct3DCreate9( D3D_SDK_VERSION );
-	
-	if( !GD3DDev )
-	{
-		suc = !FAILED( IDirect3D9_CreateDevice( GD3D,
-			D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, GetActiveWindow(),
-			D3DCREATE_HARDWARE_VERTEXPROCESSING | D3DCREATE_FPU_PRESERVE, &GD3DPP, &GD3DDev ) );
-		
-		_ss_reset_states();
-	}
-	else
-	{
-		_ss_reset_device( C );
-	}
-	
-	IDirect3DDevice9_BeginScene( GD3DDev );
-	
-#else
-	ss_glBlendEquation = (PFNGLBLENDEQUATIONPROC) ssGetProcAddress( "glBlendEquation" );
-	
-	glDisable( GL_DEPTH_TEST );
-	glMatrixMode( GL_MODELVIEW );
-	glLoadIdentity();
-	glTranslatef( 0, 0, -100 );
-	glMatrixMode( GL_PROJECTION );
-	glLoadIdentity();
-	glOrtho( 0, w, h, 0, 1, 1000 );
-	
-	glEnable( GL_BLEND );
-	glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-	
-	glEnable( GL_ALPHA_TEST );
-	glAlphaFunc( GL_GREATER, 0 );
-	
-#endif
-	
-	sgs_PushBool( C, suc );
-	return 1;
-}
-*/
 
 int SS_ShowCursor( SGS_CTX )
 {
@@ -1418,6 +1331,13 @@ sgs_RegIntConst sdl_ints[] =
 	IC( SDL_GL_CONTEXT_PROFILE_MASK ),
 	IC( SDL_GL_SHARE_WITH_CURRENT_CONTEXT ),
 	IC( SDL_GL_FRAMEBUFFER_SRGB_CAPABLE ),
+	
+	/*  CUSTOM CONSTANTS  */
+	IC( SS_RENDERER_DONTCARE ),
+	IC( SS_RENDERER_OPENGL ),
+	IC( SS_RENDERER_DIRECT3D9 ),
+	IC( SS_RENDERER_VSYNC ),
+	IC( SS_RENDERER_DEBUG ),
 };
 
 int SS_SDL_WINDOWPOS_UNDEFINED_DISPLAY( SGS_CTX )

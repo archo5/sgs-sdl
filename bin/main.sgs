@@ -79,7 +79,7 @@ function initialize()
 //	grab_input(true);
 //	show_cursor(false);
 	global Window = SS_CreateWindow( "SGS-SDL Game Framework", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 576 );
-	Window.initRenderer();
+	Window.initRenderer( SS_RENDERER_OPENGL, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );// SS_RENDERER_OPENGL );
 	global W = 1024;
 	global H = 576;
 	
@@ -163,8 +163,8 @@ function update()
 	);
 	vfmt = SS_MakeVertexFormat( "|pf3tf2" );
 	idata = fmt_pack( "4w", 1, 2, 3, 0 );
-	SS_DrawPacked( image, vfmt, vdata, 0, 4, PT_TRIANGLE_FAN );
-	SS_DrawPacked( image, vfmt, vdata, 0, 4, PT_TRIANGLE_FAN, idata );
+	SS_DrawPacked( image, vfmt, vdata, 0, 4, SS_PT_TRIANGLE_FAN );
+	SS_DrawPacked( image, vfmt, vdata, 0, 4, SS_PT_TRIANGLE_FAN, idata );
 	
 	// METHOD 2
 	g_RB.begin()
@@ -172,7 +172,7 @@ function update()
 		.f( 500, 400, 0, 1, 0 ).pad( 12 )
 		.f( 600, 600, 0, 1, 1 ).pad( 12 )
 		.f( 400, 500, 0, 0, 1 ).pad( 12 )
-		.draw( image, vfmt, 0, 4, PT_TRIANGLE_FAN );
+		.draw( image, vfmt, 0, 4, SS_PT_TRIANGLE_FAN );
 	
 	// EXTENSIONS
 	SS_DrawColorRect( 800, 200, 900, 250, 0.7, 0.5, 0.3, 0.5 );
@@ -241,7 +241,7 @@ function update()
 	
 	SS_DrawTextLine( "allocs per frame: " $ (sys_stat(4) - numallocs), Font, 4, 4, color(1,1,1) );
 	
-	Window.swap();
+	SS_Present();
 
 	sleeptime = 15 - ( ftime() - lasttime ) * 1000;
 //	if( sleeptime > 0 ) SS_Sleep( sleeptime );

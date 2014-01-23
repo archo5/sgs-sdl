@@ -15,6 +15,20 @@
 
 #define _WARN( err ) return sgs_Printf( C, SGS_WARNING, err );
 
+void ss_CallDtor( SGS_CTX, sgs_VarObj* O )
+{
+	sgs_ObjCallback* cb = O->iface;
+	while( cb[0] != SGS_OP_END )
+	{
+		if( cb[0] == SGS_OP_DESTRUCT )
+		{
+			cb[1]( C, O, 0 );
+			break;
+		}
+		cb += 2;
+	}
+}
+
 sgs_Integer ss_GlobalInt( SGS_CTX, const char* name )
 {
 	sgs_Integer v;
@@ -160,29 +174,6 @@ int ss_InitExtSys( SGS_CTX )
 	int ret;
 	ret = sgs_RegFuncConsts( C, es_fconsts, ARRAY_SIZE( es_fconsts ) );
 	if( ret != SGS_SUCCESS ) return ret;
-	
-	return SGS_SUCCESS;
-}
-
-
-
-
-
-/*
-	API
-*/
-
-int ss_InitAPI( SGS_CTX )
-{
-#ifdef SS_USED3D
-	sgs_PushInt( C, 1 );
-	sgs_PushInt( C, 1 );
-#else
-	sgs_PushInt( C, -1 );
-	sgs_PushInt( C, 0 );
-#endif
-	sgs_StoreGlobal( C, "sys_using_d3d" );
-	sgs_StoreGlobal( C, "sys_using_d3d_signed" );
 	
 	return SGS_SUCCESS;
 }

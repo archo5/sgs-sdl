@@ -28,7 +28,4 @@ function expand_col4( color )
 	return out;
 }
 
-if( sys_using_d3d )
-	function d3dcolor_fix( x ){ return (x&0xff00ff00) | ((x&0xff0000)>>16) | ((x&0xff)<<16); }
-else
-	function d3dcolor_fix( x ){ return x; }
+function d3dcolor_fix( x ){ return if( sys_rctx_flip_colors, (x&0xff00ff00) | ((x&0xff0000)>>16) | ((x&0xff)<<16), x ); }

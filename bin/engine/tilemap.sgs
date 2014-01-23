@@ -70,5 +70,5 @@ function Tilemap.render()
 {
 	this.checkCache();
 	
-	this.rb.draw( this.texture, this.vfmt, 0, map_size( this.tiles ) * 6, PT_TRIANGLES );
+	this.rb.draw( this.texture, this.vfmt, 0, map_size( this.tiles ) * 6, SS_PT_TRIANGLES );
 }

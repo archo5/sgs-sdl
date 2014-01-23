@@ -2,8 +2,11 @@
 
 #include <d3d9.h>
 
+#include <SDL2/SDL_syswm.h>
+
 
 #define SS_TEXTURE_HANDLE_DATA IDirect3DBaseTexture9* base; IDirect3DTexture9* tex2d;
+#define SS_VERTEXFORMAT_HANDLE_DATA IDirect3DVertexDeclaration9* vdecl;
 
 #include "ss_main.h"
 
@@ -64,6 +67,7 @@ struct _SS_Renderer
 	SDL_Window* window;
 	IDirect3DDevice9* d3ddev;
 	D3DPRESENT_PARAMETERS d3dpp;
+	sgs_VHTable rsrc_table;
 };
 
 
@@ -74,14 +78,21 @@ static SS_Renderer* ss_ri_d3d9_create( SDL_Window* window, uint32_t version, uin
 static void ss_ri_d3d9_destroy( SS_Renderer* R );
 static void ss_ri_d3d9_modify( SS_Renderer* R, int* modlist );
 static void ss_ri_d3d9_set_current( SS_Renderer* R );
-static void ss_ri_d3d9_swap( SS_Renderer* R, SGS_CTX );
+static void ss_ri_d3d9_poke_resource( SS_Renderer* R, sgs_VarObj* obj, int add );
+static void ss_ri_d3d9_swap( SS_Renderer* R );
 static void ss_ri_d3d9_clear( SS_Renderer* R, float* col4f );
 static void ss_ri_d3d9_set_render_state( SS_Renderer* R, int which, int arg0, int arg1, int arg2, int arg3 );
+static void ss_ri_d3d9_set_matrix( SS_Renderer* R, int which, float* data );
 
-static int ss_ri_d3d9_create_texture_argb8( SS_Renderer* R, SGS_CTX, SS_Texture* T, SS_Image* I, uint32_t flags );
+static int ss_ri_d3d9_create_texture_argb8( SS_Renderer* R, SS_Texture* T, SS_Image* I, uint32_t flags );
 static int ss_ri_d3d9_create_texture_a8( SS_Renderer* R, SS_Texture* T, uint8_t* data, int width, int height, int pitch );
 static int ss_ri_d3d9_destroy_texture( SS_Renderer* R, SS_Texture* T );
 static int ss_ri_d3d9_apply_texture( SS_Renderer* R, SS_Texture* T );
+
+static int ss_ri_d3d9_init_vertex_format( SS_Renderer* R, SS_VertexFormat* F );
+static int ss_ri_d3d9_free_vertex_format( SS_Renderer* R, SS_VertexFormat* F );
+static int ss_ri_d3d9_draw_basic_vertices( SS_Renderer* R, void* data, uint32_t count, int ptype );
+static int ss_ri_d3d9_draw_ext( SS_Renderer* R, SS_VertexFormat* F, void* vdata, uint32_t vdsize, void* idata, uint32_t idsize, int i32, uint32_t start, uint32_t count, int ptype );
 
 
 SS_RenderInterface GRI_D3D9 =
@@ -93,17 +104,24 @@ SS_RenderInterface GRI_D3D9 =
 	ss_ri_d3d9_destroy,
 	ss_ri_d3d9_modify,
 	ss_ri_d3d9_set_current,
+	ss_ri_d3d9_poke_resource,
 	ss_ri_d3d9_swap,
 	ss_ri_d3d9_clear,
 	ss_ri_d3d9_set_render_state,
+	ss_ri_d3d9_set_matrix,
 	
 	ss_ri_d3d9_create_texture_argb8,
 	ss_ri_d3d9_create_texture_a8,
 	ss_ri_d3d9_destroy_texture,
 	ss_ri_d3d9_apply_texture,
 	
+	ss_ri_d3d9_init_vertex_format,
+	ss_ri_d3d9_free_vertex_format,
+	ss_ri_d3d9_draw_basic_vertices,
+	ss_ri_d3d9_draw_ext,
+	
 	/* flags */
-	SS_RI_HALFPIXELOFFSET,
+	SS_RI_HALFPIXELOFFSET | SS_RI_COLOR_BGRA,
 	
 	/* last error */
 	"no error",
@@ -145,7 +163,7 @@ static SS_Renderer* ss_ri_d3d9_create( SDL_Window* window, uint32_t version, uin
 	SDL_GetWindowSize( window, &w, &h );
 	
 	SDL_VERSION( &sysinfo.version );
-	if( SDL_GetWindowWMInfo( W->window, &sysinfo ) <= 0 )
+	if( SDL_GetWindowWMInfo( window, &sysinfo ) <= 0 )
 	{
 		GRI_D3D9.last_error = SDL_GetError();
 		return NULL;
@@ -172,18 +190,29 @@ static SS_Renderer* ss_ri_d3d9_create( SDL_Window* window, uint32_t version, uin
 		return NULL;
 	}
 	
-	_ss_reset_states( d3ddev );
+	_ss_reset_states( d3ddev, w, h );
 	
 	R = (SS_Renderer*) malloc( sizeof(*R) );
 	R->window = window;
 	R->d3ddev = d3ddev;
 	R->d3dpp = d3dpp;
 	
+	sgs_vht_init( &R->rsrc_table, ss_GetContext(), 64, 64 );
+	
 	return R;
 }
 
 static void ss_ri_d3d9_destroy( SS_Renderer* R )
 {
+	int i;
+	SGS_CTX = ss_GetContext();
+	for( i = 0; i < R->rsrc_table.size; ++i )
+	{
+		sgs_VarObj* obj = (sgs_VarObj*) R->rsrc_table.vars[ i ].val.data.P;
+		ss_CallDtor( C, obj );
+	}
+	sgs_vht_free( &R->rsrc_table, C );
+	
 	if( GCurRr == R )
 	{
 		GCurRr = NULL;
@@ -197,7 +226,7 @@ static void ss_ri_d3d9_modify( SS_Renderer* R, int* modlist )
 {
 	int w, h;
 	int resize = 0;
-	SDL_GetWindowSize( window, &w, &h );
+	SDL_GetWindowSize( R->window, &w, &h );
 	
 	while( *modlist )
 	{
@@ -218,6 +247,20 @@ static void ss_ri_d3d9_modify( SS_Renderer* R, int* modlist )
 static void ss_ri_d3d9_set_current( SS_Renderer* R )
 {
 	UNUSED( R );
+}
+
+static void ss_ri_d3d9_poke_resource( SS_Renderer* R, sgs_VarObj* obj, int add )
+{
+	SGS_CTX = ss_GetContext();
+	sgs_Variable K;
+	
+	K.type = SGS_VT_PTR;
+	K.data.P = obj;
+	
+	if( add )
+		sgs_vht_set( &R->rsrc_table, C, &K, &K );
+	else
+		sgs_vht_unset( &R->rsrc_table, C, &K );
 }
 
 static void ss_ri_d3d9_swap( SS_Renderer* R )
@@ -260,8 +303,8 @@ static void ss_ri_d3d9_set_render_state( SS_Renderer* R, int which, int arg0, in
 		};
 		if( arg0 < 0 || arg0 >= SS_BLEND__COUNT ) arg0 = SS_BLEND_SRCALPHA;
 		if( arg1 < 0 || arg1 >= SS_BLEND__COUNT ) arg1 = SS_BLEND_INVSRCALPHA;
-		IDirect3DDevice9_SetRenderState( R->d3ddev, D3DRS_SRCBLEND, blendfactors[ src ] );
-		IDirect3DDevice9_SetRenderState( R->d3ddev, D3DRS_DESTBLEND, blendfactors[ dst ] );
+		IDirect3DDevice9_SetRenderState( R->d3ddev, D3DRS_SRCBLEND, blendfactors[ arg0 ] );
+		IDirect3DDevice9_SetRenderState( R->d3ddev, D3DRS_DESTBLEND, blendfactors[ arg1 ] );
 	}
 	else if( which == SS_RS_BLENDOP )
 	{
@@ -270,7 +313,7 @@ static void ss_ri_d3d9_set_render_state( SS_Renderer* R, int which, int arg0, in
 			D3DBLENDOP_ADD, D3DBLENDOP_SUBTRACT, D3DBLENDOP_REVSUBTRACT, D3DBLENDOP_MIN, D3DBLENDOP_MAX,
 		};
 		if( arg0 < 0 || arg0 >= SS_BLENDOP__COUNT ) arg0 = SS_BLENDOP_ADD;
-		IDirect3DDevice9_SetRenderState( R->d3ddev, D3DRS_BLENDOP, blendfuncs[ func ] );
+		IDirect3DDevice9_SetRenderState( R->d3ddev, D3DRS_BLENDOP, blendfuncs[ arg0 ] );
 	}
 	else if( which == SS_RS_CLIPENABLE )
 	{
@@ -288,8 +331,18 @@ static void ss_ri_d3d9_set_render_state( SS_Renderer* R, int which, int arg0, in
 	}
 	else if( which == SS_RS_ZENABLE )
 	{
-		IDirect3DDevice9_SetRenderState( GD3DDev, D3DRS_ZENABLE, arg0 );
+		IDirect3DDevice9_SetRenderState( R->d3ddev, D3DRS_ZENABLE, arg0 );
 	}
+}
+
+static void ss_ri_d3d9_set_matrix( SS_Renderer* R, int which, float* mtx )
+{
+	if( which == SS_RMAT_WORLD )
+		IDirect3DDevice9_SetTransform( R->d3ddev, D3DTS_WORLD, (D3DMATRIX*) mtx );
+	else if( which == SS_RMAT_VIEW )
+		IDirect3DDevice9_SetTransform( R->d3ddev, D3DTS_VIEW, (D3DMATRIX*) mtx );
+	else if( which == SS_RMAT_PROJ )
+		IDirect3DDevice9_SetTransform( R->d3ddev, D3DTS_PROJECTION, (D3DMATRIX*) mtx );
 }
 
 
@@ -332,8 +385,8 @@ static int ss_ri_d3d9_create_texture_argb8( SS_Renderer* R, SS_Texture* T, SS_Im
 	
 	T->riface = &GRI_D3D9;
 	T->renderer = R;
-	T->width = ii->width;
-	T->height = ii->height;
+	T->width = I->width;
+	T->height = I->height;
 	T->flags = flags;
 	T->handle.tex2d = tex;
 	return 1;
@@ -341,25 +394,26 @@ static int ss_ri_d3d9_create_texture_argb8( SS_Renderer* R, SS_Texture* T, SS_Im
 
 static int ss_ri_d3d9_create_texture_a8( SS_Renderer* R, SS_Texture* T, uint8_t* data, int width, int height, int pitch )
 {
+	int x, y;
 	HRESULT hr;
 	D3DLOCKED_RECT lr;
 	IDirect3DTexture9* tex = NULL;
 	
-	hr = IDirect3DDevice9_CreateTexture( GD3DDev, width,
+	hr = IDirect3DDevice9_CreateTexture( R->d3ddev, width,
 		height, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &tex, NULL );
 	if( tex == NULL || FAILED(hr) )
 		return 0;
 	
 	IDirect3DTexture9_LockRect( tex, 0, &lr, NULL, D3DLOCK_DISCARD );
-	for( y = 0; y < glyph->bitmap.rows; ++y )
+	for( y = 0; y < height; ++y )
 	{
-		for( x = 0; x < glyph->bitmap.width; ++x )
+		for( x = 0; x < width; ++x )
 		{
-			int off = y * lr.Pitch;
-			((uint8_t*)lr.pBits)[ off + x * 4 ] = 0xff;
-			((uint8_t*)lr.pBits)[ off + x * 4 + 1 ] = 0xff;
-			((uint8_t*)lr.pBits)[ off + x * 4 + 2 ] = 0xff;
-			((uint8_t*)lr.pBits)[ off + x * 4 + 3 ] = data[ x ];
+			int off = y * lr.Pitch + x * 4;
+			((uint8_t*)lr.pBits)[ off ] = 0xff;
+			((uint8_t*)lr.pBits)[ off + 1 ] = 0xff;
+			((uint8_t*)lr.pBits)[ off + 2 ] = 0xff;
+			((uint8_t*)lr.pBits)[ off + 3 ] = data[ x ];
 		}
 		data += pitch;
 	}
@@ -395,6 +449,159 @@ static int ss_ri_d3d9_apply_texture( SS_Renderer* R, SS_Texture* T )
 		IDirect3DDevice9_SetSamplerState( R->d3ddev, 0, D3DSAMP_ADDRESSU, hr ? D3DTADDRESS_WRAP : D3DTADDRESS_CLAMP );
 		IDirect3DDevice9_SetSamplerState( R->d3ddev, 0, D3DSAMP_ADDRESSV, vr ? D3DTADDRESS_WRAP : D3DTADDRESS_CLAMP );
 	}
+	
+	return 1;
+}
+
+
+static int vd_make_typecount( int type, int count )
+{
+	if( type == SS_RSET_FLOAT && count == 1 ) return D3DDECLTYPE_FLOAT1;
+	if( type == SS_RSET_FLOAT && count == 2 ) return D3DDECLTYPE_FLOAT2;
+	if( type == SS_RSET_FLOAT && count == 3 ) return D3DDECLTYPE_FLOAT3;
+	if( type == SS_RSET_FLOAT && count == 4 ) return D3DDECLTYPE_FLOAT4;
+	if( type == SS_RSET_BYTE && count == 4 ) return D3DDECLTYPE_D3DCOLOR;
+	return 0;
+}
+
+static int ss_ri_d3d9_init_vertex_format( SS_Renderer* R, SS_VertexFormat* F )
+{
+	HRESULT hr;
+	D3DVERTEXELEMENT9 els[ 5 ] = { D3DDECL_END(), D3DDECL_END(),
+		D3DDECL_END(), D3DDECL_END(), D3DDECL_END() };
+	
+	int i = 0;
+	if( F->P[0] )
+	{
+		D3DVERTEXELEMENT9 el = { 0, F->P[1], vd_make_typecount( F->P[2], F->P[3] ),
+			D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0 };
+		memcpy( els + i++, &el, sizeof(D3DVERTEXELEMENT9) );
+	}
+	if( F->T[0] )
+	{
+		D3DVERTEXELEMENT9 el = { 0, F->T[1], vd_make_typecount( F->T[2], F->T[3] ),
+			D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0 };
+		memcpy( els + i++, &el, sizeof(D3DVERTEXELEMENT9) );
+	}
+	if( F->C[0] )
+	{
+		D3DVERTEXELEMENT9 el = { 0, F->C[1], vd_make_typecount( F->C[2], F->C[3] ),
+			D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0 };
+		memcpy( els + i++, &el, sizeof(D3DVERTEXELEMENT9) );
+	}
+	if( F->N[0] )
+	{
+		D3DVERTEXELEMENT9 el = { 0, F->N[1], vd_make_typecount( F->N[2], F->N[3] ),
+			D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_NORMAL, 0 };
+		memcpy( els + i++, &el, sizeof(D3DVERTEXELEMENT9) );
+	}
+	
+	F->handle.vdecl = NULL;
+	hr = IDirect3DDevice9_CreateVertexDeclaration( R->d3ddev, els, &F->handle.vdecl );
+	if( FAILED( hr ) || !F->handle.vdecl )
+	{
+		GRI_D3D9.last_error = "vertex declaration creation failed";
+		return 0;
+	}
+	
+	return 1;
+}
+
+static int ss_ri_d3d9_free_vertex_format( SS_Renderer* R, SS_VertexFormat* F )
+{
+	IDirect3DVertexDeclaration9_Release( F->handle.vdecl );
+	return 1;
+}
+
+static const int primtypes[] =
+{
+	D3DPT_POINTLIST,
+	D3DPT_LINELIST,
+	D3DPT_LINESTRIP,
+	D3DPT_TRIANGLELIST,
+	D3DPT_TRIANGLEFAN,
+	D3DPT_TRIANGLESTRIP,
+	-10,
+};
+
+static int getprimitivecount( int mode, uint32_t vcount )
+{
+	switch( mode )
+	{
+	case SS_PT_POINTS: return vcount;
+	case SS_PT_LINES: return vcount / 2;
+	case SS_PT_LINE_STRIP: return vcount - 1;
+	case SS_PT_TRIANGLES: return vcount / 3;
+	case SS_PT_TRIANGLE_FAN: return vcount - 2;
+	case SS_PT_TRIANGLE_STRIP: return vcount - 2;
+	case SS_PT_QUADS: return vcount / 4;
+	}
+	return 0;
+}
+
+static int ss_ri_d3d9_draw_basic_vertices( SS_Renderer* R, void* data, uint32_t count, int ptype )
+{
+	int mode;
+	char* Bptr = (char*) data;
+	
+	if( ptype < 0 || ptype >= SS_PT__COUNT )
+		return 0;
+	mode = primtypes[ ptype ];
+	
+	IDirect3DDevice9_SetFVF( R->d3ddev, D3DFVF_XYZ | D3DFVF_TEX1 | D3DFVF_DIFFUSE );
+	if( mode == -10 )
+	{
+		int i, cnt = count - 3;
+		for( i = 0; i < cnt; i += 4 )
+		{
+			IDirect3DDevice9_DrawPrimitiveUP( R->d3ddev, D3DPT_TRIANGLEFAN,
+				2, Bptr + sizeof(SS_BasicVertex) * i, sizeof(SS_BasicVertex) );
+		}
+	}
+	else
+	{
+		IDirect3DDevice9_DrawPrimitiveUP( R->d3ddev, mode,
+			getprimitivecount( ptype, count ),
+			Bptr, sizeof(SS_BasicVertex) );
+	}
+	
+	return 1;
+}
+
+static int ss_ri_d3d9_draw_ext( SS_Renderer* R, SS_VertexFormat* F, void* vdata, uint32_t vdsize, void* idata, uint32_t idsize, int i32, uint32_t start, uint32_t count, int ptype )
+{
+	int mode;
+	char* BVptr = (char*) vdata;
+	char* idcs = (char*) idata;
+	
+	if( ptype < 0 || ptype >= SS_PT__COUNT )
+		return 0;
+	mode = primtypes[ ptype ];
+	
+	IDirect3DDevice9_SetVertexDeclaration( R->d3ddev, F->handle.vdecl );
+	if( idcs )
+		IDirect3DDevice9_DrawIndexedPrimitiveUP( R->d3ddev, mode, 0, count,
+			getprimitivecount( ptype, count ), idcs + start * 2, D3DFMT_INDEX16,
+			BVptr, F->size );
+	else
+	{
+		if( mode == SS_PT_QUADS )
+		{
+			int i, cnt = count - 3;
+			for( i = 0; i < cnt; i += 4 )
+			{
+				IDirect3DDevice9_DrawPrimitiveUP( R->d3ddev, D3DPT_TRIANGLEFAN,
+					2, BVptr + F->size * i, F->size );
+			}
+		}
+		else
+		{
+			IDirect3DDevice9_DrawPrimitiveUP( R->d3ddev, mode,
+				getprimitivecount( ptype, count ),
+				BVptr, F->size );
+		}
+	}
+	IDirect3DDevice9_SetVertexDeclaration( R->d3ddev, NULL );
 	
 	return 1;
 }

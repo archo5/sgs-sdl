@@ -19,6 +19,7 @@
 
 
 #include "../sgscript/src/sgscript.h"
+#include "../sgscript/src/sgs_util.h"
 #include "../sgscript/ext/sgsxgmath.h"
 
 
@@ -46,6 +47,7 @@ dict_unpack_item_t;
 
 #define DUI_LAST { NULL, NULL }
 
+void ss_CallDtor( SGS_CTX, sgs_VarObj* O );
 sgs_Integer ss_GlobalInt( SGS_CTX, const char* name );
 uint32_t ss_GetFlagString( SGS_CTX, int pos, flag_string_item_t* items );
 uint32_t ss_GlobalFlagString( SGS_CTX, const char* name, flag_string_item_t* items );
@@ -87,6 +89,8 @@ int ss_InitGraphics( SGS_CTX );
 
 /*  RENDERING INTERFACE  */
 #define SS_RI_HALFPIXELOFFSET 0x0001
+#define SS_RI_COLOR_BGRA      0x0002
+#define SS_RI_COLOR_RGBA      0x0004
 
 #define SS_RENDERER_DONTCARE  0
 #define SS_RENDERER_OPENGL    1
@@ -105,6 +109,10 @@ int ss_InitGraphics( SGS_CTX );
 #define SS_RS_CULLING      5
 #define SS_RS_ZENABLE      6
 
+#define SS_RMAT_WORLD 0
+#define SS_RMAT_VIEW  1
+#define SS_RMAT_PROJ  2
+
 #define SS_TEXTURE_HREPEAT 0x0001
 #define SS_TEXTURE_VREPEAT 0x0002
 #define SS_TEXTURE_NOLERP  0x0004
@@ -118,6 +126,9 @@ int ss_InitGraphics( SGS_CTX );
 #define SS_PT_TRIANGLE_STRIP 5
 #define SS_PT_QUADS          6
 #define SS_PT__COUNT         7
+
+#define SS_RSET_FLOAT 1
+#define SS_RSET_BYTE  2
 
 #define SS_BLENDOP_ADD              0
 #define SS_BLENDOP_SUBTRACT         1
@@ -150,28 +161,69 @@ typedef struct _SS_Texture
 {
 	SS_RenderInterface* riface;
 	SS_Renderer* renderer;
+	
 	union { SS_TEXTURE_HANDLE_DATA } handle;
+	
 	int16_t width;
 	int16_t height;
 	uint16_t flags;
 }
 SS_Texture;
 
+
+#ifndef SS_VERTEXFORMAT_HANDLE_DATA
+#define SS_VERTEXFORMAT_HANDLE_DATA void* ptr; uint32_t u32;
+#endif
+
+typedef struct _SS_VertexFormat
+{
+	SS_RenderInterface* riface;
+	SS_Renderer* renderer;
+	
+	union { SS_VERTEXFORMAT_HANDLE_DATA } handle;
+	
+	uint16_t size;
+	/* use / offset / type / count / size / order */
+	uint16_t P[ 6 ];
+	uint16_t T[ 6 ];
+	uint16_t C[ 6 ];
+	uint16_t N[ 6 ];
+}
+SS_VertexFormat;
+
+typedef struct _SS_BasicVertex
+{
+	float pos[ 3 ];   /* 4 * 3 => 12b */
+	uint32_t col;     /*           4b */
+	float tex[ 2 ];   /* 4 * 2 =>  8b */
+	float padding[2]; /* 4 * 2 =>  8b */
+	/* total: 32 bytes */
+}
+SS_BasicVertex;
+
 typedef void (*ss_ri_init) ();
 typedef void (*ss_ri_free) ();
 typedef int (*ss_ri_available) ();
-typedef SS_Renderer* (*ss_ri_create) ( SDL_Window*, uint32_t, uint32_t );
+typedef SS_Renderer* (*ss_ri_create) ( SDL_Window*, uint32_t, uint32_t ); /* version, flags */
 typedef void (*ss_ri_destroy) ( SS_Renderer* );
 typedef void (*ss_ri_modify) ( SS_Renderer*, int* );
 typedef void (*ss_ri_set_current) ( SS_Renderer* );
+typedef void (*ss_ri_poke_resource) ( SS_Renderer*, sgs_VarObj*, int ); /* !=0 => add, otherwise remove */
 typedef void (*ss_ri_swap) ( SS_Renderer* );
 typedef void (*ss_ri_clear) ( SS_Renderer*, float* );
-typedef void (*ss_ri_set_render_state) ( SS_Renderer*, int, int, int, int, int );
+typedef void (*ss_ri_set_render_state) ( SS_Renderer*, int, int, int, int, int ); /* type, arg0, arg1, arg2, arg3 */
+typedef void (*ss_ri_set_matrix) ( SS_Renderer*, int, float* ); /* type, float[16] */
 
 typedef int (*ss_ri_create_texture_argb8) ( SS_Renderer*, SS_Texture*, SS_Image*, uint32_t );
-typedef int (*ss_ri_create_texture_a8) ( SS_Renderer*, SS_Texture*, uint8_t*, int, int, int );
+typedef int (*ss_ri_create_texture_a8) ( SS_Renderer*, SS_Texture*, uint8_t*, int, int, int ); /* data, width, height, pitch */
 typedef int (*ss_ri_destroy_texture) ( SS_Renderer*, SS_Texture* );
 typedef int (*ss_ri_apply_texture) ( SS_Renderer*, SS_Texture* );
+
+typedef int (*ss_ri_init_vertex_format) ( SS_Renderer*, SS_VertexFormat* );
+typedef int (*ss_ri_free_vertex_format) ( SS_Renderer*, SS_VertexFormat* );
+typedef int (*ss_ri_draw_basic_vertices) ( SS_Renderer*, void*, uint32_t, int ); /* SS_BasicVertex*, count, ptype */
+typedef int (*ss_ri_draw_ext) ( SS_Renderer*, SS_VertexFormat*, void*, uint32_t, void*, uint32_t, int, uint32_t, uint32_t, int );
+	/* vertex_data, vertex_data_size, index_data, index_data_size, bool i32, start, count, ptype */
 
 struct _SS_RenderInterface
 {
@@ -182,14 +234,21 @@ struct _SS_RenderInterface
 	ss_ri_destroy destroy;
 	ss_ri_modify modify;
 	ss_ri_set_current set_current;
+	ss_ri_poke_resource poke_resource;
 	ss_ri_swap swap;
 	ss_ri_clear clear;
 	ss_ri_set_render_state set_render_state;
+	ss_ri_set_matrix set_matrix;
 	
 	ss_ri_create_texture_argb8 create_texture_argb8;
 	ss_ri_create_texture_a8 create_texture_a8;
 	ss_ri_destroy_texture destroy_texture;
 	ss_ri_apply_texture apply_texture;
+	
+	ss_ri_init_vertex_format init_vertex_format;
+	ss_ri_free_vertex_format free_vertex_format;
+	ss_ri_draw_basic_vertices draw_basic_vertices;
+	ss_ri_draw_ext draw_ext;
 	
 	uint32_t flags;
 	
@@ -203,6 +262,17 @@ extern SS_Renderer* GCurRr;
 #define SCRFN_NEEDS_RENDER_CONTEXT if( !GCurRI || !GCurRr ) _WARN( "must have rendering context set to use this function" );
 #define SCRFN_NEEDS_SPECIFIC_RENDER_CONTEXT( riface, rend ) if( GCurRI != riface || GCurRr != rend ) _WARN( "must have object's owning rendering context set to use this function" );
 
+void ss_MakeCurrent( SS_RenderInterface* ri, SS_Renderer* rr );
+
+typedef struct _SS_TmpCtx
+{
+	SS_RenderInterface* riface;
+	SS_Renderer* renderer;
+}
+SS_TmpCtx;
+SS_TmpCtx ss_TmpMakeCurrent( SS_RenderInterface* ri, SS_Renderer* rr );
+void ss_TmpRestoreCurrent( SS_TmpCtx* ctx );
+
 
 /* utility */
 void* ss_request_memory( size_t numbytes );
@@ -210,10 +280,7 @@ void ss_reset_buffer();
 
 
 /* API */
-int ss_parse_texture( SGS_CTX, int item, SS_Texture** out );
-void* ss_get_iface( int which );
-
-int ss_InitAPI( SGS_CTX );
+int ss_ParseTexture( SGS_CTX, int item, SS_Texture** out );
 
 
 /* Core interface */

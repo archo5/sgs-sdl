@@ -21,40 +21,41 @@ SS_Renderer* GCurRr = NULL;
 
 void ss_MakeCurrent( SS_RenderInterface* ri, SS_Renderer* rr )
 {
+	SGS_CTX = ss_GetContext();
+	
 	if( GCurRI == ri && GCurRr == rr )
 		return;
-	ri->set_current( rr );
+	
+	if( ri && rr )
+		ri->set_current( rr );
 	GCurRI = ri;
 	GCurRr = rr;
+	
+	sgs_PushBool( C, ri->flags & SS_RI_COLOR_BGRA );
+	sgs_StoreGlobal( C, "sys_rctx_flip_colors" );
+}
+
+SS_TmpCtx ss_TmpMakeCurrent( SS_RenderInterface* ri, SS_Renderer* rr )
+{
+	SS_TmpCtx ctx = { GCurRI, GCurRr };
+	ss_MakeCurrent( ri, rr );
+	return ctx;
+}
+
+void ss_TmpRestoreCurrent( SS_TmpCtx* ctx )
+{
+	ss_MakeCurrent( ctx->riface, ctx->renderer );
 }
 
 
+#define SS_MATRIX_STACK_SIZE 8
+
+typedef float mat4x4[4][4];
+mat4x4 GRWorldMatrices[ SS_MATRIX_STACK_SIZE ];
+int GRCurMatrix = 0;
+
+
 FT_Library g_ftlib;
-
-
-/*
-
-#ifdef SS_USED3D
-#define PT_POINTS D3DPT_POINTLIST
-#define PT_LINES D3DPT_LINELIST
-#define PT_LINE_STRIP D3DPT_LINESTRIP
-#define PT_TRIANGLES D3DPT_TRIANGLELIST
-#define PT_TRIANGLE_FAN D3DPT_TRIANGLEFAN
-#define PT_TRIANGLE_STRIP D3DPT_TRIANGLESTRIP
-#define PT_QUADS 10
-
-#else
-#define PT_POINTS GL_POINTS
-#define PT_LINES GL_LINES
-#define PT_LINE_STRIP GL_LINE_STRIP
-#define PT_TRIANGLES GL_TRIANGLES
-#define PT_TRIANGLE_FAN GL_TRIANGLE_FAN
-#define PT_TRIANGLE_STRIP GL_TRIANGLE_STRIP
-#define PT_QUADS GL_QUADS
-
-#endif
-
-*/
 
 
 void _mtx_transpose( float* m )
@@ -70,14 +71,30 @@ void _mtx_transpose( float* m )
 #undef MSWAP
 }
 
+void _mtx_identity( float* m )
+{
+	m[1] = m[2] = m[3] = 0.0f;
+	m[4] = m[6] = m[7] = 0.0f;
+	m[8] = m[9] = m[11] = 0.0f;
+	m[12] = m[13] = m[14] = 0.0f;
+	m[0] = m[5] = m[10] = m[15] = 1.0f;
+}
+
 
 #define TEXHDR SS_Texture* T = (SS_Texture*) data->data
 
 int sstex_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 {
 	TEXHDR;
-	/* TODO FIX REQUIRED CONTEXT */
-	T->riface->destroy_texture( T->renderer, T );
+	if( T->riface )
+	{
+		SS_TmpCtx ctx = ss_TmpMakeCurrent( T->riface, T->renderer );
+		T->riface->destroy_texture( T->renderer, T );
+		T->riface = NULL;
+		T->renderer = NULL;
+		GCurRI->poke_resource( GCurRr, data, 0 );
+		ss_TmpRestoreCurrent( &ctx );
+	}
 	return SGS_SUCCESS;
 }
 
@@ -142,7 +159,7 @@ sgs_ObjCallback tex_iface[] =
 	>> additional info
 	- returns a texture object
 	- saves the object in _Gtex dict for later reference
-	- supports image objects (TODO) and filenames as image sources
+	- supports image objects and filenames as image sources
 	- filenames will be converted to images first by taking the extension, lowercasing it and calling "ss_load_image_from_file_<ext>"
 		- if function doesn't exist or it simply returns null, texture creation fails
 */
@@ -214,83 +231,7 @@ int SS_CreateTexture( SGS_CTX )
 		if( !GCurRI->create_texture_argb8( GCurRr, T, ii, flags ) )
 			return sgs_Printf( C, SGS_WARNING, "failed to create texture: %s", GCurRI->last_error );
 		
-		/* TODO_PUSH
-		tt->flags = flags;
-		tt->width = ii->width;
-		tt->height = ii->height;
-		
-#ifdef SS_USED3D
-		{
-			int miplev = 1, i, y;
-			SS_Image* pdii = ii, *pii;
-			IDirect3DTexture9* tex = NULL;
-			if( flags & SS_TEXTURE_MIPMAPS )
-			{
-				int sz = ii->width > ii->height ? ii->width : ii->height;
-				while( sz > 1 )
-				{
-					sz /= 2;
-					miplev++;
-				}
-			}
-			IDirect3DDevice9_CreateTexture( GD3DDev, ii->width, ii->height,
-				miplev, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &tex, NULL );
-			tt->obj = (IDirect3DBaseTexture9*) tex;
-			for( i = 0; i < miplev; ++i )
-			{
-				pii = pdii;
-				D3DLOCKED_RECT lr;
-				IDirect3DTexture9_LockRect( tex, i, &lr, NULL, D3DLOCK_DISCARD );
-				for( y = 0; y < pdii->height; ++y )
-					memcpy( ((uint8_t*)lr.pBits) + lr.Pitch * y, pdii->data + pdii->width * 4 * y, pdii->width * 4 );
-				IDirect3DTexture9_UnlockRect( tex, i );
-				if( i < miplev-1 )
-					pdii = ss_ImageDS2X( pdii, C );
-				if( pii != ii )
-					sgs_DeleteImage( pii, C );
-			}
-		}
-		
-#else
-		glGenTextures( 1, &tt->id );
-		glBindTexture( GL_TEXTURE_2D, tt->id );
-		
-		glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
-#ifndef GL_BGRA
-# define GL_BGRA 0x80E1
-#endif
-		glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, ii->width, ii->height, 0, GL_BGRA, GL_UNSIGNED_BYTE, ii->data );
-		if( flags & SS_TEXTURE_MIPMAPS )
-		{
-			int miplev = 0;
-			int more = ii->width > 1 || ii->height > 1;
-			SS_Image* pdii = ii;
-			while( more )
-			{
-				SS_Image* dii = ss_ImageDS2X( pdii, C );
-				if( pdii != ii )
-					sgs_DeleteImage( pdii, C );
-				pdii = dii;
-				more = dii->width > 1 || dii->height > 1;
-				glTexImage2D( GL_TEXTURE_2D, ++miplev, GL_RGBA, dii->width,
-					dii->height, 0, GL_BGRA, GL_UNSIGNED_BYTE, dii->data );
-			}
-			if( pdii != ii )
-				sgs_DeleteImage( pdii, C );
-		}
-		
-		if( flags & SS_TEXTURE_HREPEAT ) glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
-		if( flags & SS_TEXTURE_VREPEAT ) glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, flags & SS_TEXTURE_NOLERP ? GL_NEAREST : GL_LINEAR );
-		{
-			GLuint minf = flags & SS_TEXTURE_MIPMAPS ?
-				( flags & SS_TEXTURE_NOLERP ? GL_NEAREST_MIPMAP_NEAREST : GL_LINEAR_MIPMAP_LINEAR ) :
-				( flags & SS_TEXTURE_NOLERP ? GL_NEAREST : GL_LINEAR );
-			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minf );
-		}
-		
-#endif
-*/
+		GCurRI->poke_resource( GCurRr, sgs_GetObjectStruct( C, -1 ), 1 );
 	}
 	
 	/* IMAGE [FLAGS] [KEY](if bystr) TEXTURE */
@@ -330,6 +271,8 @@ int ss_ApplyTexture( sgs_Variable* texvar, float* tox, float* toy )
 		if( SGS_BASETYPE( texvar->type ) != SGS_VT_OBJECT || texvar->data.O->iface != tex_iface )
 			return 0;
 		T = (SS_Texture*) texvar->data.O->data;
+		if( T->renderer != GCurRr || T->riface != GCurRI )
+			return 0;
 		if( GCurRI->flags & SS_RI_HALFPIXELOFFSET && !( T->flags & SS_TEXTURE_NOLERP ) )
 		{
 			if( tox ) *tox = 0.5f / T->width;
@@ -371,8 +314,6 @@ int ss_ApplyTexture( sgs_Variable* texvar, float* tox, float* toy )
 	- check for texture
 	>> data objects
 	- texture is an OpenGL texture + some metadata // TODO
-	>> tech
-	- vertex arrays // TODO, currently get it out there with immediate mode
 	>> intermediate storages
 	- data loading functions will return additional values to specify if a buffer was created in the call
 	
@@ -563,7 +504,7 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 		
 		if( !strcmp( str, "box" ) )
 		{
-			*outmode = PT_QUADS;
+			*outmode = SS_PT_QUADS;
 			vert->my = 0;
 			vert->cnt = 4;
 			vert->size = 8;
@@ -576,7 +517,7 @@ int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vcol, floa
 		}
 		if( !strcmp( str, "tile" ) )
 		{
-			*outmode = PT_QUADS;
+			*outmode = SS_PT_QUADS;
 			vert->my = 0;
 			vert->cnt = 4;
 			vert->size = 8;
@@ -847,16 +788,7 @@ colors:
 	return 1;
 }
 
-typedef struct _ssvtx
-{
-	float pos[ 3 ];
-	uint32_t col;
-	float tex[ 2 ];
-	float padding[2];
-}
-ssvtx;
-
-uint32_t col4f_pack( float* col )
+uint32_t col4f_pack_native( float* col )
 {
 #define MAX( a, b ) ((a)>(b)?(a):(b))
 #define MIN( a, b ) ((a)<(b)?(a):(b))
@@ -864,44 +796,26 @@ uint32_t col4f_pack( float* col )
 	uint32_t ir = r * 255, ig = g * 255, ib = b * 255, ia = a * 255;
 	ir = MAX( 0, MIN( 255, ir ) ); ig = MAX( 0, MIN( 255, ig ) );
 	ib = MAX( 0, MIN( 255, ib ) ); ia = MAX( 0, MIN( 255, ia ) );
-#ifdef SS_USED3D
-	return D3DCOLOR_ARGB( ia, ir, ig, ib );
-#else
+	if( GCurRI->flags & SS_RI_COLOR_BGRA )
+	{
+		uint32_t tmp = ir;
+		ir = ib;
+		ib = tmp;
+	}
 	return ir | (ig<<8) | (ib<<16) | (ia<<24);
-#endif
 #undef MIN
 #undef MAX
-}
-
-uint32_t getprimitivecount( int mode, uint32_t vcount )
-{
-	switch( mode )
-	{
-	case PT_POINTS: return vcount;
-	case PT_LINES: return vcount / 2;
-	case PT_LINE_STRIP: return vcount - 1;
-	case PT_TRIANGLES: return vcount / 3;
-	case PT_TRIANGLE_FAN: return vcount - 2;
-	case PT_TRIANGLE_STRIP: return vcount - 2;
-	case PT_QUADS: return vcount / 4;
-	}
-	return 0;
 }
 
 int SS_Draw( SGS_CTX )
 {
 	char* Bptr;
 	sgs_SizeVal Bsize;
-	ssvtx tmp = { { 0, 0, 0 }, 0xffffffff, { 0, 0 }, {0,0} };
+	SS_BasicVertex tmp = { { 0, 0, 0 }, 0xffffffff, { 0, 0 }, {0,0} };
 	
 	float *tf, *cc, *vp, *vt, *vc, tox = 0, toy = 0;
-	int mode = PT_TRIANGLES, ret = 1;
-#ifdef SS_USED3D
-	float mtxbk[ 16 ];
-	IDirect3DBaseTexture9* texobj = NULL;
-#else
-	GLuint texid = 0;
-#endif
+	int mode = SS_PT_TRIANGLES, ret = 1;
+	
 	floatbuf vert = NFB, vcol = NFB, vtex = NFB, xform = NFB, icol = NFB;
 	sgs_Variable texture;
 	dict_unpack_item_t mi[] =
@@ -929,26 +843,6 @@ int SS_Draw( SGS_CTX )
 	if( !ss_ApplyTexture( mi[0].var, &tox, &toy ) )
 		sgs_Printf( C, SGS_WARNING, "could not use texture" );
 	
-#ifdef SS_USED3D
-	if( GD3DDev )
-	{
-		IDirect3DDevice9_GetTransform( GD3DDev, D3DTS_WORLD, (D3DMATRIX*) mtxbk );
-	}
-	else
-#endif
-	if( SDL_GL_GetCurrentContext() )
-	{
-		glMatrixMode( GL_MODELVIEW );
-		
-		glEnableClientState( GL_VERTEX_ARRAY );
-		glEnableClientState( GL_TEXTURE_COORD_ARRAY );
-		glEnableClientState( GL_COLOR_ARRAY );
-	}
-	else
-	{
-		
-	}
-	
 	Bsize = vert.size / 2 * sizeof(tmp);
 	Bptr = (char*) ss_request_memory( Bsize );
 	
@@ -956,19 +850,13 @@ int SS_Draw( SGS_CTX )
 	for( tf = xform.data; tf < xform.data + xform.size; tf += 16 )
 	{
 		char* Biter = Bptr;
-#ifdef SS_USED3D
-		IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_WORLD, (D3DMATRIX*) tf );
-
-#else
-		glPushMatrix();
-		glMultMatrixf( tf );
-
-#endif
+		
+		GCurRI->set_matrix( GCurRr, SS_RMAT_WORLD, tf );
 		
 		if( cc < icol.data + icol.size )
 		{
 			/* TODO: color multiplication */
-			tmp.col = col4f_pack( cc );
+			tmp.col = col4f_pack_native( cc );
 			cc += 4;
 		}
 		
@@ -984,7 +872,7 @@ int SS_Draw( SGS_CTX )
 			}
 			if( vc < vcol.data + vcol.size )
 			{
-				tmp.col = col4f_pack( vc );
+				tmp.col = col4f_pack_native( vc );
 				vc += 4;
 			}
 			tmp.pos[0] = vp[0];
@@ -994,43 +882,10 @@ int SS_Draw( SGS_CTX )
 			Biter += sizeof(tmp);
 		}
 		
-#ifdef SS_USED3D
-		IDirect3DDevice9_SetFVF( GD3DDev, D3DFVF_XYZ | D3DFVF_TEX1 | D3DFVF_DIFFUSE );
-		if( mode == PT_QUADS )
-		{
-			int i, cnt = Bsize / sizeof(ssvtx) - 3;
-			for( i = 0; i < cnt; i += 4 )
-			{
-				IDirect3DDevice9_DrawPrimitiveUP( GD3DDev, D3DPT_TRIANGLEFAN,
-					2, Bptr + sizeof(ssvtx) * i, sizeof(ssvtx) );
-			}
-		}
-		else
-		{
-			IDirect3DDevice9_DrawPrimitiveUP( GD3DDev, mode,
-				getprimitivecount( mode, Bsize / sizeof(ssvtx) ),
-				Bptr, sizeof(ssvtx) );
-		}
+		GCurRI->draw_basic_vertices( GCurRr, Bptr, Bsize / sizeof(SS_BasicVertex), mode );
 	}
 	
-	IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_WORLD, (D3DMATRIX*) mtxbk );
-
-#else
-		/* TODO: fix hardcoded offsets, maybe */
-		glVertexPointer( 3, GL_FLOAT, sizeof(ssvtx), Bptr );
-		glColorPointer( 4, GL_UNSIGNED_BYTE, sizeof(ssvtx), Bptr + 12 );
-		glTexCoordPointer( 2, GL_FLOAT, sizeof(ssvtx), Bptr + 16 );
-		
-		glDrawArrays( mode, 0, Bsize / sizeof(ssvtx) );
-		
-		glPopMatrix();
-	}
-	
-	glDisableClientState( GL_VERTEX_ARRAY );
-	glDisableClientState( GL_TEXTURE_COORD_ARRAY );
-	glDisableClientState( GL_COLOR_ARRAY );
-
-#endif
+	GCurRI->set_matrix( GCurRr, SS_RMAT_WORLD, (float*) GRWorldMatrices[ GRCurMatrix ] );
 	
 end:
 	if( vert.my ) sgs_Dealloc( vert.data );
@@ -1050,96 +905,39 @@ cleanup:
 
 
 
-#ifndef GL_FLOAT
-#  define GL_FLOAT 1
-#  define GL_UNSIGNED_BYTE 2
-#endif
+#define VFMT_HDR SS_VertexFormat* F = (SS_VertexFormat*) data->data;
 
-typedef struct _vtxfmt vtxfmt;
-struct _vtxfmt
+int ss_vertex_format_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 {
-	int size;
-	/* use / offset / type / count / size / order */
-	uint32_t P[ 6 ];
-	uint32_t T[ 6 ];
-	uint32_t C[ 6 ];
-	uint32_t N[ 6 ];
-	
-#ifdef SS_USED3D
-	IDirect3DVertexDeclaration9* vdecl;
-#endif
-};
-
-
-#ifdef SS_USED3D
-static int vd_make_typecount( int type, int count )
-{
-	if( type == GL_FLOAT && count == 1 ) return D3DDECLTYPE_FLOAT1;
-	if( type == GL_FLOAT && count == 2 ) return D3DDECLTYPE_FLOAT2;
-	if( type == GL_FLOAT && count == 3 ) return D3DDECLTYPE_FLOAT3;
-	if( type == GL_FLOAT && count == 4 ) return D3DDECLTYPE_FLOAT4;
-	if( type == GL_UNSIGNED_BYTE && count == 4 ) return D3DDECLTYPE_D3DCOLOR;
-	return 0;
-}
-
-static void initialize_optimized_format( vtxfmt* F )
-{
-	HRESULT hr;
-	D3DVERTEXELEMENT9 els[ 5 ] = { D3DDECL_END(), D3DDECL_END(),
-		D3DDECL_END(), D3DDECL_END(), D3DDECL_END() };
-	
-	int i = 0;
-	if( F->P[0] )
+	VFMT_HDR;
+	UNUSED( unused );
+	if( F->riface )
 	{
-		D3DVERTEXELEMENT9 el = { 0, F->P[1], vd_make_typecount( F->P[2], F->P[3] ),
-			D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0 };
-		memcpy( els + i++, &el, sizeof(D3DVERTEXELEMENT9) );
+		SS_TmpCtx ctx = ss_TmpMakeCurrent( F->riface, F->renderer );
+		F->riface->free_vertex_format( F->renderer, F );
+		F->riface = NULL;
+		F->renderer = NULL;
+		GCurRI->poke_resource( GCurRr, data, 0 );
+		ss_TmpRestoreCurrent( &ctx );
 	}
-	if( F->T[0] )
-	{
-		D3DVERTEXELEMENT9 el = { 0, F->T[1], vd_make_typecount( F->T[2], F->T[3] ),
-			D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0 };
-		memcpy( els + i++, &el, sizeof(D3DVERTEXELEMENT9) );
-	}
-	if( F->C[0] )
-	{
-		D3DVERTEXELEMENT9 el = { 0, F->C[1], vd_make_typecount( F->C[2], F->C[3] ),
-			D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0 };
-		memcpy( els + i++, &el, sizeof(D3DVERTEXELEMENT9) );
-	}
-	if( F->N[0] )
-	{
-		D3DVERTEXELEMENT9 el = { 0, F->N[1], vd_make_typecount( F->N[2], F->N[3] ),
-			D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_NORMAL, 0 };
-		memcpy( els + i++, &el, sizeof(D3DVERTEXELEMENT9) );
-	}
-	
-	F->vdecl = NULL;
-	hr = IDirect3DDevice9_CreateVertexDeclaration( GD3DDev, els, &F->vdecl );
-	sgs_BreakIf( FAILED( hr ) && "vertex declaration creation failed" );
-}
-
-static void free_optimized_format( vtxfmt* F )
-{
-	IDirect3DVertexDeclaration9_Release( F->vdecl );
-}
-
-#else
-#define initialize_optimized_format(x)
-#define free_optimized_format(x)
-
-#endif
-
-
-int ss_vertex_format_destruct( SGS_CTX, sgs_VarObj* data, int dco )
-{
-	free_optimized_format( (vtxfmt*) data->data );
 	return SGS_SUCCESS;
+}
+
+int ss_vertex_format_convert( SGS_CTX, sgs_VarObj* data, int type )
+{
+	VFMT_HDR;
+	if( type == SGS_CONVOP_TOTYPE || type == SVT_STRING )
+	{
+		sgs_PushString( C, F->riface ? "SS_VertexFormat" : "SS_VertexFormat (unloaded)" );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
 }
 
 sgs_ObjCallback vertex_format_iface[] =
 {
 	SOP_DESTRUCT, ss_vertex_format_destruct,
+	SOP_CONVERT, ss_vertex_format_convert,
 	SOP_END,
 };
 
@@ -1149,6 +947,7 @@ int SS_MakeVertexFormat( SGS_CTX )
 	sgs_SizeVal fmtsize;
 	
 	SGSFN( "SS_MakeVertexFormat" );
+	SCRFN_NEEDS_RENDER_CONTEXT;
 	
 	if( sgs_StackSize( C ) != 1 ||
 		!sgs_ParseString( C, 0, &fmt, &fmtsize ) )
@@ -1156,8 +955,8 @@ int SS_MakeVertexFormat( SGS_CTX )
 			"function expects 1 argument: string" )
 	
 	{
-		vtxfmt* ef;
-		vtxfmt F = {0};
+		SS_VertexFormat* ef;
+		SS_VertexFormat F = {0};
 		char* fmtend = fmt + fmtsize;
 		int order = 0;
 		
@@ -1168,13 +967,13 @@ int SS_MakeVertexFormat( SGS_CTX )
 		while( fmt < fmtend - 2 )
 		{
 			int isz = 0;
-			uint32_t* dst;
+			uint16_t* dst;
 			
 			int ch = fmt[0], type = fmt[1], cnt = fmt[2];
 			if( ch != 'p' && ch != 't' && ch != 'c' && ch != 'n' )
 				_WARN( "wrong channel specifier (not p/t/c/n)" )
-			if( type != 'f'  && type != 'c' )
-				_WARN( "wrong type specifier (not f/c)" )
+			if( type != 'f'  && type != 'b' )
+				_WARN( "wrong type specifier (not f/b)" )
 			if( cnt != '1' && cnt != '2' && cnt != '3' && cnt != '4' )
 				_WARN( "wrong count specifier (not 1/2/3/4)" )
 			
@@ -1189,8 +988,8 @@ int SS_MakeVertexFormat( SGS_CTX )
 			
 			dst[0] = 1;
 			dst[1] = F.size;
-			if( type == 'f' ){ isz = 4; dst[2] = GL_FLOAT; }
-			else if( type == 'c' ){ isz = 1; dst[2] = GL_UNSIGNED_BYTE; }
+			if( type == 'f' ){ isz = 4; dst[2] = SS_RSET_FLOAT; }
+			else if( type == 'b' ){ isz = 1; dst[2] = SS_RSET_BYTE; }
 			
 			if( cnt == '1' ) dst[3] = 1;
 			else if( cnt == '2' ) dst[3] = 2;
@@ -1199,6 +998,8 @@ int SS_MakeVertexFormat( SGS_CTX )
 			
 			if( ch == 'n' && cnt != '3' )
 				_WARN( "normals must have 3 components" )
+			if( ch == 'c' && type == 'b' && cnt != '4' )
+				_WARN( "colors with byte components must have exactly 4 bytes" )
 			
 			F.size += dst[4] = isz * dst[3];
 			dst[5] = ++order;
@@ -1212,10 +1013,16 @@ int SS_MakeVertexFormat( SGS_CTX )
 		if( aligned )
 			F.size = ( ( F.size - 1 ) / 32 + 1 ) * 32;
 		
-		ef = (vtxfmt*) sgs_PushObjectIPA( C, sizeof(F), vertex_format_iface );
+		ef = (SS_VertexFormat*) sgs_PushObjectIPA( C, sizeof(F), vertex_format_iface );
 		memcpy( ef, &F, sizeof(F) );
-		initialize_optimized_format( ef );
-		return 1;
+		ef->renderer = GCurRr;
+		ef->riface = GCurRI;
+		if( GCurRI->init_vertex_format( GCurRr, ef ) )
+		{
+			GCurRI->poke_resource( GCurRr, sgs_GetObjectStruct( C, -1 ), 1 );
+			return 1;
+		}
+		return 0;
 	}
 }
 
@@ -1228,7 +1035,7 @@ int SS_DrawPacked( SGS_CTX )
 {
 	sgs_Variable texvar;
 	sgs_Integer start, count, type;
-	vtxfmt* F;
+	SS_VertexFormat* F;
 	char *data, *idcs = NULL;
 	sgs_SizeVal datasize, idcsize = 0;
 	int ssz = sgs_StackSize( C );
@@ -1244,10 +1051,10 @@ int SS_DrawPacked( SGS_CTX )
 		!sgs_ParseInt( C, 5, &type ) ||
 		( ssz >=7 && !sgs_ParseString( C, 6, &idcs, &idcsize ) )
 		)
-		_WARN( "unexpected arguments; function expects 6 arguments: "
-			"texture|null, format, string, int, int, int, bool" )
+		_WARN( "unexpected arguments; function expects 6-7 arguments: "
+			"texture|null, format, vertex_data, int, int, int[, index_data]" )
 	
-	F = (vtxfmt*) sgs_GetObjectData( C, 1 );
+	F = (SS_VertexFormat*) sgs_GetObjectData( C, 1 );
 	
 	if( idcs )
 	{
@@ -1264,71 +1071,10 @@ int SS_DrawPacked( SGS_CTX )
 	if( !ss_ApplyTexture( &texvar, NULL, NULL ) )
 		sgs_Printf( C, SGS_WARNING, "could not use texture" );
 	
-#ifdef SS_USED3D
-	/* TODO_PUSH
-	IDirect3DDevice9_SetTexture( GD3DDev, 0, T ? T->obj : NULL );
-	if( T && T->obj )
-	{
-		SS_Texture* tex = T;
-		int lin = !( tex->flags & SS_TEXTURE_NOLERP );
-		int mip = ( tex->flags & SS_TEXTURE_MIPMAPS );
-		int hr = ( tex->flags & SS_TEXTURE_HREPEAT );
-		int vr = ( tex->flags & SS_TEXTURE_VREPEAT );
-		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_MINFILTER, lin ? D3DTEXF_LINEAR : D3DTEXF_POINT );
-		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_MAGFILTER, lin ? D3DTEXF_LINEAR : D3DTEXF_POINT );
-		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_MIPFILTER, mip ? ( lin ? D3DTEXF_LINEAR : D3DTEXF_POINT ) : D3DTEXF_NONE );
-		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_ADDRESSU, hr ? D3DTADDRESS_WRAP : D3DTADDRESS_CLAMP );
-		IDirect3DDevice9_SetSamplerState( GD3DDev, 0, D3DSAMP_ADDRESSV, vr ? D3DTADDRESS_WRAP : D3DTADDRESS_CLAMP );
-	}
-	*/
-	IDirect3DDevice9_SetVertexDeclaration( GD3DDev, F->vdecl );
-	if( idcs )
-		IDirect3DDevice9_DrawIndexedPrimitiveUP( GD3DDev, type, 0, count,
-			getprimitivecount( type, count ), idcs + start * 2, D3DFMT_INDEX16,
-			data, F->size );
-	else
-	{
-		if( type == PT_QUADS )
-		{
-			int i, cnt = count - 3;
-			for( i = 0; i < cnt; i += 4 )
-			{
-				IDirect3DDevice9_DrawPrimitiveUP( GD3DDev, D3DPT_TRIANGLEFAN,
-					2, data + F->size * i, F->size );
-			}
-		}
-		else
-		{
-			IDirect3DDevice9_DrawPrimitiveUP( GD3DDev, type,
-				getprimitivecount( type, count ),
-				data, F->size );
-		}
-	}
-	IDirect3DDevice9_SetVertexDeclaration( GD3DDev, NULL );
-
-#else
-	if( F->P[0] ) glVertexPointer( F->P[3], F->P[2], F->size, data + F->P[1] );
-	if( F->T[0] ) glTexCoordPointer( F->T[3], F->T[2], F->size, data + F->T[1] );
-	if( F->C[0] ) glColorPointer( F->C[3], F->C[2], F->size, data + F->C[1] );
-	if( F->N[0] ) glNormalPointer( F->N[2], F->size, data + F->N[1] );
+	if( F->renderer != GCurRr || F->riface != GCurRI )
+		_WARN( "vertex format was created with another renderer" );
 	
-	if( F->P[0] ) glEnableClientState( GL_VERTEX_ARRAY );
-	if( F->T[0] ) glEnableClientState( GL_TEXTURE_COORD_ARRAY );
-	if( F->C[0] ) glEnableClientState( GL_COLOR_ARRAY );
-	if( F->N[0] ) glEnableClientState( GL_NORMAL_ARRAY );
-	
-	glColor4f( 1, 1, 1, 1 );
-	if( idcs )
-		glDrawElements( type, count, GL_UNSIGNED_SHORT, idcs + start * 2 );
-	else
-		glDrawArrays( type, start, count );
-	
-	if( F->P[0] ) glDisableClientState( GL_VERTEX_ARRAY );
-	if( F->T[0] ) glDisableClientState( GL_TEXTURE_COORD_ARRAY );
-	if( F->C[0] ) glDisableClientState( GL_COLOR_ARRAY );
-	if( F->N[0] ) glDisableClientState( GL_NORMAL_ARRAY );
-	
-#endif
+	GCurRI->draw_ext( GCurRr, F, data, datasize, idcs, idcsize, 0, start, count, type );
 	
 	return 0;
 }
@@ -1494,19 +1240,21 @@ static int ss_renderbuf_pad( SGS_CTX )
 static int ss_renderbuf_draw( SGS_CTX )
 {
 	sgs_Variable texvar;
-	vtxfmt* F = NULL;
+	SS_VertexFormat* F = NULL;
 	sgs_SizeVal start, count, type;
 	char* data;
 	
 	RB_IHDR( draw );
+	SCRFN_NEEDS_RENDER_CONTEXT;
+	
 	if( !sgs_LoadArgs( C, "@>>olll", vertex_format_iface, &F, &start, &count, &type ) )
 		return 0;
 	if( sgs_ItemType( C, 1 ) != SVT_NULL )
 	{
 		if( !sgs_IsObject( C, 1, tex_iface ) )
 			return sgs_ArgErrorExt( C, 1, 1, "texture or null", "" );
-		sgs_GetStackItem( C, 1, &texvar );
 	}
+	sgs_GetStackItem( C, 1, &texvar );
 	data = rb->B.ptr;
 	
 	if( F->size * (start+count) > rb->B.size )
@@ -1515,34 +1263,10 @@ static int ss_renderbuf_draw( SGS_CTX )
 	if( !ss_ApplyTexture( &texvar, NULL, NULL ) )
 		return sgs_Printf( C, SGS_WARNING, "could not use texture" );
 	
-	/* DRAWING CODE */
-#ifdef SS_USED3D
-	IDirect3DDevice9_SetVertexDeclaration( GD3DDev, F->vdecl );
-	IDirect3DDevice9_DrawPrimitiveUP( GD3DDev, type,
-		getprimitivecount( type, count ),
-		data, F->size );
-	IDirect3DDevice9_SetVertexDeclaration( GD3DDev, NULL );
-
-#else
-	if( F->P[0] ) glVertexPointer( F->P[3], F->P[2], F->size, data + F->P[1] );
-	if( F->T[0] ) glTexCoordPointer( F->T[3], F->T[2], F->size, data + F->T[1] );
-	if( F->C[0] ) glColorPointer( F->C[3], F->C[2], F->size, data + F->C[1] );
-	if( F->N[0] ) glNormalPointer( F->N[2], F->size, data + F->N[1] );
+	if( F->renderer != GCurRr || F->riface != GCurRI )
+		_WARN( "vertex format was created with another renderer" );
 	
-	if( F->P[0] ) glEnableClientState( GL_VERTEX_ARRAY );
-	if( F->T[0] ) glEnableClientState( GL_TEXTURE_COORD_ARRAY );
-	if( F->C[0] ) glEnableClientState( GL_COLOR_ARRAY );
-	if( F->N[0] ) glEnableClientState( GL_NORMAL_ARRAY );
-	
-	glColor4f( 1, 1, 1, 1 );
-	glDrawArrays( type, start, count );
-	
-	if( F->P[0] ) glDisableClientState( GL_VERTEX_ARRAY );
-	if( F->T[0] ) glDisableClientState( GL_TEXTURE_COORD_ARRAY );
-	if( F->C[0] ) glDisableClientState( GL_COLOR_ARRAY );
-	if( F->N[0] ) glDisableClientState( GL_NORMAL_ARRAY );
-	
-#endif
+	GCurRI->draw_ext( GCurRr, F, data, rb->B.size, NULL, 0, 0, start, count, type );
 	
 	sgs_SetStackSize( C, 1 );
 	return 1;
@@ -1633,17 +1357,14 @@ static inline void Matrix4x4MultiplyBy4x4( float src1[4][4], float src2[4][4], f
 };
 
 
-typedef float mat4x4[4][4];
-mat4x4 matrices[8];
-int curmtx = 0;
-
 int SS_MatrixPush( SGS_CTX )
 {
 	int set = 0;
-	float mtx[ 16 ] = {0};
+	float mtx[ 16 ] = {0}, *mtxin, omtx[16];
 	int ssz = sgs_StackSize( C );
 	
 	SGSFN( "SS_MatrixPush" );
+	SCRFN_NEEDS_RENDER_CONTEXT;
 	
 	if( ssz < 1 || ssz > 2 ||
 		_parse_floatvec( C, 0, mtx, 16 ) ||
@@ -1651,31 +1372,18 @@ int SS_MatrixPush( SGS_CTX )
 		_WARN( "unexpected arguments; "
 			"function expects 1-2 arguments: array(real x16)[, bool]" )
 	
-#ifdef SS_USED3D
-	{
-		if( curmtx >= 8 )
-			return 0;
-		float *mtxin = (float*) matrices[ curmtx++ ], omtx[ 16 ];
-		IDirect3DDevice9_GetTransform( GD3DDev, D3DTS_WORLD, (D3DMATRIX*) mtxin );
-		if( set )
-			memcpy( omtx, mtx, sizeof(float)*16 );
-		else
-			Matrix4x4MultiplyBy4x4( (float (*)[4]) mtx, (float (*)[4]) mtxin, (float (*)[4]) omtx );
-		IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_WORLD, (D3DMATRIX*) omtx );
-	}
-	
-#else
-	glMatrixMode( GL_MODELVIEW );
-	glPushMatrix();
-	_mtx_transpose( mtx );
+	if( GRCurMatrix >= SS_MATRIX_STACK_SIZE )
+		return 0;
+	mtxin = (float*) GRWorldMatrices[ GRCurMatrix++ ];
 	if( set )
-		glLoadMatrixf( mtx );
+		memcpy( omtx, mtx, sizeof(float)*16 );
 	else
-		glMultMatrixf( mtx );
+		Matrix4x4MultiplyBy4x4( (float (*)[4]) mtx, (float (*)[4]) mtxin, (float (*)[4]) omtx );
 	
-#endif
+	GCurRI->set_matrix( GCurRr, SS_RMAT_WORLD, omtx );
 	
-	return 0;
+	sgs_PushBool( C, 1 );
+	return 1;
 }
 
 int SS_MatrixPop( SGS_CTX )
@@ -1685,18 +1393,14 @@ int SS_MatrixPop( SGS_CTX )
 	if( sgs_StackSize( C ) )
 		_WARN( "unexpected arguments" )
 	
-#ifdef SS_USED3D
-	if( curmtx > 0 )
+	if( GRCurMatrix > 0 )
 	{
-		curmtx--;
-		IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_WORLD, (D3DMATRIX*) matrices[ curmtx ] );
+		GRCurMatrix--;
+		GCurRI->set_matrix( GCurRr, SS_RMAT_WORLD, (float*) GRWorldMatrices[ GRCurMatrix ] );
+		
+		sgs_PushBool( C, 1 );
+		return 1;
 	}
-	
-#else
-	glMatrixMode( GL_MODELVIEW );
-	glPopMatrix();
-	
-#endif
 	
 	return 0;
 }
@@ -1715,27 +1419,10 @@ int SS_SetCamera( SGS_CTX )
 		( ssz >= 2 && _parse_floatvec( C, 1, mtx2, 16 ) ) )
 		_WARN( "expected an array of 16 'real' values" )
 	
-	_mtx_transpose( mtx );
-	
-#ifdef SS_USED3D
-	IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_VIEW, (D3DMATRIX*) mtx );
+	GCurRI->set_matrix( GCurRr, SS_RMAT_VIEW, mtx );
 	if( ssz < 2 ){ mtx2[0] = 1; mtx2[5] = 1; mtx2[10] = 1; mtx2[15] = 1; }
-	else _mtx_transpose( mtx2 );
-	IDirect3DDevice9_SetTransform( GD3DDev, D3DTS_PROJECTION, (D3DMATRIX*) mtx2 );
+	GCurRI->set_matrix( GCurRr, SS_RMAT_PROJ, mtx2 );
 	
-#else
-	glMatrixMode( GL_PROJECTION );
-	if( ssz >= 2 )
-	{
-		_mtx_transpose( mtx2 );
-		glLoadMatrixf( mtx2 );
-	}
-	else
-		glLoadIdentity();
-	glMatrixMode( GL_MODELVIEW );
-	glLoadMatrixf( mtx );
-	
-#endif
 	return 0;
 }
 
@@ -1802,7 +1489,7 @@ void ss_font_free( ss_font* font, SGS_CTX )
 		sgs_SizeVal i;
 		for( i = 0; i < font->glyphs.size; ++i )
 		{
-			ss_glyph* G = (ss_glyph*) (size_t) font->glyphs.vars[ i ].val.data.I;
+			ss_glyph* G = (ss_glyph*) font->glyphs.vars[ i ].val.data.P;
 			if( G->hastex )
 				GCurRI->destroy_texture( GCurRr, &G->tex );
 			sgs_Dealloc( G );
@@ -1818,8 +1505,15 @@ void ss_font_free( ss_font* font, SGS_CTX )
 int ss_font_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 {
 	FONTHDR;
-	/* TODO FIX REQUIRED CONTEXT */
-	ss_font_free( font, C );
+	if( font->riface )
+	{
+		SS_TmpCtx ctx = ss_TmpMakeCurrent( font->riface, font->renderer );
+		ss_font_free( font, C );
+		font->riface = NULL;
+		font->renderer = NULL;
+		GCurRI->poke_resource( GCurRr, data, 0 );
+		ss_TmpRestoreCurrent( &ctx );
+	}
 	return SGS_SUCCESS;
 }
 
@@ -1969,6 +1663,7 @@ int SS_CreateFont( SGS_CTX )
 		char* paths = NULL;
 		MemBuf fpath = membuf_create();
 		ss_font* fn = (ss_font*) sgs_PushObjectIPA( C, sizeof(ss_font), font_iface );
+		sgs_VarObj* obj = sgs_GetObjectStruct( C, -1 );
 		fn->loaded = 0;
 
 		if( sgs_PushGlobal( C, "ss_font_search_paths" ) ||
@@ -2001,6 +1696,7 @@ int SS_CreateFont( SGS_CTX )
 				"could not find font '%.*s', paths: %s", fnsize, fontname, paths );
 			return 0;
 		}
+		GCurRI->poke_resource( GCurRr, obj, 1 );
 	}
 
 	/* save and return the font object */
@@ -2014,15 +1710,9 @@ int SS_CreateFont( SGS_CTX )
 
 ss_glyph* ss_font_create_glyph( ss_font* font, SGS_CTX, uint32_t cp )
 {
-	/*
-#ifdef SS_USED3D
-	IDirect3DTexture9* tex = NULL;
-#else
-	GLuint tex = 0;
-#endif
-	*/
 	FT_GlyphSlot glyph;
 	ss_glyph* G = sgs_Alloc( ss_glyph );
+	G->hastex = 0;
 	
 	FT_Load_Char( font->face, cp, 0 );
 	glyph = font->face->glyph;
@@ -2033,62 +1723,10 @@ ss_glyph* ss_font_create_glyph( ss_font* font, SGS_CTX, uint32_t cp )
 		int ret = GCurRI->create_texture_a8( GCurRr, &G->tex, glyph->bitmap.buffer, glyph->bitmap.width, glyph->bitmap.rows, glyph->bitmap.pitch );
 		sgs_BreakIf( !ret && "failed to create font texture" );
 		G->hastex = 1;
-		/* TODO_PUSH
-#ifdef SS_USED3D
-		HRESULT hr;
-		D3DLOCKED_RECT lr;
-		hr = IDirect3DDevice9_CreateTexture( GD3DDev, glyph->bitmap.width,
-			glyph->bitmap.rows, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &tex, NULL );
-		sgs_BreakIf( tex == NULL || FAILED(hr) );
-		IDirect3DTexture9_LockRect( tex, 0, &lr, NULL, D3DLOCK_DISCARD );
-		pp = glyph->bitmap.buffer;
-		for( y = 0; y < glyph->bitmap.rows; ++y )
-		{
-			for( x = 0; x < glyph->bitmap.width; ++x )
-			{
-				int off = y * lr.Pitch;
-				((uint8_t*)lr.pBits)[ off + x * 4 ] = 0xff;
-				((uint8_t*)lr.pBits)[ off + x * 4 + 1 ] = 0xff;
-				((uint8_t*)lr.pBits)[ off + x * 4 + 2 ] = 0xff;
-				((uint8_t*)lr.pBits)[ off + x * 4 + 3 ] = pp[ x ];
-			}
-			pp += glyph->bitmap.pitch;
-		}
-		IDirect3DTexture9_UnlockRect( tex, 0 );
-		
-#else
-		glGenTextures( 1, &tex );
-		glBindTexture( GL_TEXTURE_2D, tex );
-		imgdata = sgs_Alloc_n( uint8_t, glyph->bitmap.width * glyph->bitmap.rows * 4 );
-		pp = glyph->bitmap.buffer;
-		for( y = 0; y < glyph->bitmap.rows; ++y )
-		{
-			for( x = 0; x < glyph->bitmap.width; ++x )
-			{
-				int off = y * glyph->bitmap.width * 4;
-				imgdata[ off + x * 4 ] = 0xff;
-				imgdata[ off + x * 4 + 1 ] = 0xff;
-				imgdata[ off + x * 4 + 2 ] = 0xff;
-				imgdata[ off + x * 4 + 3 ] = pp[ x ];
-			}
-			pp += glyph->bitmap.pitch;
-		}
-		glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, glyph->bitmap.width, glyph->bitmap.rows,
-			0, GL_RGBA, GL_UNSIGNED_BYTE, imgdata );
-		sgs_Dealloc( imgdata );
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-		
-#endif
-		*/
 	}
 
 	G->glyph_id = FT_Get_Char_Index( font->face, cp );
-	/* TODO_PUSH
-	G->texture = tex;
-	G->texwidth = glyph->bitmap.width;
-	G->texheight = glyph->bitmap.rows;
-	*/
+	
 	G->bmoffx = glyph->bitmap_left;
 	G->bmoffy = glyph->bitmap_top;
 	G->advx = glyph->advance.x >> 6;
@@ -2126,22 +1764,14 @@ fontvtx;
 void ss_int_drawtext_line( ss_font* font, SGS_CTX, char* str,
 	sgs_SizeVal size, int x, int y, int xto, float* color )
 {
-	int W, H, mx, my, xadv = 0, ret, use_kerning;
-	uint32_t previous = 0;
+	int xadv = 0, ret, use_kerning;
+	uint32_t previous = 0, color_u32;
 	ss_glyph* G;
-
-#ifdef SS_USED3D
-	uint32_t cc = D3DCOLOR_ARGB( ((int)(color[3]*255)),
-		((int)(color[0]*255)), ((int)(color[1]*255)), ((int)(color[2]*255)) );
 	
-#else
-	glEnable( GL_TEXTURE_2D );
-	glColor4f( color[0], color[1], color[2], color[3] );
+	color_u32 = col4f_pack_native( color );
 	
-#endif
-
 	use_kerning = FT_HAS_KERNING( font->face );
-
+	
 	while( size > 0 )
 	{
 		uint32_t cp = SGS_UNICODE_INVCHAR;
@@ -2149,11 +1779,11 @@ void ss_int_drawtext_line( ss_font* font, SGS_CTX, char* str,
 		ret = abs( ret );
 		str += ret;
 		size -= ret;
-
+		
 		G = ss_font_get_glyph( font, C, cp );
 		if( !G )
 			continue;
-
+		
 		if( use_kerning && previous && G->glyph_id )
 		{
 			FT_Vector delta;
@@ -2162,45 +1792,45 @@ void ss_int_drawtext_line( ss_font* font, SGS_CTX, char* str,
 		}
 		previous = G->glyph_id;
 		x += xadv;
-
+		
 		if( x > xto )
 			break;
 		
 		if( G->hastex )
 		{
+			float tox, toy;
+			int W, H, mx, my;
+			
 			W = G->tex.width;
 			H = G->tex.height;
 			
 			mx = x + G->bmoffx;
 			my = y + font->size - G->bmoffy;
 			
-#ifdef SS_USED3D
+			GCurRI->apply_texture( GCurRr, &G->tex );
+			if( GCurRI->flags & SS_RI_HALFPIXELOFFSET )
 			{
-				float tox = 0.5f / W, toy = 0.5f / H;
-				fontvtx vdata[4] = { { mx, my, 0, cc, tox, toy }, { mx, my+H, 0, cc, tox, 1+toy },
-					{ mx+W, my+H, 0, cc, 1+tox, 1+toy }, { mx+W, my, 0, cc, 1+tox, toy } };
-				IDirect3DDevice9_SetFVF( GD3DDev, D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX1 );
-				IDirect3DDevice9_SetTexture( GD3DDev, 0,
-					(IDirect3DBaseTexture9*) G->texture );
-				IDirect3DDevice9_DrawPrimitiveUP( GD3DDev,
-					D3DPT_TRIANGLEFAN, 2, vdata, sizeof(fontvtx) );
+				tox = 0.5f / W;
+				toy = 0.5f / H;
+			}
+			else
+			{
+				tox = 0;
+				toy = 0;
 			}
 			
-#else
-			glBindTexture( GL_TEXTURE_2D, G->texture );
-			glBegin( GL_QUADS );
-			glTexCoord2f( 0, 0 );
-			glVertex2f( mx, my );
-			glTexCoord2f( 0, 1 );
-			glVertex2f( mx, my+H );
-			glTexCoord2f( 1, 1 );
-			glVertex2f( mx+W, my+H );
-			glTexCoord2f( 1, 0 );
-			glVertex2f( mx+W, my );
-			glEnd();
-#endif
+			{
+				SS_BasicVertex vdata[4] =
+				{
+					{ { mx, my, 0 },     color_u32, { tox, toy }, {0,0} },
+					{ { mx, my+H, 0 },   color_u32, { tox, 1+toy }, {0,0} },
+					{ { mx+W, my+H, 0 }, color_u32, { 1+tox, 1+toy }, {0,0} },
+					{ { mx+W, my, 0 },   color_u32, { 1+tox, toy }, {0,0} }
+				};
+				GCurRI->draw_basic_vertices( GCurRr, vdata, 4, SS_PT_TRIANGLE_FAN );
+			}
 		}
-
+		
 		xadv = G->advx;
 	}
 }
@@ -2405,7 +2035,12 @@ const char* gl_init = "global _Gtex = {}, _Gfonts = {};";
 
 int ss_InitGraphics( SGS_CTX )
 {
-	int ret;
+	int ret, mid;
+	
+	for( mid = 0; mid < SS_MATRIX_STACK_SIZE; ++mid )
+	{
+		_mtx_identity( (float*) GRWorldMatrices[ mid ] );
+	}
 
 	FT_Init_FreeType( &g_ftlib );
 

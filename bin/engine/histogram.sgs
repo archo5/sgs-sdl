@@ -10,7 +10,7 @@ function Histogram.create( limit )
 	{
 		limit = limit,
 		data = [],
-		vfmt = SS_MakeVertexFormat( "pf2cc4" ),
+		vfmt = SS_MakeVertexFormat( "pf2cb4" ),
 		rb = SS_CreateRenderBuffer(),
 	};
 	return class( data, Histogram );
@@ -35,7 +35,7 @@ function Histogram.draw( x, y, xscale, yscale, color, vlim )
 	rb.f( x + this.limit * xscale, y ).dw( bc );
 	rb.f( x + this.limit * xscale, y + yscale * vlim ).dw( bc );
 	rb.f( x, y + yscale * vlim ).dw( bc );
-	rb.draw( null, this.vfmt, 0, 4, PT_TRIANGLE_FAN );
+	rb.draw( null, this.vfmt, 0, 4, SS_PT_TRIANGLE_FAN );
 	
 	rb = this.rb.begin();
 	foreach( px, py : this.data )
@@ -43,5 +43,5 @@ function Histogram.draw( x, y, xscale, yscale, color, vlim )
 		rb.f( x + px * xscale, y + py * yscale ).dw( color );
 	}
 	if( this.data.size )
-		rb.draw( null, this.vfmt, 0, this.data.size, PT_LINE_STRIP );
+		rb.draw( null, this.vfmt, 0, this.data.size, SS_PT_LINE_STRIP );
 }
