@@ -1487,17 +1487,21 @@ int ss_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 		break;
 	
 	case SDL_WINDOWEVENT:
-		sgs_PushString( C, "windowID" );
-		sgs_PushInt( C, event->window.windowID );
-		if( event->window.event == SDL_WINDOWEVENT_RESIZED )
+		if( event->window.event == SDL_WINDOWEVENT_SIZE_CHANGED )
 		{
 			int modlist[] = { SS_RMOD_WIDTH, event->window.data1, SS_RMOD_HEIGHT, event->window.data2, 0 };
 			ss_window* W = ss_window_from_id( event->window.windowID );
 			if( W )
+			{
+				SS_TmpCtx ctx = ss_TmpMakeCurrent( W->riface, W->renderer );
 				W->riface->modify( W->renderer, modlist );
+				ss_TmpRestoreCurrent( &ctx );
+			}
 		}
+		sgs_PushString( C, "windowID" );
+		sgs_PushInt( C, event->window.windowID );
 		sgs_PushString( C, "event" );
-		sgs_PushBool( C, event->window.event );
+		sgs_PushInt( C, event->window.event );
 		sgs_PushString( C, "data1" );
 		sgs_PushInt( C, event->window.data1 );
 		sgs_PushString( C, "data2" );

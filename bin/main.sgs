@@ -1,267 +1,99 @@
 
+include "utils/playlist_menu";
+
+
+global initialWidth = 600;
+global initialHeight = 500;
+
 function configure()
 {
-	global sys_exit;
-
-	editor = false;
-	
 	for( i = 0; i < sys_args.size; ++i )
 	{
 		var arg = sys_args[ i ];
-		if( arg == "-preexit" )
+		if( arg == "-mainfile" )
 		{
-			println( "PREEXIT" );
-			sys_exit = true;
+			i++;
+			if( i >= sys_args.size )
+				ERROR( "main file not specified after '-mainfile'" );
+			old_cfg = configure;
+			include( sys_args[ i ] );
+			if( configure !== old_cfg ) // avoid infinite loops
+				configure();
 		}
-		else if( arg == "-profile" )
-		{
-			enable_profiler();
-			println( "PROFILER ENABLED" );
-		}
-		else if( arg == "-profile-ops" )
-		{
-			enable_profiler2();
-			println( "PROFILER [mode 2] ENABLED" );
-		}
-		else if( arg == "-profile-mem" )
-		{
-			enable_profiler(3);
-			println( "PROFILER [mode 3] ENABLED" );
-		}
-		else if( arg == "-editor" )
-		{
-			editor = true;
-		}
-	}
-
-	if( editor )
-	{
-		include "editor/main";
-		configure();
-	}
-}
-
-// global W, H, W1 = 1024, H1 = 576, F1 = "", W2 = 1600, H2 = 900, F2 = "", which = 2;
-global W, H, W1 = 1024, H1 = 576, F1 = "vsync", W2 = 1024, H2 = 576, F2 = "", which = 2;
-
-function switch()
-{
-	global W, H, W1, H1, F1, W2, H2, F2, which;
-	
-	which = 3 - which;
-	if( which == 1 )
-	{
-		SS_SetVideoMode( W1, H1, 32, F1 );
-		W = W1; H = H1;
-	}
-	else
-	{
-		SS_SetVideoMode( W2, H2, 32, F2 );
-		W = W2; H = H2;
 	}
 }
 
 function initialize()
 {
-	printvar( SS_GetPlatformInfo() );
-	printvar( SS_GetPowerInfo() );
-	printvar( SS_GetVideoDrivers() );
-	dmodes = [];
-	cnt = SS_GetNumDisplays();
-	for( i = 0; i < cnt; ++i )
-		dmodes.push({ name = SS_GetDisplayName( i ), modes = SS_GetDisplayModes( i ) });
-	printvar( dmodes );
-	
-//	SS_SetCaption( "The SGS-SDL Game Framework" );
-	SS_SetGLAttrib( SDL_GL_DEPTH_SIZE, 24 );
-	SS_SetGLAttrib( SDL_GL_STENCIL_SIZE, 8 );
-//	switch();
-//	grab_input(true);
-//	show_cursor(false);
-	global Window = SS_CreateWindow( "SGS-SDL Game Framework", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 576 );
-	Window.initRenderer( SS_RENDERER_OPENGL, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );// SS_RENDERER_OPENGL );
-	global W = 1024;
-	global H = 576;
-	
-	global UI = UIFrame.create( 1024, 576 );
-//	UI.addChild( UIControl.createButton( "Make it rain!", 10, 10, 120, 40, function(){} ) );
-	
-	global MI = SS_CreateImage( 2, 2 );
-	MI.clear( 0, 0, 0 );
-	MI.setData( fmt_pack( "cccc cccc cccc cccc"
-		, 255, 0, 0, 255
-		, 255, 255, 0, 255
-		, 0, 255, 0, 255
-		, 0, 0, 255, 255
-	) );
-	global MIT = SS_CreateTexture( MI, "nolerp" );
-
-	global TM = Tilemap.create( SS_CreateTexture( "ntset.png", "nolerp" ), 32, 32 );
-	floor = _G.floor;
-	randf = _G.randf;
-	for( y = 0; y < 64; ++y )
-	{
-		for( x = 0; x < 64; ++x )
-		{
-			TM.set( x, y, floor( randf() * 3.99 ), floor( randf() * 3.99 ), [1,1,1] );
-		}
-	}
-	
-	global HG = Histogram.create(200);
-	global HG2 = Histogram.create(200);
-	
-	println();
-	global image = SS_CreateTexture( "crosshair.png", "mipmaps" );
-	println( image );
-	printvar( _Gtex );
-	println();
+	global Window = SS_CreateWindow( "SGS-SDL Framework Test suite", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, initialWidth, initialHeight, SDL_WINDOW_RESIZABLE );
+	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
 	
 	global Font = SS_CreateFont( "verdana.ttf", 12 );
-	global BigFont = SS_CreateFont( "verdana.ttf", 72 );
-	
-	global g_RB = SS_CreateRenderBuffer().reserve( 512 );
 	
 	SS_InitDrawFunctions();
-	global g_edtex = SS_CreateTexture( "editor/img/default_icon.png" );
-	global g_edtex_nl = SS_CreateTexture( "editor/img/default_icon.png", "nolerp" );
+	
+	global lasttime = ftime();
+	
+	options = [];
+	foreach( real, item : io_dir("tests") )
+	{
+		if( real )
+		{
+			fn = function( item ){ os_command( "sgs-sdl -mainfile tests/" $ item.id ); };
+			options.push({ id = item, text = string_part( item, 0, -4 ), action = fn });
+		}
+	}
+	global PMenu = PlaylistMenu.create
+	(options,
+	{
+		x = 32,
+		y = 32,
+	});
+	
+	global LogoTexture = SS_CreateTexture( "logo-red.png" );
 }
-
-global mpos = vec2(0,0);
-
-global lasttime = ftime();
-global rotation = 0;
 
 function update()
 {
-	global lasttime, rotation, P, W, H;
+	global lasttime;
 	var curtime = ftime();
 	var delta = curtime - lasttime;
 	lasttime = curtime;
 	if( delta > 1.0/15.0 )
 		delta = 1.0/15.0;
 	
-	numallocs = sys_stat(4);
+	W = Window.width;
+	H = Window.height;
 	
-	rotation += delta * 2;
-	
-	var cc = color(0.1,0.2,0.4);
-	SS_Clear( cc );
-	
-	if( curtime % 2 < 1 )
-		SS_SetCamera2D( 500, 500, 500, W/H, 0 );
-	else
-		SS_SetCamera3D( vec3(500,500,-500), vec3(0,0,1), vec3(0,-1,0), deg2rad(90), W/H, 1, 10000 );
-	
-	TM.render();
-	
-	// METHOD 1
-	vdata = fmt_pack( "5f12x 5f12x 5f12x 5f12x",
-		100, 100, 0, 0, 0,
-		200, 100, 0, 1, 0,
-		300, 300, 0, 1, 1,
-		100, 200, 0, 0, 1
-	);
-	vfmt = SS_MakeVertexFormat( "|pf3tf2" );
-	idata = fmt_pack( "4w", 1, 2, 3, 0 );
-	SS_DrawPacked( image, vfmt, vdata, 0, 4, SS_PT_TRIANGLE_FAN );
-	SS_DrawPacked( image, vfmt, vdata, 0, 4, SS_PT_TRIANGLE_FAN, idata );
-	
-	// METHOD 2
-	g_RB.begin()
-		.f( 400, 400, 0, 0, 0 ).pad( 12 )
-		.f( 500, 400, 0, 1, 0 ).pad( 12 )
-		.f( 600, 600, 0, 1, 1 ).pad( 12 )
-		.f( 400, 500, 0, 0, 1 ).pad( 12 )
-		.draw( image, vfmt, 0, 4, SS_PT_TRIANGLE_FAN );
-	
-	// EXTENSIONS
-	SS_DrawColorRect( 800, 200, 900, 250, 0.7, 0.5, 0.3, 0.5 );
-	ddd = 32;
-	ccc = 16;
-	
-	hg2t0 = ftime();
-	
-	for( y = 0; y < ccc; ++y )
-	{
-		for( x = 0; x < ccc; ++x )
-		{
-			SS_DrawTexRect( 800+x*ddd, 300+y*ddd, 832+x*ddd, 332+y*ddd, g_edtex );
-		}
-	}
-	
-	hg2t1 = ftime();
-	
+	SS_Clear( color(0.1,0.1,0.1) );
 	SS_SetCameraUI( 0, W, 0, H );
 	
-	PX = 32;
-	PY = 96;
-	SZ = 64;
-	DX = DY = SZ + 1;
-	SS_DrawTexRect( PX, PY, PX+SZ, PY+SZ, g_edtex );
-	SS_Draw({ preset = "tile", texture = g_edtex, position = vec2(PX+DX,PY), scale = vec2(SZ,SZ) });
-	SS_DrawTexRect( PX, PY+DY, PX+SZ, PY+DY+SZ, g_edtex_nl );
-	SS_Draw({ preset = "tile", texture = g_edtex_nl, position = vec2(PX+DX,PY+DY), scale = vec2(SZ,SZ) });
+	Wslash = W / 2 + 1;
+	Hslash = round( H * 0.6 );
+	topMaxSize = max( Wslash, Hslash );
+	btmMaxSize = max( Wslash, H - Hslash );
 	
-	SS_DrawTexRect( 32, 32, 64, 64, MIT );
+	SS_DrawColor2VRect( 0, Hslash - topMaxSize, W, Hslash, 0.8, 0.8, 0.8, 1, 0.5, 0.5, 0.5, 1 );
+	SS_DrawColor2VRect( 0, Hslash, W, Hslash + btmMaxSize, 0.4, 0.4, 0.4, 1, 0.2, 0.2, 0.2, 1 );
 	
-	SS_Draw({ preset = "box", texture = image, position = mpos, scale = vec2(128,128), angle = rotation * M_PI, color = color(0.3,0.5,0.7) });
+	PMenu.draw( delta );
 	
-	UI.draw();
-	
-//	println( "font data: " $ { ascender = BigFont.ascender, descender = BigFont.descender, y_ppem = BigFont.y_ppem } );
-	fof = ( BigFont.ascender + abs( BigFont.descender ) - BigFont.y_ppem ) / 2; // half of total side height is the offset to apply
-	
-	// DRAW VCENTERED TEXT
-	if( !isset( _G, "dt_functions" ) )
-		global dt_functions = [ "SS_DrawTextLine", "SS_DrawTextLine_BL", "SS_DrawTextLine_VN", "SS_DrawTextLine_VC" ];
-	tl = BigFont.getTextLength( "Mg" );
-	adv = tl + 1;
-	
-	x = 150;
-	y = 150;
-	foreach( fn : dt_functions )
-	{
-		SS_DrawColorRect( x, y, x + tl, y + BigFont.size, 0, 0, 0, 1 );
-		SS_DrawColorLine( x, y + BigFont.size * 0.5, x + tl, y + BigFont.size * 0.5, 0.5, 0, 0, 1 );
-		_G[ fn ]( "Mg", BigFont, x, y, color(1,1,1) );
-		SS_DrawColorRect( x, y + 1 + BigFont.size, x + tl, y + 1 + BigFont.size + Font.size, 0, 0, 0, 0.5 );
-		SS_DrawTextLine_VN( string_replace( fn, "SS_DrawTextLine", "DTL" ), Font, x, y + 1 + BigFont.size, color(0.4, 0.8, 0.6) );
-		x += adv;
-	}
-	
-	ftm = ( ftime() - lasttime ) * 1000.0;
-	HG.push( ftm );
-	HG2.push( ( hg2t1 - hg2t0 ) * 1000.0 );
-	tx = "frame time: " $ ftm $ " ms";
-	SS_DrawTextLine( tx, Font, 101, 1, color(0,0,0) );
-	SS_DrawTextLine( tx, Font, 100, 0, color(0.9,0.8,0.7) );
-//println(tx);
-	HG.draw( 100, 500, 3, -2, 0xffcccccc, 1000/60 );
-	HG2.draw( 100, 500, 3, -2, 0xffcccccc, 1000/60 );
-	
-	SS_DrawTextLine( "allocs per frame: " $ (sys_stat(4) - numallocs), Font, 4, 4, color(1,1,1) );
+	tW = LogoTexture.width;
+	tH = LogoTexture.height;
+	SS_Draw({ preset = "tile", position = vec2( W * 0.9 - tW - 32, Hslash - tH + 24 ), scale = vec2( tW, tH ), texture = LogoTexture });
+	SS_Draw({ preset = "tile", position = vec2( W * 0.9 - tW - 32, Hslash + tH + 24 ), scale = vec2( tW, -tH ), texture = LogoTexture, color = color(0.5,0.5,0.5,0.5) });
 	
 	SS_Present();
 
 	sleeptime = 15 - ( ftime() - lasttime ) * 1000;
-//	if( sleeptime > 0 ) SS_Sleep( sleeptime );
+	if( sleeptime > 0 ) SS_Sleep( sleeptime );
 }
 
 function on_event( e )
 {
 	if( e.type == SDL_QUIT )
 		global sys_exit = true;
-	if( e.type == SDL_MOUSEMOTION )
-	{
-		global mpos = vec2( e.x, e.y );
-//		println( get_relative_mouse_state() );
-	}
-	if( e.type == SDL_KEYDOWN && e.keycode == SDLK_F11 )
-		switch();
-	if( e.type == SDL_VIDEODEVICELOST ) println( "Device lost!" );
-	if( e.type == SDL_VIDEODEVICERESET ) println( "Device reset!" );
-
-	UI.event( e );
+	PMenu.on_event( e );
 }
 
 function cleanup()

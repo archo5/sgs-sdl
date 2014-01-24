@@ -20,6 +20,7 @@ struct _SS_Renderer
 	float world_matrix[16];
 	float view_matrix[16];
 	sgs_VHTable rsrc_table;
+	int destructing;
 };
 
 
@@ -149,6 +150,7 @@ static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t version, uint3
 	SDL_GL_MakeCurrent( origwin, origctx );
 	
 	sgs_vht_init( &R->rsrc_table, ss_GetContext(), 64, 64 );
+	R->destructing = 0;
 	
 	return R;
 }
@@ -157,6 +159,7 @@ static void ss_ri_gl_destroy( SS_Renderer* R )
 {
 	int i;
 	SGS_CTX = ss_GetContext();
+	R->destructing = 1;
 	for( i = 0; i < R->rsrc_table.size; ++i )
 	{
 		sgs_VarObj* obj = (sgs_VarObj*) R->rsrc_table.vars[ i ].val.data.P;
@@ -181,8 +184,8 @@ static void ss_ri_gl_modify( SS_Renderer* R, int* modlist )
 	
 	while( *modlist )
 	{
-		if( *modlist == SS_RMOD_WIDTH ){ if( w != modlist[1] ){ resize = 1; w = modlist[1]; } }
-		else if( *modlist == SS_RMOD_HEIGHT ){ if( h != modlist[1] ){ resize = 1; h = modlist[1]; R->height = h; } }
+		if( *modlist == SS_RMOD_WIDTH ){ resize = 1; w = modlist[1]; }
+		else if( *modlist == SS_RMOD_HEIGHT ){ resize = 1; h = modlist[1]; R->height = h; }
 		
 		modlist += 2;
 	}
@@ -200,6 +203,9 @@ static void ss_ri_gl_poke_resource( SS_Renderer* R, sgs_VarObj* obj, int add )
 {
 	SGS_CTX = ss_GetContext();
 	sgs_Variable K;
+	
+	if( R->destructing )
+		return;
 	
 	K.type = SGS_VT_PTR;
 	K.data.P = obj;

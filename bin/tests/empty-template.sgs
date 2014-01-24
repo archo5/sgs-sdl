@@ -1,0 +1,22 @@
+
+function configure()
+{
+}
+
+function initialize()
+{
+	global Window = SS_CreateWindow( "SGS-SDL Game Framework", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 576 );
+	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
+}
+
+function update()
+{
+	SS_Clear( color(0.1,0.2,0.4) );
+	SS_Present();
+}
+
+function on_event( e )
+{
+	if( e.type == SDL_QUIT )
+		global sys_exit = true;
+}

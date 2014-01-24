@@ -1,0 +1,52 @@
+
+function configure()
+{
+}
+
+function initialize()
+{
+	global Window1 = SS_CreateWindow( "Direct3D Window (hopefully)", 32, 32, 128, 128 );
+	Window1.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
+	global Win1Tex = SS_CreateTexture( "crosshair.png" );
+	
+	global Window2 = SS_CreateWindow( "OpenGL Window", 192, 32, 128, 128 );
+	Window2.initRenderer( SS_RENDERER_OPENGL, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
+	global Win2Tex = SS_CreateTexture( "crosshair.png" );
+}
+
+function update()
+{
+	angle = ftime();
+	
+	if( Window1 )
+	{
+		Window1.makeCurrent();
+		SS_Clear( color( 0.1, 0.1, 0.1 ) );
+		SS_SetCameraUI( 0, 128, 0, 128 );
+		SS_Draw({ preset = "box", position = vec2( 64, 64 ), scale = vec2( 128, 128 ), angle = angle, texture = Win1Tex, color = color(1,0,0) });
+		SS_Present();
+	}
+	
+	if( Window2 )
+	{
+		Window2.makeCurrent();
+		SS_Clear( color( 0.1, 0.1, 0.1 ) );
+		SS_SetCameraUI( 0, 128, 0, 128 );
+		SS_Draw({ preset = "box", position = vec2( 64, 64 ), scale = vec2( 128, 128 ), angle = angle, texture = Win2Tex, color = color(0,0,1) });
+		SS_Present();
+	}
+}
+
+function on_event( e )
+{
+	if( e.type == SDL_QUIT )
+		global sys_exit = true;
+	if( e.type == SDL_WINDOWEVENT && e.event == SDL_WINDOWEVENT_CLOSE )
+	{
+		win = SS_GetWindowFromID( e.windowID );
+		if( win == Window1 )
+			global Window1 = null;
+		if( win == Window2 )
+			global Window2 = null;
+	}
+}

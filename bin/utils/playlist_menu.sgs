@@ -1,0 +1,198 @@
+
+
+global PlaylistMenu =
+{
+	ACT_SELECT_UP = 1,
+	ACT_SELECT_DOWN = 2,
+	ACT_ACTIVATE = 3,
+};
+
+/*
+	PlaylistMenu
+	
+	options: array of items:
+	- id // the key to use to modify some properties at runtime
+	- text // the label
+	- action // function to call on click
+	- [opt] visible // whether to show the item
+	- [opt] icon // the name of the icon to use for the item
+*/
+
+function PlaylistMenu.create( options, params )
+{
+	params ||= {};
+	
+	ids = {};
+	
+	foreach( opt : options )
+	{
+		if( isset( opt, "id" ) ) ids[ opt.id ] = opt;
+		if( !isset( opt, "text" ) ) opt.text = "<unnamed>";
+		if( !isset( opt, "visible" ) ) opt.visible = true;
+		if( isset( opt, "icon" ) )
+		{
+			opt.icon_texture = SS_CreateTexture( "ui/icons/"$opt.icon$".png" );
+		}
+	}
+	
+	data =
+	{
+		options = options,
+		mouseon = false,
+		clicked = false,
+		ontime = 0,
+	};
+	data = get_merged( params, data );
+	if( !isset( data, "x" ) ) data.x = 100;
+	if( !isset( data, "y" ) ) data.y = 400;
+	if( !isset( data, "scale" ) ) data.scale = 1;
+	if( !isset( data, "height" ) ) data.height = 14;
+	if( !isset( data, "padding" ) ) data.padding = 6;
+	if( !isset( data, "vspace" ) ) data.vspace = 4;
+	if( !isset( data, "width" ) ) data.width = 400;
+	
+	data.x *= data.scale; // scale these to preserve in-screen placement
+	data.y *= data.scale; // --
+	data.height *= data.scale;
+	data.vspace *= data.scale;
+	data.width *= data.scale;
+	data.font = SS_CreateFont( "verdana.ttf", data.height );
+	
+	return class( data, PlaylistMenu );
+}
+
+function PlaylistMenu.mousemove( x, y )
+{
+	cy = this.y;
+	pmo = this.mouseon;
+	this.mouseon = false;
+	if( x >= this.x && x < this.x + this.width )
+	{
+		foreach( oid, option : this.options )
+		{
+			if( !option.visible )
+				continue;
+			
+			fht = this.height + this.padding * 2;
+			
+			if( y >= cy && y < cy + fht )
+			{
+				if( pmo !== oid )
+					this.ontime = 0;
+				this.mouseon = oid;
+				break;
+			}
+				
+			cy += fht + this.vspace;
+		}
+	}
+}
+
+function PlaylistMenu.do_action( which )
+{
+	item = this.options[ which ];
+	if( isset( item, "action" ) )
+		item.action( item );
+}
+
+function PlaylistMenu.mouseclick( down )
+{
+	if( down )
+		this.clicked = this.mouseon;
+	else
+	{
+		if( this.clicked !== false && this.mouseon === this.clicked )
+			this.do_action( this.clicked );
+		this.clicked = false;
+	}
+}
+
+function PlaylistMenu._clamp_mouseon()
+{
+	if( !this.options.size )
+	{
+		this.mouseon = false;
+		return;
+	}
+	this.mouseon %= this.options.size;
+	if( this.mouseon < 0 )
+		this.mouseon += this.options.size;
+}
+
+function PlaylistMenu.special_action( act )
+{
+	pmo = this.mouseon;
+	if( act == PlaylistMenu.ACT_SELECT_UP )
+	{
+		if( this.mouseon === false )
+			this.mouseon = this.options.size - 1;
+		else
+			this.mouseon--;
+		this._clamp_mouseon();
+	}
+	else if( act == PlaylistMenu.ACT_SELECT_DOWN )
+	{
+		if( this.mouseon === false )
+			this.mouseon = 0;
+		else
+			this.mouseon++;
+		this._clamp_mouseon();
+	}
+	else if( act == PlaylistMenu.ACT_ACTIVATE )
+	{
+		if( this.mouseon !== false )
+			this.do_action( this.mouseon );
+	}
+	if( pmo !== this.mouseon )
+		this.ontime = 0;
+}
+
+function PlaylistMenu.on_event( e )
+{
+	if( e.type == SDL_MOUSEMOTION )
+		this.mousemove( e.x, e.y );
+	else if( e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP )
+		this.mouseclick( e.type == SDL_MOUSEBUTTONDOWN );
+	else if( e.type == SDL_KEYDOWN )
+	{
+		if( e.keycode == SDLK_UP )
+			this.special_action( PlaylistMenu.ACT_SELECT_UP );
+		else if( e.keycode == SDLK_DOWN )
+			this.special_action( PlaylistMenu.ACT_SELECT_DOWN );
+		else if( e.keycode == SDLK_RETURN )
+			this.special_action( PlaylistMenu.ACT_ACTIVATE );
+	}
+}
+
+function PlaylistMenu.draw( delta )
+{
+	this.ontime += delta;
+	cy = this.y;
+	foreach( oid, option : this.options )
+	{
+		if( !option.visible )
+			continue;
+		
+		fht = this.height + this.padding * 2;
+		
+		ix = this.x;
+		if( this.mouseon === oid )
+			ix += if( this.ontime > 0.1, 0.1, this.ontime ) * 64;
+		
+		cfc = if(this.mouseon === oid,0.3-if(this.clicked === oid,0.2,0),0);
+		SS_DrawColor2VRect_WH( ix, cy, this.width + this.padding * 2, fht,
+			0.0 + cfc, 0.0 + cfc, 0.0 + cfc, 0.0 + cfc * 0.5,
+			0.0 + cfc * 0.5, 0.05 + cfc * 0.5, 0.1 + cfc * 0.5, 0.1 );
+		
+		if( this.mouseon === oid )
+		{
+			SS_SetBlending( SS_BLENDOP_ADD, SS_BLEND_SRCALPHA, SS_BLEND_ONE );
+			SS_DrawColorRect_WH( ix, cy, this.width + this.padding * 2, fht, 1, 1, 1, pow( 1/(1+this.ontime), 16 ) * 0.1 );
+			SS_SetBlending( SS_BLENDOP_ADD, SS_BLEND_SRCALPHA, SS_BLEND_INVSRCALPHA );
+		}
+		
+		SS_DrawTextLine_VC( option.text, this.font, ix + this.padding, cy + this.padding+1 + this.height / 2, color(0,0,0,0.3) );
+		SS_DrawTextLine_VC( option.text, this.font, ix + this.padding, cy + this.padding + this.height / 2, color(1,1,1) );
+		cy += fht + this.vspace;
+	}
+}
