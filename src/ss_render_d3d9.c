@@ -14,8 +14,8 @@
 typedef IDirect3D9* WINAPI (*pfnDirect3DCreate9) (UINT SDKVersion); 
 
 
-void* GD3D9_DLL = NULL;
-IDirect3D9* GD3D = NULL;
+static void* GD3D9_DLL = NULL;
+static IDirect3D9* GD3D = NULL;
 
 
 static void _ss_reset_states( IDirect3DDevice9* dev, int w, int h )

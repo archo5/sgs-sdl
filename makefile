@@ -73,8 +73,14 @@ endif
 DEPS = $(patsubst %,$(SRCDIR)/%,$(_DEPS))
 OBJ = $(patsubst %,$(OBJDIR)/%,$(_OBJ))
 
+.PHONY: bothlaunchers
+bothlaunchers: $(OUTDIR)/sgs-sdl-release$(BINEXT) $(OUTDIR)/sgs-sdl-debug$(BINEXT)
 
-$(OUTDIR)/sgs-sdl$(BINEXT): $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) src/ss_launcher.c
+$(OUTDIR)/sgs-sdl-release$(BINEXT): $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) src/ss_launcher.c
+	$(LINUXHACKPRE)
+	gcc -o $@ src/ss_launcher.c -mwindows $(COMPATHS) $(LIBFLAGS) -Isgscript/src $(C2FLAGS) -DSS_RELEASE -Lbin -lsgs-sdl -s
+	$(LINUXHACKPOST)
+$(OUTDIR)/sgs-sdl-debug$(BINEXT): $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) src/ss_launcher.c
 	$(LINUXHACKPRE)
 	gcc -o $@ src/ss_launcher.c $(COMPATHS) $(LIBFLAGS) -Isgscript/src $(C2FLAGS) -Lbin -lsgs-sdl -s
 	$(LINUXHACKPOST)

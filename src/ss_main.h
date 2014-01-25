@@ -286,7 +286,7 @@ int ss_ParseTexture( SGS_CTX, int item, SS_Texture** out );
 
 
 /* Core interface */
-int ss_Initialize( int argc, char* argv[] );
+int ss_Initialize( int argc, char* argv[], int debug );
 int ss_Frame();
 int ss_Free();
 

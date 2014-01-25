@@ -796,12 +796,7 @@ static int SS_GetWindowFromID( SGS_CTX )
 	if( !obj )
 		sgs_PushPtr( C, win );
 	else
-	{
-		sgs_Variable var;
-		var.type = SGS_VTC_OBJECT;
-		var.data.O = obj;
-		sgs_PushVariable( C, &var );
-	}
+		sgs_PushObjectPtr( C, obj );
 	return 1;
 }
 

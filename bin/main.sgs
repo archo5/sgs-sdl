@@ -25,6 +25,8 @@ function configure()
 
 function initialize()
 {
+	println( "SGS-SDL Framework Test suite" );
+	
 	global Window = SS_CreateWindow( "SGS-SDL Framework Test suite", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, initialWidth, initialHeight, SDL_WINDOW_RESIZABLE );
 	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
 	
@@ -39,7 +41,7 @@ function initialize()
 	{
 		if( real )
 		{
-			fn = function( item ){ os_command( "sgs-sdl -mainfile tests/" $ item.id ); };
+			fn = function( item ){ os_command( sys_args[0] $ " -mainfile tests/" $ item.id ); };
 			options.push({ id = item, text = string_part( item, 0, -4 ), action = fn });
 		}
 	}

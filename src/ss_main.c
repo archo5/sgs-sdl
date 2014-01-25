@@ -30,15 +30,16 @@ sgs_Prof P;
 sgs_Context* ss_GetContext(){ return C; }
 
 
-int g_enabledProfiler = 0;
+int GEnabledProfiler = 0;
+int GEnabledDebugging = 0;
 
 int SS_EnableProfiler( SGS_CTX )
 {
 	SGSFN( "SS_EnableProfiler" );
 	if( sgs_StackSize( C ) > 0 )
-		g_enabledProfiler = sgs_GetInt( C, 0 );
+		GEnabledProfiler = sgs_GetInt( C, 0 );
 	else
-		g_enabledProfiler = 1;
+		GEnabledProfiler = 1;
 	return 0;
 }
 
@@ -65,12 +66,28 @@ void ss_reset_buffer()
 }
 
 
-int ss_Initialize( int argc, char* argv[] )
+void ss_PrintFunc( void* unused, SGS_CTX, int type, const char* message )
+{
+	if( type >= SGS_ERROR )
+	{
+		sgs_PushErrorInfo( C, SGS_ERRORINFO_FULL, type, message );
+		SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Script error", sgs_GetStringPtr( C, -1 ), NULL );
+		exit( -1 );
+	}
+}
+
+
+int ss_Initialize( int argc, char* argv[], int debug )
 {
 	int ret;
 	
+	GEnabledDebugging = debug;
+	
 	C = sgs_CreateEngine();
-	sgs_InitIDbg( C, &D );
+	if( GEnabledDebugging )
+		sgs_InitIDbg( C, &D );
+	else
+		sgs_SetPrintFunc( C, ss_PrintFunc, NULL );
 	
 	/* preinit first-use libs */
 	sgs_LoadLib_Fmt( C );
@@ -79,8 +96,7 @@ int ss_Initialize( int argc, char* argv[] )
 	sgs_LoadLib_OS( C );
 	sgs_LoadLib_RE( C );
 	sgs_LoadLib_String( C );
-	sgs_GlobalCall( C, "loadtypeflags", 0, 0 );
-
+	
 	ss_InitDebug( C );
 	ss_InitExtSys( C );
 	ss_InitExtMath( C );
@@ -93,11 +109,11 @@ int ss_Initialize( int argc, char* argv[] )
 	/* load command line arguments */
 	{
 		int i;
-		for( i = 1; i < argc; ++i )
+		for( i = 0; i < argc; ++i )
 		{
 			sgs_PushString( C, argv[ i ] );
 		}
-		sgs_PushArray( C, argc - 1 );
+		sgs_PushArray( C, argc );
 		sgs_StoreGlobal( C, "sys_args" );
 	}
 	
@@ -107,7 +123,7 @@ int ss_Initialize( int argc, char* argv[] )
 	
 	/* run the preconfig script */
 	sgs_ExecString( C, scr_preconfig );
-
+	
 	/* run the config file */
 	ret = sgs_Include( C, "engine/all" );
 	if( !ret )
@@ -126,9 +142,9 @@ int ss_Initialize( int argc, char* argv[] )
 	
 	/* configure the framework (optional) */
 	sgs_GlobalCall( C, "configure", 0, 0 );
-
-	if( g_enabledProfiler )
-		sgs_ProfInit( C, &P, g_enabledProfiler );
+	
+	if( GEnabledProfiler )
+		sgs_ProfInit( C, &P, GEnabledProfiler );
 	
 	/* check if already required to exit */
 	{
@@ -208,7 +224,7 @@ int ss_Frame()
 		
 		if( ss_GlobalInt( C, "sys_exit" ) )
 			return 1;
-	
+		
 		/* advance the application exactly one frame */
 		if( sgs_GlobalCall( C, "update", 0, 0 ) )
 		{
@@ -230,14 +246,15 @@ int ss_Free()
 	}
 	
 	sgs_membuf_destroy( &g_tmpbuf, C );
-
-	if( g_enabledProfiler )
+	
+	if( GEnabledProfiler )
 	{
 		sgs_ProfDump( &P );
 		sgs_ProfClose( &P );
 	}
-
-	sgs_CloseIDbg( C, &D );
+	
+	if( GEnabledDebugging )
+		sgs_CloseIDbg( C, &D );
 	sgs_DestroyEngine( C );
 	
 	ss_FreeGraphics( C );

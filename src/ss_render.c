@@ -266,9 +266,9 @@ int ss_ApplyTexture( sgs_Variable* texvar, float* tox, float* toy )
 	
 	if( tox ) *tox = 0;
 	if( toy ) *toy = 0;
-	if( texvar && SGS_BASETYPE( texvar->type ) != SGS_VT_NULL )
+	if( texvar && texvar->type != SGS_VT_NULL )
 	{
-		if( SGS_BASETYPE( texvar->type ) != SGS_VT_OBJECT || texvar->data.O->iface != tex_iface )
+		if( texvar->type != SGS_VT_OBJECT || texvar->data.O->iface != tex_iface )
 			return 0;
 		T = (SS_Texture*) texvar->data.O->data;
 		if( T->renderer != GCurRr || T->riface != GCurRI )
@@ -359,7 +359,7 @@ const char* _parse_floatvec( SGS_CTX, int stkitem, float* out, int numcomp )
 	else if( sgs_ParseVec3( C, stkitem, out, 0 ) ) pnp = 3;
 	else if( sgs_ParseVec4( C, stkitem, out, 0 ) ) pnp = 4;
 	else if( sgs_ParseColor( C, stkitem, out, 0 ) ) pnp = 4;
-	else if( sgs_ItemTypeExt( C, stkitem ) == VTC_ARRAY )
+	else if( sgs_ArraySize( C, stkitem ) >= 0 )
 	{
 		int32_t i, asz = sgs_ArraySize( C, stkitem );
 		if( asz > numcomp )
@@ -415,13 +415,13 @@ const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, int numc
 		return res;
 	}
 	
-	if( var->type != VTC_ARRAY )
+	asz = sgs_ArraySize( C, -1 );
+	if( asz < 0 )
 	{
 		sgs_Pop( C, 1 );
 		return "array expected";
 	}
 	
-	asz = sgs_ArraySize( C, -1 );
 	out->cnt = asz;
 	out->size = asz * numcomp;
 	out->data_off = ss_request_memory_idx( out->size * sizeof(float) );
@@ -1734,13 +1734,13 @@ ss_glyph* ss_font_create_glyph( ss_font* font, SGS_CTX, uint32_t cp )
 ss_glyph* ss_font_get_glyph( ss_font* font, SGS_CTX, uint32_t cp )
 {
 	sgs_Variable K;
-	K.type = VTC_INT;
+	K.type = SVT_INT;
 	K.data.I = cp;
 	VHTVar* p = vht_get( &font->glyphs, &K );
 	if( !p )
 	{
 		sgs_Variable V;
-		V.type = VTC_PTR;
+		V.type = SVT_PTR;
 		ss_glyph* ng = ss_font_create_glyph( font, C, cp );
 		V.data.P = ng;
 		vht_set( &font->glyphs, C, &K, &V );

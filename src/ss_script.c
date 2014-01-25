@@ -115,10 +115,10 @@ void ss_UnpackFree( SGS_CTX, dict_unpack_item_t* items )
 */
 int ss_ParseColor( SGS_CTX, int pos, float* v4f )
 {
-	if( sgs_ItemTypeExt( C, pos ) == VTC_ARRAY )
+	int32_t size = sgs_ArraySize( C, pos );
+	if( size >= 0 )
 	{
 		int i;
-		int size = sgs_ArraySize( C, pos );
 		if( size < 1 || size > 4 )
 			return 0;
 		for( i = 0; i < size; ++i )

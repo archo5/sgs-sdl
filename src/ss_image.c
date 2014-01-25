@@ -352,7 +352,7 @@ int ss_InitImage( SGS_CTX )
 
 int ss_IsImageVar( sgs_Variable* var )
 {
-	return BASETYPE(var->type) == SVT_OBJECT && var->data.O->iface == image_iface;
+	return var->type == SVT_OBJECT && var->data.O->iface == image_iface;
 }
 
 int ss_ParseImage( SGS_CTX, int pos, SS_Image** out )
