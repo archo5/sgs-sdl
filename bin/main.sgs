@@ -26,13 +26,17 @@ function configure()
 function initialize()
 {
 	println( "SGS-SDL Framework Test suite" );
+	println( "initialization started at: " $ ftime() );
 	
 	global Window = SS_CreateWindow( "SGS-SDL Framework Test suite", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, initialWidth, initialHeight, SDL_WINDOW_RESIZABLE );
+	println( "window created at: " $ ftime() );
 	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
+	println( "renderer initialized at: " $ ftime() );
 	
 	global Font = SS_CreateFont( "verdana.ttf", 12 );
 	
 	SS_InitDrawFunctions();
+	println( "drawing functions initialized at: " $ ftime() );
 	
 	global lasttime = ftime();
 	
@@ -53,6 +57,7 @@ function initialize()
 	});
 	
 	global LogoTexture = SS_CreateTexture( "logo-red.png" );
+	println( "initialization ended at: " $ ftime() );
 }
 
 function update()

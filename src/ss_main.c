@@ -33,6 +33,9 @@ sgs_Prof P;
 sgs_Context* ss_GetContext(){ return C; }
 
 
+/* #define SS_STARTUP_PROFILING 1 */
+
+
 int GEnabledProfiler = 0;
 int GEnabledDebugging = 0;
 
@@ -86,11 +89,24 @@ int ss_Initialize( int argc, char* argv[], int debug )
 	
 	GEnabledDebugging = debug;
 	
+#if SS_STARTUP_PROFILING
+	printf( "ss_Initialize called: %f\n", sgs_GetTime() );
+#endif
+	
 	C = sgs_CreateEngine();
+	
+#if SS_STARTUP_PROFILING
+	printf( "SGS engine created: %f\n", sgs_GetTime() );
+#endif
+	
 	if( GEnabledDebugging )
 		sgs_InitIDbg( C, &D );
 	else
 		sgs_SetPrintFunc( C, ss_PrintFunc, NULL );
+	
+#if SS_STARTUP_PROFILING
+	printf( "debug printing initialized: %f\n", sgs_GetTime() );
+#endif
 	
 	/* preinit first-use libs */
 	sgs_LoadLib_Fmt( C );
@@ -100,10 +116,18 @@ int ss_Initialize( int argc, char* argv[], int debug )
 	sgs_LoadLib_RE( C );
 	sgs_LoadLib_String( C );
 	
+#if SS_STARTUP_PROFILING
+	printf( "SGS libraries loaded: %f\n", sgs_GetTime() );
+#endif
+	
 	ss_InitDebug( C );
 	ss_InitExtSys( C );
 	ss_InitExtMath( C );
 	ss_InitImage( C );
+	
+#if SS_STARTUP_PROFILING
+	printf( "SS libraries loaded: %f\n", sgs_GetTime() );
+#endif
 	
 	/* preinit tmp buffer */
 	g_tmpbuf = sgs_membuf_create();
@@ -124,8 +148,16 @@ int ss_Initialize( int argc, char* argv[], int debug )
 	sgs_PushPtr( C, C );
 	sgs_StoreGlobal( C, "sys_scripting_engine" );
 	
+#if SS_STARTUP_PROFILING
+	printf( "system info pushed: %f\n", sgs_GetTime() );
+#endif
+	
 	/* run the preconfig script */
 	sgs_ExecString( C, scr_preconfig );
+	
+#if SS_STARTUP_PROFILING
+	printf( "preconfig done: %f\n", sgs_GetTime() );
+#endif
 	
 	/* run the config file */
 	ret = sgs_Include( C, "engine/all" );
@@ -135,6 +167,10 @@ int ss_Initialize( int argc, char* argv[], int debug )
 		return -2;
 	}
 	
+#if SS_STARTUP_PROFILING
+	printf( "configured engine scripts: %f\n", sgs_GetTime() );
+#endif
+	
 	/* run the main file */
 	ret = sgs_Include( C, "main" );
 	if( !ret )
@@ -143,8 +179,16 @@ int ss_Initialize( int argc, char* argv[], int debug )
 		return -3;
 	}
 	
+#if SS_STARTUP_PROFILING
+	printf( "ran main script: %f\n", sgs_GetTime() );
+#endif
+	
 	/* configure the framework (optional) */
 	sgs_GlobalCall( C, "configure", 0, 0 );
+	
+#if SS_STARTUP_PROFILING
+	printf( "called 'configure': %f\n", sgs_GetTime() );
+#endif
 	
 	if( GEnabledProfiler )
 		sgs_ProfInit( C, &P, GEnabledProfiler );
@@ -159,6 +203,10 @@ int ss_Initialize( int argc, char* argv[], int debug )
 		sgs_Pop( C, 1 );
 	}
 	
+#if SS_STARTUP_PROFILING
+	printf( "pre-SDL init: %f\n", sgs_GetTime() );
+#endif
+	
 	/* initialize SDL */
 	if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE ) < 0 )
 	{
@@ -170,6 +218,10 @@ int ss_Initialize( int argc, char* argv[], int debug )
 	SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 8 );
 	SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 8 );
 	SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
+	
+#if SS_STARTUP_PROFILING
+	printf( "post-SDL init: %f\n", sgs_GetTime() );
+#endif
 	
 	/* initialize script-space SDL API */
 	if( ss_InitSDL( C ) )
@@ -185,12 +237,20 @@ int ss_Initialize( int argc, char* argv[], int debug )
 		return -7;
 	}
 	
+#if SS_STARTUP_PROFILING
+	printf( "initialized SDL/Graphics subsystems: %f\n", sgs_GetTime() );
+#endif
+	
 	/* initialize the application */
 	if( sgs_GlobalCall( C, "initialize", 0, 0 ) )
 	{
 		fprintf( stderr, "Failed to initialize the application.\n" );
 		return -8;
 	}
+	
+#if SS_STARTUP_PROFILING
+	printf( "called 'initialize': %f\n", sgs_GetTime() );
+#endif
 	
 	return 1;
 }

@@ -128,10 +128,10 @@ int ss_ParseColor( SGS_CTX, int pos, float* v4f )
 				return 0;
 			if( !sgs_ParseReal( C, -1, &tmp ) )
 			{
-				v4f[ i ] = tmp;
 				sgs_Pop( C, 1 );
 				return 0;
 			}
+			v4f[ i ] = tmp;
 			sgs_Pop( C, 1 );
 		}
 		switch( size )
@@ -142,7 +142,7 @@ int ss_ParseColor( SGS_CTX, int pos, float* v4f )
 		}
 		return 1;
 	}
-	if( sgs_ParseColor( C, pos, v4f, 0 ) )
+	else if( sgs_ParseColor( C, pos, v4f, 0 ) )
 		return 1;
 	return 0;
 }
