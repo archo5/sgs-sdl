@@ -129,6 +129,26 @@ function SS_DrawColorLine( x1, y1, x2, y2, r, g, b, a )
 		.draw( null, g_VD_P2CC4, 0, 2, SS_PT_LINES );
 }
 
+function SS_DrawColorCircle( x, y, radius, numsides, r, g, b, a )
+{
+	if( numsides < 1 || !numsides )
+		numsides = ceil( radius * 8 / M_PI );
+	if( numsides < 3 )
+		return;
+	
+	if( sys_rctx_flip_colors ){ tmp = r; r = b; b = tmp; }
+	g_RB.begin();
+	
+	ang = M_PI;
+	ad = M_PI * 2 / numsides;
+	for( i = 0; i <= numsides; ++i )
+	{
+		g_RB.f( sin( ang ) * radius + x, cos( ang ) * radius + y ).cf2b( r, g, b, a );
+		ang += ad;
+	}
+	g_RB.draw( null, g_VD_P2CC4, 0, numsides + 1, SS_PT_TRIANGLE_FAN );
+}
+
 
 function SS_GetCamera2DMatrix( x, y, size, aspect, angle )
 {

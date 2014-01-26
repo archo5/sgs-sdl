@@ -175,7 +175,7 @@ function ED_loadObjDefs()
 		if( !r )
 			continue;
 		ffn = "editor/objects/" $ name;
-		defs = get_merged( defs, parse_sgs_def( io_file_read( ffn ) ) );
+		defs = get_merged( defs, eval( "return " $ io_file_read( ffn ) $ ";" ) );
 	}
 	eps = 0.001;
 	foreach( key, def : defs )

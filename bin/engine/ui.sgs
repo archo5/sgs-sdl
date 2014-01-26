@@ -1194,11 +1194,11 @@ function UIFrame.pushRect( x1, x2, y1, y2 )
 
 	if( tr.x1 >= x2 || tr.x2 <= x1 || tr.y1 >= y2 || tr.y2 <= y1 )
 		return false;
-
-	x1 = max( x1, tr.x1 );
-	x2 = min( x2, tr.x2 );
-	y1 = max( y1, tr.y1 );
-	y2 = min( y2, tr.y2 );
+	
+	if( x1 < tr.x1 ) x1 = tr.x1;
+	if( x2 > tr.x2 ) x2 = tr.x2;
+	if( y1 < tr.y1 ) y1 = tr.y1;
+	if( y2 > tr.y2 ) y2 = tr.y2;
 	this.rects.push({ x1 = x1, x2 = x2, y1 = y1, y2 = y2 });
 	set_cliprect( x1, x2, y1, y2 );
 	return true;

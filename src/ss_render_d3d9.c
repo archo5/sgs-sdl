@@ -555,7 +555,7 @@ static int ss_ri_d3d9_draw_basic_vertices( SS_Renderer* R, void* data, uint32_t 
 	mode = primtypes[ ptype ];
 	
 	IDirect3DDevice9_SetFVF( R->d3ddev, D3DFVF_XYZ | D3DFVF_TEX1 | D3DFVF_DIFFUSE );
-	if( mode == -10 )
+	if( ptype == SS_PT_QUADS )
 	{
 		int i, cnt = count - 3;
 		for( i = 0; i < cnt; i += 4 )
@@ -591,7 +591,7 @@ static int ss_ri_d3d9_draw_ext( SS_Renderer* R, SS_VertexFormat* F, void* vdata,
 			BVptr, F->size );
 	else
 	{
-		if( mode == SS_PT_QUADS )
+		if( ptype == SS_PT_QUADS )
 		{
 			int i, cnt = count - 3;
 			for( i = 0; i < cnt; i += 4 )

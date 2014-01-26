@@ -15,6 +15,9 @@ static const char* scr_preconfig =
 	"global sys_executable_path = string_replace( io_getexecpath(), '\\\\', '/' );\n"
 	"global sys_executable_dir = _dirname( sys_executable_path );\n"
 	"io_setcwd( sys_executable_dir );\n"
+	"\n"
+	"function min( a, b ){ return if( a < b, a, b ); }\n"
+	"function max( a, b ){ return if( a > b, a, b ); }\n"
 ;
 
 

@@ -25,6 +25,8 @@ function Histogram.push( val )
 
 function Histogram.draw( x, y, xscale, yscale, color, vlim )
 {
+	function d3dcolor_fix( x ){ return if( sys_rctx_flip_colors, (x&0xff00ff00) | ((x&0xff0000)>>16) | ((x&0xff)<<16), x ); }
+	
 	bc = 0x7f000000;
 	
 	bc = d3dcolor_fix( bc );

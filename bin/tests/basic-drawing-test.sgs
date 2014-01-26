@@ -89,7 +89,7 @@ function initialize()
 //	grab_input(true);
 //	show_cursor(false);
 	global Window = SS_CreateWindow( "SGS-SDL Framework", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 576 );
-	Window.initRenderer( SS_RENDERER_OPENGL, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );// SS_RENDERER_OPENGL );
+	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );// SS_RENDERER_OPENGL );
 	global W = 1024;
 	global H = 576;
 	
@@ -214,6 +214,10 @@ function update()
 	
 	SS_DrawTexRect( 32, 32, 64, 64, MIT );
 	
+	SS_DrawColorCircle( 128, 64, 32, 7, 0.7, 0.5, 0.3, 1 );
+	SS_DrawColorCircle( 192, 64, 32, 9, 0.3, 0.7, 0.5, 1 );
+	SS_DrawColorCircle( 256, 64, 32, 12, 0.5, 0.3, 0.7, 1 );
+	
 	SS_Draw({ preset = "box", texture = image, position = mpos, scale = vec2(128,128), angle = rotation * M_PI, color = color(0.3,0.5,0.7) });
 	
 	UI.draw();
@@ -223,7 +227,7 @@ function update()
 	
 	// DRAW VCENTERED TEXT
 	if( !isset( _G, "dt_functions" ) )
-		global dt_functions = [ "SS_DrawTextLine", "SS_DrawTextLine_BL", "SS_DrawTextLine_VN", "SS_DrawTextLine_VC" ];
+		global dt_functions = [ "SS_DrawTextLine", "SS_DrawTextLine_TA", "SS_DrawTextLine_BA", "SS_DrawTextLine_BL", "SS_DrawTextLine_VN", "SS_DrawTextLine_VC" ];
 	tl = BigFont.getTextLength( "Mg" );
 	adv = tl + 1;
 	

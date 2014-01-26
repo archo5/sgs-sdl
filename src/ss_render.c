@@ -387,11 +387,7 @@ const char* _parse_floatvec( SGS_CTX, int stkitem, float* out, int numcomp )
 	}
 	
 	if( pnp >= 0 )
-	{
-		while( pnp < numcomp )
-			out[pnp++] = 0;
 		return NULL;
-	}
 	
 	return "item was not a vector or array of floats";
 }
@@ -1886,7 +1882,7 @@ cleanup:
 	goto end;
 }
 
-int offset_from_font_bl( ss_font* font ) { return -font->size; }
+int offset_from_font_bl( ss_font* font ){ return -font->size; }
 int offset_from_font_vn( ss_font* font )
 {
 	FT_Size_Metrics m = font->face->size->metrics;
@@ -1897,8 +1893,12 @@ int offset_from_font_vc( ss_font* font )
 	FT_Size_Metrics m = font->face->size->metrics;
 	return -( ( ( m.ascender + abs( m.descender ) ) >> 6 ) ) / 2;
 }
+int offset_from_font_ta( ss_font* font ){ return offset_from_font_vn( font ) * 2; }
+int offset_from_font_ba( ss_font* font ){ return 0; }
 
-int SS_DrawTextLine   ( SGS_CTX ){ SGSFN("DrawTextLine"); return ss_draw_text_line_int( C, NULL ); }
+int SS_DrawTextLine   ( SGS_CTX ){ SGSFN("DrawTextLine"); return ss_draw_text_line_int( C, offset_from_font_vn ); }
+int SS_DrawTextLine_TA( SGS_CTX ){ SGSFN("DrawTextLine_TA"); return ss_draw_text_line_int( C, offset_from_font_ta ); }
+int SS_DrawTextLine_BA( SGS_CTX ){ SGSFN("DrawTextLine_BA"); return ss_draw_text_line_int( C, offset_from_font_ba ); }
 int SS_DrawTextLine_BL( SGS_CTX ){ SGSFN("DrawTextLine_BL"); return ss_draw_text_line_int( C, offset_from_font_bl ); }
 int SS_DrawTextLine_VN( SGS_CTX ){ SGSFN("DrawTextLine_VN"); return ss_draw_text_line_int( C, offset_from_font_vn ); }
 int SS_DrawTextLine_VC( SGS_CTX ){ SGSFN("DrawTextLine_VC"); return ss_draw_text_line_int( C, offset_from_font_vc ); }
@@ -2022,7 +2022,7 @@ sgs_RegFuncConst gl_funcs[] =
 	FN( MakeVertexFormat ), FN( DrawPacked ),
 	FN( CreateRenderBuffer ),
 	FN( CreateFont ), FN( IsFont ),
-	FN( DrawTextLine ), FN( DrawTextLine_BL ), FN( DrawTextLine_VN ), FN( DrawTextLine_VC ),
+	FN( DrawTextLine ), FN( DrawTextLine_TA ), FN( DrawTextLine_BA ), FN( DrawTextLine_BL ), FN( DrawTextLine_VN ), FN( DrawTextLine_VC ),
 	FN( MatrixPush ), FN( MatrixPop ),
 	FN( SetCamera ), FN( SetClipRect ),
 	FN( SetDepthTest ), FN( SetCulling ), FN( SetBlending ),

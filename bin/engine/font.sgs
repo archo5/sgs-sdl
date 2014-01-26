@@ -10,7 +10,7 @@ global
 	DT_BOTTOM  = 0b01000000;
 
 
-function calc_text_layout( text_ucp, font, width, height )
+function SS_CalcTextLayout( text_ucp, font, width, height )
 {
 	lines = [].reserve(6); // TODO optimize to static instance
 	lineheight = font.size;
@@ -30,7 +30,7 @@ function calc_text_layout( text_ucp, font, width, height )
 		prevchar = null;
 		if( pcpos != null )
 			prevchar = text_ucp[ pcpos ];
-		cw = font.get_advance( prevchar, text_ucp[ i ] );
+		cw = font.getAdvance( prevchar, text_ucp[ i ] );
 		
 		if( c == NL )
 		{
@@ -106,10 +106,10 @@ function calc_text_layout( text_ucp, font, width, height )
 	return lines;
 }
 
-function draw_text_rect( text, font, color, placement, left, right, top, bottom )
+function SS_DrawTextRect( text, font, color, placement, left, right, top, bottom )
 {
 	// validation
-	if( !is_font( font ) )
+	if( !SS_IsFont( font ) )
 	{
 		WARNING( "draw_text(): invalid value for 'font'" );
 		return false;
@@ -134,7 +134,7 @@ function draw_text_rect( text, font, color, placement, left, right, top, bottom 
 	
 	text_ucp = string_utf8_decode( text );
 	
-	lines = calc_text_layout( text_ucp, font, width, height );
+	lines = SS_CalcTextLayout( text_ucp, font, width, height );
 	
 	vspace = height - lines.size * lineheight;
 	y = top;
