@@ -206,6 +206,7 @@ typedef void (*ss_ri_free) ();
 typedef int (*ss_ri_available) ();
 typedef SS_Renderer* (*ss_ri_create) ( SDL_Window*, uint32_t, uint32_t ); /* version, flags */
 typedef void (*ss_ri_destroy) ( SS_Renderer* );
+typedef void* (*ss_ri_get_pointer) ( SS_Renderer*, int );
 typedef void (*ss_ri_modify) ( SS_Renderer*, int* );
 typedef void (*ss_ri_set_current) ( SS_Renderer* );
 typedef void (*ss_ri_poke_resource) ( SS_Renderer*, sgs_VarObj*, int ); /* !=0 => add, otherwise remove */
@@ -232,6 +233,7 @@ struct _SS_RenderInterface
 	ss_ri_available available;
 	ss_ri_create create;
 	ss_ri_destroy destroy;
+	ss_ri_get_pointer get_pointer;
 	ss_ri_modify modify;
 	ss_ri_set_current set_current;
 	ss_ri_poke_resource poke_resource;

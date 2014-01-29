@@ -29,6 +29,7 @@ static void ss_ri_gl_free();
 static int ss_ri_gl_available();
 static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t version, uint32_t flags );
 static void ss_ri_gl_destroy( SS_Renderer* R );
+static void* ss_ri_gl_get_pointer( SS_Renderer* R, int which );
 static void ss_ri_gl_modify( SS_Renderer* R, int* modlist );
 static void ss_ri_gl_set_current( SS_Renderer* R );
 static void ss_ri_gl_poke_resource( SS_Renderer* R, sgs_VarObj* obj, int add );
@@ -55,6 +56,7 @@ SS_RenderInterface GRI_GL =
 	ss_ri_gl_available,
 	ss_ri_gl_create,
 	ss_ri_gl_destroy,
+	ss_ri_gl_get_pointer,
 	ss_ri_gl_modify,
 	ss_ri_gl_set_current,
 	ss_ri_gl_poke_resource,
@@ -174,6 +176,12 @@ static void ss_ri_gl_destroy( SS_Renderer* R )
 	}
 	SDL_GL_DeleteContext( R->ctx );
 	free( R );
+}
+
+static void* ss_ri_gl_get_pointer( SS_Renderer* R, int which )
+{
+	UNUSED( which );
+	return NULL;
 }
 
 static void ss_ri_gl_modify( SS_Renderer* R, int* modlist )

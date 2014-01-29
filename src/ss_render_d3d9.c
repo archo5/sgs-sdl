@@ -77,6 +77,7 @@ static void ss_ri_d3d9_free();
 static int ss_ri_d3d9_available();
 static SS_Renderer* ss_ri_d3d9_create( SDL_Window* window, uint32_t version, uint32_t flags );
 static void ss_ri_d3d9_destroy( SS_Renderer* R );
+static void* ss_ri_d3d9_get_pointer( SS_Renderer* R, int which );
 static void ss_ri_d3d9_modify( SS_Renderer* R, int* modlist );
 static void ss_ri_d3d9_set_current( SS_Renderer* R );
 static void ss_ri_d3d9_poke_resource( SS_Renderer* R, sgs_VarObj* obj, int add );
@@ -103,6 +104,7 @@ SS_RenderInterface GRI_D3D9 =
 	ss_ri_d3d9_available,
 	ss_ri_d3d9_create,
 	ss_ri_d3d9_destroy,
+	ss_ri_d3d9_get_pointer,
 	ss_ri_d3d9_modify,
 	ss_ri_d3d9_set_current,
 	ss_ri_d3d9_poke_resource,
@@ -223,6 +225,12 @@ static void ss_ri_d3d9_destroy( SS_Renderer* R )
 	}
 	IDirect3DResource9_Release( R->d3ddev );
 	free( R );
+}
+
+static void* ss_ri_d3d9_get_pointer( SS_Renderer* R, int which )
+{
+	if( which == 0 ) return R->d3ddev;
+	return NULL;
 }
 
 static void ss_ri_d3d9_modify( SS_Renderer* R, int* modlist )

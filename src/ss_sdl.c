@@ -657,6 +657,7 @@ static int ss_window_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 #endif
 			return SGS_SUCCESS;
 		}
+		if( !strcmp( str, "rendererPtr" ) ){ sgs_PushPtr( C, W->riface->get_pointer( W->renderer, 0 ) ); return SGS_SUCCESS; }
 	}
 	
 	return SGS_ENOTFND;
