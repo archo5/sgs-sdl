@@ -28,7 +28,7 @@ function initialize()
 	println( "SGS-SDL Framework Test suite" );
 	println( "initialization started at: " $ ftime() );
 	
-	global Window = SS_CreateWindow( "SGS-SDL Framework Test suite", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, initialWidth, initialHeight, SDL_WINDOW_RESIZABLE );
+	global Window = SS_CreateWindow( "SGS-SDL Framework Test suite", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, initialWidth, initialHeight, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGLMAYBE );
 	println( "window created at: " $ ftime() );
 	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
 	println( "renderer initialized at: " $ ftime() );

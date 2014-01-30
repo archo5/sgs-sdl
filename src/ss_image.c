@@ -15,10 +15,10 @@
 #define _WARN( err ) { sgs_Printf( C, SGS_WARNING, err ); return 0; }
 
 
-sgs_ObjCallback image_iface[];
+SGS_DECLARE sgs_ObjCallback image_iface[];
 #define IMGHDR SS_Image* img = (SS_Image*) data->data
 
-int _make_image( SGS_CTX, int16_t w, int16_t h, const void* src )
+static int _make_image( SGS_CTX, int16_t w, int16_t h, const void* src )
 {
 	SS_Image* ii = sgs_Alloc( SS_Image );
 	ii->width = w;
@@ -32,7 +32,7 @@ int _make_image( SGS_CTX, int16_t w, int16_t h, const void* src )
 	return SGS_SUCCESS;
 }
 
-int ss_image_destruct( SGS_CTX, sgs_VarObj* data, int dco )
+static int ss_image_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 {
 	IMGHDR;
 	sgs_Dealloc( img->data );
@@ -40,7 +40,7 @@ int ss_image_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 	return SGS_SUCCESS;
 }
 
-int ss_image_resize( SGS_CTX )
+static int ss_image_resize( SGS_CTX )
 {
 	SS_Image* ii = NULL;
 	sgs_Integer w = 0, h = 0;
@@ -85,7 +85,7 @@ end:
 	return 1;
 }
 
-int ss_image_clear( SGS_CTX )
+static int ss_image_clear( SGS_CTX )
 {
 	SS_Image* ii = NULL;
 	uint32_t i = 0, cc = 0;
@@ -107,7 +107,7 @@ int ss_image_clear( SGS_CTX )
 	return 0;
 }
 
-int ss_image_setData( SGS_CTX )
+static int ss_image_setData( SGS_CTX )
 {
 	int ret = 0;
 	SS_Image* ii = NULL;
@@ -148,7 +148,7 @@ int ss_image_setData( SGS_CTX )
 	return 1;
 }
 
-int ss_image_getindex( SGS_CTX, sgs_VarObj* data, int prop )
+static int ss_image_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
 	char* str;
 	sgs_SizeVal size;
@@ -166,7 +166,7 @@ int ss_image_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	return SGS_ENOTFND;
 }
 
-int ss_image_convert( SGS_CTX, sgs_VarObj* data, int type )
+static int ss_image_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
 	if( type == SGS_CONVOP_CLONE )
 	{
@@ -191,7 +191,7 @@ int ss_image_convert( SGS_CTX, sgs_VarObj* data, int type )
 }
 
 
-sgs_ObjCallback image_iface[] =
+static sgs_ObjCallback image_iface[] =
 {
 	SOP_GETINDEX, ss_image_getindex,
 	SOP_CONVERT, ss_image_convert,
@@ -199,7 +199,7 @@ sgs_ObjCallback image_iface[] =
 	SOP_END
 };
 
-int SS_CreateImage( SGS_CTX )
+static int SS_CreateImage( SGS_CTX )
 {
 	sgs_Integer w, h;
 	int argc = sgs_StackSize( C );
@@ -252,7 +252,7 @@ int ss_LoadImageHelper( SGS_CTX, char* str, int size )
 	return 1;
 }
 
-int SS_LoadImage( SGS_CTX )
+static int SS_LoadImage( SGS_CTX )
 {
 	char *str;
 	sgs_SizeVal size;
@@ -280,7 +280,7 @@ int ss_CreateImageHelper( SGS_CTX, int16_t w, int16_t h, const void* bits )
 	return 1;
 }
 
-int ss_load_image_( SGS_CTX, int type1, int type2 )
+static int ss_load_image_( SGS_CTX, int type1, int type2 )
 {
 	char *str;
 	sgs_SizeVal size;
@@ -318,17 +318,17 @@ int ss_load_image_( SGS_CTX, int type1, int type2 )
 		return ret;
 	}
 }
-int ss_load_image_png( SGS_CTX ){ SGSFN( "ss_load_image_png" ); return ss_load_image_( C, FIF_PNG, PNG_DEFAULT ); }
-int ss_load_image_jpg( SGS_CTX ){ SGSFN( "ss_load_image_jpg" ); return ss_load_image_( C, FIF_JPEG, PNG_DEFAULT ); }
-int ss_load_image_jpeg( SGS_CTX ){ SGSFN( "ss_load_image_jpeg" ); return ss_load_image_( C, FIF_JPEG, PNG_DEFAULT ); }
-int ss_load_image_dds( SGS_CTX ){ SGSFN( "ss_load_image_dds" ); return ss_load_image_( C, FIF_DDS, DDS_DEFAULT ); }
+static int ss_load_image_png( SGS_CTX ){ SGSFN( "ss_load_image_png" ); return ss_load_image_( C, FIF_PNG, PNG_DEFAULT ); }
+static int ss_load_image_jpg( SGS_CTX ){ SGSFN( "ss_load_image_jpg" ); return ss_load_image_( C, FIF_JPEG, PNG_DEFAULT ); }
+static int ss_load_image_jpeg( SGS_CTX ){ SGSFN( "ss_load_image_jpeg" ); return ss_load_image_( C, FIF_JPEG, PNG_DEFAULT ); }
+static int ss_load_image_dds( SGS_CTX ){ SGSFN( "ss_load_image_dds" ); return ss_load_image_( C, FIF_DDS, DDS_DEFAULT ); }
 
 
-sgs_RegIntConst img_ints[] =
+static sgs_RegIntConst img_ints[] =
 {
 };
 
-sgs_RegFuncConst img_funcs[] =
+static sgs_RegFuncConst img_funcs[] =
 {
 	FN( CreateImage ),
 	FN( LoadImage ),

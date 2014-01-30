@@ -57,7 +57,6 @@ void ss_UnpackFree( SGS_CTX, dict_unpack_item_t* items );
 int ss_ParseVec2( SGS_CTX, int pos, float* v2f, int strict );
 int ss_ParseColor( SGS_CTX, int pos, float* v4f );
 int ss_InitExtMath( SGS_CTX );
-int ss_InitExtSys( SGS_CTX );
 
 
 /* SGScript - Images */
@@ -253,6 +252,7 @@ struct _SS_RenderInterface
 	ss_ri_draw_ext draw_ext;
 	
 	uint32_t flags;
+	const char* API;
 	
 	const char* last_error;
 };
@@ -276,11 +276,20 @@ SS_TmpCtx ss_TmpMakeCurrent( SS_RenderInterface* ri, SS_Renderer* rr );
 void ss_TmpRestoreCurrent( SS_TmpCtx* ctx );
 
 
+typedef struct _SS_Window
+{
+	SDL_Window* window;
+	SS_RenderInterface* riface;
+	SS_Renderer* renderer;
+}
+SS_Window;
+
+
 /* utility */
-char* ss_get_buffer_ptr();
-char* ss_request_memory( size_t numbytes );
-void ss_reset_buffer();
-#define ss_request_memory_idx( numbytes ) (ss_request_memory( numbytes ) - ss_get_buffer_ptr())
+char* ss_GetBufferPtr();
+char* ss_RequestMemory( size_t numbytes );
+void ss_ResetBuffer();
+#define ss_RequestMemory_idx( numbytes ) (ss_RequestMemory( numbytes ) - ss_GetBufferPtr())
 
 
 /* API */

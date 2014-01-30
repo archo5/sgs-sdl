@@ -21,13 +21,13 @@ static const char* scr_preconfig =
 ;
 
 
-sgs_MemBuf g_tmpbuf;
+static sgs_MemBuf g_tmpbuf;
 
 
 
-SGS_CTX;
-sgs_IDbg D;
-sgs_Prof P;
+static SGS_CTX;
+static sgs_IDbg D;
+static sgs_Prof P;
 
 
 sgs_Context* ss_GetContext(){ return C; }
@@ -36,10 +36,10 @@ sgs_Context* ss_GetContext(){ return C; }
 /* #define SS_STARTUP_PROFILING 1 */
 
 
-int GEnabledProfiler = 0;
-int GEnabledDebugging = 0;
+static int GEnabledProfiler = 0;
+static int GEnabledDebugging = 0;
 
-int SS_EnableProfiler( SGS_CTX )
+static int SS_EnableProfiler( SGS_CTX )
 {
 	SGSFN( "SS_EnableProfiler" );
 	if( sgs_StackSize( C ) > 0 )
@@ -49,7 +49,7 @@ int SS_EnableProfiler( SGS_CTX )
 	return 0;
 }
 
-int ss_InitDebug( SGS_CTX )
+static int ss_InitDebug( SGS_CTX )
 {
 	sgs_PushCFunction( C, SS_EnableProfiler );
 	sgs_StoreGlobal( C, "SS_EnableProfiler" );
@@ -57,22 +57,22 @@ int ss_InitDebug( SGS_CTX )
 }
 
 
-char* ss_get_buffer_ptr()
+char* ss_GetBufferPtr()
 {
 	return g_tmpbuf.ptr;
 }
-char* ss_request_memory( size_t numbytes )
+char* ss_RequestMemory( size_t numbytes )
 {
 	sgs_membuf_resize( &g_tmpbuf, C, g_tmpbuf.size + numbytes );
 	return g_tmpbuf.ptr + g_tmpbuf.size - numbytes;
 }
-void ss_reset_buffer()
+void ss_ResetBuffer()
 {
 	sgs_membuf_resize( &g_tmpbuf, C, 0 );
 }
 
 
-void ss_PrintFunc( void* unused, SGS_CTX, int type, const char* message )
+static void ss_PrintFunc( void* unused, SGS_CTX, int type, const char* message )
 {
 	if( type >= SGS_ERROR )
 	{
@@ -121,7 +121,6 @@ int ss_Initialize( int argc, char* argv[], int debug )
 #endif
 	
 	ss_InitDebug( C );
-	ss_InitExtSys( C );
 	ss_InitExtMath( C );
 	ss_InitImage( C );
 	

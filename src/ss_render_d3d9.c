@@ -69,6 +69,7 @@ struct _SS_Renderer
 	D3DPRESENT_PARAMETERS d3dpp;
 	sgs_VHTable rsrc_table;
 	int destructing;
+	sgs_Variable rsdict;
 };
 
 
@@ -125,6 +126,8 @@ SS_RenderInterface GRI_D3D9 =
 	
 	/* flags */
 	SS_RI_HALFPIXELOFFSET | SS_RI_COLOR_BGRA,
+	/* API */
+	"D3D9",
 	
 	/* last error */
 	"no error",
@@ -162,6 +165,7 @@ static SS_Renderer* ss_ri_d3d9_create( SDL_Window* window, uint32_t version, uin
 	D3DPRESENT_PARAMETERS d3dpp;
 	IDirect3DDevice9* d3ddev;
 	SS_Renderer* R;
+	SGS_CTX = ss_GetContext();
 	
 	SDL_GetWindowSize( window, &w, &h );
 	
@@ -200,8 +204,13 @@ static SS_Renderer* ss_ri_d3d9_create( SDL_Window* window, uint32_t version, uin
 	R->d3ddev = d3ddev;
 	R->d3dpp = d3dpp;
 	
-	sgs_vht_init( &R->rsrc_table, ss_GetContext(), 64, 64 );
+	sgs_vht_init( &R->rsrc_table, C, 64, 64 );
 	R->destructing = 0;
+	
+	sgs_PushDict( C, 0 );
+	sgs_GetStackItem( C, -1, &R->rsdict );
+	sgs_Acquire( C, &R->rsdict );
+	sgs_Pop( C, 1 );
 	
 	return R;
 }
@@ -210,6 +219,9 @@ static void ss_ri_d3d9_destroy( SS_Renderer* R )
 {
 	int i;
 	SGS_CTX = ss_GetContext();
+	
+	sgs_Release( C, &R->rsdict );
+	
 	R->destructing = 1;
 	for( i = 0; i < R->rsrc_table.size; ++i )
 	{
@@ -257,6 +269,10 @@ static void ss_ri_d3d9_modify( SS_Renderer* R, int* modlist )
 
 static void ss_ri_d3d9_set_current( SS_Renderer* R )
 {
+	SGS_CTX = ss_GetContext();
+	sgs_PushVariable( C, &R->rsdict );
+	sgs_StoreGlobal( C, "_R" );
+	
 	UNUSED( R );
 }
 

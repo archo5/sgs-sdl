@@ -21,6 +21,7 @@ struct _SS_Renderer
 	float view_matrix[16];
 	sgs_VHTable rsrc_table;
 	int destructing;
+	sgs_Variable rsdict;
 };
 
 
@@ -77,6 +78,8 @@ SS_RenderInterface GRI_GL =
 	
 	/* flags */
 	SS_RI_COLOR_RGBA,
+	/* API */
+	"GL",
 	
 	/* last error */
 	"no error",
@@ -102,6 +105,7 @@ static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t version, uint3
 	SDL_GLContext* ctx, *origctx;
 	SDL_Window* origwin;
 	SS_Renderer* R;
+	SGS_CTX = ss_GetContext();
 	
 	origctx = SDL_GL_GetCurrentContext();
 	origwin = SDL_GL_GetCurrentWindow();
@@ -151,8 +155,13 @@ static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t version, uint3
 	
 	SDL_GL_MakeCurrent( origwin, origctx );
 	
-	sgs_vht_init( &R->rsrc_table, ss_GetContext(), 64, 64 );
+	sgs_vht_init( &R->rsrc_table, C, 64, 64 );
 	R->destructing = 0;
+	
+	sgs_PushDict( C, 0 );
+	sgs_GetStackItem( C, -1, &R->rsdict );
+	sgs_Acquire( C, &R->rsdict );
+	sgs_Pop( C, 1 );
 	
 	return R;
 }
@@ -161,6 +170,9 @@ static void ss_ri_gl_destroy( SS_Renderer* R )
 {
 	int i;
 	SGS_CTX = ss_GetContext();
+	
+	sgs_Release( C, &R->rsdict );
+	
 	R->destructing = 1;
 	for( i = 0; i < R->rsrc_table.size; ++i )
 	{
@@ -204,6 +216,10 @@ static void ss_ri_gl_modify( SS_Renderer* R, int* modlist )
 
 static void ss_ri_gl_set_current( SS_Renderer* R )
 {
+	SGS_CTX = ss_GetContext();
+	sgs_PushVariable( C, &R->rsdict );
+	sgs_StoreGlobal( C, "_R" );
+	
 	SDL_GL_MakeCurrent( R->window, R->ctx );
 }
 

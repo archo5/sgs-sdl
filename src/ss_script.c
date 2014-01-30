@@ -153,28 +153,3 @@ int ss_InitExtMath( SGS_CTX )
 	return xgm_module_entry_point( C );
 }
 
-
-
-#undef FN
-#define FN( f ) { #f, ses_##f }
-
-int ses_sgs_objcount( SGS_CTX )
-{
-	sgs_PushInt( C, sgs_Stat( C, SGS_STAT_OBJCOUNT ) );
-	return 1;
-}
-
-sgs_RegFuncConst es_fconsts[] =
-{
-	FN( sgs_objcount ),
-};
-
-int ss_InitExtSys( SGS_CTX )
-{
-	int ret;
-	ret = sgs_RegFuncConsts( C, es_fconsts, ARRAY_SIZE( es_fconsts ) );
-	if( ret != SGS_SUCCESS ) return ret;
-	
-	return SGS_SUCCESS;
-}
-

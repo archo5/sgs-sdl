@@ -46,7 +46,7 @@ static void ri_free()
 
 
 
-int SS_GetPlatformInfo( SGS_CTX )
+static int SS_GetPlatformInfo( SGS_CTX )
 {
 	SGSFN( "SS_GetPlatformInfo" );
 	sgs_SetStackSize( C, 0 );
@@ -67,7 +67,7 @@ int SS_GetPlatformInfo( SGS_CTX )
 	return 1;
 }
 
-int SS_GetPowerInfo( SGS_CTX )
+static int SS_GetPowerInfo( SGS_CTX )
 {
 	int secs, pct;
 	SGSFN( "SS_GetPowerInfo" );
@@ -80,14 +80,14 @@ int SS_GetPowerInfo( SGS_CTX )
 }
 
 
-int SS_HasClipboardText( SGS_CTX )
+static int SS_HasClipboardText( SGS_CTX )
 {
 	SGSFN( "SS_HasClipboardText" );
 	sgs_PushBool( C, SDL_HasClipboardText() );
 	return 1;
 }
 
-int SS_GetClipboardText( SGS_CTX )
+static int SS_GetClipboardText( SGS_CTX )
 {
 	char* text;
 	SGSFN( "SS_GetClipboardText" );
@@ -99,7 +99,7 @@ int SS_GetClipboardText( SGS_CTX )
 	return 1;
 }
 
-int SS_SetClipboardText( SGS_CTX )
+static int SS_SetClipboardText( SGS_CTX )
 {
 	int ret;
 	char* text;
@@ -114,7 +114,7 @@ int SS_SetClipboardText( SGS_CTX )
 }
 
 
-int SS_Sleep( SGS_CTX )
+static int SS_Sleep( SGS_CTX )
 {
 	sgs_Integer time;
 	SGSFN( "SS_Sleep" );
@@ -126,11 +126,11 @@ int SS_Sleep( SGS_CTX )
 	return 0;
 }
 
-int SS_EnableScreenSaver( SGS_CTX ){ SGSFN( "SS_EnableScreenSaver" ); SDL_EnableScreenSaver(); return 0; }
-int SS_DisableScreenSaver( SGS_CTX ){ SGSFN( "SS_DisableScreenSaver" ); SDL_DisableScreenSaver(); return 0; }
-int SS_IsScreenSaverEnabled( SGS_CTX ){ SGSFN( "SS_IsScreenSaverEnabled" ); sgs_PushBool( C, SDL_IsScreenSaverEnabled() ); return 1; }
+static int SS_EnableScreenSaver( SGS_CTX ){ SGSFN( "SS_EnableScreenSaver" ); SDL_EnableScreenSaver(); return 0; }
+static int SS_DisableScreenSaver( SGS_CTX ){ SGSFN( "SS_DisableScreenSaver" ); SDL_DisableScreenSaver(); return 0; }
+static int SS_IsScreenSaverEnabled( SGS_CTX ){ SGSFN( "SS_IsScreenSaverEnabled" ); sgs_PushBool( C, SDL_IsScreenSaverEnabled() ); return 1; }
 
-int SS_GetVideoDrivers( SGS_CTX )
+static int SS_GetVideoDrivers( SGS_CTX )
 {
 	int i, num;
 	SGSFN( "SS_GetVideoDrivers" );
@@ -236,7 +236,7 @@ static int ss_acf_DisplayMode( SGS_CTX, int item, sgs_VAList* args, int flags )
 {
 	if( sgs_IsObject( C, item, ss_displaymode_iface ) )
 	{
-		if( !( flags & SGS_LOADARG_NOWRITE ) )
+		if( flags & SGS_LOADARG_WRITE )
 			*va_arg( args->args, SDL_DisplayMode** ) = (SDL_DisplayMode*) sgs_GetObjectData( C, item );
 		return 1;
 	}
@@ -380,67 +380,59 @@ static int SS_GetDesktopDisplayMode( SGS_CTX )
 
 
 
-typedef struct _ss_window
-{
-	SDL_Window* window;
-	SS_RenderInterface* riface;
-	SS_Renderer* renderer;
-}
-ss_window;
-
-#define WND_HDR ss_window* W = (ss_window*) data->data;
+#define WND_HDR SS_Window* W = (SS_Window*) data->data;
 #define WND_IHDR( funcname ) \
 	int method_call = sgs_Method( C ); \
 	sgs_FuncName( C, method_call ? "window." #funcname : "window_" #funcname ); \
-	if( !sgs_IsObject( C, 0, ss_window_iface ) ) \
+	if( !sgs_IsObject( C, 0, SS_Window_iface ) ) \
 		return sgs_ArgErrorExt( C, 0, method_call, "window", "" ); \
-	ss_window* W = (ss_window*) sgs_GetObjectData( C, 0 );
+	SS_Window* W = (SS_Window*) sgs_GetObjectData( C, 0 );
 
-SGS_DECLARE sgs_ObjCallback ss_window_iface[];
+SGS_DECLARE sgs_ObjCallback SS_Window_iface[];
 
-static int ss_windowI_show( SGS_CTX )
+static int SS_WindowI_show( SGS_CTX )
 {
 	WND_IHDR( show );
 	SDL_ShowWindow( W->window );
 	return 0;
 }
 
-static int ss_windowI_hide( SGS_CTX )
+static int SS_WindowI_hide( SGS_CTX )
 {
 	WND_IHDR( hide );
 	SDL_HideWindow( W->window );
 	return 0;
 }
 
-static int ss_windowI_minimize( SGS_CTX )
+static int SS_WindowI_minimize( SGS_CTX )
 {
 	WND_IHDR( minimize );
 	SDL_MinimizeWindow( W->window );
 	return 0;
 }
 
-static int ss_windowI_maximize( SGS_CTX )
+static int SS_WindowI_maximize( SGS_CTX )
 {
 	WND_IHDR( maximize );
 	SDL_MaximizeWindow( W->window );
 	return 0;
 }
 
-static int ss_windowI_restore( SGS_CTX )
+static int SS_WindowI_restore( SGS_CTX )
 {
 	WND_IHDR( restore );
 	SDL_RestoreWindow( W->window );
 	return 0;
 }
 
-static int ss_windowI_raise( SGS_CTX )
+static int SS_WindowI_raise( SGS_CTX )
 {
 	WND_IHDR( raise );
 	SDL_RaiseWindow( W->window );
 	return 0;
 }
 
-static int ss_windowI_setPosition( SGS_CTX )
+static int SS_WindowI_setPosition( SGS_CTX )
 {
 	sgs_Int x, y;
 	WND_IHDR( setPosition );
@@ -450,7 +442,7 @@ static int ss_windowI_setPosition( SGS_CTX )
 	return 0;
 }
 
-static int ss_windowI_setSize( SGS_CTX )
+static int SS_WindowI_setSize( SGS_CTX )
 {
 	sgs_Int w, h;
 	WND_IHDR( setSize );
@@ -460,7 +452,7 @@ static int ss_windowI_setSize( SGS_CTX )
 	return 0;
 }
 
-static int ss_windowI_setMaxSize( SGS_CTX )
+static int SS_WindowI_setMaxSize( SGS_CTX )
 {
 	sgs_Int w, h;
 	WND_IHDR( setMaxSize );
@@ -470,7 +462,7 @@ static int ss_windowI_setMaxSize( SGS_CTX )
 	return 0;
 }
 
-static int ss_windowI_setMinSize( SGS_CTX )
+static int SS_WindowI_setMinSize( SGS_CTX )
 {
 	sgs_Int w, h;
 	WND_IHDR( setMinSize );
@@ -480,7 +472,7 @@ static int ss_windowI_setMinSize( SGS_CTX )
 	return 0;
 }
 
-static int ss_windowI_warpMouse( SGS_CTX )
+static int SS_WindowI_warpMouse( SGS_CTX )
 {
 	sgs_Int x, y;
 	WND_IHDR( warpMouse );
@@ -490,7 +482,7 @@ static int ss_windowI_warpMouse( SGS_CTX )
 	return 0;
 }
 
-static int ss_windowI_initRenderer( SGS_CTX )
+static int SS_WindowI_initRenderer( SGS_CTX )
 {
 	sgs_Int renderer = SS_RENDERER_DONTCARE, version = SS_RENDERER_DONTCARE, flags = 0;
 	SS_RenderInterface* riface;
@@ -532,7 +524,7 @@ static int ss_windowI_initRenderer( SGS_CTX )
 	return 1;
 }
 
-static int ss_windowI_makeCurrent( SGS_CTX )
+static int SS_WindowI_makeCurrent( SGS_CTX )
 {
 	WND_IHDR( makeCurrent );
 	if( W->riface && W->renderer )
@@ -543,7 +535,7 @@ static int ss_windowI_makeCurrent( SGS_CTX )
 }
 
 
-static int ss_window_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
+static int SS_Window_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 {
 	char* str;
 	WND_HDR;
@@ -552,19 +544,19 @@ static int ss_window_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
 		/* function properties */
-		if( !strcmp( str, "show" ) ){ sgs_PushCFunction( C, ss_windowI_show ); return SGS_SUCCESS; }
-		if( !strcmp( str, "hide" ) ){ sgs_PushCFunction( C, ss_windowI_hide ); return SGS_SUCCESS; }
-		if( !strcmp( str, "minimize" ) ){ sgs_PushCFunction( C, ss_windowI_minimize ); return SGS_SUCCESS; }
-		if( !strcmp( str, "maximize" ) ){ sgs_PushCFunction( C, ss_windowI_maximize ); return SGS_SUCCESS; }
-		if( !strcmp( str, "restore" ) ){ sgs_PushCFunction( C, ss_windowI_restore ); return SGS_SUCCESS; }
-		if( !strcmp( str, "raise" ) ){ sgs_PushCFunction( C, ss_windowI_raise ); return SGS_SUCCESS; }
-		if( !strcmp( str, "setPosition" ) ){ sgs_PushCFunction( C, ss_windowI_setPosition ); return SGS_SUCCESS; }
-		if( !strcmp( str, "setSize" ) ){ sgs_PushCFunction( C, ss_windowI_setSize ); return SGS_SUCCESS; }
-		if( !strcmp( str, "setMaxSize" ) ){ sgs_PushCFunction( C, ss_windowI_setMaxSize ); return SGS_SUCCESS; }
-		if( !strcmp( str, "setMinSize" ) ){ sgs_PushCFunction( C, ss_windowI_setMinSize ); return SGS_SUCCESS; }
-		if( !strcmp( str, "warpMouse" ) ){ sgs_PushCFunction( C, ss_windowI_warpMouse ); return SGS_SUCCESS; }
-		if( !strcmp( str, "initRenderer" ) ){ sgs_PushCFunction( C, ss_windowI_initRenderer ); return SGS_SUCCESS; }
-		if( !strcmp( str, "makeCurrent" ) ){ sgs_PushCFunction( C, ss_windowI_makeCurrent ); return SGS_SUCCESS; }
+		if( !strcmp( str, "show" ) ){ sgs_PushCFunction( C, SS_WindowI_show ); return SGS_SUCCESS; }
+		if( !strcmp( str, "hide" ) ){ sgs_PushCFunction( C, SS_WindowI_hide ); return SGS_SUCCESS; }
+		if( !strcmp( str, "minimize" ) ){ sgs_PushCFunction( C, SS_WindowI_minimize ); return SGS_SUCCESS; }
+		if( !strcmp( str, "maximize" ) ){ sgs_PushCFunction( C, SS_WindowI_maximize ); return SGS_SUCCESS; }
+		if( !strcmp( str, "restore" ) ){ sgs_PushCFunction( C, SS_WindowI_restore ); return SGS_SUCCESS; }
+		if( !strcmp( str, "raise" ) ){ sgs_PushCFunction( C, SS_WindowI_raise ); return SGS_SUCCESS; }
+		if( !strcmp( str, "setPosition" ) ){ sgs_PushCFunction( C, SS_WindowI_setPosition ); return SGS_SUCCESS; }
+		if( !strcmp( str, "setSize" ) ){ sgs_PushCFunction( C, SS_WindowI_setSize ); return SGS_SUCCESS; }
+		if( !strcmp( str, "setMaxSize" ) ){ sgs_PushCFunction( C, SS_WindowI_setMaxSize ); return SGS_SUCCESS; }
+		if( !strcmp( str, "setMinSize" ) ){ sgs_PushCFunction( C, SS_WindowI_setMinSize ); return SGS_SUCCESS; }
+		if( !strcmp( str, "warpMouse" ) ){ sgs_PushCFunction( C, SS_WindowI_warpMouse ); return SGS_SUCCESS; }
+		if( !strcmp( str, "initRenderer" ) ){ sgs_PushCFunction( C, SS_WindowI_initRenderer ); return SGS_SUCCESS; }
+		if( !strcmp( str, "makeCurrent" ) ){ sgs_PushCFunction( C, SS_WindowI_makeCurrent ); return SGS_SUCCESS; }
 		
 		/* data properties */
 		if( !strcmp( str, "brightness" ) ){ sgs_PushReal( C, SDL_GetWindowBrightness( W->window ) ); return SGS_SUCCESS; }
@@ -657,13 +649,14 @@ static int ss_window_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 #endif
 			return SGS_SUCCESS;
 		}
+		if( !strcmp( str, "renderingAPI" ) ){ sgs_PushString( C, W->riface->API ); return SGS_SUCCESS; }
 		if( !strcmp( str, "rendererPtr" ) ){ sgs_PushPtr( C, W->riface->get_pointer( W->renderer, 0 ) ); return SGS_SUCCESS; }
 	}
 	
 	return SGS_ENOTFND;
 }
 
-static int ss_window_setindex( SGS_CTX, sgs_VarObj* data, int isprop )
+static int SS_Window_setindex( SGS_CTX, sgs_VarObj* data, int isprop )
 {
 	char* str;
 	WND_HDR;
@@ -727,7 +720,7 @@ static int ss_window_setindex( SGS_CTX, sgs_VarObj* data, int isprop )
 	return SGS_ENOTFND;
 }
 
-static int ss_window_convert( SGS_CTX, sgs_VarObj* data, int type )
+static int SS_Window_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
 	if( type == SGS_CONVOP_TOTYPE || type == SGS_VT_STRING )
 	{
@@ -738,7 +731,7 @@ static int ss_window_convert( SGS_CTX, sgs_VarObj* data, int type )
 	return SGS_ENOTSUP;
 }
 
-static int ss_window_destruct( SGS_CTX, sgs_VarObj* data, int unused )
+static int SS_Window_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 {
 	WND_HDR;
 	UNUSED( unused );
@@ -752,26 +745,26 @@ static int ss_window_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjCallback ss_window_iface[] =
+static sgs_ObjCallback SS_Window_iface[] =
 {
-	SGS_OP_GETINDEX, ss_window_getindex,
-	SGS_OP_SETINDEX, ss_window_setindex,
-	SGS_OP_CONVERT, ss_window_convert,
-	SGS_OP_DESTRUCT, ss_window_destruct,
+	SGS_OP_GETINDEX, SS_Window_getindex,
+	SGS_OP_SETINDEX, SS_Window_setindex,
+	SGS_OP_CONVERT, SS_Window_convert,
+	SGS_OP_DESTRUCT, SS_Window_destruct,
 	SGS_OP_END
 };
 
 static int SS_CreateWindow( SGS_CTX )
 {
-	ss_window* W;
+	SS_Window* W;
 	char* str;
 	sgs_Int x, y, w, h, f = 0;
 	SGSFN( "SS_CreateWindow" );
 	if( !sgs_LoadArgs( C, "siiii|i", &str, &x, &y, &w, &h, &f ) )
 		return 0;
 	
-	f |= SDL_WINDOW_OPENGL;
-	W = (ss_window*) sgs_PushObjectIPA( C, sizeof(ss_window), ss_window_iface );
+//	f |= SDL_WINDOW_OPENGL;
+	W = (SS_Window*) sgs_PushObjectIPA( C, sizeof(SS_Window), SS_Window_iface );
 	W->window = SDL_CreateWindow( str, x, y, w, h, f );
 	W->renderer = NULL;
 	W->riface = NULL;
@@ -801,7 +794,7 @@ static int SS_GetWindowFromID( SGS_CTX )
 	return 1;
 }
 
-static ss_window* ss_window_from_id( Uint32 id )
+static SS_Window* SS_Window_from_id( Uint32 id )
 {
 	sgs_VarObj* obj;
 	SDL_Window* win;
@@ -811,12 +804,12 @@ static ss_window* ss_window_from_id( Uint32 id )
 	obj = (sgs_VarObj*) SDL_GetWindowData( win, "sgsobj" );
 	if( !obj )
 		return NULL;
-	return (ss_window*) obj->data;
+	return (SS_Window*) obj->data;
 }
 
 
 
-int SS_ShowCursor( SGS_CTX )
+static int SS_ShowCursor( SGS_CTX )
 {
 	int shc;
 	SGSFN( "SS_ShowCursor" );
@@ -826,7 +819,7 @@ int SS_ShowCursor( SGS_CTX )
 	return 0;
 }
 
-int SS_WarpMouse( SGS_CTX )
+static int SS_WarpMouse( SGS_CTX )
 {
 	sgs_Integer x, y;
 	SGSFN( "SS_WarpMouse" );
@@ -836,7 +829,7 @@ int SS_WarpMouse( SGS_CTX )
 	return 0;
 }
 
-int SS_GetMouseState( SGS_CTX )
+static int SS_GetMouseState( SGS_CTX )
 {
 	int x, y, btnmask;
 	SGSFN( "SS_GetMouseState" );
@@ -848,7 +841,7 @@ int SS_GetMouseState( SGS_CTX )
 	return 1;
 }
 
-int SS_GetRelativeMouseState( SGS_CTX )
+static int SS_GetRelativeMouseState( SGS_CTX )
 {
 	int x, y, btnmask;
 	SGSFN( "SS_GetRelativeMouseState" );
@@ -861,7 +854,7 @@ int SS_GetRelativeMouseState( SGS_CTX )
 }
 
 
-int SS_SetGLAttrib( SGS_CTX )
+static int SS_SetGLAttrib( SGS_CTX )
 {
 	sgs_Integer attr, val;
 	SGSFN( "SS_SetGLAttrib" );
@@ -873,7 +866,7 @@ int SS_SetGLAttrib( SGS_CTX )
 	return 1;
 }
 
-int SS_Clear( SGS_CTX )
+static int SS_Clear( SGS_CTX )
 {
 	float col[ 4 ];
 	SGSFN( "SS_Clear" );
@@ -887,7 +880,7 @@ int SS_Clear( SGS_CTX )
 	return 0;
 }
 
-int SS_Present( SGS_CTX )
+static int SS_Present( SGS_CTX )
 {
 	SGSFN( "SS_Present" );
 	SCRFN_NEEDS_RENDER_CONTEXT;
@@ -897,7 +890,14 @@ int SS_Present( SGS_CTX )
 }
 
 
-sgs_RegIntConst sdl_ints[] =
+#ifdef SS_USED3D
+#  define SDL_WINDOW_OPENGLMAYBE 0
+#else
+#  define SDL_WINDOW_OPENGLMAYBE SDL_WINDOW_OPENGL
+#endif
+
+
+static sgs_RegIntConst sdl_ints[] =
 {
 	/*  EVENTS  */
 	IC( SDL_QUIT ),
@@ -1280,6 +1280,7 @@ sgs_RegIntConst sdl_ints[] =
 	IC( SDL_WINDOW_FULLSCREEN ),
 	IC( SDL_WINDOW_FULLSCREEN_DESKTOP ),
 	IC( SDL_WINDOW_OPENGL ),
+	IC( SDL_WINDOW_OPENGLMAYBE ),
 	IC( SDL_WINDOW_HIDDEN ),
 	IC( SDL_WINDOW_BORDERLESS ),
 	IC( SDL_WINDOW_RESIZABLE ),
@@ -1336,19 +1337,19 @@ sgs_RegIntConst sdl_ints[] =
 	IC( SS_RENDERER_DEBUG ),
 };
 
-int SS_SDL_WINDOWPOS_UNDEFINED_DISPLAY( SGS_CTX )
+static int SS_SDL_WINDOWPOS_UNDEFINED_DISPLAY( SGS_CTX )
 {
 	sgs_PushInt( C, SDL_WINDOWPOS_UNDEFINED_DISPLAY( sgs_GetInt( C, 0 ) ) );
 	return 1;
 }
 
-int SS_SDL_WINDOWPOS_CENTERED_DISPLAY( SGS_CTX )
+static int SS_SDL_WINDOWPOS_CENTERED_DISPLAY( SGS_CTX )
 {
 	sgs_PushInt( C, SDL_WINDOWPOS_CENTERED_DISPLAY( sgs_GetInt( C, 0 ) ) );
 	return 1;
 }
 
-sgs_RegFuncConst sdl_funcs[] =
+static sgs_RegFuncConst sdl_funcs[] =
 {
 	FN( GetPlatformInfo ),
 	FN( GetPowerInfo ),
@@ -1486,7 +1487,7 @@ int ss_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 		if( event->window.event == SDL_WINDOWEVENT_SIZE_CHANGED )
 		{
 			int modlist[] = { SS_RMOD_WIDTH, event->window.data1, SS_RMOD_HEIGHT, event->window.data2, 0 };
-			ss_window* W = ss_window_from_id( event->window.windowID );
+			SS_Window* W = SS_Window_from_id( event->window.windowID );
 			if( W )
 			{
 				SS_TmpCtx ctx = ss_TmpMakeCurrent( W->riface, W->renderer );
