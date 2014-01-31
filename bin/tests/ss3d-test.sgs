@@ -1,4 +1,6 @@
 
+include "ss3d";
+
 function configure()
 {
 }
@@ -7,11 +9,17 @@ function initialize()
 {
 	global Window = SS_CreateWindow( "SGS-SDL Game Framework", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 576, SDL_WINDOW_OPENGLMAYBE );
 	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
+	
+	_R.SS3D = SS3D_CreateRenderer( Window.renderingAPI, 0/* Window.rendererVersion */, Window.rendererPtr );
+	
+	println( _R.SS3D.getShader( "pp_combine" ) );
+	pcall(function(){ println( _R.SS3D.getShader( "pp_combine_doesnotexist" ) ); },function(type,msg){println(msg);});
 }
 
 function update()
 {
 	SS_Clear( color(0.1,0.2,0.4) );
+	_R.SS3D.render();
 	SS_Present();
 }
 

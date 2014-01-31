@@ -1,0 +1,89 @@
+
+float ll_distq( float dist, float rad, float fpo )
+{
+	return pow( saturate( ( rad - dist ) / rad ), fpo );
+}
+
+float2 ll_diffspec_dir( float3 viewNormal, float3 viewPos, float3 lDir )
+{
+	float3 normal = normalize( viewNormal );
+	float3 mvp2lvp = normalize( lDir );
+	float3 nvwp = normalize( viewPos );
+	float dist = length( mvp2lvp );
+	mvp2lvp /= dist;
+	
+	float refq = saturate( dot( reflect( nvwp, normal ), mvp2lvp ) );
+	float fresq = pow( saturate( 1-abs(dot( nvwp, normal )) ), 4 );
+	
+	float dlq = saturate( dot( normal, mvp2lvp ) );
+	float slq = pow( refq, 32 ) * fresq;
+	return float2( dlq, slq );
+}
+
+float2 ll_diffspec_point( float3 viewNormal, float3 viewPos, float4 lPosRad, float lFpo )
+{
+	float3 normal = normalize( viewNormal );
+	float3 mvp2lvp = lPosRad.xyz - viewPos;
+	float3 nvwp = normalize( viewPos );
+	float dist = length( mvp2lvp );
+	mvp2lvp /= dist;
+	
+	float distq = ll_distq( dist, lPosRad.w, lFpo );
+	float refq = saturate( dot( reflect( nvwp, normal ), mvp2lvp ) );
+	float fresq = pow( saturate( 1-abs(dot( nvwp, normal )) ), 4 );
+	
+	float dlq = saturate( dot( normal, mvp2lvp ) ) * distq;
+	float slq = pow( refq, 32 ) * distq * fresq;
+	return float2( dlq, slq );
+}
+
+float2 ll_diffspec_spot( float3 viewNormal, float3 viewPos, float4 lPosRad, float lFpo, float3 lLightDir, float2 lCone )
+{
+	float3 mvp2lvp = normalize( lPosRad.xyz - viewPos );
+	float2 q = ll_diffspec_point( viewNormal, viewPos, lPosRad, lFpo );
+	q *= saturate( ( lCone.x - acos(dot( mvp2lvp, lLightDir )) ) / lCone.y );
+	return q;
+}
+
+float4 ll_final_color( float4 diffuse, float3 light, float2 diffspec )
+{
+	float3 totalDiffLight = light * diffspec.x;
+	float3 totalSpecLight = light * diffspec.y;
+	diffuse.rgb *= totalDiffLight + totalSpecLight;
+	return diffuse;
+}
+
+float4 ll_primary_final_color( float4 diffuse, float3 ambient, float3 light, float2 diffspec )
+{
+	float4 c = ll_final_color( diffuse, light, diffspec );
+	c.rgb += diffuse.rgb * ambient.rgb;
+	return c;
+}
+
+float4 ll_apply_fog( float4 color, float3 fog, float dist, float density )
+{
+	dist *= density;
+	float q = 1 / pow( 2.71828, dist );
+	color.rgb = lerp( color.rgb, fog, saturate( 1 - q ) );
+	return color;
+}
+
+float ll_shadowmap_pcf2( sampler2D tex, float4 coord, float2 tsize )
+{
+	float margin = 1.0 / 4096.0;
+	float3 shn = coord.xyz / coord.w;
+	shn = shn * float3(0.5,-0.5,0.5) + float3(0.5,0.5,0.5);
+	
+	float2 isz = float2(1,1) / tsize;
+	float2 slq = frac( shn.xy * tsize );
+	float2 sht = shn.xy - slq * isz;
+	float4 lmc00 = tex2Dlod( tex, float4( sht.x, sht.y, 0, 0 ) );
+	float4 lmc10 = tex2Dlod( tex, float4( sht.x + isz.x, sht.y, 0, 0 ) );
+	float4 lmc01 = tex2Dlod( tex, float4( sht.x, sht.y + isz.y, 0, 0 ) );
+	float4 lmc11 = tex2Dlod( tex, float4( sht.x + isz.x, sht.y + isz.y, 0, 0 ) );
+	float sq00 = saturate( ( lmc00.r - shn.z + margin ) / margin );
+	float sq10 = saturate( ( lmc10.r - shn.z + margin ) / margin );
+	float sq01 = saturate( ( lmc01.r - shn.z + margin ) / margin );
+	float sq11 = saturate( ( lmc11.r - shn.z + margin ) / margin );
+	return lerp( lerp( sq00, sq10, slq.x ), lerp( sq01, sq11, slq.x ), slq.y );
+}

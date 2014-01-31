@@ -18,9 +18,9 @@
 #define SDL_VIDEODEVICERESET SDL_USEREVENT + 2
 
 
-#include "../sgscript/src/sgscript.h"
-#include "../sgscript/src/sgs_util.h"
-#include "../sgscript/ext/sgsxgmath.h"
+#include <sgscript.h>
+#include <sgs_util.h>
+#include <sgsxgmath.h>
 
 
 #define ARRAY_SIZE( x ) (sizeof(x)/sizeof(x[0]))

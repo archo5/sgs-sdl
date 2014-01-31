@@ -59,30 +59,39 @@ else
 	CFLAGS = -D_DEBUG -g -Wall $(ARCHFLAGS)
 endif
 
-C2FLAGS = $(CFLAGS) $(VIDEOFLAGS) -DBUILDING_SGS_SDL
-
 _DEPS = ss_main.h ss_cfg.h
 _OBJ = ss_main.o ss_script.o ss_sdl.o ss_render.o ss_image.o ss_render_gl.o
 
+_SS3D_DEPS = $(_DEPS) ss3d_engine.h
+_SS3D_OBJ = ss3d_engine.o ss3d_render_gl.o
+
 ifneq ($(video),nod3d)
-	VIDEOFLAGS = -DSGS_SDL_HAS_DIRECT3D
+	VIDEOFLAGS = -DSGS_SDL_HAS_DIRECT3D -Ld3dx -ld3dx9
 	_OBJ += ss_render_d3d9.o
+	_SS3D_OBJ += ss3d_render_d3d9.o
 endif
+
+C2FLAGS = $(CFLAGS) $(VIDEOFLAGS) -DBUILDING_SGS_SDL
 
 
 DEPS = $(patsubst %,$(SRCDIR)/%,$(_DEPS))
 OBJ = $(patsubst %,$(OBJDIR)/%,$(_OBJ))
+SS3D_DEPS = $(patsubst %,$(SRCDIR)/%,$(_SS3D_DEPS))
+SS3D_OBJ = $(patsubst %,$(OBJDIR)/%,$(_SS3D_OBJ))
 
 .PHONY: bothlaunchers
 bothlaunchers: $(OUTDIR)/sgs-sdl-release$(BINEXT) $(OUTDIR)/sgs-sdl-debug$(BINEXT)
 
+.PHONY: ss3d
+ss3d: $(OUTDIR)/$(LIBPFX)ss3d$(LIBEXT)
+
 $(OUTDIR)/sgs-sdl-release$(BINEXT): $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) src/ss_launcher.c
 	$(LINUXHACKPRE)
-	gcc -o $@ src/ss_launcher.c -mwindows $(COMPATHS) $(LIBFLAGS) -Isgscript/src $(C2FLAGS) -DSS_RELEASE -Lbin -lsgs-sdl -s
+	gcc -o $@ src/ss_launcher.c -mwindows $(COMPATHS) $(LIBFLAGS) -Isgscript/src -Isgscript/ext $(C2FLAGS) -DSS_RELEASE -Lbin -lsgs-sdl -s
 	$(LINUXHACKPOST)
 $(OUTDIR)/sgs-sdl-debug$(BINEXT): $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) src/ss_launcher.c
 	$(LINUXHACKPRE)
-	gcc -o $@ src/ss_launcher.c $(COMPATHS) $(LIBFLAGS) -Isgscript/src $(C2FLAGS) -Lbin -lsgs-sdl -s
+	gcc -o $@ src/ss_launcher.c $(COMPATHS) $(LIBFLAGS) -Isgscript/src -Isgscript/ext $(C2FLAGS) -Lbin -lsgs-sdl -s
 	$(LINUXHACKPOST)
 
 $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT): $(OBJ)
@@ -93,8 +102,14 @@ $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT): $(OBJ)
 	$(LINUXHACKPOST)
 	$(PLATPOST)
 
+$(OUTDIR)/$(LIBPFX)ss3d$(LIBEXT): $(SS3D_OBJ) $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT)
+	$(LINUXHACKPRE)
+	gcc -o $@ $(SS3D_OBJ) $(C2FLAGS) -Lsgscript/bin $(LINKPATHS) $(PLATFLAGS) \
+		-lsgscript -shared
+	$(LINUXHACKPOST)
+
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPS)
-	$(CC) -c -o $@ $< $(COMPATHS) -Isgscript/src $(C2FLAGS)
+	$(CC) -c -o $@ $< $(COMPATHS) -Isgscript/src -Isgscript/ext $(C2FLAGS) -Wno-comment
 
 .PHONY: clean
 clean:

@@ -1,0 +1,28 @@
+
+#ifdef VS
+
+void main( out float4 pos : POSITION0 )
+{
+	pos = float4(0,0,0,0);
+}
+
+#elif defined(PS)
+
+sampler2D Tex0 : register(s0); // color
+
+float4 main( float2 tex : TEXCOORD0 ) : COLOR0
+{
+	float4 color = tex2D( Tex0, tex );
+	
+	// gamma-correct
+	float exposure = 3;
+	float contrast = 1.5;
+	color.rgb = sqrt( color.rgb );
+	color.rgb = float3(1,1,1) - pow( float3(2,2,2), ( -exposure * color.rgb ) );
+	color.rgb = ( color.rgb - 0.5 ) * contrast + 0.5;
+	
+	return color;
+}
+
+#endif
+

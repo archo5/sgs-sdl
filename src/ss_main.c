@@ -1,8 +1,8 @@
 
 #include "ss_main.h"
 
-#include "../sgscript/ext/sgs_idbg.h"
-#include "../sgscript/ext/sgs_prof.h"
+#include <sgs_idbg.h>
+#include <sgs_prof.h>
 
 
 static const char* scr_preconfig =
