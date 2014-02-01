@@ -361,6 +361,7 @@ static const char* _parse_floatvec( SGS_CTX, int stkitem, float* out, int numcom
 	else if( sgs_ParseVec3( C, stkitem, out, 0 ) ) pnp = 3;
 	else if( sgs_ParseVec4( C, stkitem, out, 0 ) ) pnp = 4;
 	else if( sgs_ParseColor( C, stkitem, out, 0 ) ) pnp = 4;
+	else if( sgs_ParseMat4( C, stkitem, out ) ) pnp = 16;
 	else if( sgs_ArraySize( C, stkitem ) >= 0 )
 	{
 		int32_t i, asz = sgs_ArraySize( C, stkitem );

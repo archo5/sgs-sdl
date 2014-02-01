@@ -62,7 +62,7 @@ endif
 _DEPS = ss_main.h ss_cfg.h
 _OBJ = ss_main.o ss_script.o ss_sdl.o ss_render.o ss_image.o ss_render_gl.o
 
-_SS3D_DEPS = $(_DEPS) ss3d_engine.h
+_SS3D_DEPS = ss3d_engine.h
 _SS3D_OBJ = ss3d_engine.o ss3d_render_gl.o
 
 ifneq ($(video),nod3d)
@@ -108,7 +108,10 @@ $(OUTDIR)/$(LIBPFX)ss3d$(LIBEXT): $(SS3D_OBJ) $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT
 		-lsgscript -shared
 	$(LINUXHACKPOST)
 
-$(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPS)
+$(OBJDIR)/ss_%.o: $(SRCDIR)/ss_%.c $(DEPS)
+	$(CC) -c -o $@ $< $(COMPATHS) -Isgscript/src -Isgscript/ext $(C2FLAGS) -Wno-comment
+
+$(OBJDIR)/ss3d_%.o: $(SRCDIR)/ss3d_%.c $(SS3D_DEPS)
 	$(CC) -c -o $@ $< $(COMPATHS) -Isgscript/src -Isgscript/ext $(C2FLAGS) -Wno-comment
 
 .PHONY: clean

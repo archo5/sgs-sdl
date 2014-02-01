@@ -155,13 +155,13 @@ function SS_GetCamera2DMatrix( x, y, size, aspect, angle )
 	size = 1.0/size;
 	x *= size/aspect;
 	y *= size;
-	return
-	[
+	return mat4
+	(
 		size/aspect, 0, 0, 0,
 		0, -size, 0, 0,
 		0, 0, size, 0,
-		-x, y, 0.5*size, 1,
-	];
+		-x, y, 0.5*size, 1
+	);
 }
 function SS_SetCamera2D( x, y, size, aspect, angle )
 {
@@ -172,13 +172,13 @@ function SS_GetCameraUIMatrix( x1, x2, y1, y2 )
 {
 	w = x2 - x1;
 	h = y2 - y1;
-	return
-	[
+	return mat4
+	(
 		2.0/w, 0, 0, 0,
 		0, -2.0/h, 0, 0,
 		0, 0, 1, 0,
-		-1-x1/w, 1+y1/w, 0, 1,
-	];
+		-1-x1/w, 1+y1/w, 0, 1
+	);
 }
 function SS_SetCameraUI( x1, x2, y1, y2 )
 {
@@ -193,13 +193,13 @@ function SS_MultiplyPointMatrix( mtx, x, y )
 
 function SS_MatrixTranspose( m )
 {
-	return
-	[
+	return mat4
+	(
 		m[0], m[4], m[8], m[12],
 		m[1], m[5], m[9], m[13],
 		m[2], m[6], m[10], m[14],
-		m[3], m[7], m[11], m[15],
-	];
+		m[3], m[7], m[11], m[15]
+	);
 }
 
 function SS_GetCameraLookAt( pos, dir, up )
@@ -208,28 +208,28 @@ function SS_GetCameraLookAt( pos, dir, up )
 	xaxis = vec3_cross( up, zaxis ).normalized;
 	yaxis = vec3_cross( zaxis, xaxis );
 	
-	return
-	[
+	return mat4
+	(
 		xaxis[0], yaxis[0], zaxis[0], 0,
 		xaxis[1], yaxis[1], zaxis[1], 0,
 		xaxis[2], yaxis[2], zaxis[2], 0,
 		-vec3_dot( xaxis, pos ),
 		-vec3_dot( yaxis, pos ),
 		-vec3_dot( zaxis, pos ),
-		1,
-	];
+		1
+	);
 }
 function SS_GetCameraPerspective( angle, aspect, znear, zfar )
 {
 	yscale = 1 / tan( angle / 2 );
 	xscale = yscale / aspect;
-	return
-	[
+	return mat4
+	(
 		-xscale, 0, 0, 0,
 		0, yscale, 0, 0,
 		0, 0, zfar/(zfar-znear), 1,
-		0, 0, -znear*zfar/(zfar-znear), 0,
-	];
+		0, 0, -znear*zfar/(zfar-znear), 0
+	);
 }
 function SS_SetCamera3D( pos, dir, up, angle, aspect, znear, zfar )
 {

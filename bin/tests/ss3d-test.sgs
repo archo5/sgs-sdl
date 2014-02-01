@@ -11,14 +11,46 @@ function initialize()
 	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
 	
 	_R.SS3D = SS3D_CreateRenderer( Window.renderingAPI, 0/* Window.rendererVersion */, Window.rendererPtr );
+	println( "SS3D: " $ _R.SS3D );
 	
-	println( _R.SS3D.getShader( "pp_combine" ) );
-	pcall(function(){ println( _R.SS3D.getShader( "pp_combine_doesnotexist" ) ); },function(type,msg){println(msg);});
+	_R.Scene = _R.SS3D.createScene();
+	println( "Scene: " $ _R.Scene );
+	_R.SS3D.currentScene = _R.Scene;
+	
+	_R.Light = _R.Scene.createLight();
+	println( "Light: " $ _R.Light );
+	_R.Scene.destroyLight( _R.Light );
+	println( "After destruction: " $ _R.Light );
+	light = _R.Light = _R.Scene.createLight();
+	println( "New light: " $ light );
+	light.type = SS3DLIGHT_POINT;
+	light.color = vec3(1,1,1);
+	light.position = vec3(10,10,10);
+	light.range = 100;
+	light.power = 2;
+	light.isEnabled = true;
+	printvar( light );
+	
+	global camera = _R.Camera = SS3D_CreateCamera();
+	camera.position = vec3(10,10,10);
+	camera.direction = vec3(-1,-1,-1);
+	camera.aspect = 16/9;
+	printvar( camera );
+	
+	_R.Scene.camera = camera;
+	
+	println( "Shader: " $ _R.SS3D.getShader( "pp_combine" ) );
+	pcall(function(){ println( "No shader: " $ _R.SS3D.getShader( "pp_combine_doesnotexist" ) ); },function(type,msg){println(msg);});
 }
 
 function update()
 {
 	SS_Clear( color(0.1,0.2,0.4) );
+	
+	t = ftime();
+	camera.position = vec3(cos(t)*10,sin(t)*10,10);
+	camera.direction = vec3(-cos(t),-sin(t),-1);
+	
 	_R.SS3D.render();
 	SS_Present();
 }

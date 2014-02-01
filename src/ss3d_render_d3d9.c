@@ -100,7 +100,7 @@ static int shd3d9_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
 	if( type == SGS_VT_STRING || type == SGS_CONVOP_TOTYPE )
 	{
-		sgs_PushString( C, "s3dShaderD3D9" );
+		sgs_PushString( C, "SS3D_Shader_D3D9" );
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
@@ -118,12 +118,6 @@ static sgs_ObjCallback SS3D_Shader_D3D9_iface[] =
 {
 	SGS_OP_DESTRUCT, shd3d9_destruct,
 	SGS_OP_CONVERT, shd3d9_convert,
-	SGS_OP_END
-};
-
-
-static sgs_ObjCallback SS3D_Scene_D3D9_iface[] =
-{
 	SGS_OP_END
 };
 
@@ -148,10 +142,68 @@ static int rd3d9i_update( SGS_CTX )
 	return 0;
 }
 
+typedef struct _testVtx
+{
+	float x, y, z;
+	float nx, ny, nz;
+	uint32_t col;
+}
+testVtx;
+
+static testVtx testVertices[] =
+{
+	{ -5, -5, -5, -1, -1, -1, D3DCOLOR_XRGB( 233, 222, 211 ) },
+	{ +5, -5, -5, +1, -1, -1, D3DCOLOR_XRGB( 233, 211, 222 ) },
+	{ +5, +5, -5, +1, +1, -1, D3DCOLOR_XRGB( 222, 211, 222 ) },
+	{ -5, +5, -5, -1, +1, -1, D3DCOLOR_XRGB( 222, 222, 211 ) },
+	{ -5, -5, +5, -1, -1, +1, D3DCOLOR_XRGB( 211, 222, 233 ) },
+	{ +5, -5, +5, +1, -1, +1, D3DCOLOR_XRGB( 222, 211, 233 ) },
+	{ +5, +5, +5, +1, +1, +1, D3DCOLOR_XRGB( 222, 211, 233 ) },
+	{ -5, +5, +5, -1, +1, +1, D3DCOLOR_XRGB( 211, 222, 233 ) },
+};
+static uint16_t testIndices[] =
+{
+    // front
+    0, 1, 2,
+    2, 3, 0,
+    // top
+    3, 2, 6,
+    6, 7, 3,
+    // back
+    7, 6, 5,
+    5, 4, 7,
+    // bottom
+    4, 5, 1,
+    1, 0, 4,
+    // left
+    4, 0, 3,
+    3, 7, 4,
+    // right
+    1, 5, 6,
+    6, 2, 1,
+};
+
 static int rd3d9i_render( SGS_CTX )
 {
 	R_IHDR( render );
+	if( !R->inh.currentScene )
+		return 0;
+	
 	IDirect3DDevice9_Clear( R->device, 0, NULL, D3DCLEAR_TARGET, 0xc0c0c0c0, 1.0f, 0 );
+	D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 1 );
+	
+	SS3D_Scene* scene = (SS3D_Scene*) R->inh.currentScene->data;
+	if( scene->camera )
+	{
+		SS3D_Camera* cam = (SS3D_Camera*) scene->camera->data;
+		D3DCALL_( R->device, SetTransform, D3DTS_VIEW, (D3DMATRIX*) *cam->mView );
+		D3DCALL_( R->device, SetTransform, D3DTS_PROJECTION, (D3DMATRIX*) *cam->mProj );
+	}
+	D3DCALL_( R->device, SetFVF, D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_DIFFUSE );
+	D3DCALL_( R->device, DrawIndexedPrimitiveUP, D3DPT_TRIANGLELIST, 0, 8, 12, testIndices, D3DFMT_INDEX16, testVertices, sizeof(*testVertices) );
+	
+	D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 0 );
+	
 	return 0;
 }
 
@@ -220,6 +272,13 @@ static int rd3d9i_getShader( SGS_CTX )
 	}
 }
 
+static int rd3d9i_createScene( SGS_CTX )
+{
+	R_IHDR( createScene );
+	SS3D_Renderer_PushScene( &R->inh );
+	return 1;
+}
+
 static int rd3d9_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 {
 	char* name;
@@ -234,6 +293,7 @@ static int rd3d9_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 		if( !strcmp( name, "onDeviceReset" ) ){ sgs_PushCFunction( C, rd3d9i_onDeviceReset ); return SGS_SUCCESS; }
 		
 		if( !strcmp( name, "getShader" ) ){ sgs_PushCFunction( C, rd3d9i_getShader ); return SGS_SUCCESS; }
+		if( !strcmp( name, "createScene" ) ){ sgs_PushCFunction( C, rd3d9i_createScene ); return SGS_SUCCESS; }
 		
 		// properties
 		if( !strcmp( name, "currentScene" ) ){ sgs_PushObjectPtr( C, R->inh.currentScene ); return SGS_SUCCESS; }
@@ -250,10 +310,23 @@ static int rd3d9_setindex( SGS_CTX, sgs_VarObj* data, int isprop )
 	{
 		if( !strcmp( name, "currentScene" ) )
 		{
-			if( sgs_IsObject( C, 1, SS3D_Scene_D3D9_iface ) )
+			if( sgs_ItemType( C, 1 ) == SGS_VT_NULL )
 			{
-				R->inh.currentScene = sgs_GetObjectStruct( C, 1 );
-				return SGS_SUCCESS;
+				if( R->inh.currentScene )
+					sgs_ObjRelease( C, R->inh.currentScene );
+				R->inh.currentScene = NULL;
+			}
+			if( sgs_IsObject( C, 1, SS3D_Scene_iface ) )
+			{
+				sgs_VarObj* ns = sgs_GetObjectStruct( C, 1 );
+				if( ((SS3D_Scene*)ns->data)->renderer == &R->inh )
+				{
+					if( R->inh.currentScene )
+						sgs_ObjRelease( C, R->inh.currentScene );
+					R->inh.currentScene = ns;
+					sgs_ObjAcquire( C, ns );
+					return SGS_SUCCESS;
+				}
 			}
 			return SGS_EINVAL;
 		}
@@ -267,7 +340,7 @@ static int rd3d9_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
 	if( type == SGS_VT_STRING || type == SGS_CONVOP_TOTYPE )
 	{
-		sgs_PushString( C, "s3dRendererD3D9" );
+		sgs_PushString( C, "SS3D_Renderer_D3D9" );
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
@@ -297,6 +370,7 @@ int SS3D_PushRenderer_D3D9( SGS_CTX, void* device )
 	sgs_BreakIf( !device );
 	SS3D_RD3D9* R = (SS3D_RD3D9*) sgs_PushObjectIPA( C, sizeof(*R), SS3D_Renderer_D3D9_iface );
 	SS3D_Renderer_Construct( &R->inh, C );
+	R->inh.API = "D3D9";
 	R->device = (IDirect3DDevice9*) device;
 	IDirect3DDevice9_AddRef( R->device );
 	return 1;
