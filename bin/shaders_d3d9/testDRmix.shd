@@ -4,15 +4,16 @@
 void main
 (
 	float4 ipos : POSITION0,
-	float2 itex : TEXCOORD0,
+	float2 itex0 : TEXCOORD0,
+	float2 itex1 : TEXCOORD1,
 	out float4 opos : POSITION0,
 	out float2 otex : TEXCOORD0,
 	out float3 ofr : TEXCOORD1
 )
 {
 	opos = ipos;
-	otex = itex;
-	ofr = float3(ipos.xy,1);// * float3(1,-1,1);
+	otex = itex0;
+	ofr = float3(itex1,1);
 }
 
 #elif defined(PS)
@@ -27,16 +28,22 @@ float4 main( float2 itex : TEXCOORD0, float3 ifr : TEXCOORD1 ) : COLOR0
 	float4 rgbd = tex2D( texRGBD, itex );
 	float4 nrms = tex2D( texNrmS, itex );
 	
-	float3 viewPos = ifr * ( rgbd.w * gZFar );
+	float3 viewPos = ifr * rgbd.w;
 	float3 viewNormal = nrms.xyz * 2 - 1;
-	float3 lightViewPos = float3(10,5,17);
+	float3 lightViewPos = float3(25,20,27);
 	
 	float distfac = 10/(1+length(viewPos-lightViewPos)*10);
-	float NdotL = saturate( dot( viewNormal, normalize( lightViewPos - viewPos ) ) );
+	float3 lightDir = normalize( lightViewPos - viewPos );
+	float NdotL = saturate( dot( viewNormal, lightDir ) );
+	float RdotV = saturate( dot( reflect( lightDir, viewNormal ), normalize( viewPos ) ) );
+	float power = 256;
+	float factor = 0.2;
+	float spec = pow( RdotV, power ) * sqrt( power ) * factor;
 	
-	//float4 ocol = float4(normalize(lightViewPos - viewPos)*0.5+0.5,1);
-	//float4 ocol = float4(rgbd.rgb*(NdotL+0.01),1);
-	float4 ocol = float4(rgbd.w*30,0,0,1);
+//	float4 ocol = float4(normalize(lightViewPos - viewPos)*0.5+0.5,1);
+	float4 ocol = float4(rgbd.rgb*(NdotL*distfac+0.01+spec),1);
+//	float4 ocol = float4(rgbd.w*30,0,0,1);
+//	float4 ocol = float4(viewPos,1);
 	ocol = sqrt( ocol );
 	return ocol;
 }

@@ -304,7 +304,9 @@ static uint16_t testIndices[] =
 
 typedef struct _ssvtx
 {
-	float x, y, z, u, v;
+	float x, y, z;
+	float u0, v0;
+	float u1, v1;
 }
 ssvtx;
 
@@ -359,17 +361,19 @@ static int rd3d9i_render( SGS_CTX )
 	
 	float hpox = 0.5f / w;
 	float hpoy = 0.5f / h;
+	float fsx = 1/-cam->mProj[0][0];
+	float fsy = 1/cam->mProj[1][1];
 	ssvtx ssVertices[] =
 	{
-		{ -1, -1, 0, 0+hpox, 1+hpoy },
-		{ +1, -1, 0, 1+hpox, 1+hpoy },
-		{ +1, +1, 0, 1+hpox, 0+hpoy },
-		{ -1, +1, 0, 0+hpox, 0+hpoy },
+		{ -1, -1, 0, 0+hpox, 1+hpoy, -fsx, -fsy },
+		{ +1, -1, 0, 1+hpox, 1+hpoy, +fsx, -fsy },
+		{ +1, +1, 0, 1+hpox, 0+hpoy, +fsx, +fsy },
+		{ -1, +1, 0, 0+hpox, 0+hpoy, -fsx, +fsy },
 	};
 	
 	D3DCALL_( R->device, SetTexture, 0, (IDirect3DBaseTexture9*) R->drd.RTT1 );
 	D3DCALL_( R->device, SetTexture, 1, (IDirect3DBaseTexture9*) R->drd.RTT2 );
-	D3DCALL_( R->device, SetFVF, D3DFVF_XYZ | D3DFVF_TEX1 );
+	D3DCALL_( R->device, SetFVF, D3DFVF_XYZ | D3DFVF_TEX2 );
 	D3DCALL_( R->device, DrawPrimitiveUP, D3DPT_TRIANGLEFAN, 2, ssVertices, sizeof(*ssVertices) );
 	D3DCALL_( R->device, SetTexture, 0, NULL );
 	D3DCALL_( R->device, SetTexture, 0, NULL );
