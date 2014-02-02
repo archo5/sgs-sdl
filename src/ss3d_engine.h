@@ -25,6 +25,14 @@ typedef VEC4 MAT4[4];
 #define VEC3_Cross( V, A, B ) V[0]=A[1]*B[2]-A[2]*B[1]; V[1]=A[2]*B[0]-A[0]*B[2]; V[2]=A[0]*B[1]-A[1]*B[0];
 #define VEC3_Normalized( V, X ) { float len = VEC3_Length( X ); if( len > 0 ){ V[0]=X[0]/len; V[1]=X[1]/len; V[2]=X[2]/len; } }
 
+void SS3D_Mtx_Transpose( MAT4 mtx );
+void SS3D_Mtx_Multiply( MAT4 out, MAT4 A, MAT4 B );
+void SS3D_Mtx_Transform( VEC4 out, VEC4 v, MAT4 mtx );
+void SS3D_Mtx_TransformPos( VEC3 out, VEC3 pos, MAT4 mtx );
+void SS3D_Mtx_Dump( MAT4 mtx );
+void SS3D_Mtx_LookAt( MAT4 out, VEC3 pos, VEC3 dir, VEC3 up );
+void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, float znear, float zfar );
+
 
 #define SS3DLIGHT_POINT  1
 #define SS3DLIGHT_SPOT   2

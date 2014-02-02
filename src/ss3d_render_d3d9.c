@@ -83,7 +83,9 @@ static void use_shader( SS3D_RD3D9* R, SS3D_Shader_D3D9* S )
 
 static void vshc_set_mat4( SS3D_RD3D9* R, int pos, MAT4 mtx ){ D3DCALL_( R->device, SetVertexShaderConstantF, pos, mtx[0], 4 ); }
 
-static void pshc_set_float( SS3D_RD3D9* R, int pos, float f ){ VEC4 v = { f, 0, 0, 0 }; D3DCALL_( R->device, SetPixelShaderConstantF, pos, v, 1 ); }
+static void pshc_set_float( SS3D_RD3D9* R, int pos, float f ){ VEC4 v = { f, f, f, f }; D3DCALL_( R->device, SetPixelShaderConstantF, pos, v, 1 ); }
+static void pshc_set_vec4array( SS3D_RD3D9* R, int pos, VEC4 data, int count ){ D3DCALL_( R->device, SetPixelShaderConstantF, pos, data, count ); }
+static void pshc_set_int( SS3D_RD3D9* R, int pos, int i ){ int v[4] = { i, i, i, i }; D3DCALL_( R->device, SetPixelShaderConstantI, pos, v, 1 ); }
 
 static void shd3d9_free( SS3D_Shader_D3D9* S )
 {
@@ -357,11 +359,32 @@ static int rd3d9i_render( SGS_CTX )
 	
 	SS3D_Shader_D3D9* sh2 = get_shader( R, "testDRmix" );
 	use_shader( R, sh2 );
-	pshc_set_float( R, 0, cam->zfar );
+	
+	VEC4 pointlightdata[ 2 * 32 ]; /* px, py, pz, radius, cr, cg, cb, power */
+	int i, plc = 0;
+	for( i = 0; i < scene->lights.size && plc < 32; ++i )
+	{
+		SS3D_Light* light = (SS3D_Light*) scene->lights.vars[i].val.data.O->data;
+		if( light->type == SS3DLIGHT_POINT )
+		{
+			VEC3 viewpos;
+			SS3D_Mtx_TransformPos( viewpos, light->position, cam->mView );
+			VEC4 newdata[2] =
+			{
+				{ viewpos[0], viewpos[1], viewpos[2], light->range },
+				{ light->color[0], light->color[1], light->color[2], light->power }
+			};
+			memcpy( pointlightdata[ plc * 2 ], newdata, sizeof(VEC4)*2 );
+			plc++;
+		}
+	}
+	if( plc )
+		pshc_set_vec4array( R, 32, *pointlightdata, 2 * plc );
+	pshc_set_int( R, 0, plc ); /* point light count */
 	
 	float hpox = 0.5f / w;
 	float hpoy = 0.5f / h;
-	float fsx = 1/-cam->mProj[0][0];
+	float fsx = 1/cam->mProj[0][0];
 	float fsy = 1/cam->mProj[1][1];
 	ssvtx ssVertices[] =
 	{

@@ -18,10 +18,17 @@ void main
 
 #elif defined(PS)
 
+struct PointLight /* size: 2c */
+{
+	float4 vposrad;
+	float4 colpow;
+};
+
+int gPLightCount : register(c0);
+PointLight gPLights[32] : register(c32); /* ends before c96 */
+
 sampler2D texRGBD : register(s0);
 sampler2D texNrmS : register(s1);
-
-float gZFar : register(c0);
 
 float4 main( float2 itex : TEXCOORD0, float3 ifr : TEXCOORD1 ) : COLOR0
 {
@@ -30,6 +37,8 @@ float4 main( float2 itex : TEXCOORD0, float3 ifr : TEXCOORD1 ) : COLOR0
 	
 	float3 viewPos = ifr * rgbd.w;
 	float3 viewNormal = nrms.xyz * 2 - 1;
+	
+#if 0
 	float3 lightViewPos = float3(25,20,27);
 	
 	float distfac = 10/(1+length(viewPos-lightViewPos)*10);
@@ -44,6 +53,38 @@ float4 main( float2 itex : TEXCOORD0, float3 ifr : TEXCOORD1 ) : COLOR0
 	float4 ocol = float4(rgbd.rgb*(NdotL*distfac+0.01+spec),1);
 //	float4 ocol = float4(rgbd.w*30,0,0,1);
 //	float4 ocol = float4(viewPos,1);
+#else
+	float specularFactor = 0.2;
+	float specularPower = 256;
+	
+	float3 totalDiffuse = float3(0,0,0);
+	float3 totalSpecular = float3(0,0,0);
+	
+	/* AMBIENT TEST */
+	totalDiffuse += float3(0.01,0.01,0.01);
+	
+	/* POINT LIGHTS */
+	float3 viewDir = normalize( viewPos );
+	for( int i = 0; i < gPLightCount; ++i )
+	{
+		PointLight PL = gPLights[ i ];
+		float3 lightViewPos = PL.vposrad.xyz;
+		float3 lightDir = lightViewPos - viewPos;
+		float lightDist = length( lightDir );
+		lightDir /= lightDist;
+		float3 lightColor = PL.colpow.rgb;
+		
+		float distFactor = pow( 1 - saturate( lightDist / PL.vposrad.w ), PL.colpow.w );
+		float NdotL = saturate( dot( viewNormal, lightDir ) );
+		
+		float RdotV = saturate( dot( reflect( lightDir, viewNormal ), viewDir ) );
+		float specAmount = pow( RdotV, specularPower ) * sqrt( specularPower ) * specularFactor;
+		
+		totalDiffuse += lightColor * NdotL * distFactor;
+		totalSpecular += lightColor * specAmount;
+	}
+	float4 ocol = float4( totalDiffuse + totalSpecular, 1 );
+#endif
 	ocol = sqrt( ocol );
 	return ocol;
 }

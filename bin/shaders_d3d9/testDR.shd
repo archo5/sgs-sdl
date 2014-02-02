@@ -26,8 +26,6 @@ void main
 
 sampler2D Tex0 : register(s0);
 
-float gZFar : register(c0);
-
 void main
 (
 	float3 inrm : TEXCOORD1,
@@ -38,7 +36,7 @@ void main
 )
 {
 	ocol0 = float4( icol.rgb, itfpos.z );
-	ocol1 = float4( normalize( inrm ) * float3(-0.5,0.5,0.5) + 0.5, 0 );
+	ocol1 = float4( normalize( inrm ) * 0.5 + 0.5, 0 );
 }
 
 #endif

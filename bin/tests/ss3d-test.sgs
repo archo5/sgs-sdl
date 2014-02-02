@@ -24,12 +24,22 @@ function initialize()
 	light = _R.Light = _R.Scene.createLight();
 	println( "New light: " $ light );
 	light.type = SS3DLIGHT_POINT;
-	light.color = vec3(1,1,1);
-	light.position = vec3(10,10,10);
-	light.range = 100;
+	light.color = vec3(0.9,0.7,0.5);
+	light.position = vec3(10,0,5);
+	light.range = 50;
 	light.power = 2;
 	light.isEnabled = true;
 	printvar( light );
+	
+	light2 = _R.Light = _R.Scene.createLight();
+	println( "New light (2): " $ light2 );
+	light2.type = SS3DLIGHT_POINT;
+	light2.color = vec3(0.5,0.7,0.9);
+	light2.position = vec3(-10,0,5);
+	light2.range = 50;
+	light2.power = 2;
+	light2.isEnabled = true;
+	printvar( light2 );
 	
 	global camera = _R.Camera = SS3D_CreateCamera();
 	camera.position = vec3(10,10,10);
@@ -48,8 +58,8 @@ function update()
 	SS_Clear( color(0.1,0.2,0.4) );
 	
 	t = ftime();
-	camera.position = vec3(cos(t)*10,sin(t)*10,10);
-	camera.direction = vec3(-cos(t),-sin(t),-1);
+	camera.position = vec3(cos(t)*20,sin(t)*20,10);
+	camera.direction = vec3(-cos(t),-sin(t),-0.8);
 	
 	_R.SS3D.render();
 	SS_Present();
