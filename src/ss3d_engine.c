@@ -40,9 +40,9 @@ void SS3D_Mtx_LookAt( MAT4 out, VEC3 pos, VEC3 dir, VEC3 up )
 	VEC3_Normalized( xaxis, xaxis );
 	VEC3_Cross( yaxis, zaxis, xaxis );
 	
-	out[0][0] = xaxis[0]; out[0][1] = xaxis[1]; out[0][2] = xaxis[2]; out[0][3] = 0;
-	out[1][0] = yaxis[0]; out[1][1] = yaxis[1]; out[1][2] = yaxis[2]; out[1][3] = 0;
-	out[2][0] = zaxis[0]; out[2][1] = zaxis[1]; out[2][2] = zaxis[2]; out[2][3] = 0;
+	out[0][0] = xaxis[0]; out[0][1] = yaxis[0]; out[0][2] = zaxis[0]; out[0][3] = 0;
+	out[1][0] = xaxis[1]; out[1][1] = yaxis[1]; out[1][2] = zaxis[1]; out[1][3] = 0;
+	out[2][0] = xaxis[2]; out[2][1] = yaxis[2]; out[2][2] = zaxis[2]; out[2][3] = 0;
 	out[3][0] = -VEC3_Dot( xaxis, pos );
 	out[3][1] = -VEC3_Dot( yaxis, pos );
 	out[3][2] = -VEC3_Dot( zaxis, pos );
