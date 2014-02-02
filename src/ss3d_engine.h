@@ -120,7 +120,6 @@ struct _SS3D_Renderer
 {
 	SGS_CTX;
 	int destroying;
-	int width, height;
 	sgs_VHTable resources;
 	sgs_VHTable shaders;
 	sgs_VHTable materials;
@@ -128,6 +127,7 @@ struct _SS3D_Renderer
 	sgs_Bool enableDeferredShading;
 	
 	/* to be initialized by derived class */
+	int width, height;
 	const char* API;
 	sgs_ObjCallback* ifMesh;
 	sgs_ObjCallback* ifTexture;

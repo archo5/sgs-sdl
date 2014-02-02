@@ -622,6 +622,7 @@ void SS3D_Renderer_Construct( SS3D_Renderer* R, SGS_CTX )
 	sgs_vht_init( &R->shaders, C, 128, 128 );
 	sgs_vht_init( &R->materials, C, 128, 128 );
 	R->currentScene = NULL;
+	R->enableDeferredShading = 0;
 }
 
 void SS3D_Renderer_Destruct( SS3D_Renderer* R )

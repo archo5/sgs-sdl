@@ -1,0 +1,35 @@
+
+#ifdef VS
+
+float4x4 mWorldView : register(c4);
+float4x4 mProj : register(c12);
+
+void main
+(
+	float4 ipos : POSITION0,
+	float3 inrm : NORMAL0,
+	float4 icol : COLOR0,
+	out float4 opos : POSITION0,
+	out float3 onrm : TEXCOORD1,
+	out float4 ocol : COLOR0
+)
+{
+	opos = mul( mProj, mul( mWorldView, ipos ) );
+	onrm = mul( mWorldView, float4( inrm, 0 ) );
+	ocol = icol;
+}
+
+#elif defined(PS)
+
+sampler2D Tex0 : register(s0);
+
+float4 main( float3 inrm : TEXCOORD1, float4 icol : COLOR0 ) : COLOR0
+{
+	float NdotL = saturate( dot( normalize( inrm ), normalize( float3( 1, 1, -1 ) ) ) );
+	float4 ocol = icol;
+	ocol.rgb *= NdotL;
+	return ocol;
+}
+
+#endif
+

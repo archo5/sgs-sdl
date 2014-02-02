@@ -1,0 +1,44 @@
+
+#ifdef VS
+
+void main
+(
+	float4 ipos : POSITION0,
+	float2 itex : TEXCOORD0,
+	out float4 opos : POSITION0,
+	out float2 otex : TEXCOORD0,
+	out float3 ofr : TEXCOORD1
+)
+{
+	opos = ipos;
+	otex = itex;
+	ofr = float3(ipos.xy,1);// * float3(1,-1,1);
+}
+
+#elif defined(PS)
+
+sampler2D texRGBD : register(s0);
+sampler2D texNrmS : register(s1);
+
+float gZFar : register(c0);
+
+float4 main( float2 itex : TEXCOORD0, float3 ifr : TEXCOORD1 ) : COLOR0
+{
+	float4 rgbd = tex2D( texRGBD, itex );
+	float4 nrms = tex2D( texNrmS, itex );
+	
+	float3 viewPos = ifr * ( rgbd.w * gZFar );
+	float3 viewNormal = nrms.xyz * 2 - 1;
+	float3 lightViewPos = float3(10,5,17);
+	
+	float distfac = 10/(1+length(viewPos-lightViewPos)*10);
+	float NdotL = saturate( dot( viewNormal, normalize( lightViewPos - viewPos ) ) );
+	
+	//float4 ocol = float4(normalize(lightViewPos - viewPos)*0.5+0.5,1);
+	//float4 ocol = float4(rgbd.rgb*(NdotL+0.01),1);
+	float4 ocol = float4(rgbd.w*30,0,0,1);
+	ocol = sqrt( ocol );
+	return ocol;
+}
+
+#endif
