@@ -24,7 +24,7 @@ struct PointLight /* size: 2c */
 	float4 colpow;
 };
 
-int gPLightCount : register(c0);
+float gPLightCount : register(c28);
 PointLight gPLights[32] : register(c32); /* ends before c96 */
 
 sampler2D texRGBD : register(s0);

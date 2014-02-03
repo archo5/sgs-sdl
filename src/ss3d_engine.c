@@ -6,6 +6,47 @@
 #define CN( x ) { "SS3D" #x, SS3D##x }
 
 
+SGSRESULT sgs_ParseObjectPtr( SGS_CTX, sgs_StkIdx item, sgs_ObjCallback* iface, sgs_VarObj** out, int strict )
+{
+	if( !strict && sgs_ItemType( C, item ) == SGS_VT_NULL )
+	{
+		if( *out )
+			sgs_ObjRelease( C, *out );
+		*out = NULL;
+		return SGS_SUCCESS;
+	}
+	if( sgs_IsObject( C, item, iface ) )
+	{
+		if( *out )
+			sgs_ObjRelease( C, *out );
+		*out = sgs_GetObjectStruct( C, item );
+		sgs_ObjAcquire( C, *out );
+		return SGS_SUCCESS;
+	}
+	return SGS_EINVAL;
+}
+
+#define SGS_BEGIN_INDEXFUNC char* str; UNUSED( isprop ); if( sgs_ParseString( C, 0, &str, NULL ) ){
+#define SGS_END_INDEXFUNC } return SGS_ENOTFND;
+#define SGS_CASE( name ) if( !strcmp( str, name ) )
+
+#define SGS_RETURN_NULL() { sgs_PushNull( C ); return SGS_SUCCESS; }
+#define SGS_RETURN_BOOL( val ) { sgs_PushBool( C, val ); return SGS_SUCCESS; }
+#define SGS_RETURN_INT( val ) { sgs_PushInt( C, val ); return SGS_SUCCESS; }
+#define SGS_RETURN_REAL( val ) { sgs_PushReal( C, val ); return SGS_SUCCESS; }
+#define SGS_RETURN_CFUNC( val ) { sgs_PushCFunction( C, val ); return SGS_SUCCESS; }
+#define SGS_RETURN_OBJECT( val ) { sgs_PushObjectPtr( C, val ); return SGS_SUCCESS; }
+#define SGS_RETURN_VEC3( val ) { sgs_PushVec3p( C, val ); return SGS_SUCCESS; }
+#define SGS_RETURN_MAT4( val ) { sgs_PushMat4( C, val, 0 ); return SGS_SUCCESS; }
+
+#define SGS_PARSE_BOOL( out ) { sgs_Bool val; if( sgs_ParseBool( C, 1, &val ) ){ out = val; return SGS_SUCCESS; } return SGS_EINVAL; }
+#define SGS_PARSE_INT( out ) { sgs_Int val; if( sgs_ParseInt( C, 1, &val ) ){ out = val; return SGS_SUCCESS; } return SGS_EINVAL; }
+#define SGS_PARSE_REAL( out ) { sgs_Real val; if( sgs_ParseReal( C, 1, &val ) ){ out = val; return SGS_SUCCESS; } return SGS_EINVAL; }
+#define SGS_PARSE_OBJECT( iface, out, nonull ) { return sgs_ParseObjectPtr( C, 1, iface, &out, nonull ); }
+#define SGS_PARSE_VEC3( outptr, strict ) { return sgs_ParseVec3( C, 1, outptr, strict ) ? SGS_SUCCESS : SGS_EINVAL; }
+#define SGS_PARSE_MAT4( outptr ) { return sgs_ParseMat4( C, 1, outptr ) ? SGS_SUCCESS : SGS_EINVAL; }
+
+
 //
 // MATH
 
@@ -168,40 +209,32 @@ static void camera_recalc_projmtx( SS3D_Camera* CAM )
 
 static int camera_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 {
-	char* str;
 	CAM_HDR;
-	UNUSED( isprop );
-	if( sgs_ParseString( C, 0, &str, NULL ) )
-	{
-		if( !strcmp( str, "position" ) ){ sgs_PushVec3p( C, CAM->position ); return SGS_SUCCESS; }
-		if( !strcmp( str, "direction" ) ){ sgs_PushVec3p( C, CAM->direction ); return SGS_SUCCESS; }
-		if( !strcmp( str, "up" ) ){ sgs_PushVec3p( C, CAM->up ); return SGS_SUCCESS; }
-		if( !strcmp( str, "angle" ) ){ sgs_PushReal( C, CAM->angle ); return SGS_SUCCESS; }
-		if( !strcmp( str, "aspect" ) ){ sgs_PushReal( C, CAM->aspect ); return SGS_SUCCESS; }
-		if( !strcmp( str, "aamix" ) ){ sgs_PushReal( C, CAM->aamix ); return SGS_SUCCESS; }
-		if( !strcmp( str, "znear" ) ){ sgs_PushReal( C, CAM->znear ); return SGS_SUCCESS; }
-		if( !strcmp( str, "zfar" ) ){ sgs_PushReal( C, CAM->zfar ); return SGS_SUCCESS; }
-	}
-	return SGS_ENOTFND;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "position" )  SGS_RETURN_VEC3( CAM->position )
+		SGS_CASE( "direction" ) SGS_RETURN_VEC3( CAM->direction )
+		SGS_CASE( "up" )        SGS_RETURN_VEC3( CAM->up )
+		SGS_CASE( "angle" )     SGS_RETURN_REAL( CAM->angle )
+		SGS_CASE( "aspect" )    SGS_RETURN_REAL( CAM->aspect )
+		SGS_CASE( "aamix" )     SGS_RETURN_REAL( CAM->aamix )
+		SGS_CASE( "znear" )     SGS_RETURN_REAL( CAM->znear )
+		SGS_CASE( "zfar" )      SGS_RETURN_REAL( CAM->zfar )
+	SGS_END_INDEXFUNC;
 }
 
 static int camera_setindex_( SGS_CTX, sgs_VarObj* data, int isprop )
 {
-	char* str;
 	CAM_HDR;
-	UNUSED( isprop );
-	if( sgs_ParseString( C, 0, &str, NULL ) )
-	{
-		if( !strcmp( str, "position" ) ){ return sgs_ParseVec3( C, 1, CAM->position, 0 ) ? 1 : SGS_EINVAL; }
-		if( !strcmp( str, "direction" ) ){ return sgs_ParseVec3( C, 1, CAM->direction, 0 ) ? 1 : SGS_EINVAL; }
-		if( !strcmp( str, "up" ) ){ return sgs_ParseVec3( C, 1, CAM->up, 0 ) ? 1 : SGS_EINVAL; }
-		if( !strcmp( str, "angle" ) ){ sgs_Real val; if( sgs_ParseReal( C, 1, &val ) ){ CAM->angle = val; return 2; } return SGS_EINVAL; }
-		if( !strcmp( str, "aspect" ) ){ sgs_Real val; if( sgs_ParseReal( C, 1, &val ) ){ CAM->aspect = val; return 2; } return SGS_EINVAL; }
-		if( !strcmp( str, "aamix" ) ){ sgs_Real val; if( sgs_ParseReal( C, 1, &val ) ){ CAM->aamix = val; return 2; } return SGS_EINVAL; }
-		if( !strcmp( str, "znear" ) ){ sgs_Real val; if( sgs_ParseReal( C, 1, &val ) ){ CAM->znear = val; return 2; } return SGS_EINVAL; }
-		if( !strcmp( str, "zfar" ) ){ sgs_Real val; if( sgs_ParseReal( C, 1, &val ) ){ CAM->zfar = val; return 2; } return SGS_EINVAL; }
-	}
-	return SGS_ENOTFND;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "position" )  { return sgs_ParseVec3( C, 1, CAM->position, 0 ) ? 1 : SGS_EINVAL; }
+		SGS_CASE( "direction" ) { return sgs_ParseVec3( C, 1, CAM->direction, 0 ) ? 1 : SGS_EINVAL; }
+		SGS_CASE( "up" )        { return sgs_ParseVec3( C, 1, CAM->up, 0 ) ? 1 : SGS_EINVAL; }
+		SGS_CASE( "angle" )     { sgs_Real val; if( sgs_ParseReal( C, 1, &val ) ){ CAM->angle = val; return 2; } return SGS_EINVAL; }
+		SGS_CASE( "aspect" )    { sgs_Real val; if( sgs_ParseReal( C, 1, &val ) ){ CAM->aspect = val; return 2; } return SGS_EINVAL; }
+		SGS_CASE( "aamix" )     { sgs_Real val; if( sgs_ParseReal( C, 1, &val ) ){ CAM->aamix = val; return 2; } return SGS_EINVAL; }
+		SGS_CASE( "znear" )     { sgs_Real val; if( sgs_ParseReal( C, 1, &val ) ){ CAM->znear = val; return 2; } return SGS_EINVAL; }
+		SGS_CASE( "zfar" )      { sgs_Real val; if( sgs_ParseReal( C, 1, &val ) ){ CAM->zfar = val; return 2; } return SGS_EINVAL; }
+	SGS_END_INDEXFUNC;
 }
 
 static int camera_setindex( SGS_CTX, sgs_VarObj* data, int isprop )
@@ -292,95 +325,40 @@ int SS3D_CreateCamera( SGS_CTX )
 
 static int light_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 {
-	char* str;
 	L_HDR;
-	UNUSED( isprop );
-	if( sgs_ParseString( C, 0, &str, NULL ) )
-	{
-		if( !strcmp( str, "type" ) ){ sgs_PushInt( C, L->type ); return SGS_SUCCESS; }
-		if( !strcmp( str, "isEnabled" ) ){ sgs_PushBool( C, L->isEnabled ); return SGS_SUCCESS; }
-		if( !strcmp( str, "position" ) ){ sgs_PushVec3p( C, L->position ); return SGS_SUCCESS; }
-		if( !strcmp( str, "direction" ) ){ sgs_PushVec3p( C, L->direction ); return SGS_SUCCESS; }
-		if( !strcmp( str, "color" ) ){ sgs_PushVec3p( C, L->color ); return SGS_SUCCESS; }
-		if( !strcmp( str, "range" ) ){ sgs_PushReal( C, L->range ); return SGS_SUCCESS; }
-		if( !strcmp( str, "power" ) ){ sgs_PushReal( C, L->power ); return SGS_SUCCESS; }
-		if( !strcmp( str, "minangle" ) ){ sgs_PushReal( C, L->minangle ); return SGS_SUCCESS; }
-		if( !strcmp( str, "maxangle" ) ){ sgs_PushReal( C, L->maxangle ); return SGS_SUCCESS; }
-		if( !strcmp( str, "cookieTexture" ) ){ sgs_PushObjectPtr( C, L->cookieTexture ); return SGS_SUCCESS; }
-		if( !strcmp( str, "projMatrix" ) ){ sgs_PushMat4( C, *L->projMatrix, 0 ); return SGS_SUCCESS; }
-		if( !strcmp( str, "hasShadows" ) ){ sgs_PushBool( C, L->hasShadows ); return SGS_SUCCESS; }
-	}
-	return SGS_ENOTFND;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "type" )          SGS_RETURN_INT( L->type )
+		SGS_CASE( "isEnabled" )     SGS_RETURN_BOOL( L->isEnabled )
+		SGS_CASE( "position" )      SGS_RETURN_VEC3( L->position )
+		SGS_CASE( "direction" )     SGS_RETURN_VEC3( L->direction )
+		SGS_CASE( "color" )         SGS_RETURN_VEC3( L->color )
+		SGS_CASE( "range" )         SGS_RETURN_REAL( L->range )
+		SGS_CASE( "power" )         SGS_RETURN_REAL( L->power )
+		SGS_CASE( "minangle" )      SGS_RETURN_REAL( L->minangle )
+		SGS_CASE( "maxangle" )      SGS_RETURN_REAL( L->maxangle )
+		SGS_CASE( "cookieTexture" ) SGS_RETURN_OBJECT( L->cookieTexture )
+		SGS_CASE( "projMatrix" )    SGS_RETURN_MAT4( *L->projMatrix )
+		SGS_CASE( "hasShadows" )    SGS_RETURN_BOOL( L->hasShadows )
+	SGS_END_INDEXFUNC;
 }
 
 static int light_setindex( SGS_CTX, sgs_VarObj* data, int isprop )
 {
-	char* str;
 	L_HDR;
-	UNUSED( isprop );
-	if( sgs_ParseString( C, 0, &str, NULL ) )
-	{
-		if( !strcmp( str, "type" ) )
-		{
-			sgs_Int val;
-			if( sgs_ParseInt( C, 1, &val ) )
-			{
-				L->type = val;
-				return SGS_SUCCESS;
-			}
-			return SGS_EINVAL;
-		}
-		if( !strcmp( str, "isEnabled" ) )
-		{
-			sgs_Bool val;
-			if( sgs_ParseBool( C, 1, &val ) )
-			{
-				L->isEnabled = val;
-				return SGS_SUCCESS;
-			}
-			return SGS_EINVAL;
-		}
-		if( !strcmp( str, "position" ) ){ return sgs_ParseVec3( C, 1, L->position, 0 ) ? SGS_SUCCESS : SGS_EINVAL; }
-		if( !strcmp( str, "direction" ) ){ return sgs_ParseVec3( C, 1, L->direction, 0 ) ? SGS_SUCCESS : SGS_EINVAL; }
-		if( !strcmp( str, "color" ) ){ return sgs_ParseVec3( C, 1, L->color, 0 ) ? SGS_SUCCESS : SGS_EINVAL; }
-		if( !strcmp( str, "range" ) ){ sgs_Real val; if( sgs_ParseReal( C, 1, &val ) ){ L->range = val; return SGS_SUCCESS; } return SGS_EINVAL; }
-		if( !strcmp( str, "power" ) ){ sgs_Real val; if( sgs_ParseReal( C, 1, &val ) ){ L->power = val; return SGS_SUCCESS; } return SGS_EINVAL; }
-		if( !strcmp( str, "minangle" ) ){ sgs_Real val; if( sgs_ParseReal( C, 1, &val ) ){ L->minangle = val; return SGS_SUCCESS; } return SGS_EINVAL; }
-		if( !strcmp( str, "maxangle" ) ){ sgs_Real val; if( sgs_ParseReal( C, 1, &val ) ){ L->maxangle = val; return SGS_SUCCESS; } return SGS_EINVAL; }
-		if( !strcmp( str, "cookieTexture" ) )
-		{
-			if( !L->scene || !L->scene->renderer )
-				return SGS_EINPROC;
-			if( sgs_ItemType( C, 1 ) == SGS_VT_NULL )
-			{
-				if( L->cookieTexture )
-					sgs_ObjRelease( C, L->cookieTexture );
-				L->cookieTexture = NULL;
-				return SGS_SUCCESS;
-			}
-			if( sgs_IsObject( C, 1, L->scene->renderer->ifTexture ) )
-			{
-				if( L->cookieTexture )
-					sgs_ObjRelease( C, L->cookieTexture );
-				L->cookieTexture = sgs_GetObjectStruct( C, 1 );
-				sgs_ObjAcquire( C, L->cookieTexture );
-				return SGS_SUCCESS;
-			}
-			return SGS_EINVAL;
-		}
-		if( !strcmp( str, "projMatrix" ) ){ return sgs_ParseMat4( C, 1, *L->projMatrix ) ? SGS_SUCCESS : SGS_EINVAL; }
-		if( !strcmp( str, "hasShadows" ) )
-		{
-			sgs_Bool val;
-			if( sgs_ParseBool( C, 1, &val ) )
-			{
-				L->hasShadows = val;
-				return SGS_SUCCESS;
-			}
-			return SGS_EINVAL;
-		}
-	}
-	return SGS_ENOTFND;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "type" )          SGS_PARSE_INT( L->type )
+		SGS_CASE( "isEnabled" )     SGS_PARSE_BOOL( L->isEnabled )
+		SGS_CASE( "position" )      SGS_PARSE_VEC3( L->position, 0 )
+		SGS_CASE( "direction" )     SGS_PARSE_VEC3( L->direction, 0 )
+		SGS_CASE( "color" )         SGS_PARSE_VEC3( L->color, 0 )
+		SGS_CASE( "range" )         SGS_PARSE_REAL( L->range )
+		SGS_CASE( "power" )         SGS_PARSE_REAL( L->power )
+		SGS_CASE( "minangle" )      SGS_PARSE_REAL( L->minangle )
+		SGS_CASE( "maxangle" )      SGS_PARSE_REAL( L->maxangle )
+		SGS_CASE( "cookieTexture" ) { if( !L->scene || !L->scene->renderer ) return SGS_EINPROC; SGS_PARSE_OBJECT( L->scene->renderer->ifTexture, L->cookieTexture, 0 ) }
+		SGS_CASE( "projMatrix" )    SGS_PARSE_MAT4( *L->projMatrix )
+		SGS_CASE( "hasShadows" )    SGS_PARSE_BOOL( L->hasShadows )
+	SGS_END_INDEXFUNC;
 }
 
 static int light_convert( SGS_CTX, sgs_VarObj* data, int type )
@@ -524,22 +502,18 @@ static int scenei_destroyLight( SGS_CTX )
 
 static int scene_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 {
-	char* str;
 	SC_HDR;
-	UNUSED( isprop );
-	if( sgs_ParseString( C, 0, &str, NULL ) )
-	{
+	SGS_BEGIN_INDEXFUNC
 		// methods
-		if( !strcmp( str, "createMeshInstance" ) ){ sgs_PushCFunction( C, scenei_createMeshInstance ); return SGS_SUCCESS; }
-		if( !strcmp( str, "destroyMeshInstance" ) ){ sgs_PushCFunction( C, scenei_destroyMeshInstance ); return SGS_SUCCESS; }
-		if( !strcmp( str, "createLight" ) ){ sgs_PushCFunction( C, scenei_createLight ); return SGS_SUCCESS; }
-		if( !strcmp( str, "destroyLight" ) ){ sgs_PushCFunction( C, scenei_destroyLight ); return SGS_SUCCESS; }
+		SGS_CASE( "createMeshInstance" )  SGS_RETURN_CFUNC( scenei_createMeshInstance )
+		SGS_CASE( "destroyMeshInstance" ) SGS_RETURN_CFUNC( scenei_destroyMeshInstance )
+		SGS_CASE( "createLight" )         SGS_RETURN_CFUNC( scenei_createLight )
+		SGS_CASE( "destroyLight" )        SGS_RETURN_CFUNC( scenei_destroyLight )
 		
 		// properties
-		if( !strcmp( str, "camera" ) ){ sgs_PushObjectPtr( C, S->camera ); return SGS_SUCCESS; }
-		if( !strcmp( str, "cullScene" ) ){ sgs_PushObjectPtr( C, S->cullScene ); return SGS_SUCCESS; }
-	}
-	return SGS_ENOTFND;
+		SGS_CASE( "camera" )    SGS_RETURN_OBJECT( S->camera )
+		SGS_CASE( "cullScene" ) SGS_RETURN_OBJECT( S->cullScene )
+	SGS_END_INDEXFUNC;
 }
 
 static int scene_setindex( SGS_CTX, sgs_VarObj* data, int isprop )

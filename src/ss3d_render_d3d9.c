@@ -85,7 +85,7 @@ static void vshc_set_mat4( SS3D_RD3D9* R, int pos, MAT4 mtx ){ D3DCALL_( R->devi
 
 static void pshc_set_float( SS3D_RD3D9* R, int pos, float f ){ VEC4 v = { f, f, f, f }; D3DCALL_( R->device, SetPixelShaderConstantF, pos, v, 1 ); }
 static void pshc_set_vec4array( SS3D_RD3D9* R, int pos, VEC4 data, int count ){ D3DCALL_( R->device, SetPixelShaderConstantF, pos, data, count ); }
-static void pshc_set_int( SS3D_RD3D9* R, int pos, int i ){ int v[4] = { i, i, i, i }; D3DCALL_( R->device, SetPixelShaderConstantI, pos, v, 1 ); }
+// static void pshc_set_int( SS3D_RD3D9* R, int pos, int i ){ VEC4 v = { i, i, i, i }; D3DCALL_( R->device, SetPixelShaderConstantF, pos, v, 1 ); }
 
 static void shd3d9_free( SS3D_Shader_D3D9* S )
 {
@@ -380,7 +380,7 @@ static int rd3d9i_render( SGS_CTX )
 	}
 	if( plc )
 		pshc_set_vec4array( R, 32, *pointlightdata, 2 * plc );
-	pshc_set_int( R, 0, plc ); /* point light count */
+	pshc_set_float( R, 28, plc ); /* point light count */
 	
 	float hpox = 0.5f / w;
 	float hpoy = 0.5f / h;

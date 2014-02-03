@@ -8,6 +8,9 @@
 #include <sgsxgmath.h>
 
 
+SGSRESULT sgs_ParseObjectPtr( SGS_CTX, sgs_StkIdx item, sgs_ObjCallback* iface, sgs_VarObj** out, int strict );
+
+
 typedef float VEC3[3];
 typedef float VEC4[4];
 typedef VEC3 MAT3[3];
