@@ -26,26 +26,6 @@ SGSRESULT sgs_ParseObjectPtr( SGS_CTX, sgs_StkIdx item, sgs_ObjCallback* iface, 
 	return SGS_EINVAL;
 }
 
-#define SGS_BEGIN_INDEXFUNC char* str; UNUSED( isprop ); if( sgs_ParseString( C, 0, &str, NULL ) ){
-#define SGS_END_INDEXFUNC } return SGS_ENOTFND;
-#define SGS_CASE( name ) if( !strcmp( str, name ) )
-
-#define SGS_RETURN_NULL() { sgs_PushNull( C ); return SGS_SUCCESS; }
-#define SGS_RETURN_BOOL( val ) { sgs_PushBool( C, val ); return SGS_SUCCESS; }
-#define SGS_RETURN_INT( val ) { sgs_PushInt( C, val ); return SGS_SUCCESS; }
-#define SGS_RETURN_REAL( val ) { sgs_PushReal( C, val ); return SGS_SUCCESS; }
-#define SGS_RETURN_CFUNC( val ) { sgs_PushCFunction( C, val ); return SGS_SUCCESS; }
-#define SGS_RETURN_OBJECT( val ) { sgs_PushObjectPtr( C, val ); return SGS_SUCCESS; }
-#define SGS_RETURN_VEC3( val ) { sgs_PushVec3p( C, val ); return SGS_SUCCESS; }
-#define SGS_RETURN_MAT4( val ) { sgs_PushMat4( C, val, 0 ); return SGS_SUCCESS; }
-
-#define SGS_PARSE_BOOL( out ) { sgs_Bool val; if( sgs_ParseBool( C, 1, &val ) ){ out = val; return SGS_SUCCESS; } return SGS_EINVAL; }
-#define SGS_PARSE_INT( out ) { sgs_Int val; if( sgs_ParseInt( C, 1, &val ) ){ out = val; return SGS_SUCCESS; } return SGS_EINVAL; }
-#define SGS_PARSE_REAL( out ) { sgs_Real val; if( sgs_ParseReal( C, 1, &val ) ){ out = val; return SGS_SUCCESS; } return SGS_EINVAL; }
-#define SGS_PARSE_OBJECT( iface, out, nonull ) { return sgs_ParseObjectPtr( C, 1, iface, &out, nonull ); }
-#define SGS_PARSE_VEC3( outptr, strict ) { return sgs_ParseVec3( C, 1, outptr, strict ) ? SGS_SUCCESS : SGS_EINVAL; }
-#define SGS_PARSE_MAT4( outptr ) { return sgs_ParseMat4( C, 1, outptr ) ? SGS_SUCCESS : SGS_EINVAL; }
-
 
 //
 // MATH
@@ -252,7 +232,7 @@ static int camera_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
 	if( type == SGS_VT_STRING || type == SGS_CONVOP_TOTYPE )
 	{
-		sgs_PushString( C, "SS3D_Light" );
+		sgs_PushString( C, "SS3D_Camera" );
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;

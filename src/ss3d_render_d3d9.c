@@ -454,57 +454,30 @@ static int rd3d9i_createScene( SGS_CTX )
 
 static int rd3d9_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 {
-	char* name;
 	R_HDR;
-	if( sgs_ParseString( C, 0, &name, NULL ) )
-	{
+	SGS_BEGIN_INDEXFUNC
 		// methods
-		if( !strcmp( name, "update" ) ){ sgs_PushCFunction( C, rd3d9i_update ); return SGS_SUCCESS; }
-		if( !strcmp( name, "render" ) ){ sgs_PushCFunction( C, rd3d9i_render ); return SGS_SUCCESS; }
-		if( !strcmp( name, "resize" ) ){ sgs_PushCFunction( C, rd3d9i_resize ); return SGS_SUCCESS; }
-		if( !strcmp( name, "onDeviceLost" ) ){ sgs_PushCFunction( C, rd3d9i_onDeviceLost ); return SGS_SUCCESS; }
-		if( !strcmp( name, "onDeviceReset" ) ){ sgs_PushCFunction( C, rd3d9i_onDeviceReset ); return SGS_SUCCESS; }
+		SGS_CASE( "update" )        SGS_RETURN_CFUNC( rd3d9i_update )
+		SGS_CASE( "render" )        SGS_RETURN_CFUNC( rd3d9i_render )
+		SGS_CASE( "resize" )        SGS_RETURN_CFUNC( rd3d9i_resize )
+		SGS_CASE( "onDeviceLost" )  SGS_RETURN_CFUNC( rd3d9i_onDeviceLost )
+		SGS_CASE( "onDeviceReset" ) SGS_RETURN_CFUNC( rd3d9i_onDeviceReset )
 		
-		if( !strcmp( name, "getShader" ) ){ sgs_PushCFunction( C, rd3d9i_getShader ); return SGS_SUCCESS; }
-		if( !strcmp( name, "createScene" ) ){ sgs_PushCFunction( C, rd3d9i_createScene ); return SGS_SUCCESS; }
+		SGS_CASE( "getShader" )     SGS_RETURN_CFUNC( rd3d9i_getShader )
+		SGS_CASE( "createScene" )   SGS_RETURN_CFUNC( rd3d9i_createScene )
 		
 		// properties
-		if( !strcmp( name, "currentScene" ) ){ sgs_PushObjectPtr( C, R->inh.currentScene ); return SGS_SUCCESS; }
-		if( !strcmp( name, "enableDeferredShading" ) ){ sgs_PushBool( C, R->inh.enableDeferredShading ); return SGS_SUCCESS; }
-	}
-	return SGS_ENOTFND;
+		SGS_CASE( "currentScene" )          SGS_RETURN_OBJECT( R->inh.currentScene )
+		SGS_CASE( "enableDeferredShading" ) SGS_RETURN_BOOL( R->inh.enableDeferredShading )
+	SGS_END_INDEXFUNC;
 }
 
 static int rd3d9_setindex( SGS_CTX, sgs_VarObj* data, int isprop )
 {
-	char* name;
 	R_HDR;
-	if( sgs_ParseString( C, 0, &name, NULL ) )
-	{
-		if( !strcmp( name, "currentScene" ) )
-		{
-			if( sgs_ItemType( C, 1 ) == SGS_VT_NULL )
-			{
-				if( R->inh.currentScene )
-					sgs_ObjRelease( C, R->inh.currentScene );
-				R->inh.currentScene = NULL;
-			}
-			if( sgs_IsObject( C, 1, SS3D_Scene_iface ) )
-			{
-				sgs_VarObj* ns = sgs_GetObjectStruct( C, 1 );
-				if( ((SS3D_Scene*)ns->data)->renderer == &R->inh )
-				{
-					if( R->inh.currentScene )
-						sgs_ObjRelease( C, R->inh.currentScene );
-					R->inh.currentScene = ns;
-					sgs_ObjAcquire( C, ns );
-					return SGS_SUCCESS;
-				}
-			}
-			return SGS_EINVAL;
-		}
-		if( !strcmp( name, "enableDeferredShading" ) )
-			return sgs_ParseBool( C, 1, &R->inh.enableDeferredShading ) ? SGS_SUCCESS : SGS_EINVAL;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "currentScene" ) SGS_PARSE_OBJECT_IF( SS3D_Scene_iface, R->inh.currentScene, 0, ((SS3D_Scene*)sgs_GetObjectData( C, 1 ))->renderer == &R->inh )
+		SGS_CASE( "enableDeferredShading" ) SGS_PARSE_BOOL( R->inh.enableDeferredShading )
 	}
 	return SGS_ENOTFND;
 }
