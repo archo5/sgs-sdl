@@ -59,6 +59,24 @@ void SS3D_Mtx_LookAt( MAT4 out, VEC3 pos, VEC3 dir, VEC3 up );
 void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, float znear, float zfar );
 
 
+#define SS3DTEXTURE_2D     1 /* 1 side, width x height */
+#define SS3DTEXTURE_CUBE   2 /* 6 sides, width x width */
+#define SS3DTEXTURE_VOLUME 3 /* 1 side, width x height x depth */
+
+#define SS3DTEXFLAGS_SRGB    0x01
+#define SS3DTEXFLAGS_HASMIPS 0x02
+#define SS3DTEXFLAGS_LERP_X  0x04
+#define SS3DTEXFLAGS_LERP_Y  0x08
+#define SS3DTEXFLAGS_CLAMP_X 0x10
+#define SS3DTEXFLAGS_CLAMP_Y 0x20
+
+#define SS3DFORMAT_RGBA8  1
+#define SS3DFORMAT_R5G6B5 2
+#define SS3DFORMAT_DXT1   11
+#define SS3DFORMAT_DXT3   13
+#define SS3DFORMAT_DXT5   15
+#define SS3DFORMAT_ISBLOCK4FORMAT( x ) ((x)==SS3DFORMAT_DXT1||(x)==SS3DFORMAT_DXT3||(x)==SS3DFORMAT_DXT5)
+
 #define SS3DLIGHT_POINT  1
 #define SS3DLIGHT_SPOT   2
 #define SS3DLIGHT_DIRECT 3
@@ -74,6 +92,50 @@ sgs_ObjCallback SS3D_Scene_iface[9];
 typedef struct _SS3D_Scene SS3D_Scene;
 typedef struct _SS3D_Renderer SS3D_Renderer;
 
+
+typedef struct _SS3D_TextureInfo
+{
+	int type;
+	int width;
+	int height;
+	int depth;
+	int format; /* SS3DFORMAT */
+	int flags; /* SS3DTEXFLAGS */
+	int mipcount;
+}
+SS3D_TextureInfo;
+
+size_t SS3D_TextureInfo_GetTextureSideSize( SS3D_TextureInfo* TI );
+
+
+/* sorting order of pixel/block data:
+	- mip level
+	- side
+	- depth
+	- height
+	- width
+*/
+typedef struct _SS3D_TextureData
+{
+	SS3D_TextureInfo info;
+	void* data;
+}
+SS3D_TextureData;
+
+SGSRESULT SS3D_TextureData_LoadFromFile( SS3D_TextureData* TD, const char* file, int def_flags );
+void SS3D_TextureData_Free( SS3D_TextureData* TD );
+SGSBOOL SS3D_TextureData_GetMipInfo( SS3D_TextureData* TD, int mip, SS3D_TextureInfo* outinfo );
+size_t SS3D_TextureData_GetMipDataOffset( SS3D_TextureData* TD, int side, int mip );
+size_t SS3D_TextureData_GetMipDataSize( SS3D_TextureData* TD, int mip );
+
+
+typedef struct _SS3D_Texture
+{
+	SS3D_Renderer* renderer;
+	SS3D_TextureInfo info;
+	sgs_Variable source;
+}
+SS3D_Texture;
 
 typedef struct _SS3D_Camera
 {

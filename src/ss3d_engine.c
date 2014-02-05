@@ -164,6 +164,90 @@ static void scene_poke_resource( SS3D_Scene* S, sgs_VHTable* which, sgs_VarObj* 
 
 
 //
+// TEXTURE
+
+static size_t divideup( size_t x, int d )
+{
+	return x / d + ( x % d ? 1 : 0 );
+}
+
+size_t SS3D_TextureInfo_GetTextureSideSize( SS3D_TextureInfo* TI )
+{
+	size_t width = TI->width, height = TI->height, depth = TI->depth;
+	int bpu = 0;
+	switch( TI->format )
+	{
+	/* bytes per pixel */
+	case SS3DFORMAT_RGBA8: bpu = 4;
+	case SS3DFORMAT_R5G6B5: bpu = 2;
+	/* bytes per block */
+	case SS3DFORMAT_DXT1: bpu = 8; break;
+	case SS3DFORMAT_DXT3:
+	case SS3DFORMAT_DXT5: bpu = 16; break;
+	}
+	if( SS3DFORMAT_ISBLOCK4FORMAT( TI->format ) )
+	{
+		width = divideup( width, 4 );
+		height = divideup( height, 4 );
+		depth = divideup( depth, 4 );
+	}
+	switch( TI->type )
+	{
+	case SS3DTEXTURE_2D: return width * height * bpu;
+	case SS3DTEXTURE_CUBE: return width * width * bpu;
+	case SS3DTEXTURE_VOLUME: return width * height * depth * bpu;
+	}
+	return 0;
+}
+
+SGSRESULT SS3D_TextureData_LoadFromFile( SS3D_TextureData* TD, const char* file, int def_flags )
+{
+	return SGS_ENOTSUP;
+}
+
+void SS3D_TextureData_Free( SS3D_TextureData* TD )
+{
+	if( TD->data )
+		free( TD->data );
+}
+
+SGSBOOL SS3D_TextureData_GetMipInfo( SS3D_TextureData* TD, int mip, SS3D_TextureInfo* outinfo )
+{
+	SS3D_TextureInfo info = TD->info;
+	if( mip >= TD->info.mipcount )
+		return 0;
+	info.width /= pow( 2, mip ); if( info.width < 1 ) info.width = 1;
+	info.height /= pow( 2, mip ); if( info.height < 1 ) info.height = 1;
+	info.depth /= pow( 2, mip ); if( info.depth < 1 ) info.depth = 1;
+	info.mipcount -= mip;
+	*outinfo = info;
+	return 1;
+}
+
+size_t SS3D_TextureData_GetMipDataOffset( SS3D_TextureData* TD, int side, int mip )
+{
+	size_t off = 0;
+	int mipit = mip, numsides = TD->info.type == SS3DTEXTURE_CUBE ? 6 : 1;
+	while( mipit --> 0 )
+		off += SS3D_TextureData_GetMipDataSize( TD, mipit ) * numsides;
+	if( side && TD->info.type == SS3DTEXTURE_CUBE )
+	{
+		size_t curlev = SS3D_TextureData_GetMipDataSize( TD, mip );
+		off += curlev * side;
+	}
+	return off;
+}
+
+size_t SS3D_TextureData_GetMipDataSize( SS3D_TextureData* TD, int mip )
+{
+	SS3D_TextureInfo mipTI;
+	if( !SS3D_TextureData_GetMipInfo( TD, mip, &mipTI ) )
+		return 0;
+	return SS3D_TextureInfo_GetTextureSideSize( &mipTI );
+}
+
+
+//
 // CULL SCENE
 
 sgs_ObjCallback SS3D_CullScene_iface[] =
