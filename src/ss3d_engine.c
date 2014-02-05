@@ -1,5 +1,7 @@
 
 
+#include "lodepng.h"
+
 #include "ss3d_engine.h"
 
 #define FN( x ) { "SS3D_" #x, SS3D_##x }
@@ -200,21 +202,39 @@ size_t SS3D_TextureInfo_GetTextureSideSize( SS3D_TextureInfo* TI )
 	return 0;
 }
 
-SGSRESULT SS3D_TextureData_LoadFromFile( SS3D_TextureData* TD, const char* file, int def_flags )
+void SS3D_TextureInfo_GetCopyDims( SS3D_TextureInfo* TI, size_t* outcopyrowsize, size_t* outcopyrowcount )
 {
-	return SGS_ENOTSUP;
+	size_t width = TI->width, height = TI->height, depth = TI->depth;
+	int bpu = 0;
+	switch( TI->format )
+	{
+	/* bytes per pixel */
+	case SS3DFORMAT_RGBA8: bpu = 4;
+	case SS3DFORMAT_R5G6B5: bpu = 2;
+	/* bytes per block */
+	case SS3DFORMAT_DXT1: bpu = 8; break;
+	case SS3DFORMAT_DXT3:
+	case SS3DFORMAT_DXT5: bpu = 16; break;
+	}
+	if( SS3DFORMAT_ISBLOCK4FORMAT( TI->format ) )
+	{
+		width = divideup( width, 4 );
+		height = divideup( height, 4 );
+		depth = divideup( depth, 4 );
+	}
+	switch( TI->type )
+	{
+	case SS3DTEXTURE_2D: *outcopyrowsize = width * bpu; *outcopyrowcount = height; break;
+	case SS3DTEXTURE_CUBE: *outcopyrowsize = width * bpu; *outcopyrowcount = width; break;
+	case SS3DTEXTURE_VOLUME: *outcopyrowsize = width * bpu; *outcopyrowcount = height * depth; break;
+	default: *outcopyrowsize = 0; *outcopyrowcount = 0; break;
+	}
 }
 
-void SS3D_TextureData_Free( SS3D_TextureData* TD )
+SGSBOOL SS3D_TextureInfo_GetMipInfo( SS3D_TextureInfo* TI, int mip, SS3D_TextureInfo* outinfo )
 {
-	if( TD->data )
-		free( TD->data );
-}
-
-SGSBOOL SS3D_TextureData_GetMipInfo( SS3D_TextureData* TD, int mip, SS3D_TextureInfo* outinfo )
-{
-	SS3D_TextureInfo info = TD->info;
-	if( mip >= TD->info.mipcount )
+	SS3D_TextureInfo info = *TI;
+	if( mip >= TI->mipcount )
 		return 0;
 	info.width /= pow( 2, mip ); if( info.width < 1 ) info.width = 1;
 	info.height /= pow( 2, mip ); if( info.height < 1 ) info.height = 1;
@@ -222,6 +242,45 @@ SGSBOOL SS3D_TextureData_GetMipInfo( SS3D_TextureData* TD, int mip, SS3D_Texture
 	info.mipcount -= mip;
 	*outinfo = info;
 	return 1;
+}
+
+SGSRESULT SS3D_TextureData_LoadFromFile( SS3D_TextureData* TD, const char* file )
+{
+	unsigned char* out;
+	unsigned w, h;
+	int err;
+	
+	memset( TD, 0, sizeof(*TD) );
+	
+	// Try to load PNG
+	err = lodepng_decode32_file( &out, &w, &h, file );
+	if( err == 78 ) return SGS_ENOTFND;
+	if( err == 0 )
+	{
+		TD->info.type = SS3DTEXTURE_2D;
+		TD->info.width = w;
+		TD->info.height = h;
+		TD->info.depth = 1;
+		TD->info.format = SS3DFORMAT_RGBA8;
+		TD->info.flags = 0;
+		TD->info.mipcount = 1;
+		goto success;
+	}
+	
+	// type not supported
+	goto failure;
+	
+success:
+	TD->data = out;
+	return SGS_SUCCESS;
+failure:
+	return SGS_ENOTSUP;
+}
+
+void SS3D_TextureData_Free( SS3D_TextureData* TD )
+{
+	if( TD->data )
+		free( TD->data );
 }
 
 size_t SS3D_TextureData_GetMipDataOffset( SS3D_TextureData* TD, int side, int mip )
@@ -241,7 +300,7 @@ size_t SS3D_TextureData_GetMipDataOffset( SS3D_TextureData* TD, int side, int mi
 size_t SS3D_TextureData_GetMipDataSize( SS3D_TextureData* TD, int mip )
 {
 	SS3D_TextureInfo mipTI;
-	if( !SS3D_TextureData_GetMipInfo( TD, mip, &mipTI ) )
+	if( !SS3D_TextureInfo_GetMipInfo( &TD->info, mip, &mipTI ) )
 		return 0;
 	return SS3D_TextureInfo_GetTextureSideSize( &mipTI );
 }

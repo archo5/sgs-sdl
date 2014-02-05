@@ -19,6 +19,21 @@ typedef struct _SS3D_Shader_D3D9
 }
 SS3D_Shader_D3D9;
 
+typedef struct _SS3D_Texture_D3D9
+{
+	SS3D_Texture inh;
+	
+	union
+	{
+		IDirect3DBaseTexture9* base;
+		IDirect3DTexture9* tex2d;
+		IDirect3DCubeTexture9* cube;
+		IDirect3DVolumeTexture9* vol;
+	}
+	ptr;
+}
+SS3D_Texture_D3D9;
+
 typedef struct _DeferredRenderingData
 {
 	IDirect3DTexture9* RTT1; /* dR, dG, dB, depth, RGBA16F */
@@ -41,6 +56,10 @@ typedef struct _SS3D_RD3D9
 }
 SS3D_RD3D9;
 
+
+//
+//  D E F E R R E D   R E N D E R I N G
+//
 
 static void drd_init( SS3D_RD3D9* R, DeferredRenderingData* D, int w, int h )
 {
@@ -74,6 +93,10 @@ static void drd_free( SS3D_RD3D9* R, DeferredRenderingData* D )
 	D->height = 0;
 }
 
+
+//
+//  S H A D E R S
+//
 
 static void use_shader( SS3D_RD3D9* R, SS3D_Shader_D3D9* S )
 {
@@ -231,9 +254,179 @@ static SS3D_Shader_D3D9* get_shader( SS3D_RD3D9* R, const char* name )
 		out = (SS3D_Shader_D3D9*) sgs_GetObjectData( C, -1 );
 	sgs_SetStackSize( C, ssz );
 	return out;
-	
 }
 
+
+//
+//  T E X T U R E S
+//
+
+static D3DFORMAT texfmt2d3d( int fmt )
+{
+	switch( fmt )
+	{
+	case SS3DFORMAT_RGBA8: return D3DFMT_A8B8G8R8;
+	case SS3DFORMAT_R5G6B5: return D3DFMT_R5G6B5;
+	
+	case SS3DFORMAT_DXT1: return D3DFMT_DXT1;
+	case SS3DFORMAT_DXT3: return D3DFMT_DXT3;
+	case SS3DFORMAT_DXT5: return D3DFMT_DXT5;
+	}
+	return 0;
+}
+
+static void texd3d9_free( SS3D_Texture_D3D9* T )
+{
+	SAFE_RELEASE( T->ptr.base );
+}
+
+static void texdatacopy( D3DLOCKED_RECT* plr, SS3D_TextureData* TD, int side, int mip )
+{
+	int ret;
+	uint8_t *src, *dst;
+	size_t i, off, copyrowsize = 0, copyrowcount = 0;
+	SS3D_TextureInfo mipTI;
+	
+	off = SS3D_TextureData_GetMipDataOffset( TD, side, mip );
+	ret = SS3D_TextureInfo_GetMipInfo( &TD->info, mip, &mipTI );
+	sgs_BreakIf( !ret );
+	
+	src = ((uint8_t*)TD->data) + off;
+	dst = (uint8_t*)plr->pBits;
+	SS3D_TextureInfo_GetCopyDims( &mipTI, &copyrowsize, &copyrowcount );
+	for( i = 0; i < copyrowcount; ++i )
+	{
+		memcpy( dst, src, copyrowsize );
+		src += copyrowsize;
+		dst += plr->Pitch;
+	}
+}
+
+static int texd3d9_init( SS3D_RD3D9* R, SS3D_Texture_D3D9* T, SS3D_TextureData* TD )
+{
+	int mip;
+	HRESULT hr;
+	// TODO: filter unsupported formats / dimensions
+	// TODO: generate mipmaps for mipmap-unaware sources if required
+	
+	if( TD->info.type == SS3DTEXTURE_2D )
+	{
+		IDirect3DTexture9* d3dtex;
+		
+		hr = D3DCALL_( R->device, CreateTexture, TD->info.width, TD->info.height, TD->info.mipcount, 0, texfmt2d3d( TD->info.format ), D3DPOOL_MANAGED, &d3dtex, NULL );
+		if( FAILED( hr ) )
+			return sgs_Printf( R->inh.C, SGS_WARNING, "failed to load texture - error while creating d3d9 texture" );
+		
+		// load all mip levels into it
+		for( mip = 0; mip < TD->info.mipcount; ++mip )
+		{
+			D3DLOCKED_RECT lr;
+			hr = D3DCALL_( d3dtex, LockRect, mip, &lr, NULL, D3DLOCK_DISCARD );
+			if( FAILED( hr ) )
+				return sgs_Printf( R->inh.C, SGS_WARNING, "failed to load texture - error while locking d3d9 texture" );
+			
+			texdatacopy( &lr, TD, 0, mip );
+			
+			hr = D3DCALL_( d3dtex, UnlockRect, mip );
+			if( FAILED( hr ) )
+				return sgs_Printf( R->inh.C, SGS_WARNING, "failed to load texture - error while unlocking d3d9 texture" );
+		}
+		
+		T->inh.renderer = &R->inh;
+		T->inh.info = TD->info;
+		T->ptr.tex2d = d3dtex;
+		return 1;
+	}
+	
+	return sgs_Printf( R->inh.C, SGS_ERROR, "TODO [reached a part of not-yet-defined behavior]" );
+}
+
+#define TEX_HDR SS3D_Texture_D3D9* T = (SS3D_Texture_D3D9*) data->data;
+
+static int texd3d9_convert( SGS_CTX, sgs_VarObj* data, int type )
+{
+	if( type == SGS_VT_STRING || type == SGS_CONVOP_TOTYPE )
+	{
+		sgs_PushString( C, "SS3D_Texture_D3D9" );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
+}
+
+static int texd3d9_destruct( SGS_CTX, sgs_VarObj* data, int unused )
+{
+	TEX_HDR;
+	UNUSED( unused );
+	texd3d9_free( T );
+	return SGS_SUCCESS;
+}
+
+static sgs_ObjCallback SS3D_Texture_D3D9_iface[] =
+{
+	SGS_OP_DESTRUCT, texd3d9_destruct,
+	SGS_OP_CONVERT, texd3d9_convert,
+	SGS_OP_END
+};
+
+static int get_texture_( SS3D_RD3D9* R, sgs_Variable* key )
+{
+	int err;
+	SGS_CTX = R->inh.C;
+	sgs_VHTVar* found;
+	
+	sgs_BreakIf( key->type != SGS_VT_STRING );
+	
+	found = sgs_vht_get( &R->inh.textures, key );
+	if( found )
+	{
+		sgs_PushVariable( C, &found->val );
+		return 1;
+	}
+	
+	// load texture
+	{
+		sgs_Variable val;
+		SS3D_TextureData texdata;
+		SS3D_Texture_D3D9 texture, *T;
+		
+		err = SS3D_TextureData_LoadFromFile( &texdata, sgs_var_cstr( key ) );
+		if( err != SGS_SUCCESS )
+			return 0;
+		
+		err = !texd3d9_init( R, &texture, &texdata );
+		SS3D_TextureData_Free( &texdata );
+		if( err )
+			return 0;
+		
+		T = (SS3D_Texture_D3D9*) sgs_PushObjectIPA( C, sizeof(*T), SS3D_Texture_D3D9_iface );
+		memcpy( T, &texture, sizeof(*T) );
+		sgs_GetStackItem( C, -1, &val );
+		
+		sgs_vht_set( &R->inh.textures, C, key, &val );
+		return 1;
+	}
+}
+
+static SS3D_Texture_D3D9* get_texture( SS3D_RD3D9* R, const char* name )
+{
+	sgs_Variable key;
+	SGS_CTX = R->inh.C;
+	sgs_SizeVal ssz = sgs_StackSize( C );
+	SS3D_Texture_D3D9* out = NULL;
+	
+	sgs_PushString( C, name );
+	sgs_GetStackItem( C, -1, &key );
+	
+	if( get_texture_( R, &key ) )
+		out = (SS3D_Texture_D3D9*) sgs_GetObjectData( C, -1 );
+	sgs_SetStackSize( C, ssz );
+	return out;
+}
+
+
+//
+//  R E N D E R E R
+//
 
 SGS_DECLARE sgs_ObjCallback SS3D_Renderer_D3D9_iface[];
 

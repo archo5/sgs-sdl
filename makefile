@@ -62,8 +62,8 @@ endif
 _DEPS = ss_main.h ss_cfg.h
 _OBJ = ss_main.o ss_script.o ss_sdl.o ss_render.o ss_image.o ss_render_gl.o
 
-_SS3D_DEPS = ss3d_engine.h
-_SS3D_OBJ = ss3d_engine.o ss3d_render_gl.o
+_SS3D_DEPS = ss3d_engine.h lodepng.h
+_SS3D_OBJ = ss3d_engine.o ss3d_render_gl.o lodepng.o
 
 ifneq ($(video),nod3d)
 	VIDEOFLAGS = -DSGS_SDL_HAS_DIRECT3D -Ld3dx -ld3dx9
@@ -112,6 +112,8 @@ $(OBJDIR)/ss_%.o: $(SRCDIR)/ss_%.c $(DEPS)
 	$(CC) -c -o $@ $< $(COMPATHS) -Isgscript/src -Isgscript/ext $(C2FLAGS) -Wno-comment
 
 $(OBJDIR)/ss3d_%.o: $(SRCDIR)/ss3d_%.c $(SS3D_DEPS)
+	$(CC) -c -o $@ $< $(COMPATHS) -Isgscript/src -Isgscript/ext $(C2FLAGS) -Wno-comment
+$(OBJDIR)/lodepng.o: $(SRCDIR)/lodepng.c $(SS3D_DEPS)
 	$(CC) -c -o $@ $< $(COMPATHS) -Isgscript/src -Isgscript/ext $(C2FLAGS) -Wno-comment
 
 .PHONY: clean

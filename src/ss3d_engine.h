@@ -106,6 +106,8 @@ typedef struct _SS3D_TextureInfo
 SS3D_TextureInfo;
 
 size_t SS3D_TextureInfo_GetTextureSideSize( SS3D_TextureInfo* TI );
+void SS3D_TextureInfo_GetCopyDims( SS3D_TextureInfo* TI, size_t* outcopyrowsize, size_t* outcopyrowcount );
+SGSBOOL SS3D_TextureInfo_GetMipInfo( SS3D_TextureInfo* TI, int mip, SS3D_TextureInfo* outinfo );
 
 
 /* sorting order of pixel/block data:
@@ -122,9 +124,8 @@ typedef struct _SS3D_TextureData
 }
 SS3D_TextureData;
 
-SGSRESULT SS3D_TextureData_LoadFromFile( SS3D_TextureData* TD, const char* file, int def_flags );
+SGSRESULT SS3D_TextureData_LoadFromFile( SS3D_TextureData* TD, const char* file );
 void SS3D_TextureData_Free( SS3D_TextureData* TD );
-SGSBOOL SS3D_TextureData_GetMipInfo( SS3D_TextureData* TD, int mip, SS3D_TextureInfo* outinfo );
 size_t SS3D_TextureData_GetMipDataOffset( SS3D_TextureData* TD, int side, int mip );
 size_t SS3D_TextureData_GetMipDataSize( SS3D_TextureData* TD, int mip );
 
@@ -133,7 +134,6 @@ typedef struct _SS3D_Texture
 {
 	SS3D_Renderer* renderer;
 	SS3D_TextureInfo info;
-	sgs_Variable source;
 }
 SS3D_Texture;
 
@@ -217,6 +217,7 @@ struct _SS3D_Renderer
 	int destroying;
 	sgs_VHTable resources;
 	sgs_VHTable shaders;
+	sgs_VHTable textures;
 	sgs_VHTable materials;
 	sgs_VarObj* currentScene;
 	sgs_Bool enableDeferredShading;
