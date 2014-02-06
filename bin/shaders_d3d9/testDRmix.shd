@@ -83,7 +83,7 @@ float4 main( float2 itex : TEXCOORD0, float3 ifr : TEXCOORD1 ) : COLOR0
 		totalDiffuse += lightColor * NdotL * distFactor;
 		totalSpecular += lightColor * specAmount;
 	}
-	float4 ocol = float4( totalDiffuse + totalSpecular, 1 );
+	float4 ocol = float4( totalDiffuse * rgbd.rgb + totalSpecular, 1 );
 #endif
 	ocol = sqrt( ocol );
 	return ocol;

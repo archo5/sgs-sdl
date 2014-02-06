@@ -9,10 +9,12 @@ void main
 	float4 ipos : POSITION0,
 	float3 inrm : NORMAL0,
 	float4 icol : COLOR0,
+	float2 itex : TEXCOORD0,
 	out float4 opos : POSITION0,
 	out float3 onrm : TEXCOORD1,
 	out float4 otfpos : TEXCOORD2,
-	out float4 ocol : COLOR0
+	out float4 ocol : COLOR0,
+	out float2 otex : TEXCOORD0
 )
 {
 	float4 viewPos = mul( mWorldView, ipos );
@@ -20,6 +22,7 @@ void main
 	otfpos = viewPos;
 	onrm = mul( mWorldView, float4( inrm, 0 ) );
 	ocol = icol;
+	otex = itex;
 }
 
 #elif defined(PS)
@@ -31,11 +34,13 @@ void main
 	float3 inrm : TEXCOORD1,
 	float4 itfpos : TEXCOORD2,
 	float4 icol : COLOR0,
+	float2 itex : TEXCOORD0,
 	out float4 ocol0 : COLOR0,
 	out float4 ocol1 : COLOR1
 )
 {
-	ocol0 = float4( icol.rgb, itfpos.z );
+	float3 col = tex2D( Tex0, itex ).rgb * icol.rgb;
+	ocol0 = float4( col, itfpos.z );
 	ocol1 = float4( normalize( inrm ) * 0.5 + 0.5, 0 );
 }
 

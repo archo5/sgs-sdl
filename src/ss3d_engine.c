@@ -180,8 +180,8 @@ size_t SS3D_TextureInfo_GetTextureSideSize( SS3D_TextureInfo* TI )
 	switch( TI->format )
 	{
 	/* bytes per pixel */
-	case SS3DFORMAT_RGBA8: bpu = 4;
-	case SS3DFORMAT_R5G6B5: bpu = 2;
+	case SS3DFORMAT_RGBA8: bpu = 4; break;
+	case SS3DFORMAT_R5G6B5: bpu = 2; break;
 	/* bytes per block */
 	case SS3DFORMAT_DXT1: bpu = 8; break;
 	case SS3DFORMAT_DXT3:
@@ -209,8 +209,8 @@ void SS3D_TextureInfo_GetCopyDims( SS3D_TextureInfo* TI, size_t* outcopyrowsize,
 	switch( TI->format )
 	{
 	/* bytes per pixel */
-	case SS3DFORMAT_RGBA8: bpu = 4;
-	case SS3DFORMAT_R5G6B5: bpu = 2;
+	case SS3DFORMAT_RGBA8: bpu = 4; break;
+	case SS3DFORMAT_R5G6B5: bpu = 2; break;
 	/* bytes per block */
 	case SS3DFORMAT_DXT1: bpu = 8; break;
 	case SS3DFORMAT_DXT3:
@@ -757,6 +757,7 @@ void SS3D_Renderer_Construct( SS3D_Renderer* R, SGS_CTX )
 	R->destroying = 0;
 	sgs_vht_init( &R->resources, C, 128, 128 );
 	sgs_vht_init( &R->shaders, C, 128, 128 );
+	sgs_vht_init( &R->textures, C, 128, 128 );
 	sgs_vht_init( &R->materials, C, 128, 128 );
 	R->currentScene = NULL;
 	R->enableDeferredShading = 0;
@@ -773,6 +774,7 @@ void SS3D_Renderer_Destruct( SS3D_Renderer* R )
 	}
 	sgs_vht_free( &R->resources, R->C );
 	sgs_vht_free( &R->shaders, R->C );
+	sgs_vht_free( &R->textures, R->C );
 	sgs_vht_free( &R->materials, R->C );
 	if( R->currentScene )
 		sgs_ObjRelease( R->C, R->currentScene );

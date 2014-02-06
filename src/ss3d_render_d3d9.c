@@ -261,11 +261,16 @@ static SS3D_Shader_D3D9* get_shader( SS3D_RD3D9* R, const char* name )
 //  T E X T U R E S
 //
 
+static void use_texture( SS3D_RD3D9* R, int slot, SS3D_Texture_D3D9* T )
+{
+	D3DCALL_( R->device, SetTexture, slot, T ? T->ptr.base : NULL );
+}
+
 static D3DFORMAT texfmt2d3d( int fmt )
 {
 	switch( fmt )
 	{
-	case SS3DFORMAT_RGBA8: return D3DFMT_A8B8G8R8;
+	case SS3DFORMAT_RGBA8: return D3DFMT_A8R8G8B8;
 	case SS3DFORMAT_R5G6B5: return D3DFMT_R5G6B5;
 	
 	case SS3DFORMAT_DXT1: return D3DFMT_DXT1;
@@ -294,6 +299,7 @@ static void texdatacopy( D3DLOCKED_RECT* plr, SS3D_TextureData* TD, int side, in
 	src = ((uint8_t*)TD->data) + off;
 	dst = (uint8_t*)plr->pBits;
 	SS3D_TextureInfo_GetCopyDims( &mipTI, &copyrowsize, &copyrowcount );
+	
 	for( i = 0; i < copyrowcount; ++i )
 	{
 		memcpy( dst, src, copyrowsize );
@@ -315,7 +321,8 @@ static int texd3d9_init( SS3D_RD3D9* R, SS3D_Texture_D3D9* T, SS3D_TextureData* 
 		
 		hr = D3DCALL_( R->device, CreateTexture, TD->info.width, TD->info.height, TD->info.mipcount, 0, texfmt2d3d( TD->info.format ), D3DPOOL_MANAGED, &d3dtex, NULL );
 		if( FAILED( hr ) )
-			return sgs_Printf( R->inh.C, SGS_WARNING, "failed to load texture - error while creating d3d9 texture" );
+			return sgs_Printf( R->inh.C, SGS_WARNING, "failed to load texture - error while creating d3d9 texture"
+				" (type: 2D, w: %d, h: %d, mips: %d, fmt: %d, d3dfmt: %d)", TD->info.width, TD->info.height, TD->info.mipcount, TD->info.format, texfmt2d3d( TD->info.format ) );
 		
 		// load all mip levels into it
 		for( mip = 0; mip < TD->info.mipcount; ++mip )
@@ -357,7 +364,12 @@ static int texd3d9_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 {
 	TEX_HDR;
 	UNUSED( unused );
-	texd3d9_free( T );
+	if( T->inh.renderer )
+	{
+		SS3D_Renderer_PokeResource( T->inh.renderer, data, 0 );
+		T->inh.renderer = NULL;
+		texd3d9_free( T );
+	}
 	return SGS_SUCCESS;
 }
 
@@ -401,6 +413,7 @@ static int get_texture_( SS3D_RD3D9* R, sgs_Variable* key )
 		T = (SS3D_Texture_D3D9*) sgs_PushObjectIPA( C, sizeof(*T), SS3D_Texture_D3D9_iface );
 		memcpy( T, &texture, sizeof(*T) );
 		sgs_GetStackItem( C, -1, &val );
+		SS3D_Renderer_PokeResource( &R->inh, val.data.O, 1 );
 		
 		sgs_vht_set( &R->inh.textures, C, key, &val );
 		return 1;
@@ -453,24 +466,25 @@ typedef struct _testVtx
 	float x, y, z;
 	float nx, ny, nz;
 	uint32_t col;
+	float tx, ty;
 }
 testVtx;
 
 static testVtx testVertices[] =
 {
-	{ -5, -5, -5, -1, -1, -1, D3DCOLOR_XRGB( 233, 222, 211 ) },
-	{ +5, -5, -5, +1, -1, -1, D3DCOLOR_XRGB( 233, 211, 222 ) },
-	{ +5, +5, -5, +1, +1, -1, D3DCOLOR_XRGB( 222, 211, 222 ) },
-	{ -5, +5, -5, -1, +1, -1, D3DCOLOR_XRGB( 222, 222, 211 ) },
-	{ -5, -5, +5, -1, -1, +1, D3DCOLOR_XRGB( 211, 222, 233 ) },
-	{ +5, -5, +5, +1, -1, +1, D3DCOLOR_XRGB( 222, 211, 233 ) },
-	{ +5, +5, +5, +1, +1, +1, D3DCOLOR_XRGB( 222, 211, 233 ) },
-	{ -5, +5, +5, -1, +1, +1, D3DCOLOR_XRGB( 211, 222, 233 ) },
+	{ -5, -5, -5, -1, -1, -1, D3DCOLOR_XRGB( 233, 222, 211 ), 0, 0 },
+	{ +5, -5, -5, +1, -1, -1, D3DCOLOR_XRGB( 233, 211, 222 ), 1, 0 },
+	{ +5, +5, -5, +1, +1, -1, D3DCOLOR_XRGB( 222, 211, 222 ), 1, 1 },
+	{ -5, +5, -5, -1, +1, -1, D3DCOLOR_XRGB( 222, 222, 211 ), 0, 1 },
+	{ -5, -5, +5, -1, -1, +1, D3DCOLOR_XRGB( 211, 222, 233 ), 0, 0 },
+	{ +5, -5, +5, +1, -1, +1, D3DCOLOR_XRGB( 222, 211, 233 ), 1, 0 },
+	{ +5, +5, +5, +1, +1, +1, D3DCOLOR_XRGB( 222, 211, 233 ), 1, 1 },
+	{ -5, +5, +5, -1, +1, +1, D3DCOLOR_XRGB( 211, 222, 233 ), 0, 1 },
 	
-	{ -50, -50, 0, 0, 0, +1, D3DCOLOR_XRGB( 233, 222, 211 ) },
-	{ +50, -50, 0, 0, 0, +1, D3DCOLOR_XRGB( 233, 211, 222 ) },
-	{ +50, +50, 0, 0, 0, +1, D3DCOLOR_XRGB( 222, 211, 222 ) },
-	{ -50, +50, 0, 0, 0, +1, D3DCOLOR_XRGB( 222, 222, 211 ) },
+	{ -50, -50, 0, 0, 0, +1, D3DCOLOR_XRGB( 233, 222, 211 ), 0, 0 },
+	{ +50, -50, 0, 0, 0, +1, D3DCOLOR_XRGB( 233, 211, 222 ), 1, 0 },
+	{ +50, +50, 0, 0, 0, +1, D3DCOLOR_XRGB( 222, 211, 222 ), 1, 1 },
+	{ -50, +50, 0, 0, 0, +1, D3DCOLOR_XRGB( 222, 222, 211 ), 0, 1 },
 };
 static uint16_t testIndices[] =
 {
@@ -532,6 +546,9 @@ static int rd3d9i_render( SGS_CTX )
 	SS3D_Shader_D3D9* sh = get_shader( R, "testDR" );
 	use_shader( R, sh );
 	
+	SS3D_Texture_D3D9* tx = get_texture( R, "ntset.png" );
+	use_texture( R, 0, tx );
+	
 	D3DCALL_( R->device, SetTransform, D3DTS_VIEW, (D3DMATRIX*) *cam->mView );
 	D3DCALL_( R->device, SetTransform, D3DTS_PROJECTION, (D3DMATRIX*) *cam->mProj );
 	
@@ -539,7 +556,7 @@ static int rd3d9i_render( SGS_CTX )
 	vshc_set_mat4( R, 12, cam->mProj );
 	pshc_set_float( R, 0, cam->zfar );
 	
-	D3DCALL_( R->device, SetFVF, D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_DIFFUSE );
+	D3DCALL_( R->device, SetFVF, D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_DIFFUSE | D3DFVF_TEX1 );
 	D3DCALL_( R->device, DrawIndexedPrimitiveUP, D3DPT_TRIANGLELIST, 0, 12, 14, testIndices, D3DFMT_INDEX16, testVertices, sizeof(*testVertices) );
 	
 	D3DCALL_( R->device, SetRenderTarget, 0, R->bb_color );
@@ -552,6 +569,7 @@ static int rd3d9i_render( SGS_CTX )
 	
 	SS3D_Shader_D3D9* sh2 = get_shader( R, "testDRmix" );
 	use_shader( R, sh2 );
+	use_texture( R, 0, NULL );
 	
 	VEC4 pointlightdata[ 2 * 32 ]; /* px, py, pz, radius, cr, cg, cb, power */
 	int i, plc = 0;
