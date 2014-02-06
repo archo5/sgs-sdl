@@ -30,13 +30,18 @@ PointLight gPLights[32] : register(c32); /* ends before c96 */
 sampler2D texRGBD : register(s0);
 sampler2D texNrmS : register(s1);
 
+half3 decodeN( half4 enc )
+{
+	return enc.xyz * 2 - 1;
+}
+
 float4 main( float2 itex : TEXCOORD0, float3 ifr : TEXCOORD1 ) : COLOR0
 {
 	float4 rgbd = tex2D( texRGBD, itex );
 	float4 nrms = tex2D( texNrmS, itex );
 	
 	float3 viewPos = ifr * rgbd.w;
-	float3 viewNormal = nrms.xyz * 2 - 1;
+	float3 viewNormal = decodeN( nrms );
 	
 #if 0
 	float3 lightViewPos = float3(25,20,27);
@@ -44,10 +49,11 @@ float4 main( float2 itex : TEXCOORD0, float3 ifr : TEXCOORD1 ) : COLOR0
 	float distfac = 10/(1+length(viewPos-lightViewPos)*10);
 	float3 lightDir = normalize( lightViewPos - viewPos );
 	float NdotL = saturate( dot( viewNormal, lightDir ) );
-	float RdotV = saturate( dot( reflect( lightDir, viewNormal ), normalize( viewPos ) ) );
+//	float specf = saturate( dot( reflect( lightDir, viewNormal ), normalize( viewPos ) ) );
+	float specf = saturate( dot( viewNormal, normalize( lightDir - viewPos ) ) );
 	float power = 256;
 	float factor = 0.2;
-	float spec = pow( RdotV, power ) * sqrt( power ) * factor;
+	float spec = pow( specf, power ) * sqrt( power ) * factor;
 	
 //	float4 ocol = float4(normalize(lightViewPos - viewPos)*0.5+0.5,1);
 	float4 ocol = float4(rgbd.rgb*(NdotL*distfac+0.01+spec),1);
@@ -78,7 +84,7 @@ float4 main( float2 itex : TEXCOORD0, float3 ifr : TEXCOORD1 ) : COLOR0
 		float NdotL = saturate( dot( viewNormal, lightDir ) );
 		
 		float RdotV = saturate( dot( reflect( lightDir, viewNormal ), viewDir ) );
-		float specAmount = pow( RdotV, specularPower ) * sqrt( specularPower ) * specularFactor;
+		float specAmount = pow( RdotV, specularPower ) * sqrt( specularPower ) * specularFactor * PL.vposrad.w / 10;
 		
 		totalDiffuse += lightColor * NdotL * distFactor;
 		totalSpecular += lightColor * specAmount;

@@ -17,3 +17,4 @@ ipch
 !output.dir
 !*.sgs
 !*.png
+bin/testdata/
