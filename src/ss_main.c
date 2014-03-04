@@ -72,7 +72,7 @@ void ss_ResetBuffer()
 }
 
 
-static void ss_PrintFunc( void* unused, SGS_CTX, int type, const char* message )
+static void ss_MsgFunc( void* unused, SGS_CTX, int type, const char* message )
 {
 	if( type >= SGS_ERROR )
 	{
@@ -102,7 +102,7 @@ int ss_Initialize( int argc, char* argv[], int debug )
 	if( GEnabledDebugging )
 		sgs_InitIDbg( C, &D );
 	else
-		sgs_SetPrintFunc( C, ss_PrintFunc, NULL );
+		sgs_SetMsgFunc( C, ss_MsgFunc, NULL );
 	
 #if SS_STARTUP_PROFILING
 	printf( "debug printing initialized: %f\n", sgs_GetTime() );

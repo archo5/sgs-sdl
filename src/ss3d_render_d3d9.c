@@ -133,9 +133,9 @@ static int shd3d9_init_source( SS3D_RD3D9* R, SS3D_Shader_D3D9* S, const char* c
 	if( FAILED( hr ) )
 	{
 		if( outerr )
-			sgs_Printf( C, SGS_WARNING, "Errors in vertex shader compilation:\n%s", (const char*) D3DCALL( outerr, GetBufferPointer ) );
+			sgs_Msg( C, SGS_WARNING, "Errors in vertex shader compilation:\n%s", (const char*) D3DCALL( outerr, GetBufferPointer ) );
 		else
-			sgs_Printf( C, SGS_WARNING, "Unknown error in vertex shader compilation" );
+			sgs_Msg( C, SGS_WARNING, "Unknown error in vertex shader compilation" );
 		if( outbuf ) SAFE_RELEASE( outbuf );
 		if( outerr ) SAFE_RELEASE( outerr );
 		goto cleanup;
@@ -145,7 +145,7 @@ static int shd3d9_init_source( SS3D_RD3D9* R, SS3D_Shader_D3D9* S, const char* c
 	if( outerr ) SAFE_RELEASE( outerr );
 	if( FAILED( hr ) )
 	{
-		sgs_Printf( C, SGS_WARNING, "Unknown error while loading vertex shader" );
+		sgs_Msg( C, SGS_WARNING, "Unknown error while loading vertex shader" );
 		goto cleanup;
 	}
 	
@@ -153,9 +153,9 @@ static int shd3d9_init_source( SS3D_RD3D9* R, SS3D_Shader_D3D9* S, const char* c
 	if( FAILED( hr ) )
 	{
 		if( outerr )
-			sgs_Printf( C, SGS_WARNING, "Errors in pixel shader compilation:\n%s", (const char*) D3DCALL( outerr, GetBufferPointer ) );
+			sgs_Msg( C, SGS_WARNING, "Errors in pixel shader compilation:\n%s", (const char*) D3DCALL( outerr, GetBufferPointer ) );
 		else
-			sgs_Printf( C, SGS_WARNING, "Unknown error in pixel shader compilation" );
+			sgs_Msg( C, SGS_WARNING, "Unknown error in pixel shader compilation" );
 		if( outbuf ) SAFE_RELEASE( outbuf );
 		if( outerr ) SAFE_RELEASE( outerr );
 		goto cleanup;
@@ -165,7 +165,7 @@ static int shd3d9_init_source( SS3D_RD3D9* R, SS3D_Shader_D3D9* S, const char* c
 	if( outerr ) SAFE_RELEASE( outerr );
 	if( FAILED( hr ) )
 	{
-		sgs_Printf( C, SGS_WARNING, "Unknown error while loading pixel shader" );
+		sgs_Msg( C, SGS_WARNING, "Unknown error while loading pixel shader" );
 		goto cleanup;
 	}
 	
@@ -178,30 +178,21 @@ cleanup:
 
 #define SH_HDR SS3D_Shader_D3D9* S = (SS3D_Shader_D3D9*) data->data;
 
-static int shd3d9_convert( SGS_CTX, sgs_VarObj* data, int type )
-{
-	if( type == SGS_VT_STRING || type == SGS_CONVOP_TOTYPE )
-	{
-		sgs_PushString( C, "SS3D_Shader_D3D9" );
-		return SGS_SUCCESS;
-	}
-	return SGS_ENOTSUP;
-}
-
-static int shd3d9_destruct( SGS_CTX, sgs_VarObj* data, int unused )
+static int shd3d9_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	SH_HDR;
-	UNUSED( unused );
 	shd3d9_free( S );
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjCallback SS3D_Shader_D3D9_iface[] =
-{
-	SGS_OP_DESTRUCT, shd3d9_destruct,
-	SGS_OP_CONVERT, shd3d9_convert,
-	SGS_OP_END
-};
+static sgs_ObjInterface SS3D_Shader_D3D9_iface[1] =
+{{
+	"SS3D_Shader_D3D9",
+	shd3d9_destruct, NULL,
+	NULL, NULL,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL,
+}};
 
 static int get_shader_( SS3D_RD3D9* R, sgs_Variable* key )
 {
@@ -222,10 +213,10 @@ static int get_shader_( SS3D_RD3D9* R, sgs_Variable* key )
 		
 		// load code
 		sgs_PushString( C, "d3d9" );
-		sgs_PushItem( C, 1 );
+		sgs_PushVariable( C, key );
 		sgs_GlobalCall( C, "_SS3D_Shader_LoadCode", 2, 1 );
 		if( !sgs_ParseString( C, -1, &buf, &size ) )
-			return sgs_Printf( C, SGS_WARNING, "failed to load shader code" );
+			return sgs_Msg( C, SGS_WARNING, "failed to load shader code" );
 		
 		// compile code
 		if( !shd3d9_init_source( R, &shader, buf, size ) )
@@ -233,7 +224,7 @@ static int get_shader_( SS3D_RD3D9* R, sgs_Variable* key )
 		
 		S = (SS3D_Shader_D3D9*) sgs_PushObjectIPA( C, sizeof(*S), SS3D_Shader_D3D9_iface );
 		memcpy( S, &shader, sizeof(*S) );
-		sgs_GetStackItem( C, -1, &val );
+		sgs_PeekStackItem( C, -1, &val );
 		
 		sgs_vht_set( &R->inh.shaders, C, key, &val );
 		return 1;
@@ -248,7 +239,7 @@ static SS3D_Shader_D3D9* get_shader( SS3D_RD3D9* R, const char* name )
 	SS3D_Shader_D3D9* out = NULL;
 	
 	sgs_PushString( C, name );
-	sgs_GetStackItem( C, -1, &key );
+	sgs_PeekStackItem( C, -1, &key );
 	
 	if( get_shader_( R, &key ) )
 		out = (SS3D_Shader_D3D9*) sgs_GetObjectData( C, -1 );
@@ -339,7 +330,7 @@ static int texd3d9_init( SS3D_RD3D9* R, SS3D_Texture_D3D9* T, SS3D_TextureData* 
 		
 		hr = D3DCALL_( R->device, CreateTexture, TD->info.width, TD->info.height, TD->info.mipcount, 0, texfmt2d3d( TD->info.format ), D3DPOOL_MANAGED, &d3dtex, NULL );
 		if( FAILED( hr ) )
-			return sgs_Printf( R->inh.C, SGS_WARNING, "failed to load texture - error while creating d3d9 texture"
+			return sgs_Msg( R->inh.C, SGS_WARNING, "failed to load texture - error while creating d3d9 texture"
 				" (type: 2D, w: %d, h: %d, mips: %d, fmt: %d, d3dfmt: %d)", TD->info.width, TD->info.height, TD->info.mipcount, TD->info.format, texfmt2d3d( TD->info.format ) );
 		
 		// load all mip levels into it
@@ -348,13 +339,13 @@ static int texd3d9_init( SS3D_RD3D9* R, SS3D_Texture_D3D9* T, SS3D_TextureData* 
 			D3DLOCKED_RECT lr;
 			hr = D3DCALL_( d3dtex, LockRect, mip, &lr, NULL, D3DLOCK_DISCARD );
 			if( FAILED( hr ) )
-				return sgs_Printf( R->inh.C, SGS_WARNING, "failed to load texture - error while locking d3d9 texture" );
+				return sgs_Msg( R->inh.C, SGS_WARNING, "failed to load texture - error while locking d3d9 texture" );
 			
 			texdatacopy( &lr, TD, 0, mip );
 			
 			hr = D3DCALL_( d3dtex, UnlockRect, mip );
 			if( FAILED( hr ) )
-				return sgs_Printf( R->inh.C, SGS_WARNING, "failed to load texture - error while unlocking d3d9 texture" );
+				return sgs_Msg( R->inh.C, SGS_WARNING, "failed to load texture - error while unlocking d3d9 texture" );
 		}
 		
 		T->inh.renderer = &R->inh;
@@ -363,25 +354,14 @@ static int texd3d9_init( SS3D_RD3D9* R, SS3D_Texture_D3D9* T, SS3D_TextureData* 
 		return 1;
 	}
 	
-	return sgs_Printf( R->inh.C, SGS_ERROR, "TODO [reached a part of not-yet-defined behavior]" );
+	return sgs_Msg( R->inh.C, SGS_ERROR, "TODO [reached a part of not-yet-defined behavior]" );
 }
 
 #define TEX_HDR SS3D_Texture_D3D9* T = (SS3D_Texture_D3D9*) data->data;
 
-static int texd3d9_convert( SGS_CTX, sgs_VarObj* data, int type )
-{
-	if( type == SGS_VT_STRING || type == SGS_CONVOP_TOTYPE )
-	{
-		sgs_PushString( C, "SS3D_Texture_D3D9" );
-		return SGS_SUCCESS;
-	}
-	return SGS_ENOTSUP;
-}
-
-static int texd3d9_destruct( SGS_CTX, sgs_VarObj* data, int unused )
+static int texd3d9_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	TEX_HDR;
-	UNUSED( unused );
 	if( T->inh.renderer )
 	{
 		SS3D_Renderer_PokeResource( T->inh.renderer, data, 0 );
@@ -391,12 +371,14 @@ static int texd3d9_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjCallback SS3D_Texture_D3D9_iface[] =
-{
-	SGS_OP_DESTRUCT, texd3d9_destruct,
-	SGS_OP_CONVERT, texd3d9_convert,
-	SGS_OP_END
-};
+static sgs_ObjInterface SS3D_Texture_D3D9_iface[1] =
+{{
+	"SS3D_Texture_D3D9",
+	texd3d9_destruct, NULL,
+	NULL, NULL,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL,
+}};
 
 static int get_texture_( SS3D_RD3D9* R, sgs_Variable* key )
 {
@@ -430,7 +412,7 @@ static int get_texture_( SS3D_RD3D9* R, sgs_Variable* key )
 		
 		T = (SS3D_Texture_D3D9*) sgs_PushObjectIPA( C, sizeof(*T), SS3D_Texture_D3D9_iface );
 		memcpy( T, &texture, sizeof(*T) );
-		sgs_GetStackItem( C, -1, &val );
+		sgs_PeekStackItem( C, -1, &val );
 		SS3D_Renderer_PokeResource( &R->inh, val.data.O, 1 );
 		
 		sgs_vht_set( &R->inh.textures, C, key, &val );
@@ -446,7 +428,7 @@ static SS3D_Texture_D3D9* get_texture( SS3D_RD3D9* R, const char* name )
 	SS3D_Texture_D3D9* out = NULL;
 	
 	sgs_PushString( C, name );
-	sgs_GetStackItem( C, -1, &key );
+	sgs_PeekStackItem( C, -1, &key );
 	
 	if( get_texture_( R, &key ) )
 		out = (SS3D_Texture_D3D9*) sgs_GetObjectData( C, -1 );
@@ -459,21 +441,17 @@ static SS3D_Texture_D3D9* get_texture( SS3D_RD3D9* R, const char* name )
 //  R E N D E R E R
 //
 
-SGS_DECLARE sgs_ObjCallback SS3D_Renderer_D3D9_iface[];
+SGS_DECLARE sgs_ObjInterface SS3D_Renderer_D3D9_iface[];
 
 #define R_HDR SS3D_RD3D9* R = (SS3D_RD3D9*) data->data;
-#define R_IHDR( funcname ) \
-	int method_call = sgs_Method( C ); \
-	sgs_FuncName( C, method_call ? "SS3D_Renderer_D3D9." #funcname : "SS3D_Renderer_D3D9_" #funcname ); \
-	if( !sgs_IsObject( C, 0, SS3D_Renderer_D3D9_iface ) ) \
-		return sgs_ArgErrorExt( C, 0, method_call, "SS3D_Renderer_D3D9", "" ); \
-	SS3D_RD3D9* R = (SS3D_RD3D9*) sgs_GetObjectData( C, 0 );
+#define R_IHDR( funcname ) SS3D_RD3D9* R; \
+	if( !SGS_PARSE_METHOD( C, SS3D_Renderer_D3D9_iface, R, SS3D_Renderer_D3D9, funcname ) ) return 0;
 
 static int rd3d9i_update( SGS_CTX )
 {
 	float dt;
 	R_IHDR( update );
-	if( !sgs_LoadArgs( C, "@>f", &dt ) )
+	if( !sgs_LoadArgs( C, "f", &dt ) )
 		return 0;
 	SS3D_Renderer_Update( &R->inh, dt );
 	return 0;
@@ -650,7 +628,7 @@ static int rd3d9i_resize( SGS_CTX )
 {
 	sgs_Int w, h;
 	R_IHDR( resize );
-	if( !sgs_LoadArgs( C, "@>ii", &w, &h ) )
+	if( !sgs_LoadArgs( C, "ii", &w, &h ) )
 		return 0;
 	SS3D_Renderer_Resize( &R->inh, w, h );
 	return 0;
@@ -674,7 +652,7 @@ static int rd3d9i_getShader( SGS_CTX )
 {
 	sgs_Variable key;
 	R_IHDR( getShader );
-	if( !sgs_LoadArgs( C, "@>?s<v", &key ) )
+	if( !sgs_LoadArgs( C, "?s<v", &key ) )
 		return 0;
 	return get_shader_( R, &key );
 }
@@ -686,7 +664,7 @@ static int rd3d9i_createScene( SGS_CTX )
 	return 1;
 }
 
-static int rd3d9_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
+static int rd3d9_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isprop )
 {
 	R_HDR;
 	SGS_BEGIN_INDEXFUNC
@@ -706,30 +684,19 @@ static int rd3d9_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 	SGS_END_INDEXFUNC;
 }
 
-static int rd3d9_setindex( SGS_CTX, sgs_VarObj* data, int isprop )
+static int rd3d9_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* val, int isprop )
 {
 	R_HDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "currentScene" ) SGS_PARSE_OBJECT_IF( SS3D_Scene_iface, R->inh.currentScene, 0, ((SS3D_Scene*)sgs_GetObjectData( C, 1 ))->renderer == &R->inh )
+		SGS_CASE( "currentScene" ) SGS_PARSE_OBJECT_IF( SS3D_Scene_iface, R->inh.currentScene, 0, ((SS3D_Scene*)sgs_GetObjectDataP( val ))->renderer == &R->inh )
 		SGS_CASE( "enableDeferredShading" ) SGS_PARSE_BOOL( R->inh.enableDeferredShading )
 	}
 	return SGS_ENOTFND;
 }
 
-static int rd3d9_convert( SGS_CTX, sgs_VarObj* data, int type )
-{
-	if( type == SGS_VT_STRING || type == SGS_CONVOP_TOTYPE )
-	{
-		sgs_PushString( C, "SS3D_Renderer_D3D9" );
-		return SGS_SUCCESS;
-	}
-	return SGS_ENOTSUP;
-}
-
-static int rd3d9_destruct( SGS_CTX, sgs_VarObj* data, int unused )
+static int rd3d9_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	R_HDR;
-	UNUSED( unused );
 	
 	drd_free( R, &R->drd );
 	SAFE_RELEASE( R->bb_color );
@@ -741,14 +708,14 @@ static int rd3d9_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjCallback SS3D_Renderer_D3D9_iface[] =
-{
-	SGS_OP_GETINDEX, rd3d9_getindex,
-	SGS_OP_SETINDEX, rd3d9_setindex,
-	SGS_OP_DESTRUCT, rd3d9_destruct,
-	SGS_OP_CONVERT, rd3d9_convert,
-	SGS_OP_END
-};
+static sgs_ObjInterface SS3D_Renderer_D3D9_iface[1] =
+{{
+	"SS3D_Renderer_D3D9",
+	rd3d9_destruct, NULL,
+	rd3d9_getindex, rd3d9_setindex,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL,
+}};
 
 
 int SS3D_PushRenderer_D3D9( SGS_CTX, void* device )

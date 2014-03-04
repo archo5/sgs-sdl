@@ -8,29 +8,30 @@
 #include <sgsxgmath.h>
 
 
-SGSRESULT sgs_ParseObjectPtr( SGS_CTX, sgs_StkIdx item, sgs_ObjCallback* iface, sgs_VarObj** out, int strict );
+SGSRESULT sgs_ParseObjectPtr( SGS_CTX, sgs_StkIdx item, sgs_ObjInterface* iface, sgs_VarObj** out, int strict );
+SGSRESULT sgs_ParseObjectPtrP( SGS_CTX, sgs_Variable* var, sgs_ObjInterface* iface, sgs_VarObj** out, int strict );
 
-#define SGS_BEGIN_INDEXFUNC char* str; UNUSED( isprop ); if( sgs_ParseString( C, 0, &str, NULL ) ){
+#define SGS_BEGIN_INDEXFUNC char* str; UNUSED( isprop ); if( sgs_ParseStringP( C, key, &str, NULL ) ){
 #define SGS_END_INDEXFUNC } return SGS_ENOTFND;
 #define SGS_CASE( name ) if( !strcmp( str, name ) )
 
 #define SGS_RETURN_NULL() { sgs_PushNull( C ); return SGS_SUCCESS; }
-#define SGS_RETURN_BOOL( val ) { sgs_PushBool( C, val ); return SGS_SUCCESS; }
-#define SGS_RETURN_INT( val ) { sgs_PushInt( C, val ); return SGS_SUCCESS; }
-#define SGS_RETURN_REAL( val ) { sgs_PushReal( C, val ); return SGS_SUCCESS; }
-#define SGS_RETURN_CFUNC( val ) { sgs_PushCFunction( C, val ); return SGS_SUCCESS; }
-#define SGS_RETURN_OBJECT( val ) { sgs_PushObjectPtr( C, val ); return SGS_SUCCESS; }
-#define SGS_RETURN_VEC3( val ) { sgs_PushVec3p( C, val ); return SGS_SUCCESS; }
-#define SGS_RETURN_MAT4( val ) { sgs_PushMat4( C, val, 0 ); return SGS_SUCCESS; }
+#define SGS_RETURN_BOOL( value ) { sgs_PushBool( C, value ); return SGS_SUCCESS; }
+#define SGS_RETURN_INT( value ) { sgs_PushInt( C, value ); return SGS_SUCCESS; }
+#define SGS_RETURN_REAL( value ) { sgs_PushReal( C, value ); return SGS_SUCCESS; }
+#define SGS_RETURN_CFUNC( value ) { sgs_PushCFunction( C, value ); return SGS_SUCCESS; }
+#define SGS_RETURN_OBJECT( value ) { sgs_PushObjectPtr( C, value ); return SGS_SUCCESS; }
+#define SGS_RETURN_VEC3( value ) { sgs_PushVec3p( C, value ); return SGS_SUCCESS; }
+#define SGS_RETURN_MAT4( value ) { sgs_PushMat4( C, value, 0 ); return SGS_SUCCESS; }
 
-#define SGS_PARSE_BOOL( out ) { sgs_Bool val; if( sgs_ParseBool( C, 1, &val ) ){ out = val; return SGS_SUCCESS; } return SGS_EINVAL; }
-#define SGS_PARSE_INT( out ) { sgs_Int val; if( sgs_ParseInt( C, 1, &val ) ){ out = val; return SGS_SUCCESS; } return SGS_EINVAL; }
-#define SGS_PARSE_REAL( out ) { sgs_Real val; if( sgs_ParseReal( C, 1, &val ) ){ out = val; return SGS_SUCCESS; } return SGS_EINVAL; }
-#define SGS_PARSE_OBJECT( iface, out, nonull ) { return sgs_ParseObjectPtr( C, 1, iface, &out, nonull ); }
-#define SGS_PARSE_OBJECT_IF( iface, out, nonull, cond ) if( ( !(nonull) && sgs_ItemType( C, 1 ) == SGS_VT_NULL ) || ( sgs_ItemType( C, 1 ) == SGS_VT_OBJECT && (cond) ) ) \
-	{ return sgs_ParseObjectPtr( C, 1, iface, &out, nonull ); }
-#define SGS_PARSE_VEC3( outptr, strict ) { return sgs_ParseVec3( C, 1, outptr, strict ) ? SGS_SUCCESS : SGS_EINVAL; }
-#define SGS_PARSE_MAT4( outptr ) { return sgs_ParseMat4( C, 1, outptr ) ? SGS_SUCCESS : SGS_EINVAL; }
+#define SGS_PARSE_BOOL( out ) { sgs_Bool V; if( sgs_ParseBoolP( C, val, &V ) ){ out = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+#define SGS_PARSE_INT( out ) { sgs_Int V; if( sgs_ParseIntP( C, val, &V ) ){ out = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+#define SGS_PARSE_REAL( out ) { sgs_Real V; if( sgs_ParseRealP( C, val, &V ) ){ out = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+#define SGS_PARSE_OBJECT( iface, out, nonull ) { return sgs_ParseObjectPtrP( C, val, iface, &out, nonull ); }
+#define SGS_PARSE_OBJECT_IF( iface, out, nonull, cond ) if( ( !(nonull) && val->type == SGS_VT_NULL ) || ( val->type == SGS_VT_OBJECT && (cond) ) ) \
+	{ return sgs_ParseObjectPtrP( C, val, iface, &out, nonull ); }
+#define SGS_PARSE_VEC3( outptr, strict ) { return sgs_ParseVec3P( C, val, outptr, strict ) ? SGS_SUCCESS : SGS_EINVAL; }
+#define SGS_PARSE_MAT4( outptr ) { return sgs_ParseMat4P( C, val, outptr ) ? SGS_SUCCESS : SGS_EINVAL; }
 
 
 typedef float VEC3[3];
@@ -85,9 +86,9 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 #define SS3DINDEX_32 1
 
 
-sgs_ObjCallback SS3D_Camera_iface[9];
-sgs_ObjCallback SS3D_Light_iface[13];
-sgs_ObjCallback SS3D_Scene_iface[9];
+sgs_ObjInterface SS3D_Camera_iface[1];
+sgs_ObjInterface SS3D_Light_iface[1];
+sgs_ObjInterface SS3D_Scene_iface[1];
 
 typedef struct _SS3D_Scene SS3D_Scene;
 typedef struct _SS3D_Renderer SS3D_Renderer;
@@ -225,8 +226,8 @@ struct _SS3D_Renderer
 	/* to be initialized by derived class */
 	int width, height;
 	const char* API;
-	sgs_ObjCallback* ifMesh;
-	sgs_ObjCallback* ifTexture;
+	sgs_ObjInterface* ifMesh;
+	sgs_ObjInterface* ifTexture;
 };
 
 

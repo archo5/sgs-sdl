@@ -13,20 +13,12 @@
 #define ARRAY_SIZE( x ) (sizeof(x)/sizeof(x[0]))
 
 
-#define _WARN( err ) return sgs_Printf( C, SGS_WARNING, err );
+#define _WARN( err ) return sgs_Msg( C, SGS_WARNING, err );
 
 void ss_CallDtor( SGS_CTX, sgs_VarObj* O )
 {
-	sgs_ObjCallback* cb = O->iface;
-	while( cb[0] != SGS_OP_END )
-	{
-		if( cb[0] == SGS_OP_DESTRUCT )
-		{
-			cb[1]( C, O, 0 );
-			break;
-		}
-		cb += 2;
-	}
+	if( O->iface->destruct )
+		O->iface->destruct( C, O );
 }
 
 sgs_Integer ss_GlobalInt( SGS_CTX, const char* name )
@@ -85,13 +77,10 @@ int ss_UnpackDict( SGS_CTX, int pos, dict_unpack_item_t* items )
 		sgs_PushString32( C, &S, items->name );
 		
 		assert( items->var != NULL );
-		if( sgs_PushIndex( C, pos, -1 ) || !sgs_GetStackItem( C, -1, items->var ) )
+		if( sgs_PushIndexII( C, pos, -1, 0 ) || !sgs_GetStackItem( C, -1, items->var ) )
 			items->var = NULL;
 		else
-		{
-			sgs_Acquire( C, items->var );
 			ret++;
-		}
 		
 		items++;
 		sgs_SetStackSize( C, sz );

@@ -12,10 +12,10 @@
 #define FN( f ) { "SS_" #f, SS_##f }
 #define FNP( f ) { #f, f }
 #define IC( i ) { #i, i }
-#define _WARN( err ) { sgs_Printf( C, SGS_WARNING, err ); return 0; }
+#define _WARN( err ) { sgs_Msg( C, SGS_WARNING, err ); return 0; }
 
 
-SGS_DECLARE sgs_ObjCallback image_iface[];
+SGS_DECLARE sgs_ObjInterface image_iface[1];
 #define IMGHDR SS_Image* img = (SS_Image*) data->data
 
 static int _make_image( SGS_CTX, int16_t w, int16_t h, const void* src )
@@ -32,7 +32,7 @@ static int _make_image( SGS_CTX, int16_t w, int16_t h, const void* src )
 	return SGS_SUCCESS;
 }
 
-static int ss_image_destruct( SGS_CTX, sgs_VarObj* data, int dco )
+static int ss_image_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	IMGHDR;
 	sgs_Dealloc( img->data );
@@ -50,8 +50,9 @@ static int ss_image_resize( SGS_CTX )
 	sgs_Method( C );
 	if( !ss_ParseImage( C, 0, &ii ) )
 		_WARN( "'this' is not an image" )
+	sgs_ForceHideThis( C );
 	
-	if( !sgs_LoadArgs( C, "@>ii", &w, &h ) )
+	if( !sgs_LoadArgs( C, "ii", &w, &h ) )
 		return 0;
 	
 	{
@@ -96,8 +97,9 @@ static int ss_image_clear( SGS_CTX )
 	sgs_Method( C );
 	if( !ss_ParseImage( C, 0, &ii ) )
 		_WARN( "'this' is not an image" )
+	sgs_ForceHideThis( C );
 	
-	if( !sgs_LoadArgs( C, "@>^+ccc|c", &r, &g, &b, &a ) )
+	if( !sgs_LoadArgs( C, "^+ccc|c", &r, &g, &b, &a ) )
 		return 0;
 	
 	cc = (a<<24)|(r<<16)|(g<<8)|(b);
@@ -119,8 +121,9 @@ static int ss_image_setData( SGS_CTX )
 	sgs_Method( C );
 	if( !ss_ParseImage( C, 0, &ii ) )
 		_WARN( "'this' is not an image" )
+	sgs_ForceHideThis( C );
 	
-	if( !sgs_LoadArgs( C, "@>m", &buf, &size ) )
+	if( !sgs_LoadArgs( C, "m", &buf, &size ) )
 		return 0;
 	
 	pxcnt = size / 4;
@@ -148,21 +151,20 @@ static int ss_image_setData( SGS_CTX )
 	return 1;
 }
 
-static int ss_image_getindex( SGS_CTX, sgs_VarObj* data, int prop )
+static int ss_image_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isprop )
 {
 	char* str;
 	sgs_SizeVal size;
 	IMGHDR;
-	
-	if( !sgs_ParseString( C, 0, &str, &size ) )
-		return SGS_EINVAL;
-	
-	if( !strcmp( str, "width" ) ){ sgs_PushInt( C, img->width ); return SGS_SUCCESS; }
-	if( !strcmp( str, "height" ) ){ sgs_PushInt( C, img->height ); return SGS_SUCCESS; }
-	if( !strcmp( str, "resize" ) ){ sgs_PushCFunction( C, ss_image_resize ); return SGS_SUCCESS; }
-	if( !strcmp( str, "clear" ) ){ sgs_PushCFunction( C, ss_image_clear ); return SGS_SUCCESS; }
-	if( !strcmp( str, "setData" ) ){ sgs_PushCFunction( C, ss_image_setData ); return SGS_SUCCESS; }
-	
+	UNUSED( isprop );
+	if( sgs_ParseStringP( C, key, &str, &size ) )
+	{
+		if( !strcmp( str, "width" ) ){ sgs_PushInt( C, img->width ); return SGS_SUCCESS; }
+		if( !strcmp( str, "height" ) ){ sgs_PushInt( C, img->height ); return SGS_SUCCESS; }
+		if( !strcmp( str, "resize" ) ){ sgs_PushCFunction( C, ss_image_resize ); return SGS_SUCCESS; }
+		if( !strcmp( str, "clear" ) ){ sgs_PushCFunction( C, ss_image_clear ); return SGS_SUCCESS; }
+		if( !strcmp( str, "setData" ) ){ sgs_PushCFunction( C, ss_image_setData ); return SGS_SUCCESS; }
+	}
 	return SGS_ENOTFND;
 }
 
@@ -172,12 +174,6 @@ static int ss_image_convert( SGS_CTX, sgs_VarObj* data, int type )
 	{
 		IMGHDR;
 		return _make_image( C, img->width, img->height, img->data );
-	}
-	else if( type == SGS_CONVOP_TOTYPE )
-	{
-		UNUSED( data );
-		sgs_PushString( C, "image" );
-		return SGS_SUCCESS;
 	}
 	else if( type == SVT_STRING )
 	{
@@ -191,13 +187,14 @@ static int ss_image_convert( SGS_CTX, sgs_VarObj* data, int type )
 }
 
 
-static sgs_ObjCallback image_iface[] =
-{
-	SOP_GETINDEX, ss_image_getindex,
-	SOP_CONVERT, ss_image_convert,
-	SOP_DESTRUCT, ss_image_destruct,
-	SOP_END
-};
+static sgs_ObjInterface image_iface[1] =
+{{
+	"SS_Image",
+	ss_image_destruct, NULL,
+	ss_image_getindex, NULL,
+	ss_image_convert, NULL, NULL, NULL,
+	NULL, NULL
+}};
 
 static int SS_CreateImage( SGS_CTX )
 {
@@ -245,7 +242,7 @@ int ss_LoadImageHelper( SGS_CTX, char* str, int size )
 	}
 	sgs_PushStringBuf( C, str, size );
 	if( sgs_PushGlobal( C, buf ) != SGS_SUCCESS )
-		return sgs_Printf( C, SGS_WARNING, "unsupported format: '%.4s'", ptr + 1 );
+		return sgs_Msg( C, SGS_WARNING, "unsupported format: '%.4s'", ptr + 1 );
 	if( sgs_Call( C, 1, 1 ) != SGS_SUCCESS ) /* function is expected to provide detailed info on failure */
 		_WARN( "failed to load image file" )
 	

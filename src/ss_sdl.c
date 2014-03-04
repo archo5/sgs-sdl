@@ -10,7 +10,7 @@
 #define IC( i ) { #i, i }
 #define IC_SDL( i ) { "SDL_" #i, i }
 #define ICX( n, i ) { #n, i }
-#define _WARN( err ) { sgs_Printf( C, SGS_WARNING, err ); return 0; }
+#define _WARN( err ) { sgs_Msg( C, SGS_WARNING, err ); return 0; }
 
 
 
@@ -93,7 +93,7 @@ static int SS_GetClipboardText( SGS_CTX )
 	SGSFN( "SS_GetClipboardText" );
 	text = SDL_GetClipboardText();
 	if( !text )
-		return sgs_Printf( C, SGS_WARNING, "failed to read from the clipboard: %s", SDL_GetError() );
+		return sgs_Msg( C, SGS_WARNING, "failed to read from the clipboard: %s", SDL_GetError() );
 	sgs_PushString( C, text );
 	SDL_free( text );
 	return 1;
@@ -108,7 +108,7 @@ static int SS_SetClipboardText( SGS_CTX )
 		return 0;
 	ret = SDL_SetClipboardText( text ) >= 0;
 	if( !ret )
-		sgs_Printf( C, SGS_WARNING, "failed to write to the clipboard: %s", SDL_GetError() );
+		sgs_Msg( C, SGS_WARNING, "failed to write to the clipboard: %s", SDL_GetError() );
 	sgs_PushBool( C, ret );
 	return 1;
 }
@@ -145,13 +145,13 @@ static int SS_GetVideoDrivers( SGS_CTX )
 
 #define DM_HDR SDL_DisplayMode* DM = (SDL_DisplayMode*) data->data
 
-static int ss_displaymode_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
+static int ss_displaymode_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isprop )
 {
 	char* str;
 	DM_HDR;
 	UNUSED( isprop );
 	
-	if( sgs_ParseString( C, 0, &str, NULL ) )
+	if( sgs_ParseStringP( C, key, &str, NULL ) )
 	{
 		if( !strcmp( str, "format" ) ){ sgs_PushInt( C, DM->format ); return SGS_SUCCESS; }
 		if( !strcmp( str, "w" ) ){ sgs_PushInt( C, DM->w ); return SGS_SUCCESS; }
@@ -163,19 +163,19 @@ static int ss_displaymode_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 	return SGS_ENOTFND;
 }
 
-static int ss_displaymode_setindex( SGS_CTX, sgs_VarObj* data, int isprop )
+static int ss_displaymode_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* val, int isprop )
 {
 	char* str;
 	DM_HDR;
 	UNUSED( isprop );
 	
-	if( sgs_ParseString( C, 0, &str, NULL ) )
+	if( sgs_ParseStringP( C, key, &str, NULL ) )
 	{
-		if( !strcmp( str, "format" ) ){ sgs_Int val; if( sgs_ParseInt( C, 1, &val ) ){ DM->format = val; return SGS_SUCCESS; } return SGS_EINVAL; }
-		if( !strcmp( str, "w" ) ){ sgs_Int val; if( sgs_ParseInt( C, 1, &val ) ){ DM->w = val; return SGS_SUCCESS; } return SGS_EINVAL; }
-		if( !strcmp( str, "h" ) ){ sgs_Int val; if( sgs_ParseInt( C, 1, &val ) ){ DM->h = val; return SGS_SUCCESS; } return SGS_EINVAL; }
-		if( !strcmp( str, "refresh_rate" ) ){ sgs_Int val; if( sgs_ParseInt( C, 1, &val ) ){ DM->refresh_rate = val; return SGS_SUCCESS; } return SGS_EINVAL; }
-		if( !strcmp( str, "driverdata" ) ){ void* val; if( sgs_ParsePtr( C, 1, &val ) ){ DM->driverdata = val; return SGS_SUCCESS; } return SGS_EINVAL; }
+		if( !strcmp( str, "format" ) ){ sgs_Int V; if( sgs_ParseIntP( C, val, &V ) ){ DM->format = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		if( !strcmp( str, "w" ) ){ sgs_Int V; if( sgs_ParseIntP( C, val, &V ) ){ DM->w = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		if( !strcmp( str, "h" ) ){ sgs_Int V; if( sgs_ParseIntP( C, val, &V ) ){ DM->h = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		if( !strcmp( str, "refresh_rate" ) ){ sgs_Int V; if( sgs_ParseIntP( C, val, &V ) ){ DM->refresh_rate = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		if( !strcmp( str, "driverdata" ) ){ void* V; if( sgs_ParsePtrP( C, val, &V ) ){ DM->driverdata = V; return SGS_SUCCESS; } return SGS_EINVAL; }
 	}
 	
 	return SGS_ENOTFND;
@@ -198,22 +198,17 @@ static int ss_displaymode_convert( SGS_CTX, sgs_VarObj* data, int type )
 	{
 		return ss_displaymode_dump( C, data, 1 );
 	}
-	if( type == SGS_CONVOP_TOTYPE )
-	{
-		sgs_PushString( C, "SDL_DisplayMode" );
-		return SGS_SUCCESS;
-	}
 	return SGS_ENOTSUP;
 }
 
-static sgs_ObjCallback ss_displaymode_iface[] =
-{
-	SGS_OP_GETINDEX, ss_displaymode_getindex,
-	SGS_OP_SETINDEX, ss_displaymode_setindex,
-	SGS_OP_CONVERT, ss_displaymode_convert,
-	SGS_OP_DUMP, ss_displaymode_dump,
-	SGS_OP_END
-};
+static sgs_ObjInterface ss_displaymode_iface[1] =
+{{
+	"SDL_DisplayMode",
+	NULL, NULL,
+	ss_displaymode_getindex, ss_displaymode_setindex,
+	ss_displaymode_convert, NULL, ss_displaymode_dump, NULL,
+	NULL, NULL
+}};
 
 static void ss_PushDisplayMode( SGS_CTX, SDL_DisplayMode* dm )
 {
@@ -273,7 +268,7 @@ static int SS_GetNumDisplayModes( SGS_CTX )
 		return 0;
 	
 	if( 0 > ( num = SDL_GetNumDisplayModes( i ) ) )
-		return sgs_Printf( C, SGS_WARNING, "failed to get number of display modes for display #%d: %s", (int) i, SDL_GetError() );
+		return sgs_Msg( C, SGS_WARNING, "failed to get number of display modes for display #%d: %s", (int) i, SDL_GetError() );
 	
 	sgs_PushInt( C, num );
 	return 1;
@@ -287,7 +282,7 @@ static int SS_GetDisplayMode( SGS_CTX )
 		return 0;
 	
 	if( 0 != SDL_GetDisplayMode( i, mid, &mode ) )
-		return sgs_Printf( C, SGS_WARNING, "failed to get display mode #%d for display #%d: %s", (int) mid, (int) i, SDL_GetError() );
+		return sgs_Msg( C, SGS_WARNING, "failed to get display mode #%d for display #%d: %s", (int) mid, (int) i, SDL_GetError() );
 	
 	ss_PushDisplayMode( C, &mode );
 	return 1;
@@ -302,12 +297,12 @@ static int SS_GetDisplayModes( SGS_CTX )
 		return 0;
 	
 	if( 0 > ( num = SDL_GetNumDisplayModes( did ) ) )
-		return sgs_Printf( C, SGS_WARNING, "failed to get number of display modes for display #%d: %s", (int) did, SDL_GetError() );
+		return sgs_Msg( C, SGS_WARNING, "failed to get number of display modes for display #%d: %s", (int) did, SDL_GetError() );
 	
 	for( i = 0; i < num; ++i )
 	{
 		if( 0 != SDL_GetDisplayMode( did, i, &mode ) )
-			return sgs_Printf( C, SGS_WARNING, "failed to get display mode #%d for display #%d: %s", i, (int) did, SDL_GetError() );
+			return sgs_Msg( C, SGS_WARNING, "failed to get display mode #%d for display #%d: %s", i, (int) did, SDL_GetError() );
 		ss_PushDisplayMode( C, &mode );
 	}
 	sgs_PushArray( C, num );
@@ -322,7 +317,7 @@ static int SS_GetDisplayBounds( SGS_CTX )
 		return 0;
 	
 	if( 0 != SDL_GetDisplayBounds( i, &rect ) )
-		return sgs_Printf( C, SGS_WARNING, "failed to get display #%d bounds: %s", (int) i, SDL_GetError() );
+		return sgs_Msg( C, SGS_WARNING, "failed to get display #%d bounds: %s", (int) i, SDL_GetError() );
 	
 	sgs_PushString( C, "x" );
 	sgs_PushInt( C, rect.x );
@@ -358,7 +353,7 @@ static int SS_GetCurrentDisplayMode( SGS_CTX )
 		return 0;
 	
 	if( 0 != SDL_GetCurrentDisplayMode( i, &mode ) )
-		return sgs_Printf( C, SGS_WARNING, "failed to get current display mode for display #%d: %s", (int) i, SDL_GetError() );
+		return sgs_Msg( C, SGS_WARNING, "failed to get current display mode for display #%d: %s", (int) i, SDL_GetError() );
 	
 	ss_PushDisplayMode( C, &mode );
 	return 1;
@@ -372,7 +367,7 @@ static int SS_GetDesktopDisplayMode( SGS_CTX )
 		return 0;
 	
 	if( 0 != SDL_GetDesktopDisplayMode( i, &mode ) )
-		return sgs_Printf( C, SGS_WARNING, "failed to get desktop display mode for display #%d: %s", (int) i, SDL_GetError() );
+		return sgs_Msg( C, SGS_WARNING, "failed to get desktop display mode for display #%d: %s", (int) i, SDL_GetError() );
 	
 	ss_PushDisplayMode( C, &mode );
 	return 1;
@@ -381,105 +376,101 @@ static int SS_GetDesktopDisplayMode( SGS_CTX )
 
 
 #define WND_HDR SS_Window* W = (SS_Window*) data->data;
-#define WND_IHDR( funcname ) \
-	int method_call = sgs_Method( C ); \
-	sgs_FuncName( C, method_call ? "window." #funcname : "window_" #funcname ); \
-	if( !sgs_IsObject( C, 0, SS_Window_iface ) ) \
-		return sgs_ArgErrorExt( C, 0, method_call, "window", "" ); \
-	SS_Window* W = (SS_Window*) sgs_GetObjectData( C, 0 );
+#define WND_IHDR( funcname ) SS_Window* W; \
+	if( !SGS_PARSE_METHOD( C, SS_Window_iface, W, SS_Window, funcname ) ) return 0;
 
-SGS_DECLARE sgs_ObjCallback SS_Window_iface[];
+SGS_DECLARE sgs_ObjInterface SS_Window_iface[1];
 
 static int SS_WindowI_show( SGS_CTX )
 {
 	WND_IHDR( show );
 	SDL_ShowWindow( W->window );
-	return 0;
+	SGS_RETURN_THIS( C );
 }
 
 static int SS_WindowI_hide( SGS_CTX )
 {
 	WND_IHDR( hide );
 	SDL_HideWindow( W->window );
-	return 0;
+	SGS_RETURN_THIS( C );
 }
 
 static int SS_WindowI_minimize( SGS_CTX )
 {
 	WND_IHDR( minimize );
 	SDL_MinimizeWindow( W->window );
-	return 0;
+	SGS_RETURN_THIS( C );
 }
 
 static int SS_WindowI_maximize( SGS_CTX )
 {
 	WND_IHDR( maximize );
 	SDL_MaximizeWindow( W->window );
-	return 0;
+	SGS_RETURN_THIS( C );
 }
 
 static int SS_WindowI_restore( SGS_CTX )
 {
 	WND_IHDR( restore );
 	SDL_RestoreWindow( W->window );
-	return 0;
+	SGS_RETURN_THIS( C );
 }
 
 static int SS_WindowI_raise( SGS_CTX )
 {
 	WND_IHDR( raise );
 	SDL_RaiseWindow( W->window );
-	return 0;
+	SGS_RETURN_THIS( C );
 }
 
 static int SS_WindowI_setPosition( SGS_CTX )
 {
 	sgs_Int x, y;
 	WND_IHDR( setPosition );
-	if( !sgs_LoadArgs( C, "@>ii", &x, &y ) )
+	if( !sgs_LoadArgs( C, "ii", &x, &y ) )
 		return 0;
 	SDL_SetWindowPosition( W->window, x, y );
-	return 0;
+	SGS_RETURN_THIS( C );
 }
 
 static int SS_WindowI_setSize( SGS_CTX )
 {
 	sgs_Int w, h;
 	WND_IHDR( setSize );
-	if( !sgs_LoadArgs( C, "@>ii", &w, &h ) )
+	if( !sgs_LoadArgs( C, "ii", &w, &h ) )
 		return 0;
 	SDL_SetWindowSize( W->window, w, h );
-	return 0;
+	SGS_RETURN_THIS( C );
 }
 
 static int SS_WindowI_setMaxSize( SGS_CTX )
 {
 	sgs_Int w, h;
 	WND_IHDR( setMaxSize );
-	if( !sgs_LoadArgs( C, "@>ii", &w, &h ) )
+	if( !sgs_LoadArgs( C, "ii", &w, &h ) )
 		return 0;
 	SDL_SetWindowMaximumSize( W->window, w, h );
-	return 0;
+	SGS_RETURN_THIS( C );
 }
 
 static int SS_WindowI_setMinSize( SGS_CTX )
 {
 	sgs_Int w, h;
 	WND_IHDR( setMinSize );
-	if( !sgs_LoadArgs( C, "@>ii", &w, &h ) )
+	if( !sgs_LoadArgs( C, "ii", &w, &h ) )
 		return 0;
 	SDL_SetWindowMinimumSize( W->window, w, h );
-	return 0;
+	SGS_RETURN_THIS( C );
 }
 
 static int SS_WindowI_warpMouse( SGS_CTX )
 {
 	sgs_Int x, y;
 	WND_IHDR( warpMouse );
-	if( !sgs_LoadArgs( C, "@>ii", &x, &y ) )
+	if( !sgs_LoadArgs( C, "ii", &x, &y ) )
 		return 0;
 	SDL_WarpMouseInWindow( W->window, x, y );
-	return 0;
+	SGS_RETURN_THIS( C );
 }
 
 static int SS_WindowI_initRenderer( SGS_CTX )
@@ -489,16 +480,16 @@ static int SS_WindowI_initRenderer( SGS_CTX )
 	SS_Renderer* R;
 	WND_IHDR( initRenderer );
 	
-	if( !sgs_LoadArgs( C, "@>|iii", &renderer, &version, &flags ) )
+	if( !sgs_LoadArgs( C, "|iii", &renderer, &version, &flags ) )
 		return 0;
 	
 	if( W->riface )
-		return sgs_Printf( C, SGS_WARNING, "free the current renderer to initialize a new one" );
+		return sgs_Msg( C, SGS_WARNING, "free the current renderer to initialize a new one" );
 	
 	if( renderer != SS_RENDERER_DONTCARE &&
 		renderer != SS_RENDERER_OPENGL &&
 		renderer != SS_RENDERER_DIRECT3D9 )
-		return sgs_Printf( C, SGS_WARNING, "invalid renderer specified" );
+		return sgs_Msg( C, SGS_WARNING, "invalid renderer specified" );
 	
 	if( renderer == SS_RENDERER_DONTCARE )
 #ifdef SS_USED3D
@@ -509,11 +500,11 @@ static int SS_WindowI_initRenderer( SGS_CTX )
 	
 	riface = ri_pick( renderer );
 	if( !riface )
-		return sgs_Printf( C, SGS_WARNING, "specified renderer is unavailable" );
+		return sgs_Msg( C, SGS_WARNING, "specified renderer is unavailable" );
 	
 	R = riface->create( W->window, version, flags );
 	if( !R )
-		return sgs_Printf( C, SGS_WARNING, "failed to create the renderer: %s", riface->last_error );
+		return sgs_Msg( C, SGS_WARNING, "failed to create the renderer: %s", riface->last_error );
 	
 	W->riface = riface;
 	W->renderer = R;
@@ -535,13 +526,13 @@ static int SS_WindowI_makeCurrent( SGS_CTX )
 }
 
 
-static int SS_Window_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
+static int SS_Window_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isprop )
 {
 	char* str;
 	WND_HDR;
 	UNUSED( isprop );
 	
-	if( sgs_ParseString( C, 0, &str, NULL ) )
+	if( sgs_ParseStringP( C, key, &str, NULL ) )
 	{
 		/* function properties */
 		if( !strcmp( str, "show" ) ){ sgs_PushCFunction( C, SS_WindowI_show ); return SGS_SUCCESS; }
@@ -572,7 +563,7 @@ static int SS_Window_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 			else
 			{
 				sgs_PushNull( C );
-				sgs_Printf( C, SGS_WARNING, "failed to get display mode: %s", SDL_GetError() );
+				sgs_Msg( C, SGS_WARNING, "failed to get display mode: %s", SDL_GetError() );
 			}
 			return SGS_SUCCESS;
 		}
@@ -656,62 +647,62 @@ static int SS_Window_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 	return SGS_ENOTFND;
 }
 
-static int SS_Window_setindex( SGS_CTX, sgs_VarObj* data, int isprop )
+static int SS_Window_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* val, int isprop )
 {
 	char* str;
 	WND_HDR;
 	UNUSED( isprop );
 	
-	if( sgs_ParseString( C, 0, &str, NULL ) )
+	if( sgs_ParseStringP( C, key, &str, NULL ) )
 	{
 		if( !strcmp( str, "bordered" ) )
 		{
-			sgs_Bool val;
-			if( sgs_ParseBool( C, 1, &val ) )
+			sgs_Bool V;
+			if( sgs_ParseBoolP( C, val, &V ) )
 			{
-				SDL_SetWindowBordered( W->window, val );
+				SDL_SetWindowBordered( W->window, V );
 				return SGS_SUCCESS;
 			}
 			return SGS_EINVAL;
 		}
 		if( !strcmp( str, "brightness" ) )
 		{
-			sgs_Real val;
-			if( sgs_ParseReal( C, 1, &val ) )
+			sgs_Real V;
+			if( sgs_ParseRealP( C, val, &V ) )
 			{
-				if( 0 != SDL_SetWindowBrightness( W->window, val ) )
-					sgs_Printf( C, SGS_WARNING, "failed to set brightness: %s\n", SDL_GetError() );
+				if( 0 != SDL_SetWindowBrightness( W->window, V ) )
+					sgs_Msg( C, SGS_WARNING, "failed to set brightness: %s\n", SDL_GetError() );
 				return SGS_SUCCESS;
 			}
 			return SGS_EINVAL;
 		}
 		if( !strcmp( str, "fullscreen" ) )
 		{
-			sgs_Int val;
-			if( sgs_ParseInt( C, 1, &val ) )
+			sgs_Int V;
+			if( sgs_ParseIntP( C, val, &V ) )
 			{
-				if( 0 != SDL_SetWindowFullscreen( W->window, val ) )
-					sgs_Printf( C, SGS_WARNING, "failed to set fullscreen: %s\n", SDL_GetError() );
+				if( 0 != SDL_SetWindowFullscreen( W->window, V ) )
+					sgs_Msg( C, SGS_WARNING, "failed to set fullscreen: %s\n", SDL_GetError() );
 				return SGS_SUCCESS;
 			}
 			return SGS_EINVAL;
 		}
 		if( !strcmp( str, "grab" ) )
 		{
-			sgs_Bool val;
-			if( sgs_ParseBool( C, 1, &val ) )
+			sgs_Bool V;
+			if( sgs_ParseBoolP( C, val, &V ) )
 			{
-				SDL_SetWindowGrab( W->window, val );
+				SDL_SetWindowGrab( W->window, V );
 				return SGS_SUCCESS;
 			}
 			return SGS_EINVAL;
 		}
 		if( !strcmp( str, "title" ) )
 		{
-			char* val;
-			if( sgs_ParseString( C, 1, &val, NULL ) )
+			char* V;
+			if( sgs_ParseStringP( C, val, &V, NULL ) )
 			{
-				SDL_SetWindowTitle( W->window, val );
+				SDL_SetWindowTitle( W->window, V );
 				return SGS_SUCCESS;
 			}
 		}
@@ -720,21 +711,9 @@ static int SS_Window_setindex( SGS_CTX, sgs_VarObj* data, int isprop )
 	return SGS_ENOTFND;
 }
 
-static int SS_Window_convert( SGS_CTX, sgs_VarObj* data, int type )
-{
-	if( type == SGS_CONVOP_TOTYPE || type == SGS_VT_STRING )
-	{
-		UNUSED( data );
-		sgs_PushString( C, "window" );
-		return SGS_SUCCESS;
-	}
-	return SGS_ENOTSUP;
-}
-
-static int SS_Window_destruct( SGS_CTX, sgs_VarObj* data, int unused )
+static int SS_Window_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	WND_HDR;
-	UNUSED( unused );
 	if( W->renderer )
 	{
 		SS_TmpCtx ctx = ss_TmpMakeCurrent( W->riface, W->renderer );
@@ -745,14 +724,14 @@ static int SS_Window_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjCallback SS_Window_iface[] =
-{
-	SGS_OP_GETINDEX, SS_Window_getindex,
-	SGS_OP_SETINDEX, SS_Window_setindex,
-	SGS_OP_CONVERT, SS_Window_convert,
-	SGS_OP_DESTRUCT, SS_Window_destruct,
-	SGS_OP_END
-};
+static sgs_ObjInterface SS_Window_iface[1] =
+{{
+	"SS_Window",
+	SS_Window_destruct, NULL,
+	SS_Window_getindex, SS_Window_setindex,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL
+}};
 
 static int SS_CreateWindow( SGS_CTX )
 {
@@ -769,7 +748,7 @@ static int SS_CreateWindow( SGS_CTX )
 	W->renderer = NULL;
 	W->riface = NULL;
 	if( !W->window )
-		return sgs_Printf( C, SGS_WARNING, "failed to create a window" );
+		return sgs_Msg( C, SGS_WARNING, "failed to create a window" );
 	SDL_SetWindowData( W->window, "sgsobj", sgs_GetObjectStruct( C, -1 ) );
 	
 	return 1;

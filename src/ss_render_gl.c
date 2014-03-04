@@ -158,10 +158,7 @@ static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t version, uint3
 	sgs_vht_init( &R->rsrc_table, C, 64, 64 );
 	R->destructing = 0;
 	
-	sgs_PushDict( C, 0 );
-	sgs_GetStackItem( C, -1, &R->rsdict );
-	sgs_Acquire( C, &R->rsdict );
-	sgs_Pop( C, 1 );
+	sgs_InitDict( C, &R->rsdict, 0 );
 	
 	return R;
 }
@@ -231,9 +228,7 @@ static void ss_ri_gl_poke_resource( SS_Renderer* R, sgs_VarObj* obj, int add )
 	if( R->destructing )
 		return;
 	
-	K.type = SGS_VT_PTR;
-	K.data.P = obj;
-	
+	sgs_InitPtr( &K, obj );
 	if( add )
 		sgs_vht_set( &R->rsrc_table, C, &K, &K );
 	else
