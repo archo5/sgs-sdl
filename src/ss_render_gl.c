@@ -7,21 +7,19 @@
 #include <GL/gl.h>
 
 #define SS_TEXTURE_HANDLE_DATA void* __dummy; GLuint id;
+#define SS_RENDERER_OVERRIDE
 
 #include "ss_main.h"
 
 
 struct _SS_Renderer
 {
-	SDL_Window* window;
+	SS_RENDERER_DATA
 	SDL_GLContext* ctx;
 	PFNGLBLENDEQUATIONPROC glBlendEquation;
 	int height;
 	float world_matrix[16];
 	float view_matrix[16];
-	sgs_VHTable rsrc_table;
-	int destructing;
-	sgs_Variable rsdict;
 };
 
 
@@ -119,6 +117,7 @@ static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t version, uint3
 	}
 	
 	R = (SS_Renderer*) malloc( sizeof(*R) );
+	R->iface = &GRI_GL;
 	R->window = window;
 	R->ctx = ctx;
 	R->glBlendEquation = (PFNGLBLENDEQUATIONPROC) SDL_GL_GetProcAddress( "glBlendEquation" );
@@ -158,7 +157,16 @@ static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t version, uint3
 	sgs_vht_init( &R->rsrc_table, C, 64, 64 );
 	R->destructing = 0;
 	
+	sgs_InitDict( C, &R->textures, 0 );
+	sgs_InitDict( C, &R->fonts, 0 );
 	sgs_InitDict( C, &R->rsdict, 0 );
+	
+	sgs_PushString( C, "textures" );
+	sgs_SetIndexPIP( C, &R->rsdict, -1, &R->textures, 0 );
+	sgs_Pop( C, 1 );
+	sgs_PushString( C, "fonts" );
+	sgs_SetIndexPIP( C, &R->rsdict, -1, &R->fonts, 0 );
+	sgs_Pop( C, 1 );
 	
 	return R;
 }
@@ -368,7 +376,6 @@ static int ss_ri_gl_create_texture_argb8( SS_Renderer* R, SS_Texture* T, SS_Imag
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minf );
 	}
 	
-	T->riface = &GRI_GL;
 	T->renderer = R;
 	T->width = I->width;
 	T->height = I->height;
@@ -406,7 +413,6 @@ static int ss_ri_gl_create_texture_a8( SS_Renderer* R, SS_Texture* T, uint8_t* d
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 	
-	T->riface = &GRI_GL;
 	T->renderer = R;
 	T->width = width;
 	T->height = height;

@@ -153,12 +153,20 @@ int ss_InitGraphics( SGS_CTX );
 #define SS_TEXTURE_HANDLE_DATA void* ptr; uint32_t u32;
 #endif
 
+#define SS_RENDERER_DATA \
+	SS_RenderInterface* iface; \
+	SDL_Window* window; \
+	sgs_VHTable rsrc_table; \
+	int destructing; \
+	sgs_Variable textures; \
+	sgs_Variable fonts; \
+	sgs_Variable rsdict;
+
 typedef struct _SS_RenderInterface SS_RenderInterface;
 typedef struct _SS_Renderer SS_Renderer;
 
 typedef struct _SS_Texture
 {
-	SS_RenderInterface* riface;
 	SS_Renderer* renderer;
 	
 	union { SS_TEXTURE_HANDLE_DATA } handle;
@@ -176,7 +184,6 @@ SS_Texture;
 
 typedef struct _SS_VertexFormat
 {
-	SS_RenderInterface* riface;
 	SS_Renderer* renderer;
 	
 	union { SS_VERTEXFORMAT_HANDLE_DATA } handle;
@@ -256,6 +263,13 @@ struct _SS_RenderInterface
 	
 	const char* last_error;
 };
+
+#ifndef SS_RENDERER_OVERRIDE
+struct _SS_Renderer
+{
+	SS_RENDERER_DATA
+};
+#endif
 
 
 extern SS_RenderInterface* GCurRI;

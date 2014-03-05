@@ -123,7 +123,7 @@ function initialize()
 	println();
 	global image = SS_CreateTexture( "crosshair.png", "mipmaps" );
 	println( image );
-	printvar( _Gtex );
+	printvar( _R.textures );
 	println();
 	
 	global Font = SS_CreateFont( "verdana.ttf", 12 );

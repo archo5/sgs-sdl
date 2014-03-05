@@ -87,11 +87,11 @@ static void _mtx_identity( float* m )
 static int sstex_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	TEXHDR;
-	if( T->riface )
+	if( T->renderer )
 	{
-		SS_TmpCtx ctx = ss_TmpMakeCurrent( T->riface, T->renderer );
-		T->riface->destroy_texture( T->renderer, T );
-		T->riface = NULL;
+		SS_RenderInterface* RI = T->renderer->iface;
+		SS_TmpCtx ctx = ss_TmpMakeCurrent( RI, T->renderer );
+		RI->destroy_texture( T->renderer, T );
 		T->renderer = NULL;
 		GCurRI->poke_resource( GCurRr, data, 0 );
 		ss_TmpRestoreCurrent( &ctx );
@@ -188,33 +188,31 @@ static int SS_CreateTexture( SGS_CTX )
 		bystr = 1;
 		
 		/* check if image already loaded */
-		sgs_PushItem( C, 0 ); /* NAME [FLAGS] NAME */
-		sgs_PushString( C, "|" ); /* NAME [FLAGS] NAME "|" */
-		sgs_PushInt( C, flags ); /* NAME [FLAGS] NAME "\0" INT_FLAGS */
-		sgs_StringConcat( C, 3 ); /* NAME [FLAGS] KEY */
+		sgs_PushItem( C, 0 ); /* NAME [FLAGS...] NAME */
+		sgs_PushString( C, "|" ); /* NAME [FLAGS...] NAME "|" */
+		sgs_PushInt( C, flags ); /* NAME [FLAGS...] NAME "|" INT_FLAGS */
+		sgs_StringConcat( C, 3 ); /* NAME [FLAGS...] KEY */
 		
-		sgs_PushGlobal( C, "_Gtex" ); /* NAME [FLAGS] KEY _Gtex */
-		if( sgs_PushIndexII( C, -1, -2, 0 ) == SGS_SUCCESS )
+		if( sgs_PushIndexPI( C, &GCurRr->textures, -1, 0 ) == SGS_SUCCESS )
 		{
 			/* found it! */
 			return 1;
 		}
-		sgs_Pop( C, 1 );
 		
 		/* convert string to image */
 		if( !ss_LoadImageHelper( C, sgs_GetStringPtr( C, 0 ), sgs_GetStringSize( C, 0 ) ) )
 			return 0; /* error printed by LIH */
 		
-		/* NAME [FLAGS] KEY IMAGE */
+		/* NAME [FLAGS...] KEY IMAGE */
 		
 		/* insert return value as argument #0 */
 		sgs_StoreItem( C, 0 );
-		/* IMAGE [FLAGS] KEY */
+		/* IMAGE [FLAGS...] KEY */
 		
 		/* texture key must stay at position -1 */
 	}
 	
-	/* IMAGE [FLAGS] [KEY](if bystr) */
+	/* IMAGE [FLAGS...] [KEY](if bystr) */
 	
 	if( !ss_ParseImage( C, 0, &ii ) )
 		_WARN( "unexpected arguments; function expects 1-2 arguments: (image|string)[, string]" )
@@ -229,14 +227,13 @@ static int SS_CreateTexture( SGS_CTX )
 		GCurRI->poke_resource( GCurRr, sgs_GetObjectStruct( C, -1 ), 1 );
 	}
 	
-	/* IMAGE [FLAGS] [KEY](if bystr) TEXTURE */
+	/* IMAGE [FLAGS...] [KEY](if bystr) TEXTURE */
 	
 	/* texture key at position -2 */
 	if( bystr )
 	{
-		sgs_PushGlobal( C, "_Gtex" ); /* IMAGE [FLAGS] KEY TEXTURE _Gtex */
-		sgs_SetIndexIII( C, -1, -3, -2, 0 );
-		sgs_Pop( C, 1 ); /* IMAGE [FLAGS] KEY TEXTURE */
+		/* save texture in cache */
+		sgs_SetIndexPII( C, &GCurRr->textures, -2, -1, 0 );
 	}
 	
 	return 1;
@@ -265,7 +262,7 @@ int ss_ApplyTexture( sgs_Variable* texvar, float* tox, float* toy )
 		if( texvar->type != SGS_VT_OBJECT || texvar->data.O->iface != tex_iface )
 			return 0;
 		T = (SS_Texture*) texvar->data.O->data;
-		if( T->renderer != GCurRr || T->riface != GCurRI )
+		if( T->renderer != GCurRr )
 			return 0;
 		if( GCurRI->flags & SS_RI_HALFPIXELOFFSET && !( T->flags & SS_TEXTURE_NOLERP ) )
 		{
@@ -902,11 +899,11 @@ cleanup:
 static int ss_vertex_format_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	VFMT_HDR;
-	if( F->riface )
+	if( F->renderer )
 	{
-		SS_TmpCtx ctx = ss_TmpMakeCurrent( F->riface, F->renderer );
-		F->riface->free_vertex_format( F->renderer, F );
-		F->riface = NULL;
+		SS_RenderInterface* RI = F->renderer->iface;
+		SS_TmpCtx ctx = ss_TmpMakeCurrent( RI, F->renderer );
+		RI->free_vertex_format( F->renderer, F );
 		F->renderer = NULL;
 		GCurRI->poke_resource( GCurRr, data, 0 );
 		ss_TmpRestoreCurrent( &ctx );
@@ -919,7 +916,7 @@ static int ss_vertex_format_convert( SGS_CTX, sgs_VarObj* data, int type )
 	VFMT_HDR;
 	if( type == SVT_STRING )
 	{
-		sgs_PushString( C, F->riface ? "SS_VertexFormat" : "SS_VertexFormat (unloaded)" );
+		sgs_PushString( C, F->renderer ? "SS_VertexFormat" : "SS_VertexFormat (unloaded)" );
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
@@ -1009,7 +1006,6 @@ static int SS_MakeVertexFormat( SGS_CTX )
 		ef = (SS_VertexFormat*) sgs_PushObjectIPA( C, sizeof(F), vertex_format_iface );
 		memcpy( ef, &F, sizeof(F) );
 		ef->renderer = GCurRr;
-		ef->riface = GCurRI;
 		if( GCurRI->init_vertex_format( GCurRr, ef ) )
 		{
 			GCurRI->poke_resource( GCurRr, sgs_GetObjectStruct( C, -1 ), 1 );
@@ -1064,7 +1060,7 @@ static int SS_DrawPacked( SGS_CTX )
 	if( !ss_ApplyTexture( &texvar, NULL, NULL ) )
 		sgs_Msg( C, SGS_WARNING, "could not use texture" );
 	
-	if( F->renderer != GCurRr || F->riface != GCurRI )
+	if( F->renderer != GCurRr )
 		_WARN( "vertex format was created with another renderer" );
 	
 	GCurRI->draw_ext( GCurRr, F, data, datasize, idcs, idcsize, 0, start, count, type );
@@ -1252,7 +1248,7 @@ static int ss_renderbuf_draw( SGS_CTX )
 	if( !ss_ApplyTexture( &texvar, NULL, NULL ) )
 		return sgs_Msg( C, SGS_WARNING, "could not use texture" );
 	
-	if( F->renderer != GCurRr || F->riface != GCurRI )
+	if( F->renderer != GCurRr )
 		_WARN( "vertex format was created with another renderer" );
 	
 	GCurRI->draw_ext( GCurRr, F, data, rb->B.size, NULL, 0, 0, start, count, type );
@@ -1621,8 +1617,7 @@ static int SS_CreateFont( SGS_CTX )
 	sgs_StringConcat( C, 3 );
 
 	/* check if dict has the font */
-	sgs_PushGlobal( C, "_Gfonts" );
-	if( sgs_PushIndexII( C, -1, -2, 0 ) == SGS_SUCCESS )
+	if( sgs_PushIndexPI( C, &GCurRr->fonts, -1, 0 ) == SGS_SUCCESS )
 		return 1;
 
 	/* attempt to load font with different base paths */
@@ -1667,7 +1662,7 @@ static int SS_CreateFont( SGS_CTX )
 	}
 
 	/* save and return the font object */
-	sgs_SetIndexIII( C, -2, -3, -1, 0 );
+	sgs_SetIndexPII( C, &GCurRr->fonts, -2, -1, 0 );
 	return 1;
 }
 
@@ -1806,7 +1801,6 @@ static int ss_draw_text_line_int( SGS_CTX, int (*off_fn) (ss_font*) )
 	int ret = 1;
 	char* str;
 	sgs_SizeVal strsize;
-	sgs_Variable fontvar;
 	sgs_Integer X, Y;
 	float color[ 4 ];
 	ss_font* ssfont;
@@ -1990,8 +1984,6 @@ static sgs_RegFuncConst gl_funcs[] =
 	FN( SetDepthTest ), FN( SetCulling ), FN( SetBlending ),
 };
 
-static const char* gl_init = "global _Gtex = {}, _Gfonts = {};";
-
 int ss_InitGraphics( SGS_CTX )
 {
 	int ret, mid;
@@ -2008,10 +2000,7 @@ int ss_InitGraphics( SGS_CTX )
 	ret = sgs_RegFuncConsts( C, gl_funcs, ARRAY_SIZE( gl_funcs ) );
 	if( ret != SGS_SUCCESS ) return ret;
 	
-	sgs_RegisterType( C, "texture", tex_iface );
-	
-	ret = sgs_ExecString( C, gl_init );
-	if( ret != SGS_SUCCESS ) return ret;
+	sgs_RegisterType( C, "SS_Texture", tex_iface );
 	
 	return SGS_SUCCESS;
 }

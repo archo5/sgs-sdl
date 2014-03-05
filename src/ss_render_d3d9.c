@@ -7,6 +7,7 @@
 
 #define SS_TEXTURE_HANDLE_DATA IDirect3DBaseTexture9* base; IDirect3DTexture9* tex2d;
 #define SS_VERTEXFORMAT_HANDLE_DATA IDirect3DVertexDeclaration9* vdecl;
+#define SS_RENDERER_OVERRIDE
 
 #include "ss_main.h"
 
@@ -64,12 +65,9 @@ static void _ss_reset_device( IDirect3DDevice9* dev, D3DPRESENT_PARAMETERS* pd3d
 
 struct _SS_Renderer
 {
-	SDL_Window* window;
+	SS_RENDERER_DATA
 	IDirect3DDevice9* d3ddev;
 	D3DPRESENT_PARAMETERS d3dpp;
-	sgs_VHTable rsrc_table;
-	int destructing;
-	sgs_Variable rsdict;
 };
 
 
@@ -200,6 +198,7 @@ static SS_Renderer* ss_ri_d3d9_create( SDL_Window* window, uint32_t version, uin
 	_ss_reset_states( d3ddev, w, h );
 	
 	R = (SS_Renderer*) malloc( sizeof(*R) );
+	R->iface = &GRI_D3D9;
 	R->window = window;
 	R->d3ddev = d3ddev;
 	R->d3dpp = d3dpp;
@@ -207,7 +206,16 @@ static SS_Renderer* ss_ri_d3d9_create( SDL_Window* window, uint32_t version, uin
 	sgs_vht_init( &R->rsrc_table, C, 64, 64 );
 	R->destructing = 0;
 	
+	sgs_InitDict( C, &R->textures, 0 );
+	sgs_InitDict( C, &R->fonts, 0 );
 	sgs_InitDict( C, &R->rsdict, 0 );
+	
+	sgs_PushString( C, "textures" );
+	sgs_SetIndexPIP( C, &R->rsdict, -1, &R->textures, 0 );
+	sgs_Pop( C, 1 );
+	sgs_PushString( C, "fonts" );
+	sgs_SetIndexPIP( C, &R->rsdict, -1, &R->fonts, 0 );
+	sgs_Pop( C, 1 );
 	
 	return R;
 }
@@ -408,7 +416,6 @@ static int ss_ri_d3d9_create_texture_argb8( SS_Renderer* R, SS_Texture* T, SS_Im
 			ss_DeleteImage( pI, C );
 	}
 	
-	T->riface = &GRI_D3D9;
 	T->renderer = R;
 	T->width = I->width;
 	T->height = I->height;
@@ -444,7 +451,6 @@ static int ss_ri_d3d9_create_texture_a8( SS_Renderer* R, SS_Texture* T, uint8_t*
 	}
 	IDirect3DTexture9_UnlockRect( tex, 0 );
 	
-	T->riface = &GRI_D3D9;
 	T->renderer = R;
 	T->width = width;
 	T->height = height;
