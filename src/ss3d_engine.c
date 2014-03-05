@@ -8,47 +8,6 @@
 #define CN( x ) { "SS3D" #x, SS3D##x }
 
 
-SGSRESULT sgs_ParseObjectPtr( SGS_CTX, sgs_StkIdx item, sgs_ObjInterface* iface, sgs_VarObj** out, int strict )
-{
-	if( !strict && sgs_ItemType( C, item ) == SGS_VT_NULL )
-	{
-		if( *out )
-			sgs_ObjRelease( C, *out );
-		*out = NULL;
-		return SGS_SUCCESS;
-	}
-	if( sgs_IsObject( C, item, iface ) )
-	{
-		if( *out )
-			sgs_ObjRelease( C, *out );
-		*out = sgs_GetObjectStruct( C, item );
-		sgs_ObjAcquire( C, *out );
-		return SGS_SUCCESS;
-	}
-	return SGS_EINVAL;
-}
-
-SGSRESULT sgs_ParseObjectPtrP( SGS_CTX, sgs_Variable* var, sgs_ObjInterface* iface, sgs_VarObj** out, int strict )
-{
-	if( !strict && var->type == SGS_VT_NULL )
-	{
-		if( *out )
-			sgs_ObjRelease( C, *out );
-		*out = NULL;
-		return SGS_SUCCESS;
-	}
-	if( sgs_IsObjectP( var, iface ) )
-	{
-		if( *out )
-			sgs_ObjRelease( C, *out );
-		*out = sgs_GetObjectStructP( var );
-		sgs_ObjAcquire( C, *out );
-		return SGS_SUCCESS;
-	}
-	return SGS_EINVAL;
-}
-
-
 //
 // MATH
 
@@ -342,9 +301,9 @@ static void camera_recalc_projmtx( SS3D_Camera* CAM )
 	SS3D_Mtx_Perspective( CAM->mProj, CAM->angle, CAM->aspect, CAM->aamix, CAM->znear, CAM->zfar );
 }
 
-#define CAM_HDR SS3D_Camera* CAM = (SS3D_Camera*) data->data;
+#define CAM_HDR SS3D_Camera* CAM = (SS3D_Camera*) obj->data;
 
-static int camera_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isprop )
+static int camera_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	CAM_HDR;
 	SGS_BEGIN_INDEXFUNC
@@ -359,7 +318,7 @@ static int camera_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int is
 	SGS_END_INDEXFUNC;
 }
 
-static int camera_setindex_( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* val, int isprop )
+static int camera_setindex_( SGS_ARGS_SETINDEXFUNC )
 {
 	CAM_HDR;
 	SGS_BEGIN_INDEXFUNC
@@ -374,10 +333,10 @@ static int camera_setindex_( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_V
 	SGS_END_INDEXFUNC;
 }
 
-static int camera_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* val, int isprop )
+static int camera_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	CAM_HDR;
-	int ret = camera_setindex_( C, data, key, val, isprop );
+	int ret = camera_setindex_( C, obj, key, val, isprop );
 	if( ret < 0 )
 		return ret;
 	if( ret == 1 ) camera_recalc_viewmtx( CAM );
@@ -385,7 +344,7 @@ static int camera_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Va
 	return SGS_SUCCESS;
 }
 
-static int camera_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
+static int camera_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 {
 	char bfr[ 2048 ];
 	CAM_HDR;
@@ -448,9 +407,9 @@ int SS3D_CreateCamera( SGS_CTX )
 //
 // LIGHT
 
-#define L_HDR SS3D_Light* L = (SS3D_Light*) data->data;
+#define L_HDR SS3D_Light* L = (SS3D_Light*) obj->data;
 
-static int light_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isprop )
+static int light_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	L_HDR;
 	SGS_BEGIN_INDEXFUNC
@@ -469,7 +428,7 @@ static int light_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isp
 	SGS_END_INDEXFUNC;
 }
 
-static int light_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* val, int isprop )
+static int light_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	L_HDR;
 	SGS_BEGIN_INDEXFUNC
@@ -488,7 +447,7 @@ static int light_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Var
 	SGS_END_INDEXFUNC;
 }
 
-static int light_convert( SGS_CTX, sgs_VarObj* data, int type )
+static int light_convert( SGS_CTX, sgs_VarObj* obj, int type )
 {
 	L_HDR;
 	if( type == SGS_VT_STRING )
@@ -501,7 +460,7 @@ static int light_convert( SGS_CTX, sgs_VarObj* data, int type )
 	return SGS_ENOTSUP;
 }
 
-static int light_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
+static int light_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 {
 	char bfr[ 2048 ];
 	L_HDR;
@@ -541,7 +500,7 @@ static int light_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
 	return SGS_SUCCESS;
 }
 
-static int light_gcmark( SGS_CTX, sgs_VarObj* data )
+static int light_gcmark( SGS_CTX, sgs_VarObj* obj )
 {
 	L_HDR;
 	if( L->cookieTexture )
@@ -549,12 +508,12 @@ static int light_gcmark( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-static int light_destruct( SGS_CTX, sgs_VarObj* data )
+static int light_destruct( SGS_CTX, sgs_VarObj* obj )
 {
 	L_HDR;
 	if( L->scene )
 	{
-		scene_poke_resource( L->scene, &L->scene->lights, data, 0 );
+		scene_poke_resource( L->scene, &L->scene->lights, obj, 0 );
 		L->scene = NULL;
 		if( L->cookieTexture )
 		{
@@ -578,7 +537,7 @@ sgs_ObjInterface SS3D_Light_iface[1] =
 //
 // SCENE
 
-#define SC_HDR SS3D_Scene* S = (SS3D_Scene*) data->data;
+#define SC_HDR SS3D_Scene* S = (SS3D_Scene*) obj->data;
 #define SC_IHDR( funcname ) SS3D_Scene* S; \
 	if( !SGS_PARSE_METHOD( C, SS3D_Scene_iface, S, SS3D_Scene, funcname ) ) return 0;
 
@@ -615,7 +574,7 @@ static int scenei_destroyLight( SGS_CTX )
 	return 0;
 }
 
-static int scene_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isprop )
+static int scene_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	SC_HDR;
 	SGS_BEGIN_INDEXFUNC
@@ -631,7 +590,7 @@ static int scene_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isp
 	SGS_END_INDEXFUNC;
 }
 
-static int scene_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* val, int isprop )
+static int scene_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	SC_HDR;
 	SGS_BEGIN_INDEXFUNC
@@ -676,7 +635,7 @@ static int scene_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Var
 	SGS_END_INDEXFUNC;
 }
 
-static int scene_convert( SGS_CTX, sgs_VarObj* data, int type )
+static int scene_convert( SGS_CTX, sgs_VarObj* obj, int type )
 {
 	SC_HDR;
 	if( type == SGS_VT_STRING )
@@ -689,13 +648,13 @@ static int scene_convert( SGS_CTX, sgs_VarObj* data, int type )
 	return SGS_ENOTSUP;
 }
 
-static int scene_destruct( SGS_CTX, sgs_VarObj* data )
+static int scene_destruct( SGS_CTX, sgs_VarObj* obj )
 {
 	sgs_SizeVal i;
 	SC_HDR;
 	if( S->renderer )
 	{
-		SS3D_Renderer_PokeResource( S->renderer, data, 0 );
+		SS3D_Renderer_PokeResource( S->renderer, obj, 0 );
 		S->renderer = NULL;
 		S->destroying = 1;
 		for( i = 0; i < S->meshInstances.size; ++i )

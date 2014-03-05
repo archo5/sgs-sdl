@@ -47,8 +47,6 @@ dict_unpack_item_t;
 
 #define DUI_LAST { NULL, NULL }
 
-void ss_CallDtor( SGS_CTX, sgs_VarObj* O );
-sgs_Integer ss_GlobalInt( SGS_CTX, const char* name );
 uint32_t ss_GetFlagString( SGS_CTX, int pos, flag_string_item_t* items );
 uint32_t ss_GlobalFlagString( SGS_CTX, const char* name, flag_string_item_t* items );
 int ss_UnpackDict( SGS_CTX, int pos, dict_unpack_item_t* items );

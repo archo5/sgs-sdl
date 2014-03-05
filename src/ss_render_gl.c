@@ -182,7 +182,7 @@ static void ss_ri_gl_destroy( SS_Renderer* R )
 	for( i = 0; i < R->rsrc_table.size; ++i )
 	{
 		sgs_VarObj* obj = (sgs_VarObj*) R->rsrc_table.vars[ i ].val.data.P;
-		ss_CallDtor( C, obj );
+		sgs_ObjCallDtor( C, obj );
 	}
 	sgs_vht_free( &R->rsrc_table, C );
 	

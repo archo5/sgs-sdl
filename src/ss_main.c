@@ -256,7 +256,7 @@ int ss_Initialize( int argc, char* argv[], int debug )
 
 int ss_Frame()
 {
-	if( ss_GlobalInt( C, "sys_exit" ) )
+	if( sgs_GlobalInt( C, "sys_exit" ) )
 		return 1;
 	
 	{
@@ -284,7 +284,7 @@ int ss_Frame()
 			}
 		}
 		
-		if( ss_GlobalInt( C, "sys_exit" ) )
+		if( sgs_GlobalInt( C, "sys_exit" ) )
 			return 1;
 		
 		/* advance the application exactly one frame */

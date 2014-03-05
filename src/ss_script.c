@@ -2,34 +2,14 @@
 #include <math.h>
 #include <assert.h>
 
-#define SGS_INTERNAL
-
 #include "ss_main.h"
 
-#undef ARRAY_SIZE
 #include "../sgscript/ext/sgs_prof.c"
 #include "../sgscript/ext/sgs_idbg.c"
-#undef ARRAY_SIZE
 #define ARRAY_SIZE( x ) (sizeof(x)/sizeof(x[0]))
 
 
 #define _WARN( err ) return sgs_Msg( C, SGS_WARNING, err );
-
-void ss_CallDtor( SGS_CTX, sgs_VarObj* O )
-{
-	if( O->iface->destruct )
-		O->iface->destruct( C, O );
-}
-
-sgs_Integer ss_GlobalInt( SGS_CTX, const char* name )
-{
-	sgs_Integer v;
-	if( sgs_PushGlobal( C, name ) != SGS_SUCCESS )
-		return 0;
-	v = sgs_GetInt( C, -1 );
-	sgs_Pop( C, 1 );
-	return v;
-}
 
 uint32_t ss_GetFlagString( SGS_CTX, int pos, flag_string_item_t* items )
 {
@@ -68,7 +48,7 @@ int ss_UnpackDict( SGS_CTX, int pos, dict_unpack_item_t* items )
 	int ret = 0;
 	sgs_String32 S;
 	
-	if( sgs_ItemType( C, pos ) != SVT_OBJECT )
+	if( sgs_ItemType( C, pos ) != SGS_VT_OBJECT )
 		return ret;
 	
 	while( items->name )
