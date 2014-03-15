@@ -21,7 +21,7 @@ function initialize()
 	println( "Light: " $ _R.Light );
 	_R.Scene.destroyLight( _R.Light );
 	println( "After destruction: " $ _R.Light );
-	light = _R.Light = _R.Scene.createLight();
+	_R.Light = light = _R.Scene.createLight();
 	println( "New light: " $ light );
 	light.type = SS3DLIGHT_POINT;
 	light.color = vec3(0.9,0.7,0.5);
@@ -31,7 +31,7 @@ function initialize()
 	light.isEnabled = true;
 	printvar( light );
 	
-	light2 = _R.Light = _R.Scene.createLight();
+	_R.Light2 = light2 = _R.Scene.createLight();
 	println( "New light (2): " $ light2 );
 	light2.type = SS3DLIGHT_POINT;
 	light2.color = vec3(0.5,0.7,0.9);
