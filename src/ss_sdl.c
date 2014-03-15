@@ -718,7 +718,18 @@ static int SS_Window_destruct( SGS_CTX, sgs_VarObj* data )
 	{
 		SS_TmpCtx ctx = ss_TmpMakeCurrent( W->riface, W->renderer );
 		W->riface->destroy( W->renderer );
-		ss_TmpRestoreCurrent( &ctx );
+		if( ctx.renderer == W->renderer )
+		{
+			// destroyed current
+			ss_MakeCurrent( NULL, NULL );
+			sgs_PushNull( C );
+			sgs_StoreGlobal( C, "_R" );
+		}
+		else
+		{
+			// destroyed some other
+			ss_TmpRestoreCurrent( &ctx );
+		}
 	}
 	SDL_DestroyWindow( W->window );
 	return SGS_SUCCESS;

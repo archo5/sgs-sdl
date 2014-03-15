@@ -31,7 +31,7 @@ void ss_MakeCurrent( SS_RenderInterface* ri, SS_Renderer* rr )
 	GCurRI = ri;
 	GCurRr = rr;
 	
-	sgs_PushBool( C, ri->flags & SS_RI_COLOR_BGRA );
+	sgs_PushBool( C, ri ? ( ri->flags & SS_RI_COLOR_BGRA ) : 0 );
 	sgs_StoreGlobal( C, "sys_rctx_flip_colors" );
 }
 
