@@ -520,7 +520,7 @@ static int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vco
 	}
 	else if( gi[2].var )
 	{
-		sgs_Integer imode;
+		sgs_Int imode;
 		float defcomp[] = { 0, 0, 0, 0, 1, 1, 1, 1, 0.5f, 0.5f, 0.5f, 0.5f };
 		floatbuf pdata = NFB, cdata = NFB, tdata = NFB;
 		const char* res = _parse_floatbuf( C, gi[2].var, &pdata, 2, defcomp, 1 );
@@ -1023,7 +1023,7 @@ static int SS_MakeVertexFormat( SGS_CTX )
 static int SS_DrawPacked( SGS_CTX )
 {
 	sgs_Variable texvar;
-	sgs_Integer start, count, type;
+	sgs_Int start, count, type;
 	SS_VertexFormat* F;
 	char *data, *idcs = NULL;
 	sgs_SizeVal datasize, idcsize = 0;
@@ -1499,7 +1499,7 @@ static ss_glyph* ss_font_get_glyph( ss_font* font, SGS_CTX, uint32_t cp );
 static int ss_fontI_get_advance( SGS_CTX )
 {
 	int adv = 0;
-	sgs_Integer a = 0, b = 0;
+	sgs_Int a = 0, b = 0;
 	ss_font* font;
 	
 	SGSFN( "SS_Font.getAdvance" );
@@ -1600,7 +1600,7 @@ static int SS_CreateFont( SGS_CTX )
 {
 	char* fontname;
 	sgs_SizeVal fnsize;
-	sgs_Integer fontsize;
+	sgs_Int fontsize;
 	
 	SGSFN( "SS_CreateFont" );
 	SCRFN_NEEDS_RENDER_CONTEXT;
@@ -1801,7 +1801,7 @@ static int ss_draw_text_line_int( SGS_CTX, int (*off_fn) (ss_font*) )
 	int ret = 1;
 	char* str;
 	sgs_SizeVal strsize;
-	sgs_Integer X, Y;
+	sgs_Int X, Y;
 	float color[ 4 ];
 	ss_font* ssfont;
 	
@@ -1862,7 +1862,7 @@ static int SS_DrawTextLine_VC( SGS_CTX ){ SGSFN("DrawTextLine_VC"); return ss_dr
 
 static int SS_SetClipRect( SGS_CTX )
 {
-	sgs_Integer x1, x2, y1, y2;
+	sgs_Int x1, x2, y1, y2;
 	SGSFN( "SS_SetClipRect" );
 	SCRFN_NEEDS_RENDER_CONTEXT;
 	
@@ -1890,6 +1890,22 @@ static int SS_SetClipRect( SGS_CTX )
 		_WARN( "unexpected arguments; function expects null or 4 int values" )
 }
 
+static int SS_SetViewport( SGS_CTX )
+{
+	sgs_Int x1, x2, y1, y2;
+	SGSFN( "SS_SetViewport" );
+	SCRFN_NEEDS_RENDER_CONTEXT;
+	
+	if( !sgs_LoadArgs( C, "iiii", &x1, &y1, &x2, &y2 ) )
+		return 0;
+	
+	if( x2 < x1 || y2 < y1 )
+		_WARN( "invalid (negative) width and/or height" )
+	
+	GCurRI->set_render_state( GCurRr, SS_RS_VIEWPORT, x1, y1, x2, y2 );
+	return 0;
+}
+
 static int SS_SetDepthTest( SGS_CTX )
 {
 	sgs_Bool set;
@@ -1906,7 +1922,7 @@ static int SS_SetDepthTest( SGS_CTX )
 
 static int SS_SetCulling( SGS_CTX )
 {
-	sgs_Integer ii;
+	sgs_Int ii;
 	SGSFN( "SS_SetCulling" );
 	SCRFN_NEEDS_RENDER_CONTEXT;
 	
@@ -1920,7 +1936,7 @@ static int SS_SetCulling( SGS_CTX )
 
 static int SS_SetBlending( SGS_CTX )
 {
-	sgs_Integer func = 0, src, dst;
+	sgs_Int func = 0, src, dst;
 	SGSFN( "SS_SetBlending" );
 	SCRFN_NEEDS_RENDER_CONTEXT;
 	
@@ -1980,7 +1996,7 @@ static sgs_RegFuncConst gl_funcs[] =
 	FN( CreateFont ), FN( IsFont ),
 	FN( DrawTextLine ), FN( DrawTextLine_TA ), FN( DrawTextLine_BA ), FN( DrawTextLine_BL ), FN( DrawTextLine_VN ), FN( DrawTextLine_VC ),
 	FN( MatrixPush ), FN( MatrixPop ),
-	FN( SetCamera ), FN( SetClipRect ),
+	FN( SetCamera ), FN( SetClipRect ), FN( SetViewport ),
 	FN( SetDepthTest ), FN( SetCulling ), FN( SetBlending ),
 };
 

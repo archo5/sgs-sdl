@@ -103,8 +103,9 @@ int ss_InitGraphics( SGS_CTX );
 #define SS_RS_BLENDOP      2
 #define SS_RS_CLIPENABLE   3
 #define SS_RS_CLIPRECT     4
-#define SS_RS_CULLING      5
-#define SS_RS_ZENABLE      6
+#define SS_RS_VIEWPORT     5
+#define SS_RS_CULLING      6
+#define SS_RS_ZENABLE      7
 
 #define SS_RMAT_WORLD 0
 #define SS_RMAT_VIEW  1

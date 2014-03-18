@@ -358,6 +358,12 @@ static void ss_ri_d3d9_set_render_state( SS_Renderer* R, int which, int arg0, in
 		RECT rect = { arg0, arg1, arg2, arg3 };
 		IDirect3DDevice9_SetScissorRect( R->d3ddev, &rect );
 	}
+	else if( which == SS_RS_VIEWPORT )
+	{
+		/* x0 = arg0, y0 = arg1, x1 = arg2, y1 = arg3 */
+		D3DVIEWPORT9 vp = { arg0, arg1, arg2 - arg0, arg3 - arg1, 0.0, 1.0 };
+		IDirect3DDevice9_SetViewport( R->d3ddev, &vp );
+	}
 	else if( which == SS_RS_CULLING )
 	{
 		IDirect3DDevice9_SetRenderState( R->d3ddev, D3DRS_CULLMODE, arg0 ? ( arg0 > 0 ? D3DCULL_CCW : D3DCULL_CW ) : D3DCULL_NONE );

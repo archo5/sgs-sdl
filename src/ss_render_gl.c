@@ -298,6 +298,11 @@ static void ss_ri_gl_set_render_state( SS_Renderer* R, int which, int arg0, int 
 		/* x0 = arg0, y0 = arg1, x1 = arg2, y1 = arg3 */
 		glScissor( arg0, R->height - arg3, arg2 - arg0, arg3 - arg1 );
 	}
+	else if( which == SS_RS_VIEWPORT )
+	{
+		/* x0 = arg0, y0 = arg1, x1 = arg2, y1 = arg3 */
+		glViewport( arg0, R->height - arg3, arg2 - arg0, arg3 - arg1 );
+	}
 	else if( which == SS_RS_CULLING )
 	{
 		if( arg0 )
