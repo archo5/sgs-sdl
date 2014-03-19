@@ -64,6 +64,11 @@ sgs_ObjInterface SS3D_Camera_iface[1];
 sgs_ObjInterface SS3D_Light_iface[1];
 sgs_ObjInterface SS3D_Scene_iface[1];
 
+typedef struct _SS3D_Light SS3D_Light;
+typedef struct _SS3D_MeshInstance SS3D_MeshInstance;
+typedef struct _SS3D_CullScene SS3D_CullScene;
+typedef struct _SS3D_Camera SS3D_Camera;
+typedef struct _SS3D_Viewport SS3D_Viewport;
 typedef struct _SS3D_Scene SS3D_Scene;
 typedef struct _SS3D_Renderer SS3D_Renderer;
 
@@ -112,23 +117,7 @@ typedef struct _SS3D_Texture
 }
 SS3D_Texture;
 
-typedef struct _SS3D_Camera
-{
-	VEC3 position;
-	VEC3 direction;
-	VEC3 up;
-	float angle;
-	float aspect;
-	float aamix;
-	float znear;
-	float zfar;
-	
-	MAT4 mView;
-	MAT4 mProj;
-}
-SS3D_Camera;
-
-typedef struct _SS3D_Light
+struct _SS3D_Light
 {
 	SS3D_Scene* scene;
 	
@@ -144,18 +133,16 @@ typedef struct _SS3D_Light
 	sgs_VarObj* cookieTexture;
 	MAT4 projMatrix;
 	int hasShadows;
-}
-SS3D_Light;
+};
 
-typedef struct _SS3D_MeshInstance
+struct _SS3D_MeshInstance
 {
 	SS3D_Scene* scene;
 	
 	sgs_VarObj* mesh;
 	MAT4 matrix;
 	VEC3 color;
-}
-SS3D_MeshInstance;
+};
 
 typedef void (*fpSS3D_CullScene_SetCamera) ( void* /* data */, SS3D_Camera* );
 typedef int (*fpSS3D_CullScene_AABB)       ( void* /* data */, VEC3 /* from */, VEC3 /* to */ );
@@ -163,7 +150,7 @@ typedef int (*fpSS3D_CullScene_OBB)        ( void* /* data */, VEC3 /* center */
 typedef int (*fpSS3D_CullScene_Sphere)     ( void* /* data */, VEC3 /* center */, float /* radius */ );
 typedef int (*fpSS3D_CullScene_Spotlight)  ( void* /* data */, VEC3 /* origin */, float /* radius */, VEC3 /* direction */, float /* halfAngle */ );
 
-typedef struct _SS3D_CullScene
+struct _SS3D_CullScene
 {
 	fpSS3D_CullScene_SetCamera setCameraFunc;
 	fpSS3D_CullScene_AABB      AABBFunc;
@@ -171,8 +158,27 @@ typedef struct _SS3D_CullScene
 	fpSS3D_CullScene_Sphere    sphereFunc;
 	fpSS3D_CullScene_Spotlight spotlightFunc;
 	void* dataStruct;
-}
-SS3D_CullScene;
+};
+
+struct _SS3D_Camera
+{
+	VEC3 position;
+	VEC3 direction;
+	VEC3 up;
+	float angle;
+	float aspect;
+	float aamix;
+	float znear;
+	float zfar;
+	
+	MAT4 mView;
+	MAT4 mProj;
+};
+
+struct _SS3D_Viewport
+{
+	int x1, y1, x2, y2;
+};
 
 struct _SS3D_Scene
 {
@@ -182,8 +188,9 @@ struct _SS3D_Scene
 	sgs_VHTable meshInstances;
 	sgs_VHTable lights;
 	
-	sgs_VarObj* camera;
 	sgs_VarObj* cullScene;
+	sgs_VarObj* camera;
+	sgs_VarObj* viewport;
 };
 
 struct _SS3D_Renderer

@@ -113,12 +113,6 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 //
 // MISC. UTILITY
 
-void SS3D_CallDtor( SGS_CTX, sgs_VarObj* O )
-{
-	if( O->iface->destruct )
-		O->iface->destruct( C, O );
-}
-
 static void scene_poke_resource( SS3D_Scene* S, sgs_VHTable* which, sgs_VarObj* obj, int add )
 {
 	sgs_Variable K;
@@ -276,135 +270,6 @@ size_t SS3D_TextureData_GetMipDataSize( SS3D_TextureData* TD, int mip )
 
 
 //
-// CULL SCENE
-
-sgs_ObjInterface SS3D_CullScene_iface[1] =
-{{
-	"SS3D_CullScene",
-	NULL, NULL,
-	NULL, NULL,
-	NULL, NULL, NULL, NULL,
-	NULL, NULL,
-}};
-
-
-//
-// CAMERA
-
-static void camera_recalc_viewmtx( SS3D_Camera* CAM )
-{
-	SS3D_Mtx_LookAt( CAM->mView, CAM->position, CAM->direction, CAM->up );
-}
-
-static void camera_recalc_projmtx( SS3D_Camera* CAM )
-{
-	SS3D_Mtx_Perspective( CAM->mProj, CAM->angle, CAM->aspect, CAM->aamix, CAM->znear, CAM->zfar );
-}
-
-#define CAM_HDR SS3D_Camera* CAM = (SS3D_Camera*) obj->data;
-
-static int camera_getindex( SGS_ARGS_GETINDEXFUNC )
-{
-	CAM_HDR;
-	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "position" )  SGS_RETURN_VEC3( CAM->position )
-		SGS_CASE( "direction" ) SGS_RETURN_VEC3( CAM->direction )
-		SGS_CASE( "up" )        SGS_RETURN_VEC3( CAM->up )
-		SGS_CASE( "angle" )     SGS_RETURN_REAL( CAM->angle )
-		SGS_CASE( "aspect" )    SGS_RETURN_REAL( CAM->aspect )
-		SGS_CASE( "aamix" )     SGS_RETURN_REAL( CAM->aamix )
-		SGS_CASE( "znear" )     SGS_RETURN_REAL( CAM->znear )
-		SGS_CASE( "zfar" )      SGS_RETURN_REAL( CAM->zfar )
-	SGS_END_INDEXFUNC;
-}
-
-static int camera_setindex_( SGS_ARGS_SETINDEXFUNC )
-{
-	CAM_HDR;
-	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "position" )  { return sgs_ParseVec3P( C, val, CAM->position, 0 ) ? 1 : SGS_EINVAL; }
-		SGS_CASE( "direction" ) { return sgs_ParseVec3P( C, val, CAM->direction, 0 ) ? 1 : SGS_EINVAL; }
-		SGS_CASE( "up" )        { return sgs_ParseVec3P( C, val, CAM->up, 0 ) ? 1 : SGS_EINVAL; }
-		SGS_CASE( "angle" )     { sgs_Real V; if( sgs_ParseRealP( C, val, &V ) ){ CAM->angle = V; return 2; } return SGS_EINVAL; }
-		SGS_CASE( "aspect" )    { sgs_Real V; if( sgs_ParseRealP( C, val, &V ) ){ CAM->aspect = V; return 2; } return SGS_EINVAL; }
-		SGS_CASE( "aamix" )     { sgs_Real V; if( sgs_ParseRealP( C, val, &V ) ){ CAM->aamix = V; return 2; } return SGS_EINVAL; }
-		SGS_CASE( "znear" )     { sgs_Real V; if( sgs_ParseRealP( C, val, &V ) ){ CAM->znear = V; return 2; } return SGS_EINVAL; }
-		SGS_CASE( "zfar" )      { sgs_Real V; if( sgs_ParseRealP( C, val, &V ) ){ CAM->zfar = V; return 2; } return SGS_EINVAL; }
-	SGS_END_INDEXFUNC;
-}
-
-static int camera_setindex( SGS_ARGS_SETINDEXFUNC )
-{
-	CAM_HDR;
-	int ret = camera_setindex_( C, obj, key, val, isprop );
-	if( ret < 0 )
-		return ret;
-	if( ret == 1 ) camera_recalc_viewmtx( CAM );
-	if( ret == 2 ) camera_recalc_projmtx( CAM );
-	return SGS_SUCCESS;
-}
-
-static int camera_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
-{
-	char bfr[ 2048 ];
-	CAM_HDR;
-	UNUSED( maxdepth );
-	
-	sprintf( bfr,
-		"\nposition=(%g;%g;%g)"
-		"\ndirection=(%g;%g;%g)"
-		"\nup=(%g;%g;%g)"
-		"\nangle=%g"
-		"\naspect=%g"
-		"\naamix=%g"
-		"\nznear=%g"
-		"\nzfar=%g",
-		CAM->position[0], CAM->position[1], CAM->position[2],
-		CAM->direction[0], CAM->direction[1], CAM->direction[2],
-		CAM->up[0], CAM->up[1], CAM->up[2],
-		CAM->angle,
-		CAM->aspect,
-		CAM->aamix,
-		CAM->znear,
-		CAM->zfar
-	);
-	sgs_PushString( C, "SS3D_Camera\n{" );
-	sgs_PushString( C, bfr );
-	sgs_PadString( C );
-	sgs_PushString( C, "\n}" );
-	sgs_StringConcat( C, 3 );
-	return SGS_SUCCESS;
-}
-
-sgs_ObjInterface SS3D_Camera_iface[1] =
-{{
-	"SS3D_Camera",
-	NULL, NULL,
-	camera_getindex, camera_setindex,
-	NULL, NULL, camera_dump, NULL,
-	NULL, NULL,
-}};
-
-int SS3D_CreateCamera( SGS_CTX )
-{
-	SS3D_Camera* CAM = (SS3D_Camera*) sgs_PushObjectIPA( C, sizeof(*CAM), SS3D_Camera_iface );
-	VEC3_Set( CAM->position, 0, 0, 0 );
-	VEC3_Set( CAM->direction, 0, 1, 0 );
-	VEC3_Set( CAM->up, 0, 0, 1 );
-	CAM->angle = 90;
-	CAM->aspect = 1;
-	CAM->aamix = 0.5;
-	CAM->znear = 1;
-	CAM->zfar = 1000;
-	
-	camera_recalc_viewmtx( CAM );
-	camera_recalc_projmtx( CAM );
-	
-	return 1;
-}
-
-
-//
 // LIGHT
 
 #define L_HDR SS3D_Light* L = (SS3D_Light*) obj->data;
@@ -535,6 +400,207 @@ sgs_ObjInterface SS3D_Light_iface[1] =
 
 
 //
+// CULL SCENE
+
+sgs_ObjInterface SS3D_CullScene_iface[1] =
+{{
+	"SS3D_CullScene",
+	NULL, NULL,
+	NULL, NULL,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL,
+}};
+
+
+//
+// CAMERA
+
+static void camera_recalc_viewmtx( SS3D_Camera* CAM )
+{
+	SS3D_Mtx_LookAt( CAM->mView, CAM->position, CAM->direction, CAM->up );
+}
+
+static void camera_recalc_projmtx( SS3D_Camera* CAM )
+{
+	SS3D_Mtx_Perspective( CAM->mProj, CAM->angle, CAM->aspect, CAM->aamix, CAM->znear, CAM->zfar );
+}
+
+#define CAM_HDR SS3D_Camera* CAM = (SS3D_Camera*) obj->data;
+
+static int camera_getindex( SGS_ARGS_GETINDEXFUNC )
+{
+	CAM_HDR;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "position" )  SGS_RETURN_VEC3( CAM->position )
+		SGS_CASE( "direction" ) SGS_RETURN_VEC3( CAM->direction )
+		SGS_CASE( "up" )        SGS_RETURN_VEC3( CAM->up )
+		SGS_CASE( "angle" )     SGS_RETURN_REAL( CAM->angle )
+		SGS_CASE( "aspect" )    SGS_RETURN_REAL( CAM->aspect )
+		SGS_CASE( "aamix" )     SGS_RETURN_REAL( CAM->aamix )
+		SGS_CASE( "znear" )     SGS_RETURN_REAL( CAM->znear )
+		SGS_CASE( "zfar" )      SGS_RETURN_REAL( CAM->zfar )
+	SGS_END_INDEXFUNC;
+}
+
+static int camera_setindex_( SGS_ARGS_SETINDEXFUNC )
+{
+	CAM_HDR;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "position" )  { return sgs_ParseVec3P( C, val, CAM->position, 0 ) ? 1 : SGS_EINVAL; }
+		SGS_CASE( "direction" ) { return sgs_ParseVec3P( C, val, CAM->direction, 0 ) ? 1 : SGS_EINVAL; }
+		SGS_CASE( "up" )        { return sgs_ParseVec3P( C, val, CAM->up, 0 ) ? 1 : SGS_EINVAL; }
+		SGS_CASE( "angle" )     { sgs_Real V; if( sgs_ParseRealP( C, val, &V ) ){ CAM->angle = V; return 2; } return SGS_EINVAL; }
+		SGS_CASE( "aspect" )    { sgs_Real V; if( sgs_ParseRealP( C, val, &V ) ){ CAM->aspect = V; return 2; } return SGS_EINVAL; }
+		SGS_CASE( "aamix" )     { sgs_Real V; if( sgs_ParseRealP( C, val, &V ) ){ CAM->aamix = V; return 2; } return SGS_EINVAL; }
+		SGS_CASE( "znear" )     { sgs_Real V; if( sgs_ParseRealP( C, val, &V ) ){ CAM->znear = V; return 2; } return SGS_EINVAL; }
+		SGS_CASE( "zfar" )      { sgs_Real V; if( sgs_ParseRealP( C, val, &V ) ){ CAM->zfar = V; return 2; } return SGS_EINVAL; }
+	SGS_END_INDEXFUNC;
+}
+
+static int camera_setindex( SGS_ARGS_SETINDEXFUNC )
+{
+	CAM_HDR;
+	int ret = camera_setindex_( C, obj, key, val, isprop );
+	if( ret < 0 )
+		return ret;
+	if( ret == 1 ) camera_recalc_viewmtx( CAM );
+	if( ret == 2 ) camera_recalc_projmtx( CAM );
+	return SGS_SUCCESS;
+}
+
+static int camera_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
+{
+	char bfr[ 2048 ];
+	CAM_HDR;
+	UNUSED( maxdepth );
+	
+	sprintf( bfr,
+		"\nposition=(%g;%g;%g)"
+		"\ndirection=(%g;%g;%g)"
+		"\nup=(%g;%g;%g)"
+		"\nangle=%g"
+		"\naspect=%g"
+		"\naamix=%g"
+		"\nznear=%g"
+		"\nzfar=%g",
+		CAM->position[0], CAM->position[1], CAM->position[2],
+		CAM->direction[0], CAM->direction[1], CAM->direction[2],
+		CAM->up[0], CAM->up[1], CAM->up[2],
+		CAM->angle,
+		CAM->aspect,
+		CAM->aamix,
+		CAM->znear,
+		CAM->zfar
+	);
+	sgs_PushString( C, "SS3D_Camera\n{" );
+	sgs_PushString( C, bfr );
+	sgs_PadString( C );
+	sgs_PushString( C, "\n}" );
+	sgs_StringConcat( C, 3 );
+	return SGS_SUCCESS;
+}
+
+sgs_ObjInterface SS3D_Camera_iface[1] =
+{{
+	"SS3D_Camera",
+	NULL, NULL,
+	camera_getindex, camera_setindex,
+	NULL, NULL, camera_dump, NULL,
+	NULL, NULL,
+}};
+
+int SS3D_CreateCamera( SGS_CTX )
+{
+	SS3D_Camera* CAM = (SS3D_Camera*) sgs_PushObjectIPA( C, sizeof(*CAM), SS3D_Camera_iface );
+	VEC3_Set( CAM->position, 0, 0, 0 );
+	VEC3_Set( CAM->direction, 0, 1, 0 );
+	VEC3_Set( CAM->up, 0, 0, 1 );
+	CAM->angle = 90;
+	CAM->aspect = 1;
+	CAM->aamix = 0.5;
+	CAM->znear = 1;
+	CAM->zfar = 1000;
+	
+	camera_recalc_viewmtx( CAM );
+	camera_recalc_projmtx( CAM );
+	
+	return 1;
+}
+
+
+//
+// VIEWPORT
+
+#define VP_HDR SS3D_Viewport* VP = (SS3D_Viewport*) obj->data;
+
+static int viewport_getindex( SGS_ARGS_GETINDEXFUNC )
+{
+	VP_HDR;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "x1" )  SGS_RETURN_INT( VP->x1 )
+		SGS_CASE( "y1" )  SGS_RETURN_INT( VP->y1 )
+		SGS_CASE( "x2" )  SGS_RETURN_INT( VP->x2 )
+		SGS_CASE( "y2" )  SGS_RETURN_INT( VP->y2 )
+	SGS_END_INDEXFUNC;
+}
+
+static int viewport_setindex( SGS_ARGS_SETINDEXFUNC )
+{
+	VP_HDR;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "x1" )  SGS_PARSE_INT( VP->x1 )
+		SGS_CASE( "y1" )  SGS_PARSE_INT( VP->y1 )
+		SGS_CASE( "x2" )  SGS_PARSE_INT( VP->x2 )
+		SGS_CASE( "y2" )  SGS_PARSE_INT( VP->y2 )
+	SGS_END_INDEXFUNC;
+}
+
+static int viewport_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
+{
+	char bfr[ 2048 ];
+	VP_HDR;
+	UNUSED( maxdepth );
+	
+	sprintf( bfr,
+		"\nx1=%d"
+		"\ny1=%d"
+		"\nx2=%d"
+		"\ny2=%d",
+		VP->x1,
+		VP->y1,
+		VP->x2,
+		VP->y2
+	);
+	sgs_PushString( C, "SS3D_Viewport\n{" );
+	sgs_PushString( C, bfr );
+	sgs_PadString( C );
+	sgs_PushString( C, "\n}" );
+	sgs_StringConcat( C, 3 );
+	return SGS_SUCCESS;
+}
+
+sgs_ObjInterface SS3D_Viewport_iface[1] =
+{{
+	"SS3D_Viewport",
+	NULL, NULL,
+	viewport_getindex, viewport_setindex,
+	NULL, NULL, viewport_dump, NULL,
+	NULL, NULL,
+}};
+
+int SS3D_CreateViewport( SGS_CTX )
+{
+	SS3D_Viewport* VP = (SS3D_Viewport*) sgs_PushObjectIPA( C, sizeof(*VP), SS3D_Viewport_iface );
+	VP->x1 = 0;
+	VP->y1 = 0;
+	VP->x2 = 100;
+	VP->y2 = 100;
+	
+	return 1;
+}
+
+
+//
 // SCENE
 
 #define SC_HDR SS3D_Scene* S = (SS3D_Scene*) obj->data;
@@ -570,7 +636,7 @@ static int scenei_destroyLight( SGS_CTX )
 	if( !sgs_LoadArgs( C, "?o", SS3D_Light_iface ) )
 		return 0;
 	
-	SS3D_CallDtor( C, sgs_GetObjectStruct( C, 0 ) );
+	sgs_ObjCallDtor( C, sgs_GetObjectStruct( C, 0 ) );
 	return 0;
 }
 
@@ -585,8 +651,9 @@ static int scene_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "destroyLight" )        SGS_RETURN_CFUNC( scenei_destroyLight )
 		
 		// properties
-		SGS_CASE( "camera" )    SGS_RETURN_OBJECT( S->camera )
 		SGS_CASE( "cullScene" ) SGS_RETURN_OBJECT( S->cullScene )
+		SGS_CASE( "camera" )    SGS_RETURN_OBJECT( S->camera )
+		SGS_CASE( "viewport" )  SGS_RETURN_OBJECT( S->viewport )
 	SGS_END_INDEXFUNC;
 }
 
@@ -632,6 +699,25 @@ static int scene_setindex( SGS_ARGS_SETINDEXFUNC )
 			}
 			return SGS_EINVAL;
 		}
+		SGS_CASE( "viewport" )
+		{
+			if( val->type == SGS_VT_NULL )
+			{
+				if( S->viewport )
+					sgs_ObjRelease( C, S->viewport );
+				S->viewport = NULL;
+				return SGS_SUCCESS;
+			}
+			if( sgs_IsObjectP( val, SS3D_Viewport_iface ) )
+			{
+				if( S->viewport )
+					sgs_ObjRelease( C, S->viewport );
+				S->viewport = sgs_GetObjectStructP( val );
+				sgs_ObjAcquire( C, S->viewport );
+				return SGS_SUCCESS;
+			}
+			return SGS_EINVAL;
+		}
 	SGS_END_INDEXFUNC;
 }
 
@@ -660,12 +746,12 @@ static int scene_destruct( SGS_CTX, sgs_VarObj* obj )
 		for( i = 0; i < S->meshInstances.size; ++i )
 		{
 			sgs_VarObj* obj = (sgs_VarObj*) S->meshInstances.vars[ i ].val.data.P;
-			SS3D_CallDtor( C, obj );
+			sgs_ObjCallDtor( C, obj );
 		}
 		for( i = 0; i < S->lights.size; ++i )
 		{
 			sgs_VarObj* obj = (sgs_VarObj*) S->lights.vars[ i ].val.data.P;
-			SS3D_CallDtor( C, obj );
+			sgs_ObjCallDtor( C, obj );
 		}
 		sgs_vht_free( &S->meshInstances, C );
 		sgs_vht_free( &S->lights, C );
@@ -711,7 +797,7 @@ void SS3D_Renderer_Destruct( SS3D_Renderer* R )
 	for( i = 0; i < R->resources.size; ++i )
 	{
 		sgs_VarObj* obj = (sgs_VarObj*) R->resources.vars[ i ].val.data.P;
-		SS3D_CallDtor( R->C, obj );
+		sgs_ObjCallDtor( R->C, obj );
 	}
 	sgs_vht_free( &R->resources, R->C );
 	sgs_vht_free( &R->shaders, R->C );
@@ -754,6 +840,7 @@ void SS3D_Renderer_PushScene( SS3D_Renderer* R )
 	sgs_vht_init( &S->lights, R->C, 128, 128 );
 	S->camera = NULL;
 	S->cullScene = NULL;
+	S->viewport = NULL;
 	SS3D_Renderer_PokeResource( R, sgs_GetObjectStruct( R->C, -1 ), 1 );
 }
 
@@ -783,6 +870,7 @@ static int SS3D_CreateRenderer( SGS_CTX )
 static sgs_RegFuncConst ss3d_fconsts[] =
 {
 	FN( CreateCamera ),
+	FN( CreateViewport ),
 	FN( CreateRenderer ),
 };
 

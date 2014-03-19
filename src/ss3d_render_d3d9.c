@@ -535,6 +535,13 @@ static int rd3d9i_render( SGS_CTX )
 	D3DCALL_( R->device, SetRenderTarget, 1, R->drd.RTS2 );
 	D3DCALL_( R->device, SetDepthStencilSurface, R->drd.RTSD );
 	
+	if( scene->viewport )
+	{
+		SS3D_Viewport* VP = (SS3D_Viewport*) scene->viewport->data;
+		D3DVIEWPORT9 d3dvp = { 0, 0, VP->x2 - VP->x1, VP->y2 - VP->y1, 0.0f, 1.0f };
+		D3DCALL_( R->device, SetViewport, &d3dvp );
+	}
+	
 	D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 1 );
 	D3DCALL_( R->device, SetRenderState, D3DRS_SRCBLEND, D3DBLEND_ONE );
 	D3DCALL_( R->device, SetRenderState, D3DRS_DESTBLEND, D3DBLEND_ZERO );
@@ -562,6 +569,16 @@ static int rd3d9i_render( SGS_CTX )
 	D3DCALL_( R->device, SetRenderTarget, 0, R->bb_color );
 	D3DCALL_( R->device, SetRenderTarget, 1, NULL );
 	D3DCALL_( R->device, SetDepthStencilSurface, R->bb_depth );
+	
+	float invQW = 2.0f, invQH = 2.0f;
+	if( scene->viewport )
+	{
+		SS3D_Viewport* VP = (SS3D_Viewport*) scene->viewport->data;
+		D3DVIEWPORT9 d3dvp = { VP->x1, VP->y1, VP->x2 - VP->x1, VP->y2 - VP->y1, 0.0f, 1.0f };
+		invQW = w * 2.0f / ( VP->x2 - VP->x1 );
+		invQH = h * 2.0f / ( VP->y2 - VP->y1 );
+		D3DCALL_( R->device, SetViewport, &d3dvp );
+	}
 	
 	D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 0 );
 	D3DCALL_( R->device, SetRenderState, D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
@@ -601,9 +618,9 @@ static int rd3d9i_render( SGS_CTX )
 	ssvtx ssVertices[] =
 	{
 		{ -1, -1, 0, 0+hpox, 1+hpoy, -fsx, -fsy },
-		{ +1, -1, 0, 1+hpox, 1+hpoy, +fsx, -fsy },
-		{ +1, +1, 0, 1+hpox, 0+hpoy, +fsx, +fsy },
-		{ -1, +1, 0, 0+hpox, 0+hpoy, -fsx, +fsy },
+		{ invQW - 1, -1, 0, 1+hpox, 1+hpoy, +fsx, -fsy },
+		{ invQW - 1, invQH - 1, 0, 1+hpox, 0+hpoy, +fsx, +fsy },
+		{ -1, invQH - 1, 0, 0+hpox, 0+hpoy, -fsx, +fsy },
 	};
 	
 	D3DCALL_( R->device, SetTexture, 0, (IDirect3DBaseTexture9*) R->drd.RTT1 );
@@ -616,8 +633,8 @@ static int rd3d9i_render( SGS_CTX )
 	use_shader( R, NULL );
 	
 	RECT srcRect = { 0, 0, w, h };
-	RECT dstRect1 = { 0, 0, w/4, h/4 };
-	RECT dstRect2 = { w/4, 0, w/2, h/4 };
+	RECT dstRect1 = { 0, h/8, w/8, h/4 };
+	RECT dstRect2 = { w/8, h/8, w/4, h/4 };
 	D3DCALL_( R->device, StretchRect, R->drd.RTS1, &srcRect, R->bb_color, &dstRect1, D3DTEXF_POINT );
 	D3DCALL_( R->device, StretchRect, R->drd.RTS2, &srcRect, R->bb_color, &dstRect2, D3DTEXF_POINT );
 	
