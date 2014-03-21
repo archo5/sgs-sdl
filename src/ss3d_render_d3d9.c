@@ -259,6 +259,7 @@ static void use_texture( SS3D_RD3D9* R, int slot, SS3D_Texture_D3D9* T )
 	{
 		D3DCALL_( R->device, SetSamplerState, slot, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
 		D3DCALL_( R->device, SetSamplerState, slot, D3DSAMP_MINFILTER, D3DTEXF_LINEAR );
+		D3DCALL_( R->device, SetSamplerState, slot, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
 	}
 }
 

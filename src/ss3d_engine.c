@@ -207,6 +207,45 @@ SGSBOOL SS3D_TextureInfo_GetMipInfo( SS3D_TextureInfo* TI, int mip, SS3D_Texture
 	return 1;
 }
 
+
+#define COLOR_EXTRACT_( c, off ) (((c)>>(off))&0xff)
+#define COLOR_EXTRACT_R( c ) COLOR_EXTRACT_( c, 24 )
+#define COLOR_EXTRACT_G( c ) COLOR_EXTRACT_( c, 16 )
+#define COLOR_EXTRACT_B( c ) COLOR_EXTRACT_( c, 8 )
+#define COLOR_EXTRACT_A( c ) COLOR_EXTRACT_( c, 0 )
+#define COLOR_COMBINE( r, g, b, a ) (((r)<<24)|((g)<<16)|((b)<<8)|((a)))
+static uint32_t _avg_col4( uint32_t a, uint32_t b, uint32_t c, uint32_t d )
+{
+	uint32_t or = ( COLOR_EXTRACT_R( a ) + COLOR_EXTRACT_R( b ) + COLOR_EXTRACT_R( c ) + COLOR_EXTRACT_R( d ) ) / 4;
+	uint32_t og = ( COLOR_EXTRACT_G( a ) + COLOR_EXTRACT_G( b ) + COLOR_EXTRACT_G( c ) + COLOR_EXTRACT_G( d ) ) / 4;
+	uint32_t ob = ( COLOR_EXTRACT_B( a ) + COLOR_EXTRACT_B( b ) + COLOR_EXTRACT_B( c ) + COLOR_EXTRACT_B( d ) ) / 4;
+	uint32_t oa = ( COLOR_EXTRACT_A( a ) + COLOR_EXTRACT_A( b ) + COLOR_EXTRACT_A( c ) + COLOR_EXTRACT_A( d ) ) / 4;
+	return COLOR_COMBINE( or, og, ob, oa );
+}
+
+static void _img_ds2x( uint32_t* dst, unsigned dstW, unsigned dstH, uint32_t* src, unsigned srcW, unsigned srcH )
+{
+	unsigned x, y, sx0, sy0, sx1, sy1;
+	uint32_t c00, c10, c01, c11;
+	for( y = 0; y < dstH; ++y )
+	{
+		for( x = 0; x < dstW; ++x )
+		{
+			sx0 = ( x * 2 ) % srcW;
+			sy0 = ( y * 2 ) % srcH;
+			sx1 = ( x * 2 + 1 ) % srcW;
+			sy1 = ( y * 2 + 1 ) % srcH;
+			
+			c00 = src[ sx0 + sy0 * srcW ];
+			c10 = src[ sx1 + sy0 * srcW ];
+			c01 = src[ sx0 + sy1 * srcW ];
+			c11 = src[ sx1 + sy1 * srcW ];
+			
+			dst[ x + y * dstW ] = _avg_col4( c00, c10, c01, c11 );
+		}
+	}
+}
+
 SGSRESULT SS3D_TextureData_LoadFromFile( SS3D_TextureData* TD, const char* file )
 {
 	unsigned char* out;
@@ -227,13 +266,48 @@ SGSRESULT SS3D_TextureData_LoadFromFile( SS3D_TextureData* TD, const char* file 
 		TD->info.format = SS3DFORMAT_RGBA8;
 		TD->info.flags = 0;
 		TD->info.mipcount = 1;
-		goto success;
+		goto success_genmips;
 	}
 	
 	// type not supported
 	goto failure;
 	
-success:
+success_genmips:
+	if( TD->info.type == SS3DTEXTURE_2D && TD->info.format == SS3DFORMAT_RGBA8 )
+	{
+		size_t addspace = 0;
+		unsigned char* old = out, *cur;
+		
+		// calculate additional space required
+		while( w > 1 && h > 1 )
+		{
+			addspace += w * h * 4;
+			w /= 2; if( w < 1 ) w = 1;
+			h /= 2; if( h < 1 ) h = 1;
+			TD->info.mipcount++;
+		}
+		addspace += 4; /* 1x1 */
+		w = TD->info.width;
+		h = TD->info.height;
+		
+		// reallocate
+		out = (unsigned char*) malloc( addspace );
+		memcpy( out, old, w * h * 4 );
+		free( old );
+		
+		// do cascaded ds2x
+		cur = out;
+		while( w > 1 && h > 1 )
+		{
+			unsigned char* dst = cur + w * h * 4;
+			unsigned pw = w, ph = h;
+			w /= 2; if( w < 1 ) w = 1;
+			h /= 2; if( h < 1 ) h = 1;
+			_img_ds2x( (uint32_t*) dst, w, h, (uint32_t*) cur, pw, ph );
+			cur = dst;
+		}
+	}
+// success:
 	TD->data = out;
 	return SGS_SUCCESS;
 failure:
