@@ -37,9 +37,11 @@ SS3D_Texture_D3D9;
 typedef struct _DeferredRenderingData
 {
 	IDirect3DTexture9* RTT1; /* dR, dG, dB, depth, RGBA16F */
-	IDirect3DTexture9* RTT2; /* vnX, vnY, vnZ, spec, RGBA8 */
+	IDirect3DTexture9* RTT2; /* vnX, vnY, vnZ, spec, RGBA16F */
+	IDirect3DTexture9* RTT3; /* srR, srG, srB, unknown, RGBA16F */
 	IDirect3DSurface9* RTS1; /* surface of RTT1 */
 	IDirect3DSurface9* RTS2; /* surface of RTT2 */
+	IDirect3DSurface9* RTS3; /* surface of RTT3 */
 	IDirect3DSurface9* RTSD; /* depth/stencil surface, D24S8 */
 	int width, height;
 }
@@ -75,20 +77,26 @@ static void drd_init( SS3D_RD3D9* R, DeferredRenderingData* D, int w, int h )
 	hr = D3DCALL_( R->device, CreateTexture, w, h, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A16B16G16R16F, D3DPOOL_DEFAULT, &D->RTT2, NULL );
 	sgs_BreakIf( FAILED( hr ) || !D->RTT2 || !"failed to create rgba16f render target texture" );
 	
+	hr = D3DCALL_( R->device, CreateTexture, w, h, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A16B16G16R16F, D3DPOOL_DEFAULT, &D->RTT3, NULL );
+	sgs_BreakIf( FAILED( hr ) || !D->RTT3 || !"failed to create rgba16f render target texture" );
+	
 	hr = D3DCALL_( R->device, CreateDepthStencilSurface, w, h, D3DFMT_D24S8, D3DMULTISAMPLE_NONE, 0, TRUE, &D->RTSD, NULL );
 	sgs_BreakIf( FAILED( hr ) || !D->RTSD || !"failed to create d24s8 depth+stencil surface" );
 	
 	D3DCALL_( D->RTT1, GetSurfaceLevel, 0, &D->RTS1 );
 	D3DCALL_( D->RTT2, GetSurfaceLevel, 0, &D->RTS2 );
+	D3DCALL_( D->RTT3, GetSurfaceLevel, 0, &D->RTS3 );
 }
 
 static void drd_free( SS3D_RD3D9* R, DeferredRenderingData* D )
 {
 	SAFE_RELEASE( D->RTS1 );
 	SAFE_RELEASE( D->RTS2 );
+	SAFE_RELEASE( D->RTS3 );
 	SAFE_RELEASE( D->RTSD );
 	SAFE_RELEASE( D->RTT1 );
 	SAFE_RELEASE( D->RTT2 );
+	SAFE_RELEASE( D->RTT3 );
 	D->width = 0;
 	D->height = 0;
 }
@@ -109,6 +117,7 @@ static void vshc_set_mat4( SS3D_RD3D9* R, int pos, MAT4 mtx ){ D3DCALL_( R->devi
 static void pshc_set_float( SS3D_RD3D9* R, int pos, float f ){ VEC4 v = { f, f, f, f }; D3DCALL_( R->device, SetPixelShaderConstantF, pos, v, 1 ); }
 static void pshc_set_vec4array( SS3D_RD3D9* R, int pos, VEC4 data, int count ){ D3DCALL_( R->device, SetPixelShaderConstantF, pos, data, count ); }
 // static void pshc_set_int( SS3D_RD3D9* R, int pos, int i ){ VEC4 v = { i, i, i, i }; D3DCALL_( R->device, SetPixelShaderConstantF, pos, v, 1 ); }
+static void pshc_set_mat4( SS3D_RD3D9* R, int pos, MAT4 mtx ){ D3DCALL_( R->device, SetPixelShaderConstantF, pos, mtx[0], 4 ); }
 
 static void shd3d9_free( SS3D_Shader_D3D9* S )
 {
@@ -267,6 +276,7 @@ static D3DFORMAT texfmt2d3d( int fmt )
 {
 	switch( fmt )
 	{
+	case SS3DFORMAT_BGRA8:
 	case SS3DFORMAT_RGBA8: return D3DFMT_A8R8G8B8;
 	case SS3DFORMAT_R5G6B5: return D3DFMT_R5G6B5;
 	
@@ -320,10 +330,9 @@ static void texdatacopy( D3DLOCKED_RECT* plr, SS3D_TextureData* TD, int side, in
 
 static int texd3d9_init( SS3D_RD3D9* R, SS3D_Texture_D3D9* T, SS3D_TextureData* TD )
 {
-	int mip;
+	int mip, side;
 	HRESULT hr;
 	// TODO: filter unsupported formats / dimensions
-	// TODO: generate mipmaps for mipmap-unaware sources if required
 	
 	if( TD->info.type == SS3DTEXTURE_2D )
 	{
@@ -352,6 +361,35 @@ static int texd3d9_init( SS3D_RD3D9* R, SS3D_Texture_D3D9* T, SS3D_TextureData* 
 		T->inh.renderer = &R->inh;
 		T->inh.info = TD->info;
 		T->ptr.tex2d = d3dtex;
+		return 1;
+	}
+	else if( TD->info.type == SS3DTEXTURE_CUBE )
+	{
+		IDirect3DCubeTexture9* d3dtex;
+		
+		hr = D3DCALL_( R->device, CreateCubeTexture, TD->info.width, TD->info.mipcount, 0, texfmt2d3d( TD->info.format ), D3DPOOL_MANAGED, &d3dtex, NULL );
+		
+		// load all mip levels into it
+		for( side = 0; side < 6; ++side )
+		{
+			for( mip = 0; mip < TD->info.mipcount; ++mip )
+			{
+				D3DLOCKED_RECT lr;
+				hr = D3DCALL_( d3dtex, LockRect, side, mip, &lr, NULL, D3DLOCK_DISCARD );
+				if( FAILED( hr ) )
+					return sgs_Msg( R->inh.C, SGS_WARNING, "failed to load texture - error while locking d3d9 texture" );
+				
+				texdatacopy( &lr, TD, side, mip );
+				
+				hr = D3DCALL_( d3dtex, UnlockRect, side, mip );
+				if( FAILED( hr ) )
+					return sgs_Msg( R->inh.C, SGS_WARNING, "failed to load texture - error while unlocking d3d9 texture" );
+			}
+		}
+		
+		T->inh.renderer = &R->inh;
+		T->inh.info = TD->info;
+		T->ptr.cube = d3dtex;
 		return 1;
 	}
 	
@@ -534,6 +572,7 @@ static int rd3d9i_render( SGS_CTX )
 	
 	D3DCALL_( R->device, SetRenderTarget, 0, R->drd.RTS1 );
 	D3DCALL_( R->device, SetRenderTarget, 1, R->drd.RTS2 );
+	D3DCALL_( R->device, SetRenderTarget, 2, R->drd.RTS3 );
 	D3DCALL_( R->device, SetDepthStencilSurface, R->drd.RTSD );
 	
 	if( scene->viewport )
@@ -552,10 +591,12 @@ static int rd3d9i_render( SGS_CTX )
 	SS3D_Shader_D3D9* sh = get_shader( R, "testDR" );
 	use_shader( R, sh );
 	
-	SS3D_Texture_D3D9* tx = get_texture( R, "testdata/concretewall5.png" );
+	SS3D_Texture_D3D9* tx = get_texture( R, "testdata/concretewall5.dds" );
 	use_texture( R, 0, tx );
 	SS3D_Texture_D3D9* tx2 = get_texture( R, "testdata/concretewall5normal.png" );
 	use_texture( R, 1, tx2 );
+	SS3D_Texture_D3D9* txr = get_texture( R, "testdata/cubemap.dds" );
+	use_texture( R, 7, txr );
 	
 	D3DCALL_( R->device, SetTransform, D3DTS_VIEW, (D3DMATRIX*) *cam->mView );
 	D3DCALL_( R->device, SetTransform, D3DTS_PROJECTION, (D3DMATRIX*) *cam->mProj );
@@ -563,12 +604,14 @@ static int rd3d9i_render( SGS_CTX )
 	vshc_set_mat4( R, 4, cam->mView );
 	vshc_set_mat4( R, 12, cam->mProj );
 	pshc_set_float( R, 0, cam->zfar );
+	pshc_set_mat4( R, 12, cam->mInvView );
 	
 	D3DCALL_( R->device, SetFVF, D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_DIFFUSE | D3DFVF_TEX1 );
 	D3DCALL_( R->device, DrawIndexedPrimitiveUP, D3DPT_TRIANGLELIST, 0, 12, 2, testIndices, D3DFMT_INDEX16, testVertices, sizeof(*testVertices) );
 	
 	D3DCALL_( R->device, SetRenderTarget, 0, R->bb_color );
 	D3DCALL_( R->device, SetRenderTarget, 1, NULL );
+	D3DCALL_( R->device, SetRenderTarget, 2, NULL );
 	D3DCALL_( R->device, SetDepthStencilSurface, R->bb_depth );
 	
 	float invQW = 2.0f, invQH = 2.0f;
@@ -626,6 +669,7 @@ static int rd3d9i_render( SGS_CTX )
 	
 	D3DCALL_( R->device, SetTexture, 0, (IDirect3DBaseTexture9*) R->drd.RTT1 );
 	D3DCALL_( R->device, SetTexture, 1, (IDirect3DBaseTexture9*) R->drd.RTT2 );
+	D3DCALL_( R->device, SetTexture, 2, (IDirect3DBaseTexture9*) R->drd.RTT3 );
 	D3DCALL_( R->device, SetFVF, D3DFVF_XYZ | D3DFVF_TEX2 );
 	D3DCALL_( R->device, DrawPrimitiveUP, D3DPT_TRIANGLEFAN, 2, ssVertices, sizeof(*ssVertices) );
 	D3DCALL_( R->device, SetTexture, 0, NULL );
@@ -636,8 +680,10 @@ static int rd3d9i_render( SGS_CTX )
 	RECT srcRect = { 0, 0, w, h };
 	RECT dstRect1 = { 0, h/8, w/8, h/4 };
 	RECT dstRect2 = { w/8, h/8, w/4, h/4 };
+	RECT dstRect3 = { w/4, h/8, w*3/8, h/4 };
 	D3DCALL_( R->device, StretchRect, R->drd.RTS1, &srcRect, R->bb_color, &dstRect1, D3DTEXF_POINT );
 	D3DCALL_( R->device, StretchRect, R->drd.RTS2, &srcRect, R->bb_color, &dstRect2, D3DTEXF_POINT );
+	D3DCALL_( R->device, StretchRect, R->drd.RTS3, &srcRect, R->bb_color, &dstRect3, D3DTEXF_POINT );
 	
 	return 0;
 }

@@ -1,6 +1,9 @@
 
 
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <math.h>
 
 #include "dds.h"
 
@@ -130,8 +133,8 @@ DXGI_FORMAT;
 
 #ifndef MAKEFOURCC
 	#define MAKEFOURCC(ch0, ch1, ch2, ch3)                              \
-				((uint32)(byte)(ch0) | ((uint32)(byte)(ch1) << 8) |       \
-				((uint32)(byte)(ch2) << 16) | ((uint32)(byte)(ch3) << 24))
+				((dds_u32)(dds_byte)(ch0) | ((dds_u32)(dds_byte)(ch1) << 8) |       \
+				((dds_u32)(dds_byte)(ch2) << 16) | ((dds_u32)(dds_byte)(ch3) << 24))
 #endif /* defined(MAKEFOURCC) */
 
 
@@ -143,50 +146,40 @@ DXGI_FORMAT;
 #define DDS_ALPHA       0x00000002  // DDPF_ALPHA
 #define DDS_PAL8        0x00000020  // DDPF_PALETTEINDEXED8
 
-#define DDS_HEADER_FLAGS_TEXTURE        0x00001007  // DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT
-#define DDS_HEADER_FLAGS_MIPMAP         0x00020000  // DDSD_MIPMAPCOUNT
-#define DDS_HEADER_FLAGS_VOLUME         0x00800000  // DDSD_DEPTH
-#define DDS_HEADER_FLAGS_PITCH          0x00000008  // DDSD_PITCH
-#define DDS_HEADER_FLAGS_LINEARSIZE     0x00080000  // DDSD_LINEARSIZE
-
-#define DDS_HEIGHT 0x00000002 // DDSD_HEIGHT
-#define DDS_WIDTH  0x00000004 // DDSD_WIDTH
+#define DDSD_MIPMAPCOUNT 0x00020000
+#define DDSD_DEPTH       0x00800000
+#define DDSD_PITCH       0x00000008
+#define DDSD_LINEARSIZE  0x00080000
 
 #define DDS_SURFACE_FLAGS_TEXTURE 0x00001000 // DDSCAPS_TEXTURE
 #define DDS_SURFACE_FLAGS_MIPMAP  0x00400008 // DDSCAPS_COMPLEX | DDSCAPS_MIPMAP
 #define DDS_SURFACE_FLAGS_CUBEMAP 0x00000008 // DDSCAPS_COMPLEX
 
-#define DDS_CUBEMAP_POSITIVEX 0x00000600 // DDSCAPS2_CUBEMAP | DDSCAPS2_CUBEMAP_POSITIVEX
-#define DDS_CUBEMAP_NEGATIVEX 0x00000a00 // DDSCAPS2_CUBEMAP | DDSCAPS2_CUBEMAP_NEGATIVEX
-#define DDS_CUBEMAP_POSITIVEY 0x00001200 // DDSCAPS2_CUBEMAP | DDSCAPS2_CUBEMAP_POSITIVEY
-#define DDS_CUBEMAP_NEGATIVEY 0x00002200 // DDSCAPS2_CUBEMAP | DDSCAPS2_CUBEMAP_NEGATIVEY
-#define DDS_CUBEMAP_POSITIVEZ 0x00004200 // DDSCAPS2_CUBEMAP | DDSCAPS2_CUBEMAP_POSITIVEZ
-#define DDS_CUBEMAP_NEGATIVEZ 0x00008200 // DDSCAPS2_CUBEMAP | DDSCAPS2_CUBEMAP_NEGATIVEZ
-
-#define DDS_CUBEMAP_ALLFACES (DDS_CUBEMAP_POSITIVEX | DDS_CUBEMAP_NEGATIVEX |\
-                              DDS_CUBEMAP_POSITIVEY | DDS_CUBEMAP_NEGATIVEY |\
-                              DDS_CUBEMAP_POSITIVEZ | DDS_CUBEMAP_NEGATIVEZ)
-
-#define DDS_CUBEMAP 0x00000200 // DDSCAPS2_CUBEMAP
-
-#define DDS_FLAGS_VOLUME 0x00200000 // DDSCAPS2_VOLUME
+#define DDSCAPS2_CUBEMAP 0x200
+#define DDSCAPS2_CUBEMAP_POSITIVEX 0x400
+#define DDSCAPS2_CUBEMAP_NEGATIVEX 0x800
+#define DDSCAPS2_CUBEMAP_POSITIVEY 0x1000
+#define DDSCAPS2_CUBEMAP_NEGATIVEY 0x2000
+#define DDSCAPS2_CUBEMAP_POSITIVEZ 0x4000
+#define DDSCAPS2_CUBEMAP_NEGATIVEZ 0x8000
+#define DDSCAPS2_VOLUME 0x200000
 
 
-typedef struct _dds_pixelformat
+typedef struct _DDS_PIXELFORMAT
 {
-	uint32  size;
-	uint32  flags;
-	uint32  fourCC;
-	uint32  RGBBitCount;
-	uint32  RBitMask;
-	uint32  GBitMask;
-	uint32  BBitMask;
-	uint32  ABitMask;
+	dds_u32  size;
+	dds_u32  flags;
+	dds_u32  fourCC;
+	dds_u32  RGBBitCount;
+	dds_u32  RBitMask;
+	dds_u32  GBitMask;
+	dds_u32  BBitMask;
+	dds_u32  ABitMask;
 }
-dds_pixelformat;
+DDS_PIXELFORMAT;
 
 #define DDS_MAGIC "DDS "
-typedef struct _dds_header
+typedef struct _DDS_HEADER
 {
 	char            magic[4];
 	dds_u32         size;
@@ -197,26 +190,26 @@ typedef struct _dds_header
 	dds_u32         depth; // only if DDS_HEADER_FLAGS_VOLUME is set in flags
 	dds_u32         mipMapCount;
 	dds_u32         reserved1[11];
-	dds_pixelformat ddspf;
+	DDS_PIXELFORMAT ddspf;
 	dds_u32         caps;
 	dds_u32         caps2;
 	dds_u32         caps3;
 	dds_u32         caps4;
 	dds_u32         reserved2;
 }
-dds_header;
+DDS_HEADER;
 
-typedef struct _dds_header_dxt10
+typedef struct _DDS_HEADER_DXT10
 {
 	DXGI_FORMAT dxgiFormat;
-	uint32      resourceDimension;
-	uint32      miscFlag; // see D3D11_RESOURCE_MISC_FLAG
-	uint32      arraySize;
-	uint32      reserved;
+	dds_u32     resourceDimension;
+	dds_u32     miscFlag; // see D3D11_RESOURCE_MISC_FLAG
+	dds_u32     arraySize;
+	dds_u32     reserved;
 }
-dds_header_dxt10;
+DDS_HEADER_DXT10;
 
-
+/*
 static size_t BitsPerPixel( DXGI_FORMAT fmt )
 {
 	switch( fmt )
@@ -388,6 +381,9 @@ static void GetSurfaceInfo( size_t width, size_t height, DXGI_FORMAT fmt, size_t
 	case DXGI_FORMAT_G8R8_G8B8_UNORM:
 		packed = 1;
 		break;
+		
+	default:
+		break;
 	}
 
 	if (bc)
@@ -426,7 +422,7 @@ static void GetSurfaceInfo( size_t width, size_t height, DXGI_FORMAT fmt, size_t
 	if( outRowBytes ) *outRowBytes = rowBytes;
 	if( outNumRows ) *outNumRows = numRows;
 }
-
+*/
 
 #define ISBITMASK(r, g, b, a) (ddpf.RBitMask == r && ddpf.GBitMask == g && ddpf.BBitMask == b && ddpf.ABitMask == a)
 
@@ -561,83 +557,280 @@ static DXGI_FORMAT GetDXGIFormat(DDS_PIXELFORMAT ddpf)
 }
 
 
-static int dds_verify_header( dds_byte* bytes, size_t size, dds_header** outhdr, dds_header_dxt10** outhdr10 )
+static int dds_verify_header( dds_byte* bytes, size_t size, DDS_HEADER** outhdr, DDS_HEADER_DXT10** outhdr10 )
 {
-	dds_header* header;
+	DDS_HEADER* header;
 	
 	if( memcmp( bytes, DDS_MAGIC, 4 ) != 0 )
 		return DDS_EINVAL;
 	
-	header = (dds_header*) bytes;
+	header = (DDS_HEADER*) bytes;
 	*outhdr = header;
 	*outhdr10 = NULL;
 	
 	if( ( header->ddspf.flags & DDS_FOURCC ) &&
 		( MAKEFOURCC( 'D', 'X', '1', '0' ) == header->ddspf.fourCC ) )
 	{
-		if( size < sizeof( dds_header ) + sizeof( dds_header_dxt10 ) )
+		if( size < sizeof( DDS_HEADER ) + sizeof( DDS_HEADER_DXT10 ) )
 			return DDS_EINVAL;
-		*outhdr10 = (dds_header_dxt10*)( bytes + sizeof( dds_header ) );
+		*outhdr10 = (DDS_HEADER_DXT10*)( bytes + sizeof( DDS_HEADER ) );
 	}
 	
 	return DDS_SUCCESS;
 }
 
+dds_u32 dds_supported_format( DXGI_FORMAT fmt )
+{
+	switch( fmt )
+	{
+	case DXGI_FORMAT_R8G8B8A8_UNORM: return DDS_FMT_R8G8B8A8;
+	case DXGI_FORMAT_B8G8R8A8_UNORM: return DDS_FMT_B8G8R8A8;
+	case DXGI_FORMAT_BC1_UNORM: return DDS_FMT_DXT1;
+	case DXGI_FORMAT_BC2_UNORM: return DDS_FMT_DXT3;
+	case DXGI_FORMAT_BC3_UNORM: return DDS_FMT_DXT5;
+	default: return DDS_FMT_UNKNOWN;
+	}
+}
 
-int dds_load_from_memory( dds_byte* bytes, size_t size, dds_info* out, dds_u32* supfmt )
+DDSRESULT dds_load_info( dds_info* out, size_t size, DDS_HEADER* hdr, DDS_HEADER_DXT10* hdr10 )
+{
+	static const dds_u32 sideflags[6] = { DDS_CUBEMAP_PX, DDS_CUBEMAP_NX, DDS_CUBEMAP_PY, DDS_CUBEMAP_NY, DDS_CUBEMAP_PZ, DDS_CUBEMAP_NZ };
+	
+	int i;
+	dds_u32 sum, sum2;
+	dds_image_info plane;
+	
+	out->data = NULL;
+	out->side = 0;
+	out->mip = 0;
+	
+	out->image.width = hdr->width;
+	out->image.height = hdr->height;
+	out->image.depth = hdr->flags & DDSD_DEPTH ? hdr->depth : 1;
+	out->image.format = dds_supported_format( GetDXGIFormat( hdr->ddspf ) );
+	
+	out->mipcount = hdr->flags & DDSD_MIPMAPCOUNT ? hdr->mipMapCount : 1;
+	out->flags = 0;
+	if( hdr->caps2 & DDSCAPS2_VOLUME ) out->flags |= DDS_VOLUME;
+	if( hdr->caps2 & DDSCAPS2_CUBEMAP ) out->flags |= DDS_CUBEMAP;
+	if( hdr->caps2 & DDSCAPS2_CUBEMAP_POSITIVEX ) out->flags |= DDS_CUBEMAP_PX;
+	if( hdr->caps2 & DDSCAPS2_CUBEMAP_NEGATIVEX ) out->flags |= DDS_CUBEMAP_NX;
+	if( hdr->caps2 & DDSCAPS2_CUBEMAP_POSITIVEY ) out->flags |= DDS_CUBEMAP_PY;
+	if( hdr->caps2 & DDSCAPS2_CUBEMAP_NEGATIVEY ) out->flags |= DDS_CUBEMAP_NY;
+	if( hdr->caps2 & DDSCAPS2_CUBEMAP_POSITIVEZ ) out->flags |= DDS_CUBEMAP_PZ;
+	if( hdr->caps2 & DDSCAPS2_CUBEMAP_NEGATIVEZ ) out->flags |= DDS_CUBEMAP_NZ;
+	
+	if( out->mipcount > 16 )
+		return DDS_ENOTSUP;
+	
+	sum = 0;
+	for( i = 0; i < out->mipcount; ++i )
+	{
+		out->mipoffsets[ i ] = sum;
+		dds_getinfo( out, &plane );
+		sum += plane.size;
+	}
+	sum2 = 0;
+	for( i = 0; i < 6; ++i )
+	{
+		out->sideoffsets[ i ] = sum2;
+		if( out->flags & DDS_CUBEMAP && out->flags & sideflags[ i ] )
+			sum2 += sum;
+	}
+	
+	out->image.size = out->flags & DDS_CUBEMAP ? sum2 : sum;
+	
+	printf( "loaded dds: w=%d h=%d d=%d fmt=%d mips=%d cube=%s size=%d\n", (int) out->image.width, (int) out->image.height,
+		(int) out->image.depth, (int) out->image.format, (int) out->mipcount, out->flags & DDS_CUBEMAP ? "true" : "false", (int) out->image.size );
+	
+	return DDS_SUCCESS;
+}
+
+DDSRESULT dds_check_supfmt( dds_info* info, const dds_u32* supfmt )
+{
+	if( !supfmt )
+		return DDS_SUCCESS;
+	while( *supfmt )
+	{
+		if( info->image.format == *supfmt++ )
+			return DDS_SUCCESS;
+	}
+	return DDS_ENOTSUP;
+}
+
+DDSRESULT dds_load_from_memory( dds_byte* bytes, size_t size, dds_info* out, const dds_u32* supfmt )
 {
 	int res;
-	dds_header* header;
-	dds_header_dxt10* header10;
+	DDS_HEADER* header;
+	DDS_HEADER_DXT10* header10;
 	
-	if( size < sizeof( dds_header ) )
+	if( size < sizeof( DDS_HEADER ) )
 		return DDS_EINVAL;
 	
 	res = dds_verify_header( bytes, size, &header, &header10 );
 	if( res < 0 )
 		return res;
 	
-	dds_load_info( out, header, header10 );
+	if( dds_load_info( out, size, header, header10 ) < 0 )
+		return DDS_EINVAL;
 	if( dds_check_supfmt( out, supfmt ) < 0 )
 		return DDS_ENOTSUP;
+	
+	out->data = bytes;
+	out->srcsize = size;
+	out->hdrsize = 0;
+	return DDS_SUCCESS;
 }
 
-int dds_load_from_file( const char* file, dds_info* out, dds_u32* supfmt )
+DDSRESULT dds_load_from_file( const char* file, dds_info* out, const dds_u32* supfmt )
 {
 	int res;
-	size_t numread;
-	char ddsheader[ sizeof( dds_header ) + sizeof( dds_header_dxt10 ) ];
-	dds_header* header;
-	dds_header_dxt10* header10;
+	size_t numread, filesize;
+	dds_byte ddsheader[ sizeof( DDS_HEADER ) + sizeof( DDS_HEADER_DXT10 ) ];
+	DDS_HEADER* header;
+	DDS_HEADER_DXT10* header10;
 	
 	FILE* fp = fopen( file, "rb" );
 	if( !fp )
 		return DDS_ENOTFND;
 	
-	numread = fread( ddsheader, 1, sizeof( dds_header ) );
-	if( numread < sizeof( dds_header ) )
+	numread = fread( ddsheader, 1, sizeof( DDS_HEADER ), fp );
+	if( numread < sizeof( DDS_HEADER ) )
 	{
 		fclose( fp );
 		return DDS_EINVAL;
 	}
 	
-	res = dds_verify_header( bytes, numread, &header, &header10 );
+	fseek( fp, 0, SEEK_END );
+	filesize = ftell( fp );
+	fseek( fp, 0, SEEK_SET );
+	
+	res = dds_verify_header( ddsheader, numread, &header, &header10 );
 	if( res < 0 )
 	{
 		fclose( fp );
 		return res;
 	}
 	
-	dds_load_info( out, header, header10 );
+	if( dds_load_info( out, filesize, header, header10 ) < 0 )
+	{
+		fclose( fp );
+		return DDS_EINVAL;
+	}
 	if( dds_check_supfmt( out, supfmt ) < 0 )
+	{
+		fclose( fp );
 		return DDS_ENOTSUP;
+	}
 	
+	out->data = fp;
+	out->srcsize = filesize;
+	out->hdrsize = sizeof( DDS_HEADER ) + ( header10 ? sizeof( DDS_HEADER_DXT10 ) : 0 );
+	out->flags |= DDS_FILE_READER;
 	return DDS_SUCCESS;
+}
+
+DDSRESULT dds_seek( dds_info* info, int side, int mip )
+{
+	static const dds_u32 sideflags[6] = { DDS_CUBEMAP_PX, DDS_CUBEMAP_NX, DDS_CUBEMAP_PY, DDS_CUBEMAP_NY, DDS_CUBEMAP_PZ, DDS_CUBEMAP_NZ };
+	
+	if( mip < 0 || mip >= info->mipcount )
+		return DDS_ENOTFND;
+	
+	if( info->flags & DDS_CUBEMAP )
+	{
+		if( side < 0 || side >= 6 )
+			return DDS_ENOTFND;
+		dds_u32 sideflag = sideflags[ side ];
+		if( !( info->flags & sideflag ) )
+			return DDS_ENOTFND;
+	}
+	else
+	{
+		if( side != 0 )
+			return DDS_ENOTFND;
+	}
+	
+	info->side = side;
+	info->mip = mip;
+	return DDS_SUCCESS;
+}
+
+void dds_getinfo( dds_info* info, dds_image_info* outplaneinfo )
+{
+	int mippwr = pow( 2, info->mip );
+	int fmt = info->image.format;
+	
+	*outplaneinfo = info->image;
+	outplaneinfo->width /= mippwr;
+	outplaneinfo->height /= mippwr;
+	outplaneinfo->depth /= mippwr;
+	if( outplaneinfo->width < 1 ) outplaneinfo->width = 1;
+	if( outplaneinfo->height < 1 ) outplaneinfo->height = 1;
+	if( outplaneinfo->depth < 1 ) outplaneinfo->depth = 1;
+	
+	if( fmt == DDS_FMT_DXT1 || fmt == DDS_FMT_DXT3 || fmt == DDS_FMT_DXT5 )
+	{
+		int p = ( outplaneinfo->width + 3 ) / 4;
+		if( p < 1 ) p = 1;
+		outplaneinfo->pitch = p * ( fmt == DDS_FMT_DXT1 ? 8 : 16 );
+		outplaneinfo->size = outplaneinfo->pitch * ( ( outplaneinfo->height + 3 ) / 4 );
+	}
+	else /* RGBA8 / BGRA8 */
+	{
+		outplaneinfo->pitch = outplaneinfo->width * 4;
+		outplaneinfo->size = outplaneinfo->pitch * outplaneinfo->height * outplaneinfo->depth;
+	}
+}
+
+DDSBOOL dds_read( dds_info* info, void* out )
+{
+	dds_image_info plane;
+	dds_u32 offset = info->hdrsize + info->sideoffsets[ info->side ] + info->mipoffsets[ info->mip ];
+	dds_getinfo( info, &plane );
+	
+	if( info->flags & DDS_FILE_READER )
+	{
+		fseek( (FILE*) info->data, offset, SEEK_SET );
+		return fread( out, 1, plane.size, (FILE*) info->data ) == plane.size;
+	}
+	else
+	{
+		if( offset + plane.size > info->srcsize )
+			return 0;
+		memcpy( out, ((dds_byte*) info->data) + offset, plane.size );
+		return 1;
+	}
+}
+
+dds_byte* dds_read_all( dds_info* info )
+{
+	int s, m, nsz = info->flags & DDS_CUBEMAP ? 6 : 1;
+	static const dds_u32 sideflags[6] = { DDS_CUBEMAP_PX, DDS_CUBEMAP_NX, DDS_CUBEMAP_PY, DDS_CUBEMAP_NY, DDS_CUBEMAP_PZ, DDS_CUBEMAP_NZ };
+	dds_byte* out = (dds_byte*) malloc( info->image.size );
+	
+	for( s = 0; s < nsz; ++s )
+	{
+		if( nsz == 6 && !( info->flags & sideflags[ s ] ) )
+			continue;
+		for( m = 0; m < info->mipcount; ++m )
+		{
+			if( dds_seek( info, s, m ) != DDS_SUCCESS ||
+				!dds_read( info, out + info->sideoffsets[ s ] + info->mipoffsets[ m ] ) )
+				goto fail;
+		}
+	}
+	
+	return out;
+fail:
+	free( out );
+	return NULL;
 }
 
 void dds_close( dds_info* info )
 {
-	if( info->flags & DDS_READING_FILE )
+	if( info->flags & DDS_FILE_READER )
 		fclose( (FILE*) info->data );
+	info->data = NULL;
 }
 

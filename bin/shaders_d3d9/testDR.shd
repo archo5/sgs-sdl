@@ -31,6 +31,9 @@ void main
 
 sampler2D Tex0 : register(s0);
 sampler2D Tex1 : register(s1);
+samplerCUBE Tex7 : register(s7);
+
+float4x4 mInvView : register(c12);
 
 half3 encodeN( half3 n )
 {
@@ -45,7 +48,8 @@ void main
 	float4 icol : COLOR0,
 	float2 itex : TEXCOORD0,
 	out float4 ocol0 : COLOR0,
-	out float4 ocol1 : COLOR1
+	out float4 ocol1 : COLOR1,
+	out float4 ocol2 : COLOR2
 )
 {
 	float3 col = tex2D( Tex0, itex ).rgb * icol.rgb;
@@ -57,8 +61,11 @@ void main
 	float3 N = iN;
 	
 	float3 Normal = nrm.x * T + nrm.y * B + nrm.z * N;
+	float3 refView = reflect( -normalize( itfpos ), Normal );
+	float3 refWorld = mul( mInvView, float4( refView, 0 ) ).xyz;
 	
 	ocol1 = float4( encodeN( Normal ), 0 );
+	ocol2 = float4( pow( texCUBE( Tex7, refWorld ).rgb, 2 ) * 0.5, 0 );
 }
 
 #endif

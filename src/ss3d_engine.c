@@ -1,6 +1,7 @@
 
 
 #include "lodepng.h"
+#include "dds.h"
 
 #include "ss3d_engine.h"
 
@@ -133,7 +134,7 @@ static void scene_poke_resource( SS3D_Scene* S, sgs_VHTable* which, sgs_VarObj* 
 
 static size_t divideup( size_t x, int d )
 {
-	return x / d + ( x % d ? 1 : 0 );
+	return ( x + d - 1 ) / d;
 }
 
 size_t SS3D_TextureInfo_GetTextureSideSize( SS3D_TextureInfo* TI )
@@ -143,6 +144,7 @@ size_t SS3D_TextureInfo_GetTextureSideSize( SS3D_TextureInfo* TI )
 	switch( TI->format )
 	{
 	/* bytes per pixel */
+	case SS3DFORMAT_BGRA8:
 	case SS3DFORMAT_RGBA8: bpu = 4; break;
 	case SS3DFORMAT_R5G6B5: bpu = 2; break;
 	/* bytes per block */
@@ -172,6 +174,7 @@ void SS3D_TextureInfo_GetCopyDims( SS3D_TextureInfo* TI, size_t* outcopyrowsize,
 	switch( TI->format )
 	{
 	/* bytes per pixel */
+	case SS3DFORMAT_BGRA8:
 	case SS3DFORMAT_RGBA8: bpu = 4; break;
 	case SS3DFORMAT_R5G6B5: bpu = 2; break;
 	/* bytes per block */
@@ -246,13 +249,52 @@ static void _img_ds2x( uint32_t* dst, unsigned dstW, unsigned dstH, uint32_t* sr
 	}
 }
 
+static int ddsfmt_to_enginefmt( dds_u32 fmt )
+{
+	switch( fmt )
+	{
+	case DDS_FMT_R8G8B8A8: return SS3DFORMAT_RGBA8;
+	case DDS_FMT_B8G8R8A8: return SS3DFORMAT_BGRA8;
+	case DDS_FMT_DXT1: return SS3DFORMAT_DXT1;
+	case DDS_FMT_DXT3: return SS3DFORMAT_DXT3;
+	case DDS_FMT_DXT5: return SS3DFORMAT_DXT5;
+	default: return SS3DFORMAT_UNKNOWN;
+	}
+}
+
 SGSRESULT SS3D_TextureData_LoadFromFile( SS3D_TextureData* TD, const char* file )
 {
 	unsigned char* out;
 	unsigned w, h;
 	int err;
 	
+	static const dds_u32 dds_supfmt[] = { DDS_FMT_R8G8B8A8, DDS_FMT_B8G8R8A8, DDS_FMT_DXT1, DDS_FMT_DXT3, DDS_FMT_DXT5, 0 };
+	dds_info ddsinfo;
+	
 	memset( TD, 0, sizeof(*TD) );
+	
+	// Try to load DDS
+	err = dds_load_from_file( file, &ddsinfo, dds_supfmt );
+	if( err == DDS_ENOTFND ) return SGS_ENOTFND;
+	if( err == DDS_SUCCESS )
+	{
+		dds_u32 cmf = ddsinfo.flags & DDS_CUBEMAP_FULL;
+		if( cmf && cmf != DDS_CUBEMAP_FULL )
+		{
+			dds_close( &ddsinfo );
+			return SGS_EINVAL;
+		}
+		TD->info.type = ddsinfo.flags & DDS_CUBEMAP ? SS3DTEXTURE_CUBE : ( ddsinfo.flags & DDS_VOLUME ? SS3DTEXTURE_VOLUME : SS3DTEXTURE_2D );
+		TD->info.width = ddsinfo.image.width;
+		TD->info.height = ddsinfo.image.height;
+		TD->info.depth = ddsinfo.image.depth;
+		TD->info.format = ddsfmt_to_enginefmt( ddsinfo.image.format );
+		TD->info.mipcount = ddsinfo.mipcount;
+		out = dds_read_all( &ddsinfo );
+		dds_close( &ddsinfo );
+		sgs_BreakIf( !out );
+		goto success;
+	}
 	
 	// Try to load PNG
 	err = lodepng_decode32_file( &out, &w, &h, file );
@@ -273,7 +315,7 @@ SGSRESULT SS3D_TextureData_LoadFromFile( SS3D_TextureData* TD, const char* file 
 	goto failure;
 	
 success_genmips:
-	if( TD->info.type == SS3DTEXTURE_2D && TD->info.format == SS3DFORMAT_RGBA8 )
+	if( TD->info.type == SS3DTEXTURE_2D && ( TD->info.format == SS3DFORMAT_RGBA8 || TD->info.format == SS3DFORMAT_BGRA8 ) )
 	{
 		size_t addspace = 0;
 		unsigned char* old = out, *cur;
@@ -307,7 +349,7 @@ success_genmips:
 			cur = dst;
 		}
 	}
-// success:
+success:
 	TD->data = out;
 	return SGS_SUCCESS;
 failure:
@@ -492,6 +534,8 @@ sgs_ObjInterface SS3D_CullScene_iface[1] =
 static void camera_recalc_viewmtx( SS3D_Camera* CAM )
 {
 	SS3D_Mtx_LookAt( CAM->mView, CAM->position, CAM->direction, CAM->up );
+	memcpy( CAM->mInvView, CAM->mView, sizeof( CAM->mView ) );
+	SS3D_Mtx_Transpose( CAM->mInvView );
 }
 
 static void camera_recalc_projmtx( SS3D_Camera* CAM )

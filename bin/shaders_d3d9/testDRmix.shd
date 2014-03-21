@@ -29,6 +29,7 @@ PointLight gPLights[32] : register(c32); /* ends before c96 */
 
 sampler2D texRGBD : register(s0);
 sampler2D texNrmS : register(s1);
+sampler2D texRefE : register(s2);
 
 half3 decodeN( half4 enc )
 {
@@ -39,6 +40,7 @@ float4 main( float2 itex : TEXCOORD0, float3 ifr : TEXCOORD1 ) : COLOR0
 {
 	float4 rgbd = tex2D( texRGBD, itex );
 	float4 nrms = tex2D( texNrmS, itex );
+	float4 refe = tex2D( texRefE, itex );
 	
 	float3 viewPos = ifr * rgbd.w;
 	float3 viewNormal = decodeN( nrms );
@@ -64,7 +66,7 @@ float4 main( float2 itex : TEXCOORD0, float3 ifr : TEXCOORD1 ) : COLOR0
 	float specularPower = 256;
 	
 	float3 totalDiffuse = float3(0,0,0);
-	float3 totalSpecular = float3(0,0,0);
+	float3 totalSpecular = refe.xyz; // float3(0,0,0);
 	
 	/* AMBIENT TEST */
 	totalDiffuse += float3(0.01,0.01,0.01);
