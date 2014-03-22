@@ -65,7 +65,7 @@ void main
 	float3 refWorld = mul( mInvView, float4( refView, 0 ) ).xyz;
 	
 	ocol1 = float4( encodeN( Normal ), 0 );
-	ocol2 = float4( pow( texCUBE( Tex7, refWorld ).rgb, 2 ) * 0.5, 0 );
+	ocol2 = float4( texCUBElod( Tex7, float4( refWorld.xzy*float3(1,-1,1), 1 ) ).rgb * 0.5, 0 );
 }
 
 #endif

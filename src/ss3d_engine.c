@@ -9,6 +9,16 @@
 #define CN( x ) { "SS3D" #x, SS3D##x }
 
 
+void sgs_ObjAssign( SGS_CTX, sgs_VarObj** pobj, sgs_VarObj* src )
+{
+	if( *pobj )
+		sgs_ObjRelease( C, *pobj );
+	*pobj = src;
+	if( src )
+		sgs_ObjAcquire( C, src );
+}
+
+
 //
 // MATH
 
@@ -365,13 +375,16 @@ void SS3D_TextureData_Free( SS3D_TextureData* TD )
 size_t SS3D_TextureData_GetMipDataOffset( SS3D_TextureData* TD, int side, int mip )
 {
 	size_t off = 0;
-	int mipit = mip, numsides = TD->info.type == SS3DTEXTURE_CUBE ? 6 : 1;
+	int mipit = mip;
 	while( mipit --> 0 )
-		off += SS3D_TextureData_GetMipDataSize( TD, mipit ) * numsides;
+		off += SS3D_TextureData_GetMipDataSize( TD, mipit );
 	if( side && TD->info.type == SS3DTEXTURE_CUBE )
 	{
-		size_t curlev = SS3D_TextureData_GetMipDataSize( TD, mip );
-		off += curlev * side;
+		size_t fullsidesize = 0;
+		mipit = TD->info.mipcount;
+		while( mipit --> 0 )
+			fullsidesize += SS3D_TextureData_GetMipDataSize( TD, mipit );
+		off += fullsidesize * side;
 	}
 	return off;
 }
@@ -382,6 +395,97 @@ size_t SS3D_TextureData_GetMipDataSize( SS3D_TextureData* TD, int mip )
 	if( !SS3D_TextureInfo_GetMipInfo( &TD->info, mip, &mipTI ) )
 		return 0;
 	return SS3D_TextureInfo_GetTextureSideSize( &mipTI );
+}
+
+
+//
+// VDECL
+
+#define USAGE_PADDING 723
+const char* SS3D_VDeclInfo_Parse( SS3D_VDeclInfo* info, const char* text )
+{
+	int offset = 0, count = 0, align32 = 0;
+	if( *text == '|' )
+	{
+		align32 = 1;
+		text++;
+	}
+	while( *text )
+	{
+		int usage = -1, type = -1, size = -1;
+		char chr_usage, chr_type, chr_mult;
+		chr_usage = *text++; if( !chr_usage ) return "unexpected end of sequence";
+		chr_type = *text++; if( !chr_type ) return "unexpected end of sequence";
+		chr_mult = *text++; if( !chr_mult ) return "unexpected end of sequence";
+		
+		if( chr_usage == 'p' ) usage = SS3D_VDECLUSAGE_POSITION;
+		else if( chr_usage == 'c' ) usage = SS3D_VDECLUSAGE_COLOR;
+		else if( chr_usage == 'n' ) usage = SS3D_VDECLUSAGE_NORMAL;
+		else if( chr_usage == 't' ) usage = SS3D_VDECLUSAGE_TANGENT;
+		else if( chr_usage == '0' ) usage = SS3D_VDECLUSAGE_TEXTURE0;
+		else if( chr_usage == '1' ) usage = SS3D_VDECLUSAGE_TEXTURE1;
+		else if( chr_usage == '2' ) usage = SS3D_VDECLUSAGE_TEXTURE2;
+		else if( chr_usage == '3' ) usage = SS3D_VDECLUSAGE_TEXTURE3;
+		else if( chr_usage == 'x' ) usage = USAGE_PADDING;
+		else return "usage type specifier not recognized";
+		
+		if( chr_type == 'f' )
+		{
+			if( chr_mult == '1' ){ type = SS3D_VDECLTYPE_FLOAT1; size = 4; }
+			else if( chr_mult == '2' ){ type = SS3D_VDECLTYPE_FLOAT2; size = 8; }
+			else if( chr_mult == '3' ){ type = SS3D_VDECLTYPE_FLOAT3; size = 12; }
+			else if( chr_mult == '4' ){ type = SS3D_VDECLTYPE_FLOAT4; size = 16; }
+			else return "invalid multiplier";
+		}
+		else if( chr_type == 'b' )
+		{
+			if( chr_mult == '1' || chr_mult == '2' || chr_mult == '3' )
+				return "type/multiplier combo not supported";
+			else if( chr_mult == '4' ){ type = SS3D_VDECLTYPE_BCOL4; size = 4; }
+			else return "invalid multiplier";
+		}
+		else return "invalid data type specified";
+		
+		info->offsets[ count ] = offset;
+		info->types[ count ] = type;
+		info->usages[ count ] = usage;
+		count++;
+		offset += size;
+	}
+	
+	if( align32 )
+		offset = ( ( offset + 31 ) / 32 ) * 32;
+	
+	if( offset == 0 )
+		return "vertex is empty";
+	if( offset > 255 )
+		return "vertex size too big (> 255)";
+	
+	info->count = count;
+	info->size = offset;
+	
+	return NULL;
+}
+
+
+//
+// MESH
+
+void SS3D_Mesh_Init( SS3D_Mesh* mesh )
+{
+	mesh->renderer = NULL;
+	
+	mesh->dataFlags = 0;
+	mesh->vertexDecl = NULL;
+	mesh->vertexCount = 0;
+	mesh->indexCount = 0;
+	memset( mesh->parts, 0, sizeof( mesh->parts ) );
+	mesh->numParts = 0;
+	
+	VEC3_Set( mesh->boundsMin, 0, 0, 0 );
+	VEC3_Set( mesh->boundsMax, 0, 0, 0 );
+	VEC3_Set( mesh->center, 0, 0, 0 );
+	mesh->radius = 0;
 }
 
 

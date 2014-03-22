@@ -34,6 +34,24 @@ typedef struct _SS3D_Texture_D3D9
 }
 SS3D_Texture_D3D9;
 
+typedef struct _SS3D_VDecl_D3D9
+{
+	struct _SS3D_RD3D9* renderer;
+	
+	SS3D_VDeclInfo info;
+	IDirect3DVertexDeclaration9* VD;
+}
+SS3D_VDecl_D3D9;
+
+typedef struct _SS3D_Mesh_D3D9
+{
+	SS3D_Mesh inh;
+	
+	IDirect3DVertexBuffer9* VB;
+	IDirect3DIndexBuffer9* IB;
+}
+SS3D_Mesh_D3D9;
+
 typedef struct _DeferredRenderingData
 {
 	IDirect3DTexture9* RTT1; /* dR, dG, dB, depth, RGBA16F */
@@ -314,6 +332,8 @@ static void texdatacopy( D3DLOCKED_RECT* plr, SS3D_TextureData* TD, int side, in
 	ret = SS3D_TextureInfo_GetMipInfo( &TD->info, mip, &mipTI );
 	sgs_BreakIf( !ret );
 	
+//	printf( "read side=%d mip=%d at %d\n", side, mip, off );
+	
 	src = ((uint8_t*)TD->data) + off;
 	dst = (uint8_t*)plr->pBits;
 	SS3D_TextureInfo_GetCopyDims( &mipTI, &copyrowsize, &copyrowcount );
@@ -477,10 +497,229 @@ static SS3D_Texture_D3D9* get_texture( SS3D_RD3D9* R, const char* name )
 
 
 //
+//  V D E C L
+//
+
+SGS_DECLARE sgs_ObjInterface SS3D_VDecl_D3D9_iface[1];
+
+#define VD_HDR SS3D_VDecl_D3D9* VD = (SS3D_VDecl_D3D9*) obj->data;
+
+static void vdecld3d9_free( SS3D_VDecl_D3D9* VD )
+{
+	SAFE_RELEASE( VD->VD );
+}
+
+static int vdecld3d9_destruct( SGS_CTX, sgs_VarObj* obj )
+{
+	VD_HDR;
+	if( VD->renderer )
+	{
+		SS3D_Renderer_PokeResource( &VD->renderer->inh, obj, 0 );
+		VD->renderer = NULL;
+		vdecld3d9_free( VD );
+	}
+	return SGS_SUCCESS;
+}
+
+static sgs_ObjInterface SS3D_VDecl_D3D9_iface[1] =
+{{
+	"SS3D_VDecl_D3D9",
+	vdecld3d9_destruct, NULL,
+	NULL, NULL,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL,
+}};
+
+static int vdecltype_to_eltype[] =
+{
+	D3DDECLTYPE_FLOAT1,
+	D3DDECLTYPE_FLOAT2,
+	D3DDECLTYPE_FLOAT3,
+	D3DDECLTYPE_FLOAT4,
+	D3DDECLTYPE_D3DCOLOR,
+};
+
+static int vdeclusage_to_elusage[] =
+{
+	D3DDECLUSAGE_POSITION,
+	D3DDECLUSAGE_COLOR,
+	D3DDECLUSAGE_NORMAL,
+	D3DDECLUSAGE_TANGENT,
+	D3DDECLUSAGE_TEXCOORD,
+	D3DDECLUSAGE_TEXCOORD,
+	D3DDECLUSAGE_TEXCOORD,
+	D3DDECLUSAGE_TEXCOORD,
+};
+
+static int vdeclusage_to_elusageindex[] = { 0, 0, 0, 0, 0, 1, 2, 3 };
+
+static int init_vdecl( SS3D_RD3D9* R, SS3D_VDecl_D3D9* VD )
+{
+	int i;
+	D3DVERTEXELEMENT9 elements[ SS3D_VDECL_MAX_ITEMS + 1 ], end[1] = { D3DDECL_END() };
+	for( i = 0; i < VD->info.count; ++i )
+	{
+		elements[ i ].Stream = 0;
+		elements[ i ].Offset = VD->info.offsets[ i ];
+		elements[ i ].Type = vdecltype_to_eltype[ VD->info.types[ i ] ];
+		elements[ i ].Method = D3DDECLMETHOD_DEFAULT;
+		elements[ i ].Usage = vdeclusage_to_elusage[ VD->info.usages[ i ] ];
+		elements[ i ].UsageIndex = vdeclusage_to_elusageindex[ VD->info.usages[ i ] ];
+	}
+	memcpy( elements + VD->info.count, end, sizeof(*end) );
+	if( FAILED( D3DCALL_( R->device, CreateVertexDeclaration, elements, &VD->VD ) ) )
+		return sgs_Msg( R->inh.C, SGS_WARNING, "failed to create vertex declaration" );
+	return 1;
+}
+
+static int create_vdecl( SS3D_RD3D9* R, const char* text )
+{
+	const char* err;
+	SS3D_VDecl_D3D9* VD = (SS3D_VDecl_D3D9*) sgs_PushObjectIPA( R->inh.C, sizeof(*VD), SS3D_VDecl_D3D9_iface );
+	memset( VD, 0, sizeof(*VD) );
+	err = SS3D_VDeclInfo_Parse( &VD->info, text );
+	if( err )
+		return sgs_Msg( R->inh.C, SGS_WARNING, "failed to parse vertex declaration: %s", err );
+	VD->renderer = R;
+	SS3D_Renderer_PokeResource( &R->inh, sgs_GetObjectStruct( R->inh.C, -1 ), 1 );
+	return init_vdecl( R, VD );
+}
+
+
+//
+//  M E S H
+//
+
+SGS_DECLARE sgs_ObjInterface SS3D_Mesh_D3D9_iface[1];
+
+#define M_HDR SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) obj->data;
+#define M_IHDR( funcname ) SS3D_Mesh_D3D9* M; \
+	if( !SGS_PARSE_METHOD( C, SS3D_Mesh_D3D9_iface, M, SS3D_Mesh_D3D9, funcname ) ) return 0;
+
+static void meshd3d9_free( SS3D_Mesh_D3D9* M )
+{
+	SAFE_RELEASE( M->VB );
+	SAFE_RELEASE( M->IB );
+}
+
+static int meshd3d9_destruct( SGS_CTX, sgs_VarObj* obj )
+{
+	M_HDR;
+	if( M->inh.renderer )
+	{
+		SS3D_Renderer_PokeResource( M->inh.renderer, obj, 0 );
+		M->inh.renderer = NULL;
+		meshd3d9_free( M );
+	}
+	return SGS_SUCCESS;
+}
+
+static int meshd3d9i_setVertexData( SGS_CTX )
+{
+	/* args: string buffer, obj vdecl, bool tristrip */
+	void* vb_data;
+	SS3D_VDecl_D3D9* vdecl = NULL;
+	char* buf;
+	sgs_SizeVal size;
+	sgs_Bool tristrip;
+	M_IHDR( setVertexData );
+	if( !sgs_LoadArgs( C, "m!ob", &buf, &size, SS3D_VDecl_D3D9_iface, &vdecl, &tristrip ) )
+		return 0;
+	
+	SAFE_RELEASE( M->VB );
+	D3DCALL_( ((SS3D_RD3D9*)M->inh.renderer)->device, CreateVertexBuffer, size, 0, 0, D3DPOOL_MANAGED, &M->VB, NULL );
+	if( !M->VB )
+		return sgs_Msg( C, SGS_WARNING, "failed to create vertex buffer" );
+	
+	if( FAILED( D3DCALL_( M->VB, Lock, 0, 0, &vb_data, D3DLOCK_DISCARD ) ) )
+		return sgs_Msg( C, SGS_WARNING, "failed to lock vertex buffer" );
+	
+	memcpy( vb_data, buf, size );
+	
+	if( FAILED( D3DCALL( M->VB, Unlock ) ) )
+		return sgs_Msg( C, SGS_WARNING, "failed to unlock vertex buffer" );
+	
+	M->inh.dataFlags = ( M->inh.dataFlags & ~SS3D_MDF_TRIANGLESTRIP ) | ( SS3D_MDF_TRIANGLESTRIP * tristrip );
+	M->inh.vertexCount = size / vdecl->info.size;
+	sgs_ObjAssign( C, &M->inh.vertexDecl, sgs_GetObjectStruct( C, 1 ) );
+	SGS_RETURN_BOOL( 1 )
+}
+
+static int meshd3d9i_setIndexData( SGS_CTX )
+{
+	/* args: string buffer, bool i32 */
+	void* ib_data;
+	char* buf;
+	sgs_SizeVal size;
+	sgs_Bool i32;
+	M_IHDR( setIndexData );
+	if( !sgs_LoadArgs( C, "mb", &buf, &size, &i32 ) )
+		return 0;
+	
+	SAFE_RELEASE( M->IB );
+	D3DCALL_( ((SS3D_RD3D9*)M->inh.renderer)->device, CreateIndexBuffer, size, 0, i32 ? D3DFMT_INDEX32 : D3DFMT_INDEX16, D3DPOOL_MANAGED, &M->IB, NULL );
+	if( !M->IB )
+		return sgs_Msg( C, SGS_WARNING, "failed to create index buffer" );
+	
+	if( FAILED( D3DCALL_( M->IB, Lock, 0, 0, &ib_data, D3DLOCK_DISCARD ) ) )
+		return sgs_Msg( C, SGS_WARNING, "failed to lock index buffer" );
+	
+	memcpy( ib_data, buf, size );
+	
+	if( FAILED( D3DCALL( M->IB, Unlock ) ) )
+		return sgs_Msg( C, SGS_WARNING, "failed to unlock index buffer" );
+	
+	M->inh.dataFlags = ( M->inh.dataFlags & ~SS3D_MDF_INDEX_32 ) | ( SS3D_MDF_INDEX_32 * i32 );
+	M->inh.indexCount = size / ( i32 ? 4 : 2 );
+	SGS_RETURN_BOOL( 1 )
+}
+
+static int meshd3d9_getindex( SGS_ARGS_GETINDEXFUNC )
+{
+	M_HDR;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "numParts" )      SGS_RETURN_INT( M->inh.numParts )
+		SGS_CASE( "useTriStrips" )  SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ) )
+		SGS_CASE( "useI32" )        SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_INDEX_32 ) )
+		SGS_CASE( "vertexCount" )   SGS_RETURN_INT( M->inh.vertexCount )
+		SGS_CASE( "indexCount" )    SGS_RETURN_INT( M->inh.indexCount )
+		
+		SGS_CASE( "boundsMin" )     SGS_RETURN_VEC3( M->inh.boundsMin )
+		SGS_CASE( "boundsMax" )     SGS_RETURN_VEC3( M->inh.boundsMax )
+		SGS_CASE( "center" )        SGS_RETURN_VEC3( M->inh.center )
+		SGS_CASE( "radius" )        SGS_RETURN_REAL( M->inh.radius )
+		
+		SGS_CASE( "setVertexData" ) SGS_RETURN_CFUNC( meshd3d9i_setVertexData )
+		SGS_CASE( "setIndexData" )  SGS_RETURN_CFUNC( meshd3d9i_setIndexData )
+	SGS_END_INDEXFUNC;
+}
+
+static sgs_ObjInterface SS3D_Mesh_D3D9_iface[1] =
+{{
+	"SS3D_Mesh_D3D9",
+	meshd3d9_destruct, NULL,
+	meshd3d9_getindex, NULL,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL,
+}};
+
+static int create_mesh( SS3D_RD3D9* R )
+{
+	SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) sgs_PushObjectIPA( R->inh.C, sizeof(*M), SS3D_Mesh_D3D9_iface );
+	SS3D_Mesh_Init( &M->inh );
+	M->inh.renderer = &R->inh;
+	SS3D_Renderer_PokeResource( &R->inh, sgs_GetObjectStruct( R->inh.C, -1 ), 1 );
+	M->VB = NULL;
+	M->IB = NULL;
+	return 1;
+}
+
+
+//
 //  R E N D E R E R
 //
 
-SGS_DECLARE sgs_ObjInterface SS3D_Renderer_D3D9_iface[];
+SGS_DECLARE sgs_ObjInterface SS3D_Renderer_D3D9_iface[1];
 
 #define R_HDR SS3D_RD3D9* R = (SS3D_RD3D9*) data->data;
 #define R_IHDR( funcname ) SS3D_RD3D9* R; \
@@ -595,7 +834,7 @@ static int rd3d9i_render( SGS_CTX )
 	use_texture( R, 0, tx );
 	SS3D_Texture_D3D9* tx2 = get_texture( R, "testdata/concretewall5normal.png" );
 	use_texture( R, 1, tx2 );
-	SS3D_Texture_D3D9* txr = get_texture( R, "testdata/cubemap.dds" );
+	SS3D_Texture_D3D9* txr = get_texture( R, "testdata/cubemap_pbr.dds" );
 	use_texture( R, 7, txr );
 	
 	D3DCALL_( R->device, SetTransform, D3DTS_VIEW, (D3DMATRIX*) *cam->mView );
@@ -721,6 +960,30 @@ static int rd3d9i_getShader( SGS_CTX )
 	return get_shader_( R, &key );
 }
 
+static int rd3d9i_getTexture( SGS_CTX )
+{
+	sgs_Variable key;
+	R_IHDR( getTexture );
+	if( !sgs_LoadArgs( C, "?s<v", &key ) )
+		return 0;
+	return get_texture_( R, &key );
+}
+
+static int rd3d9i_createVertexDecl( SGS_CTX )
+{
+	char* str;
+	R_IHDR( createVertexDecl );
+	if( !sgs_LoadArgs( C, "s", &str ) )
+		return 0;
+	return create_vdecl( R, str );
+}
+
+static int rd3d9i_createMesh( SGS_CTX )
+{
+	R_IHDR( createMesh );
+	return create_mesh( R );
+}
+
 static int rd3d9i_createScene( SGS_CTX )
 {
 	R_IHDR( createScene );
@@ -733,14 +996,17 @@ static int rd3d9_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isp
 	R_HDR;
 	SGS_BEGIN_INDEXFUNC
 		// methods
-		SGS_CASE( "update" )        SGS_RETURN_CFUNC( rd3d9i_update )
-		SGS_CASE( "render" )        SGS_RETURN_CFUNC( rd3d9i_render )
-		SGS_CASE( "resize" )        SGS_RETURN_CFUNC( rd3d9i_resize )
-		SGS_CASE( "onDeviceLost" )  SGS_RETURN_CFUNC( rd3d9i_onDeviceLost )
-		SGS_CASE( "onDeviceReset" ) SGS_RETURN_CFUNC( rd3d9i_onDeviceReset )
+		SGS_CASE( "update" )           SGS_RETURN_CFUNC( rd3d9i_update )
+		SGS_CASE( "render" )           SGS_RETURN_CFUNC( rd3d9i_render )
+		SGS_CASE( "resize" )           SGS_RETURN_CFUNC( rd3d9i_resize )
+		SGS_CASE( "onDeviceLost" )     SGS_RETURN_CFUNC( rd3d9i_onDeviceLost )
+		SGS_CASE( "onDeviceReset" )    SGS_RETURN_CFUNC( rd3d9i_onDeviceReset )
 		
-		SGS_CASE( "getShader" )     SGS_RETURN_CFUNC( rd3d9i_getShader )
-		SGS_CASE( "createScene" )   SGS_RETURN_CFUNC( rd3d9i_createScene )
+		SGS_CASE( "getShader" )        SGS_RETURN_CFUNC( rd3d9i_getShader )
+		SGS_CASE( "getTexture" )       SGS_RETURN_CFUNC( rd3d9i_getTexture )
+		SGS_CASE( "createVertexDecl" ) SGS_RETURN_CFUNC( rd3d9i_createVertexDecl )
+		SGS_CASE( "createMesh" )       SGS_RETURN_CFUNC( rd3d9i_createMesh )
+		SGS_CASE( "createScene" )      SGS_RETURN_CFUNC( rd3d9i_createScene )
 		
 		// properties
 		SGS_CASE( "currentScene" )          SGS_RETURN_OBJECT( R->inh.currentScene )

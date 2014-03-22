@@ -600,10 +600,6 @@ DDSRESULT dds_load_info( dds_info* out, size_t size, DDS_HEADER* hdr, DDS_HEADER
 	dds_u32 sum, sum2;
 	dds_image_info plane;
 	
-	out->data = NULL;
-	out->side = 0;
-	out->mip = 0;
-	
 	out->image.width = hdr->width;
 	out->image.height = hdr->height;
 	out->image.depth = hdr->flags & DDSD_DEPTH ? hdr->depth : 1;
@@ -627,6 +623,7 @@ DDSRESULT dds_load_info( dds_info* out, size_t size, DDS_HEADER* hdr, DDS_HEADER
 	for( i = 0; i < out->mipcount; ++i )
 	{
 		out->mipoffsets[ i ] = sum;
+		out->mip = i;
 		dds_getinfo( out, &plane );
 		sum += plane.size;
 	}
@@ -639,6 +636,10 @@ DDSRESULT dds_load_info( dds_info* out, size_t size, DDS_HEADER* hdr, DDS_HEADER
 	}
 	
 	out->image.size = out->flags & DDS_CUBEMAP ? sum2 : sum;
+	
+	out->data = NULL;
+	out->side = 0;
+	out->mip = 0;
 	
 	printf( "loaded dds: w=%d h=%d d=%d fmt=%d mips=%d cube=%s size=%d\n", (int) out->image.width, (int) out->image.height,
 		(int) out->image.depth, (int) out->image.format, (int) out->mipcount, out->flags & DDS_CUBEMAP ? "true" : "false", (int) out->image.size );
@@ -741,8 +742,7 @@ DDSRESULT dds_seek( dds_info* info, int side, int mip )
 	{
 		if( side < 0 || side >= 6 )
 			return DDS_ENOTFND;
-		dds_u32 sideflag = sideflags[ side ];
-		if( !( info->flags & sideflag ) )
+		if( !( info->flags & sideflags[ side ] ) )
 			return DDS_ENOTFND;
 	}
 	else
@@ -756,30 +756,30 @@ DDSRESULT dds_seek( dds_info* info, int side, int mip )
 	return DDS_SUCCESS;
 }
 
-void dds_getinfo( dds_info* info, dds_image_info* outplaneinfo )
+void dds_getinfo( dds_info* info, dds_image_info* plane )
 {
 	int mippwr = pow( 2, info->mip );
 	int fmt = info->image.format;
 	
-	*outplaneinfo = info->image;
-	outplaneinfo->width /= mippwr;
-	outplaneinfo->height /= mippwr;
-	outplaneinfo->depth /= mippwr;
-	if( outplaneinfo->width < 1 ) outplaneinfo->width = 1;
-	if( outplaneinfo->height < 1 ) outplaneinfo->height = 1;
-	if( outplaneinfo->depth < 1 ) outplaneinfo->depth = 1;
+	*plane = info->image;
+	plane->width /= mippwr;
+	plane->height /= mippwr;
+	plane->depth /= mippwr;
+	if( plane->width < 1 ) plane->width = 1;
+	if( plane->height < 1 ) plane->height = 1;
+	if( plane->depth < 1 ) plane->depth = 1;
 	
 	if( fmt == DDS_FMT_DXT1 || fmt == DDS_FMT_DXT3 || fmt == DDS_FMT_DXT5 )
 	{
-		int p = ( outplaneinfo->width + 3 ) / 4;
+		int p = ( plane->width + 3 ) / 4;
 		if( p < 1 ) p = 1;
-		outplaneinfo->pitch = p * ( fmt == DDS_FMT_DXT1 ? 8 : 16 );
-		outplaneinfo->size = outplaneinfo->pitch * ( ( outplaneinfo->height + 3 ) / 4 );
+		plane->pitch = p * ( fmt == DDS_FMT_DXT1 ? 8 : 16 );
+		plane->size = plane->pitch * ( ( plane->height + 3 ) / 4 );
 	}
 	else /* RGBA8 / BGRA8 */
 	{
-		outplaneinfo->pitch = outplaneinfo->width * 4;
-		outplaneinfo->size = outplaneinfo->pitch * outplaneinfo->height * outplaneinfo->depth;
+		plane->pitch = plane->width * 4;
+		plane->size = plane->pitch * plane->height * plane->depth;
 	}
 }
 
@@ -792,6 +792,7 @@ DDSBOOL dds_read( dds_info* info, void* out )
 	if( info->flags & DDS_FILE_READER )
 	{
 		fseek( (FILE*) info->data, offset, SEEK_SET );
+//		printf( "sideoff=%d mipoff=%d\n", info->sideoffsets[ info->side ], info->mipoffsets[ info->mip ] );
 		return fread( out, 1, plane.size, (FILE*) info->data ) == plane.size;
 	}
 	else
@@ -818,6 +819,7 @@ dds_byte* dds_read_all( dds_info* info )
 			if( dds_seek( info, s, m ) != DDS_SUCCESS ||
 				!dds_read( info, out + info->sideoffsets[ s ] + info->mipoffsets[ m ] ) )
 				goto fail;
+//			printf( "written s=%d m=%d at %d\n", s, m, info->sideoffsets[ s ] + info->mipoffsets[ m ] );
 		}
 	}
 	

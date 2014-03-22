@@ -8,6 +8,9 @@
 #include <sgsxgmath.h>
 
 
+void sgs_ObjAssign( SGS_CTX, sgs_VarObj** pobj, sgs_VarObj* src );
+
+
 typedef float VEC3[3];
 typedef float VEC4[4];
 typedef VEC3 MAT3[3];
@@ -61,12 +64,39 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 #define SS3DINDEX_16 0
 #define SS3DINDEX_32 1
 
+#define SS3D_NUM_MATERIAL_TEXTURES 6
+#define SS3D_MAX_MESH_PARTS 8
+#define SS3D_VDECL_MAX_ITEMS 8
+
+#define SS3D_VDECLTYPE_FLOAT1 0
+#define SS3D_VDECLTYPE_FLOAT2 1
+#define SS3D_VDECLTYPE_FLOAT3 2
+#define SS3D_VDECLTYPE_FLOAT4 3
+#define SS3D_VDECLTYPE_BCOL4 4
+
+/* usage type | expected data type */
+#define SS3D_VDECLUSAGE_POSITION 0 /* float3 */
+#define SS3D_VDECLUSAGE_COLOR    1 /* float3/float4/ubyte4 */
+#define SS3D_VDECLUSAGE_NORMAL   2 /* float3 */
+#define SS3D_VDECLUSAGE_TANGENT  3 /* float4 */
+#define SS3D_VDECLUSAGE_TEXTURE0 4 /* any .. */
+#define SS3D_VDECLUSAGE_TEXTURE1 5
+#define SS3D_VDECLUSAGE_TEXTURE2 6
+#define SS3D_VDECLUSAGE_TEXTURE3 7
+
+/* mesh data flags */
+#define SS3D_MDF_INDEX_32      0x01
+#define SS3D_MDF_TRIANGLESTRIP 0x02
+
 
 sgs_ObjInterface SS3D_Camera_iface[1];
 sgs_ObjInterface SS3D_Light_iface[1];
 sgs_ObjInterface SS3D_Scene_iface[1];
 
 typedef struct _SS3D_Light SS3D_Light;
+typedef struct _SS3D_Material SS3D_Material;
+typedef struct _SS3D_MeshPart SS3D_MeshPart;
+typedef struct _SS3D_Mesh SS3D_Mesh;
 typedef struct _SS3D_MeshInstance SS3D_MeshInstance;
 typedef struct _SS3D_CullScene SS3D_CullScene;
 typedef struct _SS3D_Camera SS3D_Camera;
@@ -136,6 +166,56 @@ struct _SS3D_Light
 	MAT4 projMatrix;
 	int hasShadows;
 };
+
+struct _SS3D_Material
+{
+	SS3D_Renderer* renderer;
+	
+	sgs_VarObj* surfaceShader;
+	sgs_VarObj* textures[ SS3D_NUM_MATERIAL_TEXTURES ];
+};
+
+struct _SS3D_MeshPart
+{
+	sgs_VarObj* material;
+	uint32_t vertexOffset;
+	uint32_t vertexCount;
+	uint32_t indexOffset;
+	uint32_t indexCount;
+};
+
+typedef struct _SS3D_VDeclInfo
+{
+	uint8_t offsets[ SS3D_VDECL_MAX_ITEMS ];
+	uint8_t types  [ SS3D_VDECL_MAX_ITEMS ];
+	uint8_t usages [ SS3D_VDECL_MAX_ITEMS ];
+	uint8_t count;
+	uint8_t size;
+}
+SS3D_VDeclInfo;
+
+const char* SS3D_VDeclInfo_Parse( SS3D_VDeclInfo* info, const char* text );
+
+struct _SS3D_Mesh
+{
+	SS3D_Renderer* renderer;
+	
+	/* rendering info */
+	int dataFlags;
+	sgs_VarObj* vertexDecl;
+	uint32_t vertexCount;
+	uint32_t indexCount;
+	SS3D_MeshPart parts[ SS3D_MAX_MESH_PARTS ];
+	int numParts;
+	
+	/* collision detection */
+	VEC3 boundsMin;
+	VEC3 boundsMax;
+	VEC3 center;
+	float radius;
+};
+
+void SS3D_Mesh_Init( SS3D_Mesh* mesh );
 
 struct _SS3D_MeshInstance
 {

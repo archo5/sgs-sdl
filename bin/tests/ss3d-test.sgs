@@ -13,6 +13,9 @@ function initialize()
 	_R.SS3D = SS3D_CreateRenderer( Window.renderingAPI, 0/* Window.rendererVersion */, Window.rendererPtr );
 	println( "SS3D: " $ _R.SS3D );
 	
+	_R.VD1 = _R.SS3D.createVertexDecl( "|pf3nf30f2" );
+	println( "VD1: " $ _R.VD1 );
+	
 	_R.Scene = _R.SS3D.createScene();
 	println( "Scene: " $ _R.Scene );
 	_R.SS3D.currentScene = _R.Scene;
