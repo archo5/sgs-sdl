@@ -13,12 +13,43 @@ function initialize()
 	_R.SS3D = SS3D_CreateRenderer( Window.renderingAPI, 0/* Window.rendererVersion */, Window.rendererPtr );
 	println( "SS3D: " $ _R.SS3D );
 	
-	_R.VD1 = _R.SS3D.createVertexDecl( "|pf3nf30f2" );
+	_R.VD1 = _R.SS3D.createVertexDecl( "pf3nf3tf40f2" );
 	println( "VD1: " $ _R.VD1 );
+	
+	_R.Mesh = _R.SS3D.createMesh();
+	if( 0 )
+	{
+		vdata = fmt_pack( "12f 12f 12f 12f",
+			-1, -1, 1,  0, 0, 1,  1, 0, 0, 1,  0, 0,
+			1, -1, 1,   0, 0, 1,  1, 0, 0, 1,  1, 0,
+			1, 1, 1,    0, 0, 1,  1, 0, 0, 1,  1, 1,
+			-1, 1, 1,   0, 0, 1,  1, 0, 0, 1,  0, 1 );
+		_R.Mesh.setVertexData( vdata, _R.VD1, false );
+		_R.Mesh.setIndexData( fmt_pack( "6w", 0, 1, 2, 2, 3, 0 ), false );
+		_R.Mesh.numParts = 1;
+		_R.Mesh.setPart( 0, null, 0, 4, 0, 6 );
+	}
+	else
+	{
+		mesh = unserialize( io_file_read( "testdata/bunny.ssm" ) );
+		shader = _R.SS3D.getShader( "testFRrender2" );
+		texture = _R.SS3D.getTexture( "testdata/red.png" );
+		material = _R.SS3D.createMaterial();
+		material.shader = shader;
+		material.setTexture( 0, texture );
+		_R.MeshVD = _R.SS3D.createVertexDecl( mesh.format );
+		_R.Mesh.setVertexData( mesh.vdata, _R.MeshVD, false );
+		_R.Mesh.setIndexData( mesh.idata, true );
+		_R.Mesh.numParts = 1;
+		_R.Mesh.setPart( 0, material, 0, mesh.vcount, 0, mesh.icount );
+	}
 	
 	_R.Scene = _R.SS3D.createScene();
 	println( "Scene: " $ _R.Scene );
 	_R.SS3D.currentScene = _R.Scene;
+	
+	_R.MI = _R.Scene.createMeshInstance();
+	_R.MI.mesh = _R.Mesh;
 	
 	_R.Light = _R.Scene.createLight();
 	println( "Light: " $ _R.Light );

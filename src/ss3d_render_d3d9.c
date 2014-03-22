@@ -52,18 +52,17 @@ typedef struct _SS3D_Mesh_D3D9
 }
 SS3D_Mesh_D3D9;
 
-typedef struct _DeferredRenderingData
+typedef struct RTData
 {
-	IDirect3DTexture9* RTT1; /* dR, dG, dB, depth, RGBA16F */
-	IDirect3DTexture9* RTT2; /* vnX, vnY, vnZ, spec, RGBA16F */
-	IDirect3DTexture9* RTT3; /* srR, srG, srB, unknown, RGBA16F */
-	IDirect3DSurface9* RTS1; /* surface of RTT1 */
-	IDirect3DSurface9* RTS2; /* surface of RTT2 */
-	IDirect3DSurface9* RTS3; /* surface of RTT3 */
+	IDirect3DTexture9* RTT_OCOL; /* oR, oG, oB, oA, RGBA16F */
+	IDirect3DTexture9* RTT_PARM; /* distX, distY, emissive, ?, RGBA16F */
+	
+	IDirect3DSurface9* RTS_OCOL;
+	IDirect3DSurface9* RTS_PARM;
 	IDirect3DSurface9* RTSD; /* depth/stencil surface, D24S8 */
 	int width, height;
 }
-DeferredRenderingData;
+RTData;
 
 typedef struct _SS3D_RD3D9
 {
@@ -72,16 +71,16 @@ typedef struct _SS3D_RD3D9
 	IDirect3DDevice9* device;
 	IDirect3DSurface9* bb_color;
 	IDirect3DSurface9* bb_depth;
-	DeferredRenderingData drd;
+	RTData drd;
 }
 SS3D_RD3D9;
 
 
 //
-//  D E F E R R E D   R E N D E R I N G
+//  P O S T  -  P R O C E S S
 //
 
-static void drd_init( SS3D_RD3D9* R, DeferredRenderingData* D, int w, int h )
+static void postproc_init( SS3D_RD3D9* R, RTData* D, int w, int h )
 {
 	HRESULT hr;
 	memset( D, 0, sizeof(*D) );
@@ -89,32 +88,26 @@ static void drd_init( SS3D_RD3D9* R, DeferredRenderingData* D, int w, int h )
 	D->width = w;
 	D->height = h;
 	
-	hr = D3DCALL_( R->device, CreateTexture, w, h, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A16B16G16R16F, D3DPOOL_DEFAULT, &D->RTT1, NULL );
-	sgs_BreakIf( FAILED( hr ) || !D->RTT1 || !"failed to create rgba16f render target texture" );
+	hr = D3DCALL_( R->device, CreateTexture, w, h, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A16B16G16R16F, D3DPOOL_DEFAULT, &D->RTT_OCOL, NULL );
+	sgs_BreakIf( FAILED( hr ) || !D->RTT_OCOL || !"failed to create rgba16f render target texture" );
 	
-	hr = D3DCALL_( R->device, CreateTexture, w, h, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A16B16G16R16F, D3DPOOL_DEFAULT, &D->RTT2, NULL );
-	sgs_BreakIf( FAILED( hr ) || !D->RTT2 || !"failed to create rgba16f render target texture" );
-	
-	hr = D3DCALL_( R->device, CreateTexture, w, h, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A16B16G16R16F, D3DPOOL_DEFAULT, &D->RTT3, NULL );
-	sgs_BreakIf( FAILED( hr ) || !D->RTT3 || !"failed to create rgba16f render target texture" );
+	hr = D3DCALL_( R->device, CreateTexture, w, h, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A16B16G16R16F, D3DPOOL_DEFAULT, &D->RTT_PARM, NULL );
+	sgs_BreakIf( FAILED( hr ) || !D->RTT_PARM || !"failed to create rgba16f render target texture" );
 	
 	hr = D3DCALL_( R->device, CreateDepthStencilSurface, w, h, D3DFMT_D24S8, D3DMULTISAMPLE_NONE, 0, TRUE, &D->RTSD, NULL );
 	sgs_BreakIf( FAILED( hr ) || !D->RTSD || !"failed to create d24s8 depth+stencil surface" );
 	
-	D3DCALL_( D->RTT1, GetSurfaceLevel, 0, &D->RTS1 );
-	D3DCALL_( D->RTT2, GetSurfaceLevel, 0, &D->RTS2 );
-	D3DCALL_( D->RTT3, GetSurfaceLevel, 0, &D->RTS3 );
+	D3DCALL_( D->RTT_OCOL, GetSurfaceLevel, 0, &D->RTS_OCOL );
+	D3DCALL_( D->RTT_PARM, GetSurfaceLevel, 0, &D->RTS_PARM );
 }
 
-static void drd_free( SS3D_RD3D9* R, DeferredRenderingData* D )
+static void postproc_free( SS3D_RD3D9* R, RTData* D )
 {
-	SAFE_RELEASE( D->RTS1 );
-	SAFE_RELEASE( D->RTS2 );
-	SAFE_RELEASE( D->RTS3 );
+	SAFE_RELEASE( D->RTS_OCOL );
+	SAFE_RELEASE( D->RTS_PARM );
 	SAFE_RELEASE( D->RTSD );
-	SAFE_RELEASE( D->RTT1 );
-	SAFE_RELEASE( D->RTT2 );
-	SAFE_RELEASE( D->RTT3 );
+	SAFE_RELEASE( D->RTT_OCOL );
+	SAFE_RELEASE( D->RTT_PARM );
 	D->width = 0;
 	D->height = 0;
 }
@@ -447,6 +440,8 @@ static int get_texture_( SS3D_RD3D9* R, sgs_Variable* key )
 	
 	sgs_BreakIf( key->type != SGS_VT_STRING );
 	
+//	printf( "loading texture \"%s\"\n", sgs_var_cstr( key ) );
+	
 	found = sgs_vht_get( &R->inh.textures, key );
 	if( found )
 	{
@@ -462,7 +457,7 @@ static int get_texture_( SS3D_RD3D9* R, sgs_Variable* key )
 		
 		err = SS3D_TextureData_LoadFromFile( &texdata, sgs_var_cstr( key ) );
 		if( err != SGS_SUCCESS )
-			return 0;
+			return sgs_Msg( C, SGS_WARNING, "failed to load texture %s from file", sgs_var_cstr( key ) );
 		
 		err = !texd3d9_init( R, &texture, &texdata );
 		SS3D_TextureData_Free( &texdata );
@@ -614,6 +609,20 @@ static int meshd3d9_destruct( SGS_CTX, sgs_VarObj* obj )
 	return SGS_SUCCESS;
 }
 
+static int meshd3d9_gcmark( SGS_CTX, sgs_VarObj* obj )
+{
+	int i;
+	M_HDR;
+	if( M->inh.vertexDecl )
+		sgs_ObjGCMark( C, M->inh.vertexDecl );
+	for( i = 0; i < M->inh.numParts; ++i )
+	{
+		if( M->inh.parts[ i ].material )
+			sgs_ObjGCMark( C, M->inh.parts[ i ].material );
+	}
+	return SGS_SUCCESS;
+}
+
 static int meshd3d9i_setVertexData( SGS_CTX )
 {
 	/* args: string buffer, obj vdecl, bool tristrip */
@@ -674,6 +683,28 @@ static int meshd3d9i_setIndexData( SGS_CTX )
 	SGS_RETURN_BOOL( 1 )
 }
 
+static int meshd3d9i_setPart( SGS_CTX )
+{
+	SS3D_Material* mtl;
+	sgs_Int pid, vo, vc, io, ic;
+	M_IHDR( setPart );
+	if( !sgs_LoadArgs( C, "ioiiii", &pid, SS3D_Material_iface, &mtl, &vo, &vc, &io, &ic ) )
+		return 0;
+	
+	if( pid < 0 || pid >= M->inh.numParts )
+		return sgs_Msg( C, SGS_WARNING, "part %d is not made available", (int) pid );
+	
+	if( mtl->renderer != M->inh.renderer )
+		return sgs_Msg( C, SGS_WARNING, "material / mesh renderer mismatch" );
+	
+	sgs_ObjAssign( C, &M->inh.parts[ pid ].material, sgs_GetObjectStruct( C, 1 ) );
+	M->inh.parts[ pid ].vertexOffset = vo;
+	M->inh.parts[ pid ].vertexCount = vc;
+	M->inh.parts[ pid ].indexOffset = io;
+	M->inh.parts[ pid ].indexCount = ic;
+	SGS_RETURN_BOOL( 1 )
+}
+
 static int meshd3d9_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	M_HDR;
@@ -691,14 +722,41 @@ static int meshd3d9_getindex( SGS_ARGS_GETINDEXFUNC )
 		
 		SGS_CASE( "setVertexData" ) SGS_RETURN_CFUNC( meshd3d9i_setVertexData )
 		SGS_CASE( "setIndexData" )  SGS_RETURN_CFUNC( meshd3d9i_setIndexData )
+		SGS_CASE( "setPart" )       SGS_RETURN_CFUNC( meshd3d9i_setPart )
+	SGS_END_INDEXFUNC;
+}
+
+static int meshd3d9_setindex( SGS_ARGS_SETINDEXFUNC )
+{
+	M_HDR;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "numParts" )
+		{
+			int nnp = (int) sgs_GetIntP( C, val );
+			int cnp = M->inh.numParts;
+			while( cnp > nnp )
+			{
+				if( M->inh.parts[ cnp ].material )
+					sgs_ObjRelease( C, M->inh.parts[ cnp ].material );
+				memset( M->inh.parts + cnp, 0, sizeof( SS3D_MeshPart ) );
+				cnp--;
+			}
+			M->inh.numParts = nnp;
+			return SGS_SUCCESS;
+		}
+		
+		SGS_CASE( "boundsMin" ) SGS_PARSE_VEC3( M->inh.boundsMin, 0 )
+		SGS_CASE( "boundsMax" ) SGS_PARSE_VEC3( M->inh.boundsMax, 0 )
+		SGS_CASE( "center" )    SGS_PARSE_VEC3( M->inh.center, 0 )
+		SGS_CASE( "radius" )    SGS_PARSE_REAL( M->inh.radius )
 	SGS_END_INDEXFUNC;
 }
 
 static sgs_ObjInterface SS3D_Mesh_D3D9_iface[1] =
 {{
 	"SS3D_Mesh_D3D9",
-	meshd3d9_destruct, NULL,
-	meshd3d9_getindex, NULL,
+	meshd3d9_destruct, meshd3d9_gcmark,
+	meshd3d9_getindex, meshd3d9_setindex,
 	NULL, NULL, NULL, NULL,
 	NULL, NULL,
 }};
@@ -797,22 +855,42 @@ ssvtx;
 
 static int rd3d9i_render( SGS_CTX )
 {
+	int i;
 	R_IHDR( render );
+	
 	if( !R->inh.currentScene )
 		return 0;
 	SS3D_Scene* scene = (SS3D_Scene*) R->inh.currentScene->data;
+	
 	if( !scene->camera )
 		return 0;
 	SS3D_Camera* cam = (SS3D_Camera*) scene->camera->data;
 	
 	int w = R->inh.width, h = R->inh.height;
 	
+	
+	SS3D_Texture_D3D9* tx_diffusemap = get_texture( R, "testdata/concretewall5.dds" );
+	SS3D_Texture_D3D9* tx_normalmap = get_texture( R, "testdata/concretewall5normal.png" );
+	SS3D_Texture_D3D9* tx_cubemap = get_texture( R, "testdata/cubemap_pbr.dds" );
+	
+	
+	SS3D_Shader_D3D9* sh_solid_render = get_shader( R, "testFRrender" );
+	SS3D_Shader_D3D9* sh_post_process = get_shader( R, "testFRpost" );
+	
+	
+	D3DCALL_( R->device, SetTransform, D3DTS_VIEW, (D3DMATRIX*) *cam->mView );
+	D3DCALL_( R->device, SetTransform, D3DTS_PROJECTION, (D3DMATRIX*) *cam->mProj );
+	
+	
 	D3DCALL_( R->device, Clear, 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, 0xc0c0c0c0, 1.0f, 0 );
 	
-	D3DCALL_( R->device, SetRenderTarget, 0, R->drd.RTS1 );
-	D3DCALL_( R->device, SetRenderTarget, 1, R->drd.RTS2 );
-	D3DCALL_( R->device, SetRenderTarget, 2, R->drd.RTS3 );
+	
+	/* PASS 3: RENDER SOLID OBJECTS */
+	D3DCALL_( R->device, SetRenderTarget, 0, R->drd.RTS_OCOL );
+	D3DCALL_( R->device, SetRenderTarget, 1, R->drd.RTS_PARM );
 	D3DCALL_( R->device, SetDepthStencilSurface, R->drd.RTSD );
+	
+	D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 1 );
 	
 	if( scene->viewport )
 	{
@@ -821,59 +899,21 @@ static int rd3d9i_render( SGS_CTX )
 		D3DCALL_( R->device, SetViewport, &d3dvp );
 	}
 	
-	D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 1 );
-	D3DCALL_( R->device, SetRenderState, D3DRS_SRCBLEND, D3DBLEND_ONE );
-	D3DCALL_( R->device, SetRenderState, D3DRS_DESTBLEND, D3DBLEND_ZERO );
-	
 	D3DCALL_( R->device, Clear, 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, 0, 1.0f, 0 );
 	
-	SS3D_Shader_D3D9* sh = get_shader( R, "testDR" );
-	use_shader( R, sh );
-	
-	SS3D_Texture_D3D9* tx = get_texture( R, "testdata/concretewall5.dds" );
-	use_texture( R, 0, tx );
-	SS3D_Texture_D3D9* tx2 = get_texture( R, "testdata/concretewall5normal.png" );
-	use_texture( R, 1, tx2 );
-	SS3D_Texture_D3D9* txr = get_texture( R, "testdata/cubemap_pbr.dds" );
-	use_texture( R, 7, txr );
-	
-	D3DCALL_( R->device, SetTransform, D3DTS_VIEW, (D3DMATRIX*) *cam->mView );
-	D3DCALL_( R->device, SetTransform, D3DTS_PROJECTION, (D3DMATRIX*) *cam->mProj );
+	use_shader( R, sh_solid_render );
 	
 	vshc_set_mat4( R, 4, cam->mView );
 	vshc_set_mat4( R, 12, cam->mProj );
 	pshc_set_float( R, 0, cam->zfar );
 	pshc_set_mat4( R, 12, cam->mInvView );
 	
-	D3DCALL_( R->device, SetFVF, D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_DIFFUSE | D3DFVF_TEX1 );
-	D3DCALL_( R->device, DrawIndexedPrimitiveUP, D3DPT_TRIANGLELIST, 0, 12, 2, testIndices, D3DFMT_INDEX16, testVertices, sizeof(*testVertices) );
-	
-	D3DCALL_( R->device, SetRenderTarget, 0, R->bb_color );
-	D3DCALL_( R->device, SetRenderTarget, 1, NULL );
-	D3DCALL_( R->device, SetRenderTarget, 2, NULL );
-	D3DCALL_( R->device, SetDepthStencilSurface, R->bb_depth );
-	
-	float invQW = 2.0f, invQH = 2.0f;
-	if( scene->viewport )
-	{
-		SS3D_Viewport* VP = (SS3D_Viewport*) scene->viewport->data;
-		D3DVIEWPORT9 d3dvp = { VP->x1, VP->y1, VP->x2 - VP->x1, VP->y2 - VP->y1, 0.0f, 1.0f };
-		invQW = w * 2.0f / ( VP->x2 - VP->x1 );
-		invQH = h * 2.0f / ( VP->y2 - VP->y1 );
-		D3DCALL_( R->device, SetViewport, &d3dvp );
-	}
-	
-	D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 0 );
+	D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 1 );
 	D3DCALL_( R->device, SetRenderState, D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
 	D3DCALL_( R->device, SetRenderState, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
 	
-	SS3D_Shader_D3D9* sh2 = get_shader( R, "testDRmix" );
-	use_shader( R, sh2 );
-	use_texture( R, 0, NULL );
-	use_texture( R, 1, NULL );
-	
 	VEC4 pointlightdata[ 2 * 32 ]; /* px, py, pz, radius, cr, cg, cb, power */
-	int i, plc = 0;
+	int plc = 0;
 	for( i = 0; i < scene->lights.size && plc < 32; ++i )
 	{
 		SS3D_Light* light = (SS3D_Light*) scene->lights.vars[i].val.data.O->data;
@@ -894,35 +934,107 @@ static int rd3d9i_render( SGS_CTX )
 		pshc_set_vec4array( R, 32, *pointlightdata, 2 * plc );
 	pshc_set_float( R, 28, plc ); /* point light count */
 	
-	float hpox = 0.5f / w;
-	float hpoy = 0.5f / h;
-	float fsx = 1/cam->mProj[0][0];
-	float fsy = 1/cam->mProj[1][1];
-	ssvtx ssVertices[] =
+	use_texture( R, 0, tx_diffusemap );
+	use_texture( R, 1, tx_normalmap );
+	use_texture( R, 8, tx_cubemap );
+	
+	
+	D3DCALL_( R->device, SetFVF, D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_DIFFUSE | D3DFVF_TEX1 );
+	D3DCALL_( R->device, DrawIndexedPrimitiveUP, D3DPT_TRIANGLELIST, 0, 12, 2, testIndices, D3DFMT_INDEX16, testVertices, sizeof(*testVertices) );
+	
+	for( i = 0; i < scene->meshInstances.size; ++i )
 	{
-		{ -1, -1, 0, 0+hpox, 1+hpoy, -fsx, -fsy },
-		{ invQW - 1, -1, 0, 1+hpox, 1+hpoy, +fsx, -fsy },
-		{ invQW - 1, invQH - 1, 0, 1+hpox, 0+hpoy, +fsx, +fsy },
-		{ -1, invQH - 1, 0, 0+hpox, 0+hpoy, -fsx, +fsy },
-	};
+		int p, t;
+		
+		SS3D_MeshInstance* MI = (SS3D_MeshInstance*) scene->meshInstances.vars[ i ].val.data.O->data;
+		if( !MI->mesh || !MI->enabled )
+			continue;
+		
+		SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) MI->mesh->data;
+		SS3D_VDecl_D3D9* VD = (SS3D_VDecl_D3D9*) M->inh.vertexDecl->data;
+		
+		D3DCALL_( R->device, SetTransform, D3DTS_WORLD, (D3DMATRIX*) MI->matrix );
+		D3DCALL_( R->device, SetVertexDeclaration, VD->VD );
+		D3DCALL_( R->device, SetStreamSource, 0, M->VB, 0, VD->info.size );
+		D3DCALL_( R->device, SetIndices, M->IB );
+		
+		for( p = 0; p < M->inh.numParts; ++p )
+		{
+			SS3D_MeshPart* MP = M->inh.parts + p;
+			SS3D_Material* MTL = (SS3D_Material*) MP->material->data;
+			
+			use_shader( R, (SS3D_Shader_D3D9*) MTL->shader->data );
+			for( t = 0; t < SS3D_NUM_MATERIAL_TEXTURES; ++t )
+				use_texture( R, t, MTL->textures[ t ] ? (SS3D_Texture_D3D9*) MTL->textures[ t ]->data : NULL );
+			
+			if( MP->indexCount < 3 )
+				continue;
+			D3DCALL_( R->device, DrawIndexedPrimitive,
+				M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ? D3DPT_TRIANGLESTRIP : D3DPT_TRIANGLELIST,
+				MP->vertexOffset, 0, MP->vertexCount, MP->indexOffset, M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ? MP->indexCount - 2 : MP->indexCount / 3 );
+		}
+	}
 	
-	D3DCALL_( R->device, SetTexture, 0, (IDirect3DBaseTexture9*) R->drd.RTT1 );
-	D3DCALL_( R->device, SetTexture, 1, (IDirect3DBaseTexture9*) R->drd.RTT2 );
-	D3DCALL_( R->device, SetTexture, 2, (IDirect3DBaseTexture9*) R->drd.RTT3 );
-	D3DCALL_( R->device, SetFVF, D3DFVF_XYZ | D3DFVF_TEX2 );
-	D3DCALL_( R->device, DrawPrimitiveUP, D3DPT_TRIANGLEFAN, 2, ssVertices, sizeof(*ssVertices) );
-	D3DCALL_( R->device, SetTexture, 0, NULL );
-	D3DCALL_( R->device, SetTexture, 0, NULL );
 	
+	/* PASS 4: RENDER TRANSPARENT STUFF */
+	// TODO
+	
+	
+	/* PASS 5: POST-PROCESS & RENDER TO BACKBUFFER */
+	D3DCALL_( R->device, SetRenderTarget, 0, R->bb_color );
+	D3DCALL_( R->device, SetRenderTarget, 1, NULL );
+	D3DCALL_( R->device, SetDepthStencilSurface, R->bb_depth );
+	
+	{
+		float invQW = 2.0f, invQH = 2.0f;
+		if( scene->viewport )
+		{
+			SS3D_Viewport* VP = (SS3D_Viewport*) scene->viewport->data;
+			D3DVIEWPORT9 d3dvp = { VP->x1, VP->y1, VP->x2 - VP->x1, VP->y2 - VP->y1, 0.0f, 1.0f };
+			invQW = w * 2.0f / ( VP->x2 - VP->x1 );
+			invQH = h * 2.0f / ( VP->y2 - VP->y1 );
+			D3DCALL_( R->device, SetViewport, &d3dvp );
+		}
+		
+		D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 0 );
+		D3DCALL_( R->device, SetRenderState, D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
+		D3DCALL_( R->device, SetRenderState, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
+		
+		use_shader( R, sh_post_process );
+		
+		float hpox = 0.5f / w;
+		float hpoy = 0.5f / h;
+		float fsx = 1/cam->mProj[0][0];
+		float fsy = 1/cam->mProj[1][1];
+		ssvtx ssVertices[] =
+		{
+			{ -1, -1, 0, 0+hpox, 1+hpoy, -fsx, -fsy },
+			{ invQW - 1, -1, 0, 1+hpox, 1+hpoy, +fsx, -fsy },
+			{ invQW - 1, invQH - 1, 0, 1+hpox, 0+hpoy, +fsx, +fsy },
+			{ -1, invQH - 1, 0, 0+hpox, 0+hpoy, -fsx, +fsy },
+		};
+		
+		D3DCALL_( R->device, SetTexture, 0, (IDirect3DBaseTexture9*) R->drd.RTT_OCOL );
+		D3DCALL_( R->device, SetTexture, 1, (IDirect3DBaseTexture9*) R->drd.RTT_PARM );
+		D3DCALL_( R->device, SetFVF, D3DFVF_XYZ | D3DFVF_TEX2 );
+		D3DCALL_( R->device, DrawPrimitiveUP, D3DPT_TRIANGLEFAN, 2, ssVertices, sizeof(*ssVertices) );
+	}
+	
+	D3DCALL_( R->device, SetTexture, 0, NULL );
 	use_shader( R, NULL );
 	
 	RECT srcRect = { 0, 0, w, h };
-	RECT dstRect1 = { 0, h/8, w/8, h/4 };
-	RECT dstRect2 = { w/8, h/8, w/4, h/4 };
-	RECT dstRect3 = { w/4, h/8, w*3/8, h/4 };
-	D3DCALL_( R->device, StretchRect, R->drd.RTS1, &srcRect, R->bb_color, &dstRect1, D3DTEXF_POINT );
-	D3DCALL_( R->device, StretchRect, R->drd.RTS2, &srcRect, R->bb_color, &dstRect2, D3DTEXF_POINT );
-	D3DCALL_( R->device, StretchRect, R->drd.RTS3, &srcRect, R->bb_color, &dstRect3, D3DTEXF_POINT );
+	RECT dstRect = { 0, h/8, w/8, h/4 };
+	IDirect3DSurface9* surfs[] = {
+		R->drd.RTS_OCOL,
+//		R->drd.RTS_PARM,
+	};
+	for( i = 0; i < sizeof(surfs)/sizeof(surfs[0]); ++i )
+	{
+		D3DCALL_( R->device, StretchRect, surfs[i], &srcRect, R->bb_color, &dstRect, D3DTEXF_POINT );
+		dstRect.left += w/8;
+		dstRect.right += w/8;
+	}
 	
 	return 0;
 }
@@ -978,6 +1090,12 @@ static int rd3d9i_createVertexDecl( SGS_CTX )
 	return create_vdecl( R, str );
 }
 
+static int rd3d9i_createMaterial( SGS_CTX )
+{
+	R_IHDR( createMaterial );
+	return SS3D_Material_Create( &R->inh );
+}
+
 static int rd3d9i_createMesh( SGS_CTX )
 {
 	R_IHDR( createMesh );
@@ -1005,12 +1123,12 @@ static int rd3d9_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isp
 		SGS_CASE( "getShader" )        SGS_RETURN_CFUNC( rd3d9i_getShader )
 		SGS_CASE( "getTexture" )       SGS_RETURN_CFUNC( rd3d9i_getTexture )
 		SGS_CASE( "createVertexDecl" ) SGS_RETURN_CFUNC( rd3d9i_createVertexDecl )
+		SGS_CASE( "createMaterial" )   SGS_RETURN_CFUNC( rd3d9i_createMaterial )
 		SGS_CASE( "createMesh" )       SGS_RETURN_CFUNC( rd3d9i_createMesh )
 		SGS_CASE( "createScene" )      SGS_RETURN_CFUNC( rd3d9i_createScene )
 		
 		// properties
 		SGS_CASE( "currentScene" )          SGS_RETURN_OBJECT( R->inh.currentScene )
-		SGS_CASE( "enableDeferredShading" ) SGS_RETURN_BOOL( R->inh.enableDeferredShading )
 	SGS_END_INDEXFUNC;
 }
 
@@ -1019,16 +1137,14 @@ static int rd3d9_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Var
 	R_HDR;
 	SGS_BEGIN_INDEXFUNC
 		SGS_CASE( "currentScene" ) SGS_PARSE_OBJECT_IF( SS3D_Scene_iface, R->inh.currentScene, 0, ((SS3D_Scene*)sgs_GetObjectDataP( val ))->renderer == &R->inh )
-		SGS_CASE( "enableDeferredShading" ) SGS_PARSE_BOOL( R->inh.enableDeferredShading )
-	}
-	return SGS_ENOTFND;
+	SGS_END_INDEXFUNC;
 }
 
 static int rd3d9_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	R_HDR;
 	
-	drd_free( R, &R->drd );
+	postproc_free( R, &R->drd );
 	SAFE_RELEASE( R->bb_color );
 	SAFE_RELEASE( R->bb_depth );
 	SAFE_RELEASE( R->device );
@@ -1056,6 +1172,10 @@ int SS3D_PushRenderer_D3D9( SGS_CTX, void* device )
 	SS3D_Renderer_Construct( &R->inh, C );
 	
 	R->inh.API = "D3D9";
+	R->inh.ifMesh = SS3D_Mesh_D3D9_iface;
+	R->inh.ifTexture = SS3D_Texture_D3D9_iface;
+	R->inh.ifShader = SS3D_Shader_D3D9_iface;
+	
 	R->device = (IDirect3DDevice9*) device;
 	D3DCALL( R->device, AddRef );
 	D3DCALL_( R->device, GetRenderTarget, 0, &R->bb_color );
@@ -1068,7 +1188,7 @@ int SS3D_PushRenderer_D3D9( SGS_CTX, void* device )
 		R->inh.height = desc.Height;
 	}
 	
-	drd_init( R, &R->drd, R->inh.width, R->inh.height );
+	postproc_init( R, &R->drd, R->inh.width, R->inh.height );
 	
 	return 1;
 }

@@ -22,6 +22,14 @@ void sgs_ObjAssign( SGS_CTX, sgs_VarObj** pobj, sgs_VarObj* src )
 //
 // MATH
 
+void SS3D_Mtx_Identity( MAT4 out )
+{
+	int i, j;
+	for( j = 0; j < 4; ++j )
+		for( i = 0; i < 4; ++i )
+			out[ i ][ j ] = i == j ? 1.0f : 0.0f;
+}
+
 void SS3D_Mtx_Transpose( MAT4 mtx )
 {
 	float tmp;
@@ -133,9 +141,9 @@ static void scene_poke_resource( SS3D_Scene* S, sgs_VHTable* which, sgs_VarObj* 
 	
 	sgs_InitPtr( &K, obj );
 	if( add )
-		sgs_vht_set( &S->lights, S->renderer->C, &K, &K );
+		sgs_vht_set( which, S->renderer->C, &K, &K );
 	else
-		sgs_vht_unset( &S->lights, S->renderer->C, &K );
+		sgs_vht_unset( which, S->renderer->C, &K );
 }
 
 
@@ -469,6 +477,105 @@ const char* SS3D_VDeclInfo_Parse( SS3D_VDeclInfo* info, const char* text )
 
 
 //
+// MATERIAL
+
+#define MTL_HDR SS3D_Material* MTL = (SS3D_Material*) obj->data;
+#define MTL_IHDR( funcname ) SS3D_Material* MTL; \
+	if( !SGS_PARSE_METHOD( C, SS3D_Material_iface, MTL, SS3D_Material, funcname ) ) return 0;
+
+static int material_destruct( SGS_CTX, sgs_VarObj* obj )
+{
+	MTL_HDR;
+	if( MTL->renderer )
+	{
+		int i;
+		MTL->renderer = NULL;
+		if( MTL->shader )
+		{
+			sgs_ObjRelease( C, MTL->shader );
+			MTL->shader = NULL;
+		}
+		for( i = 0; i < SS3D_NUM_MATERIAL_TEXTURES; ++i )
+		{
+			if( MTL->textures[i] )
+			{
+				sgs_ObjRelease( C, MTL->textures[i] );
+				MTL->textures[i] = NULL;
+			}
+		}
+	}
+	return SGS_SUCCESS;
+}
+
+static int material_gcmark( SGS_CTX, sgs_VarObj* obj )
+{
+	int i;
+	MTL_HDR;
+	if( MTL->shader )
+	{
+		sgs_ObjGCMark( C, MTL->shader );
+		MTL->shader = NULL;
+	}
+	for( i = 0; i < SS3D_NUM_MATERIAL_TEXTURES; ++i )
+	{
+		if( MTL->textures[i] )
+		{
+			sgs_ObjGCMark( C, MTL->textures[i] );
+			MTL->textures[i] = NULL;
+		}
+	}
+	return SGS_SUCCESS;
+}
+
+static int material_setTexture( SGS_CTX )
+{
+	sgs_Int index;
+	MTL_IHDR( setTexture );
+	if( !sgs_LoadArgs( C, "i?o", &index, MTL->renderer->ifTexture ) )
+		return 0;
+	if( index < 0 || index >= SS3D_NUM_MATERIAL_TEXTURES )
+		return sgs_Msg( C, SGS_WARNING, "texture index %d not available", (int) index );
+	sgs_ObjAssign( C, &MTL->textures[ index ], sgs_GetObjectStruct( C, 1 ) );
+	SGS_RETURN_BOOL( 1 )
+}
+
+static int material_getindex( SGS_ARGS_GETINDEXFUNC )
+{
+	MTL_HDR;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "shader" )     SGS_RETURN_OBJECT( MTL->shader )
+		
+		SGS_CASE( "setTexture" ) SGS_RETURN_CFUNC( material_setTexture )
+	SGS_END_INDEXFUNC;
+}
+
+static int material_setindex( SGS_ARGS_SETINDEXFUNC )
+{
+	MTL_HDR;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "shader" )    { if( !MTL->renderer ) return SGS_EINPROC; SGS_PARSE_OBJECT( MTL->renderer->ifShader, MTL->shader, 0 ) }
+	SGS_END_INDEXFUNC;
+}
+
+sgs_ObjInterface SS3D_Material_iface[1] =
+{{
+	"SS3D_Material",
+	material_destruct, material_gcmark,
+	material_getindex, material_setindex,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL
+}};
+
+int SS3D_Material_Create( SS3D_Renderer* R )
+{
+	SS3D_Material* MTL = (SS3D_Material*) sgs_PushObjectIPA( R->C, sizeof(*MTL), SS3D_Material_iface );
+	memset( MTL, 0, sizeof(*MTL) );
+	MTL->renderer = R;
+	return 1;
+}
+
+
+//
 // MESH
 
 void SS3D_Mesh_Init( SS3D_Mesh* mesh )
@@ -487,6 +594,67 @@ void SS3D_Mesh_Init( SS3D_Mesh* mesh )
 	VEC3_Set( mesh->center, 0, 0, 0 );
 	mesh->radius = 0;
 }
+
+
+//
+// MESH INSTANCE
+
+#define MI_HDR SS3D_MeshInstance* MI = (SS3D_MeshInstance*) obj->data
+
+static int meshinst_destruct( SGS_CTX, sgs_VarObj* obj )
+{
+	MI_HDR;
+	if( MI->scene )
+	{
+		scene_poke_resource( MI->scene, &MI->scene->meshInstances, obj, 0 );
+		MI->scene = NULL;
+		if( MI->mesh )
+		{
+			sgs_ObjRelease( C, MI->mesh );
+			MI->mesh = NULL;
+		}
+	}
+	return SGS_SUCCESS;
+}
+
+static int meshinst_gcmark( SGS_CTX, sgs_VarObj* obj )
+{
+	MI_HDR;
+	if( MI->mesh )
+		sgs_ObjGCMark( C, MI->mesh );
+	return SGS_SUCCESS;
+}
+
+static int meshinst_getindex( SGS_ARGS_GETINDEXFUNC )
+{
+	MI_HDR;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "mesh" )    SGS_RETURN_OBJECT( MI->mesh )
+		SGS_CASE( "matrix" )  SGS_RETURN_MAT4( *MI->matrix )
+		SGS_CASE( "color" )   SGS_RETURN_VEC4( MI->color )
+		SGS_CASE( "enabled" ) SGS_RETURN_BOOL( MI->enabled )
+	SGS_END_INDEXFUNC;
+}
+
+static int meshinst_setindex( SGS_ARGS_SETINDEXFUNC )
+{
+	MI_HDR;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "mesh" )    { if( !MI->scene || !MI->scene->renderer ) return SGS_EINPROC; SGS_PARSE_OBJECT( MI->scene->renderer->ifMesh, MI->mesh, 0 ) }
+		SGS_CASE( "matrix" )  SGS_PARSE_MAT4( *MI->matrix )
+		SGS_CASE( "color" )   SGS_PARSE_VEC4( MI->color, 0 )
+		SGS_CASE( "enabled" ) SGS_PARSE_BOOL( MI->enabled )
+	SGS_END_INDEXFUNC;
+}
+
+sgs_ObjInterface SS3D_MeshInstance_iface[1] =
+{{
+	"SS3D_MeshInstance",
+	meshinst_destruct, meshinst_gcmark,
+	meshinst_getindex, meshinst_setindex,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL
+}};
 
 
 //
@@ -831,13 +999,27 @@ int SS3D_CreateViewport( SGS_CTX )
 
 static int scenei_createMeshInstance( SGS_CTX )
 {
+	SS3D_MeshInstance* MI;
 	SC_IHDR( createMeshInstance );
-	return 0;
+	MI = (SS3D_MeshInstance*) sgs_PushObjectIPA( C, sizeof(*MI), SS3D_MeshInstance_iface );
+	
+	MI->scene = S;
+	MI->mesh = NULL;
+	SS3D_Mtx_Identity( MI->matrix );
+	VEC4_Set( MI->color, 1, 1, 1, 1 );
+	MI->enabled = 1;
+	
+	scene_poke_resource( S, &S->meshInstances, sgs_GetObjectStruct( C, -1 ), 1 );
+	return 1;
 }
 
 static int scenei_destroyMeshInstance( SGS_CTX )
 {
 	SC_IHDR( destroyMeshInstance );
+	if( !sgs_LoadArgs( C, "?o", SS3D_MeshInstance_iface ) )
+		return 0;
+	
+	sgs_ObjCallDtor( C, sgs_GetObjectStruct( C, 0 ) );
 	return 0;
 }
 
@@ -846,8 +1028,10 @@ static int scenei_createLight( SGS_CTX )
 	SS3D_Light* L;
 	SC_IHDR( createLight );
 	L = (SS3D_Light*) sgs_PushObjectIPA( C, sizeof(*L), SS3D_Light_iface );
+	
 	memset( L, 0, sizeof(*L) );
 	L->scene = S;
+	
 	scene_poke_resource( S, &S->lights, sgs_GetObjectStruct( C, -1 ), 1 );
 	return 1;
 }
@@ -1009,7 +1193,6 @@ void SS3D_Renderer_Construct( SS3D_Renderer* R, SGS_CTX )
 	sgs_vht_init( &R->textures, C, 128, 128 );
 	sgs_vht_init( &R->materials, C, 128, 128 );
 	R->currentScene = NULL;
-	R->enableDeferredShading = 0;
 }
 
 void SS3D_Renderer_Destruct( SS3D_Renderer* R )

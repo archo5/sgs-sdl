@@ -28,6 +28,9 @@ typedef VEC4 MAT4[4];
 #define VEC3_Cross( V, A, B ) V[0]=A[1]*B[2]-A[2]*B[1]; V[1]=A[2]*B[0]-A[0]*B[2]; V[2]=A[0]*B[1]-A[1]*B[0];
 #define VEC3_Normalized( V, X ) { float len = VEC3_Length( X ); if( len > 0 ){ V[0]=X[0]/len; V[1]=X[1]/len; V[2]=X[2]/len; } }
 
+#define VEC4_Set( V, x, y, z, w ) V[0] = x; V[1] = y; V[2] = z; V[3] = w;
+
+void SS3D_Mtx_Identity( MAT4 out );
 void SS3D_Mtx_Transpose( MAT4 mtx );
 void SS3D_Mtx_Multiply( MAT4 out, MAT4 A, MAT4 B );
 void SS3D_Mtx_Transform( VEC4 out, VEC4 v, MAT4 mtx );
@@ -171,18 +174,13 @@ struct _SS3D_Material
 {
 	SS3D_Renderer* renderer;
 	
-	sgs_VarObj* surfaceShader;
+	sgs_VarObj* shader;
 	sgs_VarObj* textures[ SS3D_NUM_MATERIAL_TEXTURES ];
 };
 
-struct _SS3D_MeshPart
-{
-	sgs_VarObj* material;
-	uint32_t vertexOffset;
-	uint32_t vertexCount;
-	uint32_t indexOffset;
-	uint32_t indexCount;
-};
+extern sgs_ObjInterface SS3D_Material_iface[1];
+
+int SS3D_Material_Create( SS3D_Renderer* R );
 
 typedef struct _SS3D_VDeclInfo
 {
@@ -195,6 +193,15 @@ typedef struct _SS3D_VDeclInfo
 SS3D_VDeclInfo;
 
 const char* SS3D_VDeclInfo_Parse( SS3D_VDeclInfo* info, const char* text );
+
+struct _SS3D_MeshPart
+{
+	sgs_VarObj* material;
+	uint32_t vertexOffset;
+	uint32_t vertexCount;
+	uint32_t indexOffset;
+	uint32_t indexCount;
+};
 
 struct _SS3D_Mesh
 {
@@ -223,7 +230,8 @@ struct _SS3D_MeshInstance
 	
 	sgs_VarObj* mesh;
 	MAT4 matrix;
-	VEC3 color;
+	VEC4 color;
+	int enabled;
 };
 
 typedef void (*fpSS3D_CullScene_SetCamera) ( void* /* data */, SS3D_Camera* );
@@ -285,13 +293,13 @@ struct _SS3D_Renderer
 	sgs_VHTable textures;
 	sgs_VHTable materials;
 	sgs_VarObj* currentScene;
-	sgs_Bool enableDeferredShading;
 	
 	/* to be initialized by derived class */
 	int width, height;
 	const char* API;
 	sgs_ObjInterface* ifMesh;
 	sgs_ObjInterface* ifTexture;
+	sgs_ObjInterface* ifShader;
 };
 
 
