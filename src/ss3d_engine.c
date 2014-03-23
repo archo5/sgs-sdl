@@ -70,7 +70,7 @@ void SS3D_Mtx_TransformPos( VEC3 out, VEC3 pos, MAT4 mtx )
 {
 	VEC4 tmp, xpos = {pos[0],pos[1],pos[2],1};
 	SS3D_Mtx_Transform( tmp, xpos, mtx );
-	out[0] = tmp[0]; out[1] = tmp[1]; out[2] = tmp[2];
+	out[0] = tmp[0] / tmp[3]; out[1] = tmp[1] / tmp[3]; out[2] = tmp[2] / tmp[3];
 }
 
 void SS3D_Mtx_Dump( MAT4 mtx )
@@ -1024,6 +1024,23 @@ static void camera_recalc_projmtx( SS3D_Camera* CAM )
 }
 
 #define CAM_HDR SS3D_Camera* CAM = (SS3D_Camera*) obj->data;
+#define CAM_IHDR( funcname ) SS3D_Camera* CAM; \
+	if( !SGS_PARSE_METHOD( C, SS3D_Camera_iface, CAM, SS3D_Camera, funcname ) ) return 0;
+
+static int camerai_worldToScreen( SGS_CTX )
+{
+	VEC3 pos;
+	CAM_IHDR( worldToScreen );
+	if( !sgs_LoadArgs( C, "x", sgs_ArgCheck_Vec3, pos ) )
+		return 0;
+	
+	SS3D_Mtx_TransformPos( pos, pos, CAM->mView );
+	SS3D_Mtx_TransformPos( pos, pos, CAM->mProj );
+	pos[0] = pos[0] * 0.5f + 0.5f;
+	pos[1] = pos[1] * -0.5f + 0.5f;
+	sgs_PushVec3p( C, pos );
+	return 1;
+}
 
 static int camera_getindex( SGS_ARGS_GETINDEXFUNC )
 {
@@ -1041,6 +1058,8 @@ static int camera_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "viewMatrix" ) SGS_RETURN_MAT4( *CAM->mView )
 		SGS_CASE( "invViewMatrix" ) SGS_RETURN_MAT4( *CAM->mInvView )
 		SGS_CASE( "projMatrix" ) SGS_RETURN_MAT4( *CAM->mProj )
+		
+		SGS_CASE( "worldToScreen" ) SGS_RETURN_CFUNC( camerai_worldToScreen )
 	SGS_END_INDEXFUNC;
 }
 

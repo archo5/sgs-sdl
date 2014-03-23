@@ -21,6 +21,8 @@ sampler2D texBLOOM : register(s2);
 
 float4 main( float2 itex : TEXCOORD0 ) : COLOR0
 {
+	float3 parm = tex2D( texPARM, itex ).rgb;
+	itex += parm.xy;
 	float3 ocol = tex2D( texOCOL, itex ).rgb;
 	float3 bloom = tex2D( texBLOOM, itex ).rgb;
 	ocol += bloom / 2;

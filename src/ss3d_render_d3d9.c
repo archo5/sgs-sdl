@@ -1076,9 +1076,6 @@ static int rd3d9i_render( SGS_CTX )
 	D3DCALL_( R->device, SetTransform, D3DTS_PROJECTION, (D3DMATRIX*) *cam->mProj );
 	
 	
-	D3DCALL_( R->device, Clear, 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, 0xc0c0c0c0, 1.0f, 0 );
-	
-	
 	/* PASS 3: RENDER SOLID OBJECTS */
 	D3DCALL_( R->device, SetRenderTarget, 0, R->drd.RTS_OCOL );
 	D3DCALL_( R->device, SetRenderTarget, 1, R->drd.RTS_PARM );
@@ -1244,7 +1241,7 @@ static int rd3d9i_render( SGS_CTX )
 	postproc_blit( R, 4 );
 	
 	D3DCALL_( R->device, SetRenderTarget, 0, R->bb_color );
-	D3DCALL_( R->device, Clear, 0, NULL, D3DCLEAR_TARGET, 0, 1.0f, 0 );
+//	D3DCALL_( R->device, Clear, 0, NULL, D3DCLEAR_TARGET, 0, 1.0f, 0 );
 	use_shader( R, sh_post_process );
 	D3DCALL_( R->device, SetTexture, 0, (IDirect3DBaseTexture9*) R->drd.RTT_OCOL );
 	D3DCALL_( R->device, SetTexture, 1, (IDirect3DBaseTexture9*) R->drd.RTT_PARM );
@@ -1261,7 +1258,7 @@ static int rd3d9i_render( SGS_CTX )
 	RECT dstRect = { 0, h/8, w/8, h/4 };
 	IDirect3DSurface9* surfs[] = {
 		R->drd.RTS_OCOL,
-//		R->drd.RTS_PARM,
+		R->drd.RTS_PARM,
 //		R->drd.RTS_BLOOM_DSHP,
 //		R->drd.RTS_BLOOM_BLUR1,
 		R->drd.RTS_BLOOM_BLUR2,

@@ -9,6 +9,9 @@ function initialize()
 {
 	global Window = SS_CreateWindow( "SGS-SDL Game Framework", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 576, SDL_WINDOW_OPENGLMAYBE );
 	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
+	SS_InitDrawFunctions();
+	
+	global Font = SS_CreateFont( "verdana.ttf", 12 );
 	
 	_R.SS3D = SS3D_CreateRenderer( Window.renderingAPI, 0/* Window.rendererVersion */, Window.rendererPtr );
 	println( "SS3D: " $ _R.SS3D );
@@ -86,6 +89,7 @@ function initialize()
 	_R.ParticleMtl.transparent = true;
 	_R.ParticleMtl.shader = _R.SS3D.getShader( "sprite" );
 	_R.ParticleMtl.setTexture( 0, _R.SS3D.getTexture( "testdata/smoke.png" ) );
+	_R.ParticleMtl.setTexture( 1, _R.SS3D.getTexture( "testdata/smoke_normal.png" ) );
 	
 	_R.ParticleMesh = _R.SS3D.createMesh( true );
 	_R.ParticleMI = _R.Scene.createMeshInstance();
@@ -136,12 +140,26 @@ function update()
 	SS_Clear( color(0.1,0.2,0.4) );
 	
 	t = ftime();
-	camera.position = vec3(cos(t)*20,sin(t)*20,10);
-	camera.direction = vec3(-cos(t),-sin(t),-0.8);
+	camera.position = vec3(cos(t)*20,sin(t)*20,13);
+	camera.direction = vec3(-cos(t),-sin(t),-0.6);
 	
 	SS3D_UpdateParticleMesh( _R.SS3D, _R.ParticleMesh, _R.ParticleMtl, camera.viewMatrix, _R.Particles, _R.ParticleSizes, _R.ParticleColors );
 	
 	_R.SS3D.render();
+	
+	point = camera.worldToScreen( vec3(-5,0,10) );
+	SS_SetCameraUI( 0, Window.width, 0, Window.height );
+	
+	if( 0 )
+	{
+		text = "#4293075";
+		width = Font.getTextLength( text );
+		tX = point.x * Window.width;
+		tY = point.y * Window.height;
+		SS_DrawColorRect_WH( tX - 2, tY - 2, width + 4, Font.size + 4, 0.1, 0.2, 0.4, 0.5 );
+		SS_DrawTextLine( text, Font, tX, tY, color(1,1,1,1) );
+	}
+	
 	SS_Present();
 }
 

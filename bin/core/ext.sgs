@@ -1,0 +1,499 @@
+
+//
+// PRIMITIVE RENDERING
+//
+
+function SS_InitDrawFunctions()
+{
+	global g_RB = SS_CreateRenderBuffer();
+	global g_VD_P2CC4 = SS_MakeVertexFormat( "pf2cb4" );
+	global g_VD_P2T2 = SS_MakeVertexFormat( "pf2tf2" );
+	global g_VD_P2T2CC4 = SS_MakeVertexFormat( "pf2tf2cb4" );
+}
+
+function SS_DrawColorRect( x1, y1, x2, y2, r, g, b, a )
+{
+	if( sys_rctx_flip_colors ){ tmp = r; r = b; b = tmp; }
+	g_RB.begin()
+		.f( x1, y1 ).cf2b( r, g, b, a )
+		.f( x2, y1 ).cf2b( r, g, b, a )
+		.f( x2, y2 ).cf2b( r, g, b, a )
+		.f( x1, y2 ).cf2b( r, g, b, a )
+		.draw( null, g_VD_P2CC4, 0, 4, SS_PT_TRIANGLE_FAN );
+}
+function SS_DrawColorRect_WH( x, y, w, h, r, g, b, a ){ SS_DrawColorRect( x, y, x+w, y+h, r, g, b, a ); }
+
+function SS_DrawColor2VRect( x1, y1, x2, y2, r1, g1, b1, a1, r2, g2, b2, a2 )
+{
+	if( sys_rctx_flip_colors ){ tmp = r1; r1 = b1; b1 = tmp; tmp = r2; r2 = b2; b2 = tmp; }
+	g_RB.begin()
+		.f( x1, y1 ).cf2b( r1, g1, b1, a1 )
+		.f( x2, y1 ).cf2b( r1, g1, b1, a1 )
+		.f( x2, y2 ).cf2b( r2, g2, b2, a2 )
+		.f( x1, y2 ).cf2b( r2, g2, b2, a2 )
+		.draw( null, g_VD_P2CC4, 0, 4, SS_PT_TRIANGLE_FAN );
+}
+function SS_DrawColor2VRect_WH( x, y, w, h, r1, g1, b1, a1, r2, g2, b2, a2 ){ SS_DrawColor2VRect( x, y, x+w, y+h, r1, g1, b1, a1, r2, g2, b2, a2 ); }
+
+function SS_DrawTexRect( x1, y1, x2, y2, tex )
+{
+	g_RB.begin().f(
+		x1, y1, 0, 0,
+		x2, y1, 1, 0,
+		x2, y2, 1, 1,
+		x1, y2, 0, 1
+	).draw( tex, g_VD_P2T2, 0, 4, SS_PT_TRIANGLE_FAN );
+}
+function SS_DrawTexRect_WH( x, y, w, h, tex ){ SS_DrawTexRect( x, y, x+w, y+h, tex ); }
+function SS_DrawTexBox( x, y, w, h, tex ){ w /= 2; h /= 2; SS_DrawTexRect( x-w, y-h, x+w, y+h, tex ); }
+function SS_DrawTexBox_Rotated( x, y, w, h, angle, tex )
+{
+	w *= 0.5;
+	h *= 0.5;
+	
+	c = cos( angle );
+	s = sin( angle );
+	
+	ext1x = ( c - s ) * w;
+	ext1y = ( c + s ) * h;
+	ext2x = ( -c -s ) * w;
+	ext2y = ( c - s ) * h;
+	
+	g_RB.begin().f(
+		x - ext1x, y - ext1y, 0, 0, // pos - ext1
+		x - ext2x, y - ext2y, 1, 0, // pos - ext2
+		x + ext1x, y + ext1y, 1, 1, // pos + ext1
+		x + ext2x, y + ext2y, 0, 1 // pos + ext2
+	).draw( tex, g_VD_P2T2, 0, 4, SS_PT_TRIANGLE_FAN );
+}
+
+function SS_DrawTexColorRect( x1, y1, x2, y2, tex, r, g, b, a )
+{
+	if( sys_rctx_flip_colors ){ tmp = r; r = b; b = tmp; }
+	g_RB.begin()
+		.f( x1, y1, 0, 0 ).cf2b( r, g, b, a )
+		.f( x2, y1, 1, 0 ).cf2b( r, g, b, a )
+		.f( x2, y2, 1, 1 ).cf2b( r, g, b, a )
+		.f( x1, y2, 0, 1 ).cf2b( r, g, b, a )
+		.draw( tex, g_VD_P2T2CC4, 0, 4, SS_PT_TRIANGLE_FAN );
+}
+function SS_DrawTexColorRect_WH( x, y, w, h, tex, r, g, b, a ){ SS_DrawTexColorRect( x, y, x+w, y+h, tex, r, g, b, a ); }
+function SS_DrawTexColorBox( x, y, w, h, tex, r, g, b, a ){ w /= 2; h /= 2; SS_DrawTexColorRect( x-w, y-h, x+w, y+h, tex, r, g, b, a ); }
+function SS_DrawTexColorBox_Rotated( x, y, w, h, angle, tex, r, g, b, a )
+{
+	w *= 0.5;
+	h *= 0.5;
+	
+	c = cos( angle );
+	s = sin( angle );
+	
+	ext1x = ( c - s ) * w;
+	ext1y = ( c + s ) * h;
+	ext2x = ( -c -s ) * w;
+	ext2y = ( c - s ) * h;
+	
+	if( sys_rctx_flip_colors ){ tmp = r; r = b; b = tmp; }
+	
+	g_RB.begin()
+		.f( x - ext1x, y - ext1y, 0, 1 ).cf2b( r, g, b, a ) // pos - ext1
+		.f( x - ext2x, y - ext2y, 1, 1 ).cf2b( r, g, b, a ) // pos - ext2
+		.f( x + ext1x, y + ext1y, 1, 0 ).cf2b( r, g, b, a ) // pos + ext1
+		.f( x + ext2x, y + ext2y, 0, 0 ).cf2b( r, g, b, a ) // pos + ext2
+		.draw( tex, g_VD_P2T2CC4, 0, 4, SS_PT_TRIANGLE_FAN );
+}
+
+function SS_DrawColorPolyOutlined( vertices, r, g, b, a, or, og, ob, oa )
+{
+	if( vertices.size < 3 )
+		return;
+	
+	if( sys_rctx_flip_colors ){ tmp = r; r = b; b = tmp; }
+	if( sys_rctx_flip_colors ){ tmp = or; or = ob; ob = tmp; }
+	
+	g_RB.begin();
+	foreach( v : vertices )
+		g_RB.f( v.x, v.y ).cf2b( r, g, b, a );
+	g_RB.draw( null, g_VD_P2CC4, 0, vertices.size, SS_PT_TRIANGLE_FAN );
+	
+	g_RB.begin();
+	foreach( v : vertices )
+		g_RB.f( v.x, v.y ).cf2b( or, og, ob, oa );
+	v = vertices.first;
+	g_RB.f( v.x, v.y ).cf2b( or, og, ob, oa );
+	g_RB.draw( null, g_VD_P2CC4, 0, vertices.size + 1, SS_PT_LINE_STRIP );
+}
+
+function SS_DrawColorLine( x1, y1, x2, y2, r, g, b, a )
+{
+	if( sys_rctx_flip_colors ){ tmp = r; r = b; b = tmp; }
+	g_RB.begin()
+		.f( x1, y1 ).cf2b( r, g, b, a )
+		.f( x2, y2 ).cf2b( r, g, b, a )
+		.draw( null, g_VD_P2CC4, 0, 2, SS_PT_LINES );
+}
+
+function SS_DrawColorCircle( x, y, radius, numsides, r, g, b, a )
+{
+	if( numsides < 1 || !numsides )
+		numsides = ceil( radius * 8 / M_PI );
+	if( numsides < 3 )
+		return;
+	
+	if( sys_rctx_flip_colors ){ tmp = r; r = b; b = tmp; }
+	g_RB.begin();
+	
+	ang = M_PI;
+	ad = M_PI * 2 / numsides;
+	for( i = 0; i <= numsides; ++i )
+	{
+		g_RB.f( sin( ang ) * radius + x, cos( ang ) * radius + y ).cf2b( r, g, b, a );
+		ang += ad;
+	}
+	g_RB.draw( null, g_VD_P2CC4, 0, numsides + 1, SS_PT_TRIANGLE_FAN );
+}
+
+
+function SS_GetCamera2DMatrix( x, y, size, aspect, angle )
+{
+	size = 1.0/size;
+	x *= size/aspect;
+	y *= size;
+	return mat4
+	(
+		size/aspect, 0, 0, 0,
+		0, -size, 0, 0,
+		0, 0, size, 0,
+		-x, y, 0.5*size, 1
+	);
+}
+function SS_SetCamera2D( x, y, size, aspect, angle )
+{
+	SS_SetCamera( SS_GetCamera2DMatrix( x, y, size, aspect, angle ) );
+}
+
+function SS_GetCameraUIMatrix( x1, x2, y1, y2 )
+{
+	w = x2 - x1;
+	h = y2 - y1;
+	return mat4
+	(
+		2.0/w, 0, 0, 0,
+		0, -2.0/h, 0, 0,
+		0, 0, 1, 0,
+		-1-x1/w, 1+y1/w, 0, 1
+	);
+}
+function SS_SetCameraUI( x1, x2, y1, y2 )
+{
+	SS_SetCamera( SS_GetCameraUIMatrix( x1, x2, y1, y2 ) );
+}
+
+function SS_MultiplyPointMatrix( mtx, x, y )
+{
+	return vec2( mtx[0]*x + mtx[1]*y + mtx[3], mtx[4]*x + mtx[5]*y + mtx[7] );
+}
+
+
+function SS_MatrixTranspose( m )
+{
+	return mat4
+	(
+		m[0], m[4], m[8], m[12],
+		m[1], m[5], m[9], m[13],
+		m[2], m[6], m[10], m[14],
+		m[3], m[7], m[11], m[15]
+	);
+}
+
+function SS_GetCameraLookAt( pos, dir, up )
+{
+	zaxis = dir.normalized;
+	xaxis = vec3_cross( up, zaxis ).normalized;
+	yaxis = vec3_cross( zaxis, xaxis );
+	
+	return mat4
+	(
+		xaxis[0], yaxis[0], zaxis[0], 0,
+		xaxis[1], yaxis[1], zaxis[1], 0,
+		xaxis[2], yaxis[2], zaxis[2], 0,
+		-vec3_dot( xaxis, pos ),
+		-vec3_dot( yaxis, pos ),
+		-vec3_dot( zaxis, pos ),
+		1
+	);
+}
+function SS_GetCameraPerspective( angle, aspect, znear, zfar )
+{
+	yscale = 1 / tan( angle / 2 );
+	xscale = yscale / aspect;
+	return mat4
+	(
+		-xscale, 0, 0, 0,
+		0, yscale, 0, 0,
+		0, 0, zfar/(zfar-znear), 1,
+		0, 0, -znear*zfar/(zfar-znear), 0
+	);
+}
+function SS_SetCamera3D( pos, dir, up, angle, aspect, znear, zfar )
+{
+	SS_SetCamera
+	(
+		SS_GetCameraLookAt( pos, dir, up )
+		,SS_GetCameraPerspective( angle, aspect, znear, zfar )
+	);
+}
+function SS_GetCamera3D( pos, dir, up, angle, aspect, znear, zfar )
+{
+	return
+	[
+		SS_GetCameraLookAt( pos, dir, up )
+		,SS_GetCameraPerspective( angle, aspect, znear, zfar )
+	];
+}
+
+function SS_DrawFitted( tex, left, right, top, bottom, placement )
+{
+	xq = 1;
+	yq = 1;
+	if( placement & DT_LEFT ) xq = 0;
+	if( placement & DT_RIGHT ) xq = 2;
+	if( placement & DT_TOP ) yq = 0;
+	if( placement & DT_BOTTOM ) yq = 2;
+
+	iw = tex.width;
+	ih = tex.height;
+	rw = right - left;
+	rh = bottom - top;
+
+	if( iw > rw || ih > rh )
+	{
+		ia = iw / ih;
+		ra = rw / rh;
+		if( ia > ra ) // width-limited
+		{
+			ih *= rw / iw;
+			iw = rw;
+		}
+		else // height-limited
+		{
+			iw *= rh / ih;
+			ih = rh;
+		}
+	}
+	SS_Draw({
+		preset = "tile", texture = tex,
+		position = [ ( rw - iw ) / 2 * xq + left, ( rh - ih ) / 2 * yq + top ],
+		scale = [ iw, ih ],
+	});
+}
+
+function SS_DrawButton( tex, left, right, top, bottom, off, texoff )
+{
+	off ||= 8;
+	texoff ||= off;
+
+	tox = texoff / tex.width;
+	toy = texoff / tex.height;
+	x1 = left + off;
+	x2 = right - off;
+	y1 = top + off;
+	y2 = bottom - off;
+
+	V =
+	[
+		[left, top], [x1, top], [x1, y1], [left, y1],
+		[x1, top], [x2, top], [x2, y1], [x1, y1],
+		[x2, top], [right, top], [right, y1], [x2, y1],
+
+		[left, y1], [x1, y1], [x1, y2], [left, y2],
+		[x1, y1], [x2, y1], [x2, y2], [x1, y2],
+		[x2, y1], [right, y1], [right, y2], [x2, y2],
+
+		[left, y2], [x1, y2], [x1, bottom], [left, bottom],
+		[x1, y2], [x2, y2], [x2, bottom], [x1, bottom],
+		[x2, y2], [right, y2], [right, bottom], [x2, bottom],
+	];
+
+	T =
+	[
+		[0, 0], [tox, 0], [tox, toy], [0, toy],
+		[tox, 0], [1-tox, 0], [1-tox, toy], [tox, toy],
+		[1-tox, 0], [1, 0], [1, toy], [1-tox, toy],
+
+		[0, toy], [tox, toy], [tox, 1-toy], [0, 1-toy],
+		[tox, toy], [1-tox, toy], [1-tox, 1-toy], [tox, 1-toy],
+		[1-tox, toy], [1, toy], [1, 1-toy], [1-tox, 1-toy],
+
+		[0, 1-toy], [tox, 1-toy], [tox, 1], [0, 1],
+		[tox, 1-toy], [1-tox, 1-toy], [1-tox, 1], [tox, 1],
+		[1-tox, 1-toy], [1, 1-toy], [1, 1], [1-tox, 1],
+	];
+
+	SS_Draw({ texture = tex, mode = SS_PT_QUADS, vertices = V, vtexcoords = T, position=[0,0] });
+}
+
+
+
+//
+// TEXT RENDERING
+//
+
+global
+	DT_LEFT    = 0b00000001,
+	DT_CENTER  = 0b00000010,
+	DT_RIGHT   = 0b00000100,
+	DT_JUSTIFY = 0b00001000,
+	DT_TOP     = 0b00010000,
+	DT_VCENTER = 0b00100000,
+	DT_BOTTOM  = 0b01000000;
+
+
+function SS_CalcTextLayout( text_ucp, font, width, height )
+{
+	lines = [].reserve(6); // TODO optimize to static instance
+	lineheight = font.size;
+	
+	SP = string_charcode( " " );
+	NL = string_charcode( "\n" );
+	
+	from = 0;
+	eol = 0;
+	curline = 0;
+	curword = 0;
+	numwords = 1;
+	pcpos = null;
+	for( i = 0; i < text_ucp.size; ++i )
+	{
+		c = text_ucp[ i ];
+		prevchar = null;
+		if( pcpos != null )
+			prevchar = text_ucp[ pcpos ];
+		cw = font.getAdvance( prevchar, text_ucp[ i ] );
+		
+		if( c == NL )
+		{
+			curline += curword;
+			if( prevchar == SP )
+				numwords--;
+			
+		//	lines.push({ from = from, to = i, width = curline, numwords = numwords });
+			lines.push( from, i, curline );
+			
+			curline = 0;
+			curword = 0;
+			numwords = 1;
+			if( ( lines.size + 1 ) * lineheight > height )
+				break;
+			pcpos = null;
+			i++;
+			while( i < text_ucp.size && text_ucp[ i ] == SP )
+				i++;
+			from = i--;
+			continue;
+		}
+		if( c == SP )
+		{
+			curline += curword;
+			if( prevchar !== null && prevchar != SP )
+				numwords++;
+			eol = i;
+			curword = 0;
+		}
+		if( curline + curword + cw < width )
+		{
+			// still within line
+			curword += cw;
+			pcpos = i;
+			continue;
+		}
+		else
+		{
+			// over the limit
+			if( curline )
+			{
+				// if not first word, commit line and restart the word
+				curword = 0;
+				numwords--;
+				i = eol;
+			}
+			curline += curword;
+			
+		//	lines.push({ from = from, to = i, width = curline, numwords = numwords });
+			lines.push( from, i, curline );
+			
+			curline = 0;
+			curword = 0;
+			numwords = 1;
+			if( ( lines.size + 1 ) * lineheight > height )
+				break;
+			pcpos = null;
+			while( i < text_ucp.size && text_ucp[ i ] == SP )
+				i++;
+			from = i--;
+			continue;
+		}
+	}
+	
+	curline += curword;
+	if( curline )
+	{
+	//	lines.push({ from = from, to = text_ucp.size, width = curline, numwords = numwords });
+		lines.push( from, text_ucp.size, curline );
+	}
+	
+	return lines;
+}
+
+function SS_DrawTextRect( text, font, color, placement, left, right, top, bottom )
+{
+	// validation
+	if( !SS_IsFont( font ) )
+	{
+		WARNING( "draw_text(): invalid value for 'font'" );
+		return false;
+	}
+	hfc = !!( placement & DT_LEFT ) + !!( placement & DT_CENTER )
+		+ !!( placement & DT_RIGHT ) + !!( placement & DT_JUSTIFY );
+	vfc = !!( placement & DT_TOP ) + !!( placement & DT_VCENTER )
+		+ !!( placement & DT_BOTTOM );
+	if( hfc != 1 || vfc != 1 )
+	{
+		WARNING( "draw_text(): invalid placement flag combo" );
+		return false;
+	}
+	
+	// sizing
+	width = right - left;
+	height = bottom - top;
+	
+	lineheight = font.size;
+	if( height < lineheight )
+		return true;
+	
+	text_ucp = string_utf8_decode( text );
+	
+	lines = SS_CalcTextLayout( text_ucp, font, width, height );
+	
+	vspace = height - lines.size * lineheight;
+	y = top;
+	if( placement & DT_VCENTER ) y += vspace / 2;
+	else if( placement & DT_BOTTOM ) y += vspace;
+	
+//	foreach( lnum, line : lines )
+	for( clo = 0; clo < lines.size; clo += 3 )
+	{
+		hspace = width - lines[clo+2];//line.width;
+		x = left;
+		if( placement & DT_CENTER ) x += hspace / 2;
+		else if( placement & DT_RIGHT ) x += hspace;
+		
+		ucppart = text_ucp.part( lines[clo], lines[clo+1] - lines[clo] );
+	//	ucppart = text_ucp.part( line.from, line.to - line.from );
+		utf8part = string_utf8_encode( ucppart );
+		
+		SS_DrawTextLine_VN( utf8part, font, x, y, color );
+		y += lineheight;
+	}
+}
+
+

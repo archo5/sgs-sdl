@@ -159,10 +159,17 @@ int ss_Initialize( int argc, char* argv[], int debug )
 #endif
 	
 	/* run the config file */
-	ret = sgs_Include( C, "engine/all" );
+	ret = sgs_Include( C, "core/config" );
 	if( !ret )
 	{
-		fprintf( stderr, "Could not set up engine scripts.\n" );
+		fprintf( stderr, "Could not run core/config (configuration script).\n" );
+		return -2;
+	}
+	/* run the primary extensions */
+	ret = sgs_Include( C, "core/ext" );
+	if( !ret )
+	{
+		fprintf( stderr, "Could not run core/ext.\n" );
 		return -2;
 	}
 	

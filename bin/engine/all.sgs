@@ -1,6 +1,0 @@
-include "engine/config";
-include "engine/draw";
-include "engine/font";
-include "engine/histogram";
-include "engine/tilemap";
-include "engine/ui";

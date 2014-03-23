@@ -11,21 +11,28 @@ void main
 	float2 tc : TEXCOORD0,
 	out float4 opos : POSITION0,
 	out float4 ocol : COLOR0,
-	out float2 otc : TEXCOORD0
+	out float2 otc : TEXCOORD0,
+	out float4 tfpos : TEXCOORD1
 )
 {
-	opos = mul( mProj, mul( mWorldView, ipos ) );
+	tfpos = opos = mul( mProj, mul( mWorldView, ipos ) );
 	ocol = icol;
 	otc = tc;
 }
 
 #elif defined(PS)
 
-sampler2D Tex0 : register(s0);
+sampler2D Base : register(s0);
+sampler2D Bump : register(s1);
 
-float4 main( float2 tc : TEXCOORD0, float4 icol : COLOR0 ) : COLOR0
+void main( float2 tc : TEXCOORD0, float4 itfpos : TEXCOORD1, float4 icol : COLOR0,
+	out float4 ocol : COLOR0, out float4 oprm : COLOR1 )
 {
-	return tex2D( Tex0, tc ) * icol;
+	float4 col = tex2D( Base, tc );
+	float3 nrm = normalize( tex2D( Bump, tc ).rgb * 2 - 1 );
+	col.rgb *= col.rgb;
+	ocol = col * icol;
+	oprm = float4( nrm.xy * 0.5 / itfpos.z, 0, col.a ); 
 }
 
 #endif

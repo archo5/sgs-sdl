@@ -1,4 +1,7 @@
 
+include "../utils/tilemap";
+include "../utils/histogram";
+
 function configure()
 {
 	global sys_exit;
@@ -92,9 +95,6 @@ function initialize()
 	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );// SS_RENDERER_OPENGL );
 	global W = 1024;
 	global H = 576;
-	
-	global UI = UIFrame.create( 1024, 576 );
-//	UI.addChild( UIControl.createButton( "Make it rain!", 10, 10, 120, 40, function(){} ) );
 	
 	global MI = SS_CreateImage( 2, 2 );
 	MI.clear( 0, 0, 0 );
@@ -220,8 +220,6 @@ function update()
 	
 	SS_Draw({ preset = "box", texture = image, position = mpos, scale = vec2(128,128), angle = rotation * M_PI, color = color(0.3,0.5,0.7) });
 	
-	UI.draw();
-	
 //	println( "font data: " $ { ascender = BigFont.ascender, descender = BigFont.descender, y_ppem = BigFont.y_ppem } );
 	fof = ( BigFont.ascender + abs( BigFont.descender ) - BigFont.y_ppem ) / 2; // half of total side height is the offset to apply
 	
@@ -274,8 +272,6 @@ function on_event( e )
 		switch();
 	if( e.type == SDL_VIDEODEVICELOST ) println( "Device lost!" );
 	if( e.type == SDL_VIDEODEVICERESET ) println( "Device reset!" );
-
-	UI.event( e );
 }
 
 function cleanup()
