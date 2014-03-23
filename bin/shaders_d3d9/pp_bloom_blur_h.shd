@@ -1,0 +1,37 @@
+
+#ifdef VS
+
+void main
+(
+	float4 ipos : POSITION0,
+	float2 itex0 : TEXCOORD0,
+	out float4 opos : POSITION0,
+	out float2 otex : TEXCOORD0
+)
+{
+	opos = ipos;
+	otex = itex0;
+}
+
+#elif defined(PS)
+
+sampler2D texOCOL : register(s0);
+
+float4 PPData : register(c0);
+
+float4 main( float2 itex : TEXCOORD0 ) : COLOR0
+{
+	float2 hoff = float2( PPData.z, 0 );
+	
+	float3 ocol = tex2D( texOCOL, itex ).rgb * 0.383;
+	ocol += tex2D( texOCOL, itex + hoff*1 ).rgb * 0.242;
+	ocol += tex2D( texOCOL, itex + hoff*2 ).rgb * 0.061;
+	ocol += tex2D( texOCOL, itex + hoff*3 ).rgb * 0.006;
+	ocol += tex2D( texOCOL, itex - hoff*1 ).rgb * 0.242;
+	ocol += tex2D( texOCOL, itex - hoff*2 ).rgb * 0.061;
+	ocol += tex2D( texOCOL, itex - hoff*3 ).rgb * 0.006;
+	
+	return float4( ocol, 1 );
+}
+
+#endif

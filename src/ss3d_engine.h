@@ -8,8 +8,6 @@
 #include <sgsxgmath.h>
 
 
-void sgs_ObjAssign( SGS_CTX, sgs_VarObj** pobj, sgs_VarObj* src );
-
 
 typedef float VEC3[3];
 typedef float VEC4[4];
@@ -293,6 +291,7 @@ struct _SS3D_Renderer
 	sgs_VHTable textures;
 	sgs_VHTable materials;
 	sgs_VarObj* currentScene;
+	sgs_VarObj* store;
 	
 	/* to be initialized by derived class */
 	int width, height;

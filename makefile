@@ -103,10 +103,12 @@ $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT): $(OBJ)
 	$(PLATPOST)
 
 $(OUTDIR)/$(LIBPFX)ss3d$(LIBEXT): $(SS3D_OBJ) $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT)
+	$(MAKE) -C sgscript xgmath
 	$(LINUXHACKPRE)
 	gcc -o $@ $(SS3D_OBJ) $(C2FLAGS) -Lsgscript/bin $(LINKPATHS) $(PLATFLAGS) \
 		-lsgscript -shared
 	$(LINUXHACKPOST)
+	$(PLATPOST)
 
 $(OBJDIR)/ss_%.o: $(SRCDIR)/ss_%.c $(DEPS)
 	$(CC) -c -o $@ $< $(COMPATHS) -Isgscript/src -Isgscript/ext $(C2FLAGS) -Wno-comment

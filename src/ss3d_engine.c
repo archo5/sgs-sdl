@@ -9,16 +9,6 @@
 #define CN( x ) { "SS3D" #x, SS3D##x }
 
 
-void sgs_ObjAssign( SGS_CTX, sgs_VarObj** pobj, sgs_VarObj* src )
-{
-	if( *pobj )
-		sgs_ObjRelease( C, *pobj );
-	*pobj = src;
-	if( src )
-		sgs_ObjAcquire( C, src );
-}
-
-
 //
 // MATH
 
@@ -126,6 +116,92 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 	out[2][0] = out[2][1] = 0; out[2][3] = 1;
 	out[3][2] = -znear * zfar / ( zfar - znear );
 	out[3][0] = out[3][1] = out[3][3] = 0;
+}
+
+
+//
+// MESH GENERATORS
+
+typedef struct _genVtx
+{
+	float x, y, z;
+	float tx, ty;
+	float nx, ny, nz;
+	float tgx, tgy, tgz, tgw;
+	float cr, cg, cb, ca;
+}
+genVtx;
+
+static int SS3D_MeshGen_Cube( SGS_CTX )
+{
+	VEC3 pos = {0,0,0};
+	VEC4 col = {1,1,1,1};
+	float ext;
+	SGSFN( "SS3D_MeshGen_Cube" );
+	if( !sgs_LoadArgs( C, "f|xx", &ext, sgs_ArgCheck_Vec3, pos, sgs_ArgCheck_Color, col ) )
+		return 0;
+	
+	genVtx vertices[] =
+	{
+		// front
+		{ pos[0]-ext, pos[1]-ext, pos[2]-ext,  0, 0,   0,  0, -1,  0,  1,  0, 1,  col[0], col[1], col[2], col[3] },
+		{ pos[0]+ext, pos[1]-ext, pos[2]-ext,  0, 1,   0,  0, -1,  0,  1,  0, 1,  col[0], col[1], col[2], col[3] },
+		{ pos[0]+ext, pos[1]+ext, pos[2]-ext,  1, 1,   0,  0, -1,  0,  1,  0, 1,  col[0], col[1], col[2], col[3] },
+		{ pos[0]-ext, pos[1]+ext, pos[2]-ext,  1, 0,   0,  0, -1,  0,  1,  0, 1,  col[0], col[1], col[2], col[3] },
+		// top
+		{ pos[0]-ext, pos[1]+ext, pos[2]-ext,  0, 0,   0, +1,  0,  0,  0,  1, 1,  col[0], col[1], col[2], col[3] },
+		{ pos[0]+ext, pos[1]+ext, pos[2]-ext,  0, 1,   0, +1,  0,  0,  0,  1, 1,  col[0], col[1], col[2], col[3] },
+		{ pos[0]+ext, pos[1]+ext, pos[2]+ext,  1, 1,   0, +1,  0,  0,  0,  1, 1,  col[0], col[1], col[2], col[3] },
+		{ pos[0]-ext, pos[1]+ext, pos[2]+ext,  1, 0,   0, +1,  0,  0,  0,  1, 1,  col[0], col[1], col[2], col[3] },
+		// back
+		{ pos[0]-ext, pos[1]+ext, pos[2]+ext,  0, 0,   0,  0, +1,  0, -1,  0, 1,  col[0], col[1], col[2], col[3] },
+		{ pos[0]+ext, pos[1]+ext, pos[2]+ext,  0, 1,   0,  0, +1,  0, -1,  0, 1,  col[0], col[1], col[2], col[3] },
+		{ pos[0]+ext, pos[1]-ext, pos[2]+ext,  1, 1,   0,  0, +1,  0, -1,  0, 1,  col[0], col[1], col[2], col[3] },
+		{ pos[0]-ext, pos[1]-ext, pos[2]+ext,  1, 0,   0,  0, +1,  0, -1,  0, 1,  col[0], col[1], col[2], col[3] },
+		// bottom
+		{ pos[0]-ext, pos[1]-ext, pos[2]+ext,  0, 0,   0, -1,  0,  0,  0, -1, 1,  col[0], col[1], col[2], col[3] },
+		{ pos[0]+ext, pos[1]-ext, pos[2]+ext,  0, 1,   0, -1,  0,  0,  0, -1, 1,  col[0], col[1], col[2], col[3] },
+		{ pos[0]+ext, pos[1]-ext, pos[2]-ext,  1, 1,   0, -1,  0,  0,  0, -1, 1,  col[0], col[1], col[2], col[3] },
+		{ pos[0]-ext, pos[1]-ext, pos[2]-ext,  1, 0,   0, -1,  0,  0,  0, -1, 1,  col[0], col[1], col[2], col[3] },
+		// left
+		{ pos[0]-ext, pos[1]-ext, pos[2]+ext,  0, 0,  -1,  0,  0,  0,  1,  0, 1,  col[0], col[1], col[2], col[3] },
+		{ pos[0]-ext, pos[1]-ext, pos[2]-ext,  0, 1,  -1,  0,  0,  0,  1,  0, 1,  col[0], col[1], col[2], col[3] },
+		{ pos[0]-ext, pos[1]+ext, pos[2]-ext,  1, 1,  -1,  0,  0,  0,  1,  0, 1,  col[0], col[1], col[2], col[3] },
+		{ pos[0]-ext, pos[1]+ext, pos[2]+ext,  1, 0,  -1,  0,  0,  0,  1,  0, 1,  col[0], col[1], col[2], col[3] },
+		// right
+		{ pos[0]+ext, pos[1]-ext, pos[2]-ext,  0, 0,  +1,  0,  0,  0,  1,  0, 1,  col[0], col[1], col[2], col[3] },
+		{ pos[0]+ext, pos[1]-ext, pos[2]+ext,  0, 1,  +1,  0,  0,  0,  1,  0, 1,  col[0], col[1], col[2], col[3] },
+		{ pos[0]+ext, pos[1]+ext, pos[2]+ext,  1, 1,  +1,  0,  0,  0,  1,  0, 1,  col[0], col[1], col[2], col[3] },
+		{ pos[0]+ext, pos[1]+ext, pos[2]-ext,  1, 0,  +1,  0,  0,  0,  1,  0, 1,  col[0], col[1], col[2], col[3] },
+	};
+	
+	uint16_t indices[] =
+	{
+		// front
+		0, 1, 2,
+		2, 3, 0,
+		// top
+		4, 5, 6,
+		6, 7, 4,
+		// back
+		8, 9, 10,
+		10, 11, 8,
+		// bottom
+		12, 13, 14,
+		14, 15, 12,
+		// left
+		16, 17, 18,
+		18, 19, 16,
+		// right
+		20, 21, 22,
+		22, 23, 20,
+	};
+	
+	sgs_PushStringBuf( C, (char*) vertices, sizeof(vertices) );
+	sgs_PushStringBuf( C, (char*) indices, sizeof(indices) );
+	sgs_PushInt( C, 4 * 6 );
+	sgs_PushInt( C, 6 * 6 );
+	return 4;
 }
 
 
@@ -631,7 +707,7 @@ static int meshinst_getindex( SGS_ARGS_GETINDEXFUNC )
 	SGS_BEGIN_INDEXFUNC
 		SGS_CASE( "mesh" )    SGS_RETURN_OBJECT( MI->mesh )
 		SGS_CASE( "matrix" )  SGS_RETURN_MAT4( *MI->matrix )
-		SGS_CASE( "color" )   SGS_RETURN_VEC4( MI->color )
+		SGS_CASE( "color" )   SGS_RETURN_COLOR( MI->color )
 		SGS_CASE( "enabled" ) SGS_RETURN_BOOL( MI->enabled )
 	SGS_END_INDEXFUNC;
 }
@@ -642,7 +718,7 @@ static int meshinst_setindex( SGS_ARGS_SETINDEXFUNC )
 	SGS_BEGIN_INDEXFUNC
 		SGS_CASE( "mesh" )    { if( !MI->scene || !MI->scene->renderer ) return SGS_EINPROC; SGS_PARSE_OBJECT( MI->scene->renderer->ifMesh, MI->mesh, 0 ) }
 		SGS_CASE( "matrix" )  SGS_PARSE_MAT4( *MI->matrix )
-		SGS_CASE( "color" )   SGS_PARSE_VEC4( MI->color, 0 )
+		SGS_CASE( "color" )   SGS_PARSE_COLOR( MI->color, 0 )
 		SGS_CASE( "enabled" ) SGS_PARSE_BOOL( MI->enabled )
 	SGS_END_INDEXFUNC;
 }
@@ -1185,6 +1261,7 @@ sgs_ObjInterface SS3D_Scene_iface[1] =
 
 void SS3D_Renderer_Construct( SS3D_Renderer* R, SGS_CTX )
 {
+	sgs_Variable storeVar;
 	memset( R, 0, sizeof(*R) );
 	R->C = C;
 	R->destroying = 0;
@@ -1193,6 +1270,9 @@ void SS3D_Renderer_Construct( SS3D_Renderer* R, SGS_CTX )
 	sgs_vht_init( &R->textures, C, 128, 128 );
 	sgs_vht_init( &R->materials, C, 128, 128 );
 	R->currentScene = NULL;
+	
+	sgs_InitDict( C, &storeVar, 0 );
+	R->store = sgs_GetObjectStructP( &storeVar );
 }
 
 void SS3D_Renderer_Destruct( SS3D_Renderer* R )
@@ -1210,6 +1290,7 @@ void SS3D_Renderer_Destruct( SS3D_Renderer* R )
 	sgs_vht_free( &R->materials, R->C );
 	if( R->currentScene )
 		sgs_ObjRelease( R->C, R->currentScene );
+	sgs_ObjRelease( R->C, R->store );
 }
 
 void SS3D_Renderer_Update( SS3D_Renderer* R, float dt )
@@ -1274,6 +1355,8 @@ static int SS3D_CreateRenderer( SGS_CTX )
 
 static sgs_RegFuncConst ss3d_fconsts[] =
 {
+	FN( MeshGen_Cube ),
+	
 	FN( CreateCamera ),
 	FN( CreateViewport ),
 	FN( CreateRenderer ),

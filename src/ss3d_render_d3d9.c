@@ -56,9 +56,15 @@ typedef struct RTData
 {
 	IDirect3DTexture9* RTT_OCOL; /* oR, oG, oB, oA, RGBA16F */
 	IDirect3DTexture9* RTT_PARM; /* distX, distY, emissive, ?, RGBA16F */
+	IDirect3DTexture9* RTT_BLOOM_DSHP; /* bloom downsample/high-pass RT, RGBA8 */
+	IDirect3DTexture9* RTT_BLOOM_BLUR1; /* bloom horizontal blur RT, RGBA8 */
+	IDirect3DTexture9* RTT_BLOOM_BLUR2; /* bloom vertical blur RT, RGBA8 */
 	
 	IDirect3DSurface9* RTS_OCOL;
 	IDirect3DSurface9* RTS_PARM;
+	IDirect3DSurface9* RTS_BLOOM_DSHP;
+	IDirect3DSurface9* RTS_BLOOM_BLUR1;
+	IDirect3DSurface9* RTS_BLOOM_BLUR2;
 	IDirect3DSurface9* RTSD; /* depth/stencil surface, D24S8 */
 	int width, height;
 }
@@ -88,26 +94,50 @@ static void postproc_init( SS3D_RD3D9* R, RTData* D, int w, int h )
 	D->width = w;
 	D->height = h;
 	
+	int w4 = w / 4;
+	int h4 = h / 4;
+	
+	/* core */
 	hr = D3DCALL_( R->device, CreateTexture, w, h, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A16B16G16R16F, D3DPOOL_DEFAULT, &D->RTT_OCOL, NULL );
 	sgs_BreakIf( FAILED( hr ) || !D->RTT_OCOL || !"failed to create rgba16f render target texture" );
 	
 	hr = D3DCALL_( R->device, CreateTexture, w, h, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A16B16G16R16F, D3DPOOL_DEFAULT, &D->RTT_PARM, NULL );
 	sgs_BreakIf( FAILED( hr ) || !D->RTT_PARM || !"failed to create rgba16f render target texture" );
 	
+	/* bloom */
+	hr = D3DCALL_( R->device, CreateTexture, w4, h4, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A16B16G16R16F, D3DPOOL_DEFAULT, &D->RTT_BLOOM_DSHP, NULL );
+	sgs_BreakIf( FAILED( hr ) || !D->RTT_BLOOM_DSHP || !"failed to create rgba16f render target texture" );
+	
+	hr = D3DCALL_( R->device, CreateTexture, w4, h4, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A16B16G16R16F, D3DPOOL_DEFAULT, &D->RTT_BLOOM_BLUR1, NULL );
+	sgs_BreakIf( FAILED( hr ) || !D->RTT_BLOOM_BLUR1 || !"failed to create rgba16f render target texture" );
+	
+	hr = D3DCALL_( R->device, CreateTexture, w4, h4, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A16B16G16R16F, D3DPOOL_DEFAULT, &D->RTT_BLOOM_BLUR2, NULL );
+	sgs_BreakIf( FAILED( hr ) || !D->RTT_BLOOM_BLUR2 || !"failed to create rgba16f render target texture" );
+	
+	/* depth */
 	hr = D3DCALL_( R->device, CreateDepthStencilSurface, w, h, D3DFMT_D24S8, D3DMULTISAMPLE_NONE, 0, TRUE, &D->RTSD, NULL );
 	sgs_BreakIf( FAILED( hr ) || !D->RTSD || !"failed to create d24s8 depth+stencil surface" );
 	
 	D3DCALL_( D->RTT_OCOL, GetSurfaceLevel, 0, &D->RTS_OCOL );
 	D3DCALL_( D->RTT_PARM, GetSurfaceLevel, 0, &D->RTS_PARM );
+	D3DCALL_( D->RTT_BLOOM_DSHP, GetSurfaceLevel, 0, &D->RTS_BLOOM_DSHP );
+	D3DCALL_( D->RTT_BLOOM_BLUR1, GetSurfaceLevel, 0, &D->RTS_BLOOM_BLUR1 );
+	D3DCALL_( D->RTT_BLOOM_BLUR2, GetSurfaceLevel, 0, &D->RTS_BLOOM_BLUR2 );
 }
 
 static void postproc_free( SS3D_RD3D9* R, RTData* D )
 {
 	SAFE_RELEASE( D->RTS_OCOL );
 	SAFE_RELEASE( D->RTS_PARM );
+	SAFE_RELEASE( D->RTS_BLOOM_DSHP );
+	SAFE_RELEASE( D->RTS_BLOOM_BLUR1 );
+	SAFE_RELEASE( D->RTS_BLOOM_BLUR2 );
 	SAFE_RELEASE( D->RTSD );
 	SAFE_RELEASE( D->RTT_OCOL );
 	SAFE_RELEASE( D->RTT_PARM );
+	SAFE_RELEASE( D->RTT_BLOOM_DSHP );
+	SAFE_RELEASE( D->RTT_BLOOM_BLUR1 );
+	SAFE_RELEASE( D->RTT_BLOOM_BLUR2 );
 	D->width = 0;
 	D->height = 0;
 }
@@ -853,6 +883,47 @@ typedef struct _ssvtx
 }
 ssvtx;
 
+static void postproc_blit( SS3D_RD3D9* R, int ds )
+{
+	int w = R->inh.width, h = R->inh.height;
+	
+	/* assuming these are validated: */
+	SS3D_Scene* scene = (SS3D_Scene*) R->inh.currentScene->data;
+	SS3D_Camera* cam = (SS3D_Camera*) scene->camera->data;
+	
+	float invQW = 2.0f, invQH = 2.0f;
+	if( scene->viewport )
+	{
+		SS3D_Viewport* VP = (SS3D_Viewport*) scene->viewport->data;
+		D3DVIEWPORT9 d3dvp = { VP->x1 / ds, VP->y1 / ds, ( VP->x2 - VP->x1 ) / ds, ( VP->y2 - VP->y1 ) / ds, 0.0f, 1.0f };
+		invQW = w * 2.0f / ( VP->x2 - VP->x1 );
+		invQH = h * 2.0f / ( VP->y2 - VP->y1 );
+		D3DCALL_( R->device, SetViewport, &d3dvp );
+	}
+	
+	w /= ds;
+	h /= ds;
+	
+	float hpox = 0.5f / w;
+	float hpoy = 0.5f / h;
+	float fsx = 1/cam->mProj[0][0];
+	float fsy = 1/cam->mProj[1][1];
+	ssvtx ssVertices[] =
+	{
+		{ -1, -1, 0, 0+hpox, 1+hpoy, -fsx, -fsy },
+		{ invQW - 1, -1, 0, 1+hpox, 1+hpoy, +fsx, -fsy },
+		{ invQW - 1, invQH - 1, 0, 1+hpox, 0+hpoy, +fsx, +fsy },
+		{ -1, invQH - 1, 0, 0+hpox, 0+hpoy, -fsx, +fsy },
+	};
+	
+	VEC4 ppdata;
+	VEC4_Set( ppdata, w, h, 1.0f / w, 1.0f / h );
+	pshc_set_vec4array( R, 0, ppdata, 1 );
+	
+	D3DCALL_( R->device, SetFVF, D3DFVF_XYZ | D3DFVF_TEX2 );
+	D3DCALL_( R->device, DrawPrimitiveUP, D3DPT_TRIANGLEFAN, 2, ssVertices, sizeof(*ssVertices) );
+}
+
 static int rd3d9i_render( SGS_CTX )
 {
 	int i;
@@ -876,6 +947,9 @@ static int rd3d9i_render( SGS_CTX )
 	
 	SS3D_Shader_D3D9* sh_solid_render = get_shader( R, "testFRrender" );
 	SS3D_Shader_D3D9* sh_post_process = get_shader( R, "testFRpost" );
+	SS3D_Shader_D3D9* sh_post_dshp = get_shader( R, "pp_bloom_dshp" );
+	SS3D_Shader_D3D9* sh_post_blur_h = get_shader( R, "pp_bloom_blur_h" );
+	SS3D_Shader_D3D9* sh_post_blur_v = get_shader( R, "pp_bloom_blur_v" );
 	
 	
 	D3DCALL_( R->device, SetTransform, D3DTS_VIEW, (D3DMATRIX*) *cam->mView );
@@ -981,44 +1055,38 @@ static int rd3d9i_render( SGS_CTX )
 	
 	
 	/* PASS 5: POST-PROCESS & RENDER TO BACKBUFFER */
-	D3DCALL_( R->device, SetRenderTarget, 0, R->bb_color );
+	D3DCALL_( R->device, SetRenderState, D3DRS_ALPHABLENDENABLE, 0 );
+	D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 0 );
 	D3DCALL_( R->device, SetRenderTarget, 1, NULL );
 	D3DCALL_( R->device, SetDepthStencilSurface, R->bb_depth );
 	
-	{
-		float invQW = 2.0f, invQH = 2.0f;
-		if( scene->viewport )
-		{
-			SS3D_Viewport* VP = (SS3D_Viewport*) scene->viewport->data;
-			D3DVIEWPORT9 d3dvp = { VP->x1, VP->y1, VP->x2 - VP->x1, VP->y2 - VP->y1, 0.0f, 1.0f };
-			invQW = w * 2.0f / ( VP->x2 - VP->x1 );
-			invQH = h * 2.0f / ( VP->y2 - VP->y1 );
-			D3DCALL_( R->device, SetViewport, &d3dvp );
-		}
-		
-		D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 0 );
-		D3DCALL_( R->device, SetRenderState, D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
-		D3DCALL_( R->device, SetRenderState, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
-		
-		use_shader( R, sh_post_process );
-		
-		float hpox = 0.5f / w;
-		float hpoy = 0.5f / h;
-		float fsx = 1/cam->mProj[0][0];
-		float fsy = 1/cam->mProj[1][1];
-		ssvtx ssVertices[] =
-		{
-			{ -1, -1, 0, 0+hpox, 1+hpoy, -fsx, -fsy },
-			{ invQW - 1, -1, 0, 1+hpox, 1+hpoy, +fsx, -fsy },
-			{ invQW - 1, invQH - 1, 0, 1+hpox, 0+hpoy, +fsx, +fsy },
-			{ -1, invQH - 1, 0, 0+hpox, 0+hpoy, -fsx, +fsy },
-		};
-		
-		D3DCALL_( R->device, SetTexture, 0, (IDirect3DBaseTexture9*) R->drd.RTT_OCOL );
-		D3DCALL_( R->device, SetTexture, 1, (IDirect3DBaseTexture9*) R->drd.RTT_PARM );
-		D3DCALL_( R->device, SetFVF, D3DFVF_XYZ | D3DFVF_TEX2 );
-		D3DCALL_( R->device, DrawPrimitiveUP, D3DPT_TRIANGLEFAN, 2, ssVertices, sizeof(*ssVertices) );
-	}
+	D3DCALL_( R->device, SetRenderTarget, 0, R->drd.RTS_BLOOM_DSHP );
+	D3DCALL_( R->device, Clear, 0, NULL, D3DCLEAR_TARGET, 0, 1.0f, 0 );
+	D3DCALL_( R->device, SetTexture, 0, (IDirect3DBaseTexture9*) R->drd.RTT_OCOL );
+	use_shader( R, sh_post_dshp );
+	postproc_blit( R, 4 );
+	
+	D3DCALL_( R->device, SetRenderTarget, 0, R->drd.RTS_BLOOM_BLUR1 );
+	D3DCALL_( R->device, Clear, 0, NULL, D3DCLEAR_TARGET, 0, 1.0f, 0 );
+	D3DCALL_( R->device, SetTexture, 0, (IDirect3DBaseTexture9*) R->drd.RTT_BLOOM_DSHP );
+	use_shader( R, sh_post_blur_h );
+	postproc_blit( R, 4 );
+	
+	D3DCALL_( R->device, SetRenderTarget, 0, R->drd.RTS_BLOOM_BLUR2 );
+	D3DCALL_( R->device, Clear, 0, NULL, D3DCLEAR_TARGET, 0, 1.0f, 0 );
+	D3DCALL_( R->device, SetTexture, 0, (IDirect3DBaseTexture9*) R->drd.RTT_BLOOM_BLUR1 );
+	use_shader( R, sh_post_blur_v );
+	postproc_blit( R, 4 );
+	
+	D3DCALL_( R->device, SetRenderTarget, 0, R->bb_color );
+	D3DCALL_( R->device, Clear, 0, NULL, D3DCLEAR_TARGET, 0, 1.0f, 0 );
+	use_shader( R, sh_post_process );
+	D3DCALL_( R->device, SetTexture, 0, (IDirect3DBaseTexture9*) R->drd.RTT_OCOL );
+	D3DCALL_( R->device, SetTexture, 1, (IDirect3DBaseTexture9*) R->drd.RTT_PARM );
+	D3DCALL_( R->device, SetTexture, 2, (IDirect3DBaseTexture9*) R->drd.RTT_BLOOM_BLUR2 );
+	D3DCALL_( R->device, SetSamplerState, 2, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
+	postproc_blit( R, 1 );
+	
 	
 	D3DCALL_( R->device, SetTexture, 0, NULL );
 	use_shader( R, NULL );
@@ -1028,6 +1096,9 @@ static int rd3d9i_render( SGS_CTX )
 	IDirect3DSurface9* surfs[] = {
 		R->drd.RTS_OCOL,
 //		R->drd.RTS_PARM,
+		R->drd.RTS_BLOOM_DSHP,
+		R->drd.RTS_BLOOM_BLUR1,
+		R->drd.RTS_BLOOM_BLUR2,
 	};
 	for( i = 0; i < sizeof(surfs)/sizeof(surfs[0]); ++i )
 	{
@@ -1035,6 +1106,10 @@ static int rd3d9i_render( SGS_CTX )
 		dstRect.left += w/8;
 		dstRect.right += w/8;
 	}
+	
+	D3DCALL_( R->device, SetRenderState, D3DRS_ALPHABLENDENABLE, 1 );
+	D3DCALL_( R->device, SetRenderState, D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
+	D3DCALL_( R->device, SetRenderState, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
 	
 	return 0;
 }
@@ -1113,6 +1188,10 @@ static int rd3d9_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isp
 {
 	R_HDR;
 	SGS_BEGIN_INDEXFUNC
+		// properties
+		SGS_CASE( "currentScene" )     SGS_RETURN_OBJECT( R->inh.currentScene )
+		SGS_CASE( "store" )            SGS_RETURN_OBJECT( R->inh.store )
+		
 		// methods
 		SGS_CASE( "update" )           SGS_RETURN_CFUNC( rd3d9i_update )
 		SGS_CASE( "render" )           SGS_RETURN_CFUNC( rd3d9i_render )
@@ -1126,9 +1205,6 @@ static int rd3d9_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isp
 		SGS_CASE( "createMaterial" )   SGS_RETURN_CFUNC( rd3d9i_createMaterial )
 		SGS_CASE( "createMesh" )       SGS_RETURN_CFUNC( rd3d9i_createMesh )
 		SGS_CASE( "createScene" )      SGS_RETURN_CFUNC( rd3d9i_createScene )
-		
-		// properties
-		SGS_CASE( "currentScene" )          SGS_RETURN_OBJECT( R->inh.currentScene )
 	SGS_END_INDEXFUNC;
 }
 

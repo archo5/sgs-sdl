@@ -29,7 +29,7 @@ function initialize()
 		_R.Mesh.numParts = 1;
 		_R.Mesh.setPart( 0, null, 0, 4, 0, 6 );
 	}
-	else
+	else if(1)
 	{
 		mesh = unserialize( io_file_read( "testdata/bunny.ssm" ) );
 		shader = _R.SS3D.getShader( "testFRrender2" );
@@ -42,6 +42,15 @@ function initialize()
 		_R.Mesh.setIndexData( mesh.idata, true );
 		_R.Mesh.numParts = 1;
 		_R.Mesh.setPart( 0, material, 0, mesh.vcount, 0, mesh.icount );
+	}
+	else
+	{
+		shader = _R.SS3D.getShader( "testFRrender2" );
+		texture = _R.SS3D.getTexture( "testdata/red.png" );
+		material = _R.SS3D.createMaterial();
+		material.shader = shader;
+		material.setTexture( 0, texture );
+		_R.Mesh = SS3D_CreateCubeMesh( _R.SS3D, material, 5 );
 	}
 	
 	_R.Scene = _R.SS3D.createScene();

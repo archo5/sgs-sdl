@@ -1,4 +1,19 @@
 
+// CACHES
+
+function SS3D_GetVertexDecl( ss3d, decl )
+{
+	if( !isset( ss3d.store, "vdecls" ) ) ss3d.store.vdecls = {};
+	vdecls = ss3d.store.vdecls;
+	if( !isset( vdecls, decl ) )
+		vdecls[ decl ] = inst = ss3d.createVertexDecl( decl );
+	else
+		inst = vdecls[ decl ];
+	return inst;
+}
+
+// SHADERS
+
 function _SS3D_Shader_NamePath( name )
 {
 	name = string_replace( name, "\\", "/" );
@@ -53,4 +68,20 @@ function _SS3D_Shader_LoadCode( renderer, name )
 		);
 	}
 	return _SS3D_Shader_LoadFile( renderer, name );
+}
+
+
+// MESH GEN
+
+function SS3D_GenMeshVertexFormat(){ return "pf30f2nf3tf4cf4"; }
+
+function SS3D_CreateCubeMesh( ss3d, material, extents, position, color )
+{
+	(vdata,idata,vcount,icount) = SS3D_MeshGen_Cube( extents, position, color );
+	mesh = ss3d.createMesh();
+	mesh.setVertexData( vdata, SS3D_GetVertexDecl( ss3d, SS3D_GenMeshVertexFormat() ), false );
+	mesh.setIndexData( idata, false );
+	mesh.numParts = 1;
+	mesh.setPart( 0, material, 0, vcount, 0, icount );
+	return mesh;
 }
