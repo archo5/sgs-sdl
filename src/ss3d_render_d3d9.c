@@ -653,10 +653,59 @@ static int meshd3d9_gcmark( SGS_CTX, sgs_VarObj* obj )
 	return SGS_SUCCESS;
 }
 
+static int mesh_vb_init( SGS_CTX, SS3D_Mesh_D3D9* M, sgs_SizeVal size )
+{
+	int dyn = !!( M->inh.dataFlags & SS3D_MDF_DYNAMIC );
+	SAFE_RELEASE( M->VB );
+	D3DCALL_( ((SS3D_RD3D9*)M->inh.renderer)->device, CreateVertexBuffer, size, dyn ? D3DUSAGE_DYNAMIC : 0, 0, dyn ? D3DPOOL_DEFAULT : D3DPOOL_MANAGED, &M->VB, NULL );
+	if( !M->VB )
+		return sgs_Msg( C, SGS_WARNING, "failed to create vertex buffer" );
+	M->inh.vertexDataSize = size;
+	return 1;
+}
+static int mesh_ib_init( SGS_CTX, SS3D_Mesh_D3D9* M, sgs_SizeVal size, int i32 )
+{
+	int dyn = !!( M->inh.dataFlags & SS3D_MDF_DYNAMIC );
+	SAFE_RELEASE( M->IB );
+	D3DCALL_( ((SS3D_RD3D9*)M->inh.renderer)->device, CreateIndexBuffer, size, dyn ? D3DUSAGE_DYNAMIC : 0, i32 ? D3DFMT_INDEX32 : D3DFMT_INDEX16, dyn ? D3DPOOL_DEFAULT : D3DPOOL_MANAGED, &M->IB, NULL );
+	if( !M->IB )
+		return sgs_Msg( C, SGS_WARNING, "failed to create index buffer" );
+	M->inh.dataFlags = ( M->inh.dataFlags & ~SS3D_MDF_INDEX_32 ) | ( SS3D_MDF_INDEX_32 * i32 );
+	M->inh.indexDataSize = size;
+	return 1;
+}
+static int mesh_vb_upload( SGS_CTX, SS3D_Mesh_D3D9* M, void* data, sgs_SizeVal size )
+{
+	void* vb_data;
+	
+	if( FAILED( D3DCALL_( M->VB, Lock, 0, 0, &vb_data, D3DLOCK_DISCARD ) ) )
+		return sgs_Msg( C, SGS_WARNING, "failed to lock vertex buffer" );
+	
+	memcpy( vb_data, data, size );
+	
+	if( FAILED( D3DCALL( M->VB, Unlock ) ) )
+		return sgs_Msg( C, SGS_WARNING, "failed to unlock vertex buffer" );
+	
+	return 1;
+}
+static int mesh_ib_upload( SGS_CTX, SS3D_Mesh_D3D9* M, void* data, sgs_SizeVal size )
+{
+	void* ib_data;
+	
+	if( FAILED( D3DCALL_( M->IB, Lock, 0, 0, &ib_data, D3DLOCK_DISCARD ) ) )
+		return sgs_Msg( C, SGS_WARNING, "failed to lock index buffer" );
+	
+	memcpy( ib_data, data, size );
+	
+	if( FAILED( D3DCALL( M->IB, Unlock ) ) )
+		return sgs_Msg( C, SGS_WARNING, "failed to unlock index buffer" );
+	
+	return 1;
+}
+
 static int meshd3d9i_setVertexData( SGS_CTX )
 {
 	/* args: string buffer, obj vdecl, bool tristrip */
-	void* vb_data;
 	SS3D_VDecl_D3D9* vdecl = NULL;
 	char* buf;
 	sgs_SizeVal size;
@@ -665,18 +714,11 @@ static int meshd3d9i_setVertexData( SGS_CTX )
 	if( !sgs_LoadArgs( C, "m!ob", &buf, &size, SS3D_VDecl_D3D9_iface, &vdecl, &tristrip ) )
 		return 0;
 	
-	SAFE_RELEASE( M->VB );
-	D3DCALL_( ((SS3D_RD3D9*)M->inh.renderer)->device, CreateVertexBuffer, size, 0, 0, D3DPOOL_MANAGED, &M->VB, NULL );
-	if( !M->VB )
-		return sgs_Msg( C, SGS_WARNING, "failed to create vertex buffer" );
+	if( !mesh_vb_init( C, M, size ) )
+		return 0;
 	
-	if( FAILED( D3DCALL_( M->VB, Lock, 0, 0, &vb_data, D3DLOCK_DISCARD ) ) )
-		return sgs_Msg( C, SGS_WARNING, "failed to lock vertex buffer" );
-	
-	memcpy( vb_data, buf, size );
-	
-	if( FAILED( D3DCALL( M->VB, Unlock ) ) )
-		return sgs_Msg( C, SGS_WARNING, "failed to unlock vertex buffer" );
+	if( !mesh_vb_upload( C, M, buf, size ) )
+		return 0;
 	
 	M->inh.dataFlags = ( M->inh.dataFlags & ~SS3D_MDF_TRIANGLESTRIP ) | ( SS3D_MDF_TRIANGLESTRIP * tristrip );
 	M->inh.vertexCount = size / vdecl->info.size;
@@ -687,7 +729,6 @@ static int meshd3d9i_setVertexData( SGS_CTX )
 static int meshd3d9i_setIndexData( SGS_CTX )
 {
 	/* args: string buffer, bool i32 */
-	void* ib_data;
 	char* buf;
 	sgs_SizeVal size;
 	sgs_Bool i32;
@@ -695,20 +736,91 @@ static int meshd3d9i_setIndexData( SGS_CTX )
 	if( !sgs_LoadArgs( C, "mb", &buf, &size, &i32 ) )
 		return 0;
 	
-	SAFE_RELEASE( M->IB );
-	D3DCALL_( ((SS3D_RD3D9*)M->inh.renderer)->device, CreateIndexBuffer, size, 0, i32 ? D3DFMT_INDEX32 : D3DFMT_INDEX16, D3DPOOL_MANAGED, &M->IB, NULL );
+	if( !mesh_ib_init( C, M, size, i32 ) )
+		return 0;
+	
+	if( !mesh_ib_upload( C, M, buf, size ) )
+		return 0;
+	
+	M->inh.indexCount = size / ( i32 ? 4 : 2 );
+	SGS_RETURN_BOOL( 1 )
+}
+
+static int meshd3d9i_initVertexBuffer( SGS_CTX )
+{
+	/* args: int size */
+	sgs_Int size;
+	M_IHDR( initVertexBuffer );
+	if( !sgs_LoadArgs( C, "i", &size ) )
+		return 0;
+	
+	if( !mesh_vb_init( C, M, size ) )
+		return 0;
+	
+	SGS_RETURN_BOOL( 1 )
+}
+
+static int meshd3d9i_initIndexBuffer( SGS_CTX )
+{
+	/* args: int size */
+	sgs_Int size;
+	sgs_Bool i32;
+	M_IHDR( initIndexBuffer );
+	if( !sgs_LoadArgs( C, "ib", &size, &i32 ) )
+		return 0;
+	
+	if( !mesh_ib_init( C, M, size, i32 ) )
+		return 0;
+	
+	SGS_RETURN_BOOL( 1 )
+}
+
+static int meshd3d9i_updateVertexData( SGS_CTX )
+{
+	/* args: string buffer, obj vdecl, bool tristrip */
+	SS3D_VDecl_D3D9* vdecl = NULL;
+	char* buf;
+	sgs_SizeVal size;
+	sgs_Bool tristrip;
+	M_IHDR( updateVertexData );
+	if( !sgs_LoadArgs( C, "m!ob", &buf, &size, SS3D_VDecl_D3D9_iface, &vdecl, &tristrip ) )
+		return 0;
+	
+	if( !M->VB )
+		return sgs_Msg( C, SGS_WARNING, "vertex buffer is not initialized" );
+	
+	if( size > M->inh.vertexDataSize )
+		return sgs_Msg( C, SGS_WARNING, "vertex data too big (%d > %d)", (int) size, (int) M->inh.vertexDataSize );
+	
+	if( !mesh_vb_upload( C, M, buf, size ) )
+		return 0;
+	
+	M->inh.dataFlags = ( M->inh.dataFlags & ~SS3D_MDF_TRIANGLESTRIP ) | ( SS3D_MDF_TRIANGLESTRIP * tristrip );
+	M->inh.vertexCount = size / vdecl->info.size;
+	sgs_ObjAssign( C, &M->inh.vertexDecl, sgs_GetObjectStruct( C, 1 ) );
+	SGS_RETURN_BOOL( 1 )
+}
+
+static int meshd3d9i_updateIndexData( SGS_CTX )
+{
+	/* args: string buffer */
+	char* buf;
+	sgs_SizeVal size;
+	sgs_Bool i32;
+	M_IHDR( updateIndexData );
+	if( !sgs_LoadArgs( C, "m", &buf, &size ) )
+		return 0;
+	
 	if( !M->IB )
-		return sgs_Msg( C, SGS_WARNING, "failed to create index buffer" );
+		return sgs_Msg( C, SGS_WARNING, "index buffer is not initialized" );
 	
-	if( FAILED( D3DCALL_( M->IB, Lock, 0, 0, &ib_data, D3DLOCK_DISCARD ) ) )
-		return sgs_Msg( C, SGS_WARNING, "failed to lock index buffer" );
+	if( size > M->inh.indexDataSize )
+		return sgs_Msg( C, SGS_WARNING, "index data too big (%d > %d)", (int) size, (int) M->inh.indexDataSize );
 	
-	memcpy( ib_data, buf, size );
+	if( !mesh_ib_upload( C, M, buf, size ) )
+		return 0;
 	
-	if( FAILED( D3DCALL( M->IB, Unlock ) ) )
-		return sgs_Msg( C, SGS_WARNING, "failed to unlock index buffer" );
-	
-	M->inh.dataFlags = ( M->inh.dataFlags & ~SS3D_MDF_INDEX_32 ) | ( SS3D_MDF_INDEX_32 * i32 );
+	i32 = !!( M->inh.dataFlags & SS3D_MDF_INDEX_32 );
 	M->inh.indexCount = size / ( i32 ? 4 : 2 );
 	SGS_RETURN_BOOL( 1 )
 }
@@ -739,20 +851,27 @@ static int meshd3d9_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	M_HDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "numParts" )      SGS_RETURN_INT( M->inh.numParts )
-		SGS_CASE( "useTriStrips" )  SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ) )
-		SGS_CASE( "useI32" )        SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_INDEX_32 ) )
-		SGS_CASE( "vertexCount" )   SGS_RETURN_INT( M->inh.vertexCount )
-		SGS_CASE( "indexCount" )    SGS_RETURN_INT( M->inh.indexCount )
+		SGS_CASE( "numParts" )         SGS_RETURN_INT( M->inh.numParts )
+		SGS_CASE( "useTriStrips" )     SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ) )
+		SGS_CASE( "useI32" )           SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_INDEX_32 ) )
+		SGS_CASE( "isDynamic" )        SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_DYNAMIC ) )
+		SGS_CASE( "vertexCount" )      SGS_RETURN_INT( M->inh.vertexCount )
+		SGS_CASE( "vertexDataSize" )   SGS_RETURN_INT( M->inh.vertexDataSize )
+		SGS_CASE( "indexCount" )       SGS_RETURN_INT( M->inh.indexCount )
+		SGS_CASE( "indexDataSize" )    SGS_RETURN_INT( M->inh.indexDataSize )
 		
-		SGS_CASE( "boundsMin" )     SGS_RETURN_VEC3( M->inh.boundsMin )
-		SGS_CASE( "boundsMax" )     SGS_RETURN_VEC3( M->inh.boundsMax )
-		SGS_CASE( "center" )        SGS_RETURN_VEC3( M->inh.center )
-		SGS_CASE( "radius" )        SGS_RETURN_REAL( M->inh.radius )
+		SGS_CASE( "boundsMin" )        SGS_RETURN_VEC3P( M->inh.boundsMin )
+		SGS_CASE( "boundsMax" )        SGS_RETURN_VEC3P( M->inh.boundsMax )
+		SGS_CASE( "center" )           SGS_RETURN_VEC3P( M->inh.center )
+		SGS_CASE( "radius" )           SGS_RETURN_REAL( M->inh.radius )
 		
-		SGS_CASE( "setVertexData" ) SGS_RETURN_CFUNC( meshd3d9i_setVertexData )
-		SGS_CASE( "setIndexData" )  SGS_RETURN_CFUNC( meshd3d9i_setIndexData )
-		SGS_CASE( "setPart" )       SGS_RETURN_CFUNC( meshd3d9i_setPart )
+		SGS_CASE( "setVertexData" )    SGS_RETURN_CFUNC( meshd3d9i_setVertexData )
+		SGS_CASE( "setIndexData" )     SGS_RETURN_CFUNC( meshd3d9i_setIndexData )
+		SGS_CASE( "initVertexBuffer" ) SGS_RETURN_CFUNC( meshd3d9i_initVertexBuffer )
+		SGS_CASE( "initIndexBuffer" )  SGS_RETURN_CFUNC( meshd3d9i_initIndexBuffer )
+		SGS_CASE( "updateVertexData" ) SGS_RETURN_CFUNC( meshd3d9i_updateVertexData )
+		SGS_CASE( "updateIndexData" )  SGS_RETURN_CFUNC( meshd3d9i_updateIndexData )
+		SGS_CASE( "setPart" )          SGS_RETURN_CFUNC( meshd3d9i_setPart )
 	SGS_END_INDEXFUNC;
 }
 
@@ -791,11 +910,12 @@ static sgs_ObjInterface SS3D_Mesh_D3D9_iface[1] =
 	NULL, NULL,
 }};
 
-static int create_mesh( SS3D_RD3D9* R )
+static int create_mesh( SS3D_RD3D9* R, int dynamic )
 {
 	SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) sgs_PushObjectIPA( R->inh.C, sizeof(*M), SS3D_Mesh_D3D9_iface );
 	SS3D_Mesh_Init( &M->inh );
 	M->inh.renderer = &R->inh;
+	M->inh.dataFlags |= dynamic;
 	SS3D_Renderer_PokeResource( &R->inh, sgs_GetObjectStruct( R->inh.C, -1 ), 1 );
 	M->VB = NULL;
 	M->IB = NULL;
@@ -1019,6 +1139,7 @@ static int rd3d9i_render( SGS_CTX )
 	for( i = 0; i < scene->meshInstances.size; ++i )
 	{
 		int p, t;
+		MAT4 m_world_view;
 		
 		SS3D_MeshInstance* MI = (SS3D_MeshInstance*) scene->meshInstances.vars[ i ].val.data.O->data;
 		if( !MI->mesh || !MI->enabled )
@@ -1027,7 +1148,9 @@ static int rd3d9i_render( SGS_CTX )
 		SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) MI->mesh->data;
 		SS3D_VDecl_D3D9* VD = (SS3D_VDecl_D3D9*) M->inh.vertexDecl->data;
 		
-		D3DCALL_( R->device, SetTransform, D3DTS_WORLD, (D3DMATRIX*) MI->matrix );
+		SS3D_Mtx_Multiply( m_world_view, MI->matrix, cam->mView );
+		vshc_set_mat4( R, 4, m_world_view );
+		
 		D3DCALL_( R->device, SetVertexDeclaration, VD->VD );
 		D3DCALL_( R->device, SetStreamSource, 0, M->VB, 0, VD->info.size );
 		D3DCALL_( R->device, SetIndices, M->IB );
@@ -1036,6 +1159,9 @@ static int rd3d9i_render( SGS_CTX )
 		{
 			SS3D_MeshPart* MP = M->inh.parts + p;
 			SS3D_Material* MTL = (SS3D_Material*) MP->material->data;
+			
+			if( MTL->transparent )
+				continue;
 			
 			use_shader( R, (SS3D_Shader_D3D9*) MTL->shader->data );
 			for( t = 0; t < SS3D_NUM_MATERIAL_TEXTURES; ++t )
@@ -1051,7 +1177,46 @@ static int rd3d9i_render( SGS_CTX )
 	
 	
 	/* PASS 4: RENDER TRANSPARENT STUFF */
-	// TODO
+	D3DCALL_( R->device, SetRenderState, D3DRS_ZWRITEENABLE, 0 );
+	for( i = 0; i < scene->meshInstances.size; ++i )
+	{
+		int p, t;
+		MAT4 m_world_view;
+		
+		SS3D_MeshInstance* MI = (SS3D_MeshInstance*) scene->meshInstances.vars[ i ].val.data.O->data;
+		if( !MI->mesh || !MI->enabled )
+			continue;
+		
+		SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) MI->mesh->data;
+		SS3D_VDecl_D3D9* VD = (SS3D_VDecl_D3D9*) M->inh.vertexDecl->data;
+		
+		SS3D_Mtx_Multiply( m_world_view, MI->matrix, cam->mView );
+		vshc_set_mat4( R, 4, m_world_view );
+		
+		D3DCALL_( R->device, SetVertexDeclaration, VD->VD );
+		D3DCALL_( R->device, SetStreamSource, 0, M->VB, 0, VD->info.size );
+		D3DCALL_( R->device, SetIndices, M->IB );
+		
+		for( p = 0; p < M->inh.numParts; ++p )
+		{
+			SS3D_MeshPart* MP = M->inh.parts + p;
+			SS3D_Material* MTL = (SS3D_Material*) MP->material->data;
+			
+			if( !MTL->transparent )
+				continue;
+			
+			use_shader( R, (SS3D_Shader_D3D9*) MTL->shader->data );
+			for( t = 0; t < SS3D_NUM_MATERIAL_TEXTURES; ++t )
+				use_texture( R, t, MTL->textures[ t ] ? (SS3D_Texture_D3D9*) MTL->textures[ t ]->data : NULL );
+			
+			if( MP->indexCount < 3 )
+				continue;
+			D3DCALL_( R->device, DrawIndexedPrimitive,
+				M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ? D3DPT_TRIANGLESTRIP : D3DPT_TRIANGLELIST,
+				MP->vertexOffset, 0, MP->vertexCount, MP->indexOffset, M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ? MP->indexCount - 2 : MP->indexCount / 3 );
+		}
+	}
+	D3DCALL_( R->device, SetRenderState, D3DRS_ZWRITEENABLE, 1 );
 	
 	
 	/* PASS 5: POST-PROCESS & RENDER TO BACKBUFFER */
@@ -1092,17 +1257,19 @@ static int rd3d9i_render( SGS_CTX )
 	use_shader( R, NULL );
 	
 	RECT srcRect = { 0, 0, w, h };
+	RECT srcRect2 = { 0, 0, w/4, h/4 };
 	RECT dstRect = { 0, h/8, w/8, h/4 };
 	IDirect3DSurface9* surfs[] = {
 		R->drd.RTS_OCOL,
 //		R->drd.RTS_PARM,
-		R->drd.RTS_BLOOM_DSHP,
-		R->drd.RTS_BLOOM_BLUR1,
+//		R->drd.RTS_BLOOM_DSHP,
+//		R->drd.RTS_BLOOM_BLUR1,
 		R->drd.RTS_BLOOM_BLUR2,
 	};
 	for( i = 0; i < sizeof(surfs)/sizeof(surfs[0]); ++i )
 	{
-		D3DCALL_( R->device, StretchRect, surfs[i], &srcRect, R->bb_color, &dstRect, D3DTEXF_POINT );
+		RECT* sr = ( surfs[i] == R->drd.RTS_BLOOM_DSHP || surfs[i] == R->drd.RTS_BLOOM_BLUR1 || surfs[i] == R->drd.RTS_BLOOM_BLUR2 ) ? &srcRect2 : &srcRect;
+		D3DCALL_( R->device, StretchRect, surfs[i], sr, R->bb_color, &dstRect, D3DTEXF_POINT );
 		dstRect.left += w/8;
 		dstRect.right += w/8;
 	}
@@ -1173,8 +1340,11 @@ static int rd3d9i_createMaterial( SGS_CTX )
 
 static int rd3d9i_createMesh( SGS_CTX )
 {
+	sgs_Bool dyn = 0;
 	R_IHDR( createMesh );
-	return create_mesh( R );
+	if( !sgs_LoadArgs( C, "|b", &dyn ) )
+		return 0;
+	return create_mesh( R, dyn );
 }
 
 static int rd3d9i_createScene( SGS_CTX )

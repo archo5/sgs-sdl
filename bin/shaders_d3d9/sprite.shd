@@ -7,23 +7,25 @@ float4x4 mProj : register(c12);
 void main
 (
 	float4 ipos : POSITION0,
+	float4 icol : COLOR0,
 	float2 tc : TEXCOORD0,
 	out float4 opos : POSITION0,
+	out float4 ocol : COLOR0,
 	out float2 otc : TEXCOORD0
 )
 {
 	opos = mul( mProj, mul( mWorldView, ipos ) );
+	ocol = icol;
 	otc = tc;
 }
 
 #elif defined(PS)
 
-float4 Color : register(c0);
 sampler2D Tex0 : register(s0);
 
-float4 main( float2 tc : TEXCOORD0 ) : COLOR0
+float4 main( float2 tc : TEXCOORD0, float4 icol : COLOR0 ) : COLOR0
 {
-	return tex2D( Tex0, tc ) * Color;
+	return tex2D( Tex0, tc ) * icol;
 }
 
 #endif

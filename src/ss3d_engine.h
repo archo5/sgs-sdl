@@ -17,16 +17,17 @@ typedef VEC4 MAT4[4];
 #define DEG2RAD( x ) ((x)/180.0f*M_PI)
 
 #define VEC3_Set( V, x, y, z ) V[0] = x; V[1] = y; V[2] = z;
-#define VEC3_Add( V, A, B ) v[0]=A[0]+B[0]; v[1]=A[1]+B[1]; v[2]=A[2]+B[2];
-#define VEC3_Sub( V, A, B ) v[0]=A[0]-B[0]; v[1]=A[1]-B[1]; v[2]=A[2]-B[2];
-#define VEC3_Mul( V, A, B ) v[0]=A[0]*B[0]; v[1]=A[1]*B[1]; v[2]=A[2]*B[2];
-#define VEC3_Div( V, A, B ) v[0]=A[0]/B[0]; v[1]=A[1]/B[1]; v[2]=A[2]/B[2];
+#define VEC3_Add( V, A, B ) V[0]=A[0]+B[0]; V[1]=A[1]+B[1]; V[2]=A[2]+B[2];
+#define VEC3_Sub( V, A, B ) V[0]=A[0]-B[0]; V[1]=A[1]-B[1]; V[2]=A[2]-B[2];
+#define VEC3_Mul( V, A, B ) V[0]=A[0]*B[0]; V[1]=A[1]*B[1]; V[2]=A[2]*B[2];
+#define VEC3_Div( V, A, B ) V[0]=A[0]/B[0]; V[1]=A[1]/B[1]; V[2]=A[2]/B[2];
 #define VEC3_Dot( A, B ) (A[0]*B[0]+A[1]*B[1]+A[2]*B[2])
 #define VEC3_Length( X ) sqrt( VEC3_Dot( X, X ) );
 #define VEC3_Cross( V, A, B ) V[0]=A[1]*B[2]-A[2]*B[1]; V[1]=A[2]*B[0]-A[0]*B[2]; V[2]=A[0]*B[1]-A[1]*B[0];
 #define VEC3_Normalized( V, X ) { float len = VEC3_Length( X ); if( len > 0 ){ V[0]=X[0]/len; V[1]=X[1]/len; V[2]=X[2]/len; } }
 
 #define VEC4_Set( V, x, y, z, w ) V[0] = x; V[1] = y; V[2] = z; V[3] = w;
+#define VEC4_Copy( V, src ) V[0] = src[0]; V[1] = src[1]; V[2] = src[2]; V[3] = src[3];
 
 void SS3D_Mtx_Identity( MAT4 out );
 void SS3D_Mtx_Transpose( MAT4 mtx );
@@ -88,6 +89,7 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 /* mesh data flags */
 #define SS3D_MDF_INDEX_32      0x01
 #define SS3D_MDF_TRIANGLESTRIP 0x02
+#define SS3D_MDF_DYNAMIC       0x04
 
 
 sgs_ObjInterface SS3D_Camera_iface[1];
@@ -172,6 +174,7 @@ struct _SS3D_Material
 {
 	SS3D_Renderer* renderer;
 	
+	int transparent;
 	sgs_VarObj* shader;
 	sgs_VarObj* textures[ SS3D_NUM_MATERIAL_TEXTURES ];
 };
@@ -209,7 +212,9 @@ struct _SS3D_Mesh
 	int dataFlags;
 	sgs_VarObj* vertexDecl;
 	uint32_t vertexCount;
+	uint32_t vertexDataSize;
 	uint32_t indexCount;
+	uint32_t indexDataSize;
 	SS3D_MeshPart parts[ SS3D_MAX_MESH_PARTS ];
 	int numParts;
 	

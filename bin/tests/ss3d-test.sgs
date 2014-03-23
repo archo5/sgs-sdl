@@ -13,6 +13,10 @@ function initialize()
 	_R.SS3D = SS3D_CreateRenderer( Window.renderingAPI, 0/* Window.rendererVersion */, Window.rendererPtr );
 	println( "SS3D: " $ _R.SS3D );
 	
+	_R.Scene = _R.SS3D.createScene();
+	println( "Scene: " $ _R.Scene );
+	_R.SS3D.currentScene = _R.Scene;
+	
 	_R.VD1 = _R.SS3D.createVertexDecl( "pf3nf3tf40f2" );
 	println( "VD1: " $ _R.VD1 );
 	
@@ -50,12 +54,43 @@ function initialize()
 		material = _R.SS3D.createMaterial();
 		material.shader = shader;
 		material.setTexture( 0, texture );
-		_R.Mesh = SS3D_CreateCubeMesh( _R.SS3D, material, 5 );
+		_R.Mesh = SS3D_CreateCubeMesh( _R.SS3D, material, 0.55 );
+		
+		insts = [];
+		for( y = -32; y < 32; ++y )
+		{
+			for( x = -32; x < 32; ++x )
+			{
+				inst = _R.Scene.createMeshInstance();
+				printvar(inst);
+				inst.mesh = _R.Mesh;
+				inst.matrix = mat4(
+					1, 0, 0, 0,
+					0, 1, 0, 0,
+					0, 0, 1, 0,
+					x, y, rand() % 3, 1
+				);
+				insts.push( inst );
+			}
+		}
+		_R.insts = insts;
 	}
 	
-	_R.Scene = _R.SS3D.createScene();
-	println( "Scene: " $ _R.Scene );
-	_R.SS3D.currentScene = _R.Scene;
+	// PARTICLES
+	_R.Particles = floatarray_buffer( 128 * 3 );
+	_R.Particles.randbox( vec3(-10,-10,0), vec3(10,10,5) );
+	_R.ParticleColors = floatarray( 1, 1, 1, 0.3 );
+	_R.ParticleSizes = floatarray( 5 );
+	
+	_R.ParticleMtl = _R.SS3D.createMaterial();
+	_R.ParticleMtl.transparent = true;
+	_R.ParticleMtl.shader = _R.SS3D.getShader( "sprite" );
+	_R.ParticleMtl.setTexture( 0, _R.SS3D.getTexture( "testdata/smoke.png" ) );
+	
+	_R.ParticleMesh = _R.SS3D.createMesh( true );
+	_R.ParticleMI = _R.Scene.createMeshInstance();
+	_R.ParticleMI.mesh = _R.ParticleMesh;
+	
 	
 	_R.MI = _R.Scene.createMeshInstance();
 	_R.MI.mesh = _R.Mesh;
@@ -103,6 +138,8 @@ function update()
 	t = ftime();
 	camera.position = vec3(cos(t)*20,sin(t)*20,10);
 	camera.direction = vec3(-cos(t),-sin(t),-0.8);
+	
+	SS3D_UpdateParticleMesh( _R.SS3D, _R.ParticleMesh, _R.ParticleMtl, camera.viewMatrix, _R.Particles, _R.ParticleSizes, _R.ParticleColors );
 	
 	_R.SS3D.render();
 	SS_Present();

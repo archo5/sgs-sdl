@@ -204,6 +204,134 @@ static int SS3D_MeshGen_Cube( SGS_CTX )
 	return 4;
 }
 
+typedef struct _particleVtx
+{
+	VEC3 pos;
+	float u, v;
+	VEC4 color;
+}
+particleVtx;
+
+static int SS3D_MeshGen_Particles( SGS_CTX )
+{
+	static const XGM_VT defdata[5] = { 1, 1, 1, 1, 0 };
+	MAT4 viewmatrix;
+	xgm_vtarray* arr_pos = NULL;
+	xgm_vtarray* arr_size = NULL;
+	xgm_vtarray* arr_color = NULL;
+	xgm_vtarray* arr_angle = NULL;
+	
+	sgs_SizeVal i, position_count;
+	XGM_VT* positions;
+	const XGM_VT* sizes = defdata;
+	sgs_SizeVal size_count = 1;
+	const XGM_VT* colors = defdata;
+	sgs_SizeVal color_count = 1;
+	const XGM_VT* angles = defdata + 4;
+	sgs_SizeVal angle_count = 1;
+	
+	particleVtx* vdata;
+	uint16_t* idata;
+	
+	SGSFN( "SS3D_MeshGen_Particles" );
+	if( !sgs_LoadArgs( C, "xx|xxx",
+		sgs_ArgCheck_Mat4, viewmatrix,
+		sgs_ArgCheck_FloatArray, &arr_pos,
+		sgs_ArgCheck_FloatArray, &arr_size,
+		sgs_ArgCheck_FloatArray, &arr_color,
+		sgs_ArgCheck_FloatArray, &arr_angle ) )
+		return 0;
+	
+	if( arr_pos->size < 3 )
+		return sgs_Msg( C, SGS_WARNING, "positions float array must contain at least 3 items" );
+	
+	positions = arr_pos->data;
+	position_count = arr_pos->size / 3;
+	if( arr_size && arr_size->size >= 1 )
+	{
+		sizes = arr_size->data;
+		size_count = arr_size->size;
+	}
+	if( arr_color && arr_color->size >= 4 )
+	{
+		colors = arr_color->data;
+		color_count = arr_color->size / 4;
+	}
+	if( arr_angle && arr_angle->size >= 1 )
+	{
+		angles = arr_angle->data;
+		angle_count = arr_angle->size;
+	}
+	
+	viewmatrix[3][0] = viewmatrix[3][1] = viewmatrix[3][2] = 0;
+	viewmatrix[0][3] = viewmatrix[1][3] = viewmatrix[2][3] = 0;
+	viewmatrix[3][3] = 1;
+	SS3D_Mtx_Transpose( viewmatrix );
+	
+	sgs_PushStringBuf( C, NULL, position_count * 4 * sizeof(*vdata) );
+	vdata = (particleVtx*) sgs_GetStringPtr( C, -1 );
+	
+	for( i = 0; i < position_count; ++i )
+	{
+		float* position = positions + i * 3;
+		float extent = sizes[ i % size_count ] * 0.5f;
+		float angle = angles[ i % angle_count ];
+		const float* color = colors + ( i % color_count ) * 4;
+		float ang_sin = sin( angle ) * extent;
+		float ang_cos = cos( angle ) * extent;
+		
+		VEC3 vp00 = { +ang_sin -ang_cos, -ang_sin -ang_cos, 0 };
+		VEC3 vp10 = { +ang_sin +ang_cos, +ang_sin -ang_cos, 0 };
+		VEC3 vp11 = { -ang_sin +ang_cos, +ang_sin +ang_cos, 0 };
+		VEC3 vp01 = { -ang_sin -ang_cos, -ang_sin +ang_cos, 0 };
+		
+		SS3D_Mtx_TransformPos( vp00, vp00, viewmatrix );
+		SS3D_Mtx_TransformPos( vp10, vp10, viewmatrix );
+		SS3D_Mtx_TransformPos( vp11, vp11, viewmatrix );
+		SS3D_Mtx_TransformPos( vp01, vp01, viewmatrix );
+		
+		VEC3_Add( vdata->pos, position, vp00 );
+		vdata->u = 0; vdata->v = 0;
+		VEC4_Copy( vdata->color, color );
+		vdata++;
+		
+		VEC3_Add( vdata->pos, position, vp10 );
+		vdata->u = 1; vdata->v = 0;
+		VEC4_Copy( vdata->color, color );
+		vdata++;
+		
+		VEC3_Add( vdata->pos, position, vp11 );
+		vdata->u = 1; vdata->v = 1;
+		VEC4_Copy( vdata->color, color );
+		vdata++;
+		
+		VEC3_Add( vdata->pos, position, vp01 );
+		vdata->u = 0; vdata->v = 1;
+		VEC4_Copy( vdata->color, color );
+		vdata++;
+	}
+	
+	sgs_PushStringBuf( C, NULL, position_count * 6 * sizeof(*idata) );
+	idata = (uint16_t*) sgs_GetStringPtr( C, -1 );
+	
+	for( i = 0; i < position_count; ++i )
+	{
+		uint16_t bv = i * 4;
+		idata[0] = bv;
+		idata[1] = bv+1;
+		idata[2] = bv+2;
+		idata[3] = bv+2;
+		idata[4] = bv+3;
+		idata[5] = bv;
+		idata += 6;
+	}
+	
+	sgs_PushInt( C, position_count * 4 );
+	sgs_PushInt( C, position_count * 6 );
+	
+	return 4;
+}
+
 
 //
 // MISC. UTILITY
@@ -619,6 +747,7 @@ static int material_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	MTL_HDR;
 	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "transparent" ) SGS_RETURN_BOOL( MTL->transparent )
 		SGS_CASE( "shader" )     SGS_RETURN_OBJECT( MTL->shader )
 		
 		SGS_CASE( "setTexture" ) SGS_RETURN_CFUNC( material_setTexture )
@@ -629,6 +758,7 @@ static int material_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	MTL_HDR;
 	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "transparent" ) SGS_PARSE_BOOL( MTL->transparent )
 		SGS_CASE( "shader" )    { if( !MTL->renderer ) return SGS_EINPROC; SGS_PARSE_OBJECT( MTL->renderer->ifShader, MTL->shader, 0 ) }
 	SGS_END_INDEXFUNC;
 }
@@ -661,7 +791,9 @@ void SS3D_Mesh_Init( SS3D_Mesh* mesh )
 	mesh->dataFlags = 0;
 	mesh->vertexDecl = NULL;
 	mesh->vertexCount = 0;
+	mesh->vertexDataSize = 0;
 	mesh->indexCount = 0;
+	mesh->indexDataSize = 0;
 	memset( mesh->parts, 0, sizeof( mesh->parts ) );
 	mesh->numParts = 0;
 	
@@ -744,9 +876,9 @@ static int light_getindex( SGS_ARGS_GETINDEXFUNC )
 	SGS_BEGIN_INDEXFUNC
 		SGS_CASE( "type" )          SGS_RETURN_INT( L->type )
 		SGS_CASE( "isEnabled" )     SGS_RETURN_BOOL( L->isEnabled )
-		SGS_CASE( "position" )      SGS_RETURN_VEC3( L->position )
-		SGS_CASE( "direction" )     SGS_RETURN_VEC3( L->direction )
-		SGS_CASE( "color" )         SGS_RETURN_VEC3( L->color )
+		SGS_CASE( "position" )      SGS_RETURN_VEC3P( L->position )
+		SGS_CASE( "direction" )     SGS_RETURN_VEC3P( L->direction )
+		SGS_CASE( "color" )         SGS_RETURN_VEC3P( L->color )
 		SGS_CASE( "range" )         SGS_RETURN_REAL( L->range )
 		SGS_CASE( "power" )         SGS_RETURN_REAL( L->power )
 		SGS_CASE( "minangle" )      SGS_RETURN_REAL( L->minangle )
@@ -897,14 +1029,18 @@ static int camera_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	CAM_HDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "position" )  SGS_RETURN_VEC3( CAM->position )
-		SGS_CASE( "direction" ) SGS_RETURN_VEC3( CAM->direction )
-		SGS_CASE( "up" )        SGS_RETURN_VEC3( CAM->up )
+		SGS_CASE( "position" )  SGS_RETURN_VEC3P( CAM->position )
+		SGS_CASE( "direction" ) SGS_RETURN_VEC3P( CAM->direction )
+		SGS_CASE( "up" )        SGS_RETURN_VEC3P( CAM->up )
 		SGS_CASE( "angle" )     SGS_RETURN_REAL( CAM->angle )
 		SGS_CASE( "aspect" )    SGS_RETURN_REAL( CAM->aspect )
 		SGS_CASE( "aamix" )     SGS_RETURN_REAL( CAM->aamix )
 		SGS_CASE( "znear" )     SGS_RETURN_REAL( CAM->znear )
 		SGS_CASE( "zfar" )      SGS_RETURN_REAL( CAM->zfar )
+		
+		SGS_CASE( "viewMatrix" ) SGS_RETURN_MAT4( *CAM->mView )
+		SGS_CASE( "invViewMatrix" ) SGS_RETURN_MAT4( *CAM->mInvView )
+		SGS_CASE( "projMatrix" ) SGS_RETURN_MAT4( *CAM->mProj )
 	SGS_END_INDEXFUNC;
 }
 
@@ -1356,6 +1492,7 @@ static int SS3D_CreateRenderer( SGS_CTX )
 static sgs_RegFuncConst ss3d_fconsts[] =
 {
 	FN( MeshGen_Cube ),
+	FN( MeshGen_Particles ),
 	
 	FN( CreateCamera ),
 	FN( CreateViewport ),

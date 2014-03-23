@@ -73,15 +73,32 @@ function _SS3D_Shader_LoadCode( renderer, name )
 
 // MESH GEN
 
-function SS3D_GenMeshVertexFormat(){ return "pf30f2nf3tf4cf4"; }
+global cSS3D_GenMeshVertexFormat = "pf30f2nf3tf4cf4";
+global cSS3D_GenParticleVertexFormat = "pf30f2cf4";
 
 function SS3D_CreateCubeMesh( ss3d, material, extents, position, color )
 {
 	(vdata,idata,vcount,icount) = SS3D_MeshGen_Cube( extents, position, color );
 	mesh = ss3d.createMesh();
-	mesh.setVertexData( vdata, SS3D_GetVertexDecl( ss3d, SS3D_GenMeshVertexFormat() ), false );
+	mesh.setVertexData( vdata, SS3D_GetVertexDecl( ss3d, cSS3D_GenMeshVertexFormat ), false );
 	mesh.setIndexData( idata, false );
 	mesh.numParts = 1;
 	mesh.setPart( 0, material, 0, vcount, 0, icount );
 	return mesh;
+}
+
+function SS3D_UpdateParticleMesh( ss3d, mesh, material, viewmatrix, positions, sizes, colors, angles )
+{
+	(vdata,idata,vcount,icount) = SS3D_MeshGen_Particles( viewmatrix, positions, sizes, colors, angles );
+	
+	if( mesh.vertexDataSize < vdata.length )
+		mesh.initVertexBuffer( vdata.length );
+	mesh.updateVertexData( vdata, SS3D_GetVertexDecl( ss3d, cSS3D_GenParticleVertexFormat ), false );
+	
+	if( mesh.indexDataSize < idata.length )
+		mesh.initIndexBuffer( idata.length, false );
+	mesh.updateIndexData( idata );
+	
+	mesh.numParts = 1;
+	mesh.setPart( 0, material, 0, vcount, 0, icount );
 }
