@@ -66,7 +66,7 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 #define SS3DINDEX_16 0
 #define SS3DINDEX_32 1
 
-#define SS3D_NUM_MATERIAL_TEXTURES 6
+#define SS3D_NUM_MATERIAL_TEXTURES 8
 #define SS3D_MAX_MESH_PARTS 8
 #define SS3D_VDECL_MAX_ITEMS 8
 
@@ -90,6 +90,9 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 #define SS3D_MDF_INDEX_32      0x01
 #define SS3D_MDF_TRIANGLESTRIP 0x02
 #define SS3D_MDF_DYNAMIC       0x04
+
+#define SS3D_MDF__PUBFLAGMASK  0x03
+#define SS3D_MDF__PUBFLAGBASE  0
 
 
 sgs_ObjInterface SS3D_Camera_iface[1];
@@ -126,8 +129,8 @@ SGSBOOL SS3D_TextureInfo_GetMipInfo( SS3D_TextureInfo* TI, int mip, SS3D_Texture
 
 
 /* sorting order of pixel/block data:
-	- mip level
 	- side
+	- mip level
 	- depth
 	- height
 	- width
@@ -143,6 +146,45 @@ SGSRESULT SS3D_TextureData_LoadFromFile( SS3D_TextureData* TD, const char* file 
 void SS3D_TextureData_Free( SS3D_TextureData* TD );
 size_t SS3D_TextureData_GetMipDataOffset( SS3D_TextureData* TD, int side, int mip );
 size_t SS3D_TextureData_GetMipDataSize( SS3D_TextureData* TD, int mip );
+
+
+typedef struct _SS3D_MeshFilePartData
+{
+	uint32_t vertexOffset;
+	uint32_t vertexCount;
+	uint32_t indexOffset;
+	uint32_t indexCount;
+	
+	uint16_t materialFlags;
+	uint8_t materialTextureCount; /* 0 - 8 */
+	uint8_t materialStringSizes[ SS3D_NUM_MATERIAL_TEXTURES + 1 ];
+	char* materialStrings[ SS3D_NUM_MATERIAL_TEXTURES + 1 ];
+}
+SS3D_MeshFilePartData; /* size w/o padding = 28+[36/72] = 64/100 */
+
+typedef struct _SS3D_MeshFileData
+{
+	uint32_t dataFlags;
+	uint32_t vertexDataSize;
+	uint32_t indexDataSize;
+	char* vertexData;
+	char* indexData;
+	char* formatData;
+	
+	VEC3 boundsMin;
+	VEC3 boundsMax;
+	VEC3 center;
+	float radius;
+	
+	uint8_t numParts;
+	uint8_t formatSize;
+	/* size w/o padding at this point = 54+[12/24] = 66/78 */
+	
+	SS3D_MeshFilePartData parts[ SS3D_MAX_MESH_PARTS ];
+}
+SS3D_MeshFileData; /* size w/o padding = 66/78 + 64/100 x8 = 578/878 */
+
+int SS3D_MeshData_Parse( char* buf, size_t size, SS3D_MeshFileData* out );
 
 
 typedef struct _SS3D_Texture
@@ -295,6 +337,7 @@ struct _SS3D_Renderer
 	sgs_VHTable shaders;
 	sgs_VHTable textures;
 	sgs_VHTable materials;
+	sgs_VarObj* _myobj;
 	sgs_VarObj* currentScene;
 	sgs_VarObj* store;
 	

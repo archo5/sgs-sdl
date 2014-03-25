@@ -36,7 +36,7 @@ function initialize()
 		_R.Mesh.numParts = 1;
 		_R.Mesh.setPart( 0, null, 0, 4, 0, 6 );
 	}
-	else if(1)
+	else if(0)
 	{
 		mesh = unserialize( io_file_read( "testdata/bunny.ssm" ) );
 		shader = _R.SS3D.getShader( "testFRrender2" );
@@ -49,6 +49,11 @@ function initialize()
 		_R.Mesh.setIndexData( mesh.idata, true );
 		_R.Mesh.numParts = 1;
 		_R.Mesh.setPart( 0, material, 0, mesh.vcount, 0, mesh.icount );
+	}
+	else if(1)
+	{
+		mesh = io_file_read( "testdata/bunny.real.ssm" );
+		_R.Mesh.loadFromBuffer( mesh );
 	}
 	else
 	{

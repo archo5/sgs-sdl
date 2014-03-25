@@ -1,16 +1,5 @@
 
-// CACHES
-
-function SS3D_GetVertexDecl( ss3d, decl )
-{
-	if( !isset( ss3d.store, "vdecls" ) ) ss3d.store.vdecls = {};
-	vdecls = ss3d.store.vdecls;
-	if( !isset( vdecls, decl ) )
-		vdecls[ decl ] = inst = ss3d.createVertexDecl( decl );
-	else
-		inst = vdecls[ decl ];
-	return inst;
-}
+global SS3D_FileRoot = "";
 
 // SHADERS
 
@@ -45,7 +34,7 @@ function _SS3D_Shader_ParseIncludes( renderer, name, data )
 
 function _SS3D_Shader_LoadFile( renderer, name )
 {
-	filename = "shaders_" $ renderer $ "/" $ name $ ".shd";
+	filename = SS3D_FileRoot $ "shaders_" $ renderer $ "/" $ name $ ".shd";
 	if( !io_file_exists( filename ) )
 		return null;
 	data = io_file_read( filename );
@@ -70,6 +59,43 @@ function _SS3D_Shader_LoadCode( renderer, name )
 	return _SS3D_Shader_LoadFile( renderer, name );
 }
 
+// CACHES
+
+function SS3D_GetVertexDecl( ss3d, decl )
+{
+	if( !isset( ss3d.store, "vdecls" ) ) ss3d.store.vdecls = {};
+	vdecls = ss3d.store.vdecls;
+	if( !isset( vdecls, decl ) )
+	{
+		inst = ss3d.createVertexDecl( decl );
+		if( inst )
+			vdecls[ decl ] = inst;
+	}
+	else
+		inst = vdecls[ decl ];
+	return inst;
+}
+
+// MESH LOADING
+
+function SS3D_MeshLoad_GetVertexDecl( ss3d, decl ){ return SS3D_GetVertexDecl( ss3d, decl ); }
+function SS3D_MeshLoad_GetShader( ss3d, shader ){ return ss3d.getShader( shader ); }
+function SS3D_MeshLoad_GetTexture( ss3d, texture ){ return ss3d.getTexture( SS3D_FileRoot $ texture ); }
+function SS3D_MeshLoad_GetMaterial( ss3d, flags, shader, t0, t1, t2, t3, t4, t5, t6, t7 )
+{
+	mtl = ss3d.createMaterial();
+	mtl.transparent = flags & 1;
+	mtl.shader = SS3D_MeshLoad_GetShader( ss3d, shader );
+	mtl.setTexture( 0, if( t0, SS3D_MeshLoad_GetTexture( ss3d, t0 ), null ) );
+	mtl.setTexture( 1, if( t1, SS3D_MeshLoad_GetTexture( ss3d, t1 ), null ) );
+	mtl.setTexture( 2, if( t2, SS3D_MeshLoad_GetTexture( ss3d, t2 ), null ) );
+	mtl.setTexture( 3, if( t3, SS3D_MeshLoad_GetTexture( ss3d, t3 ), null ) );
+	mtl.setTexture( 4, if( t4, SS3D_MeshLoad_GetTexture( ss3d, t4 ), null ) );
+	mtl.setTexture( 5, if( t5, SS3D_MeshLoad_GetTexture( ss3d, t5 ), null ) );
+	mtl.setTexture( 6, if( t6, SS3D_MeshLoad_GetTexture( ss3d, t6 ), null ) );
+	mtl.setTexture( 7, if( t7, SS3D_MeshLoad_GetTexture( ss3d, t7 ), null ) );
+	return mtl;
+}
 
 // MESH GEN
 

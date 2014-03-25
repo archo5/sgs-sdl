@@ -702,6 +702,18 @@ static int mesh_ib_upload( SGS_CTX, SS3D_Mesh_D3D9* M, void* data, sgs_SizeVal s
 	
 	return 1;
 }
+static void mesh_set_num_parts( SGS_CTX, SS3D_Mesh_D3D9* M, int num )
+{
+	int cnp = M->inh.numParts;
+	while( cnp > num )
+	{
+		if( M->inh.parts[ cnp ].material )
+			sgs_ObjRelease( C, M->inh.parts[ cnp ].material );
+		memset( M->inh.parts + cnp, 0, sizeof( SS3D_MeshPart ) );
+		cnp--;
+	}
+	M->inh.numParts = num;
+}
 
 static int meshd3d9i_setVertexData( SGS_CTX )
 {
@@ -847,6 +859,77 @@ static int meshd3d9i_setPart( SGS_CTX )
 	SGS_RETURN_BOOL( 1 )
 }
 
+static int meshd3d9i_loadFromBuffer( SGS_CTX )
+{
+	int p, t;
+	char* buf;
+	sgs_SizeVal size;
+	SS3D_MeshFileData mfd;
+	
+	M_IHDR( loadFromBuffer );
+	if( !sgs_LoadArgs( C, "m", &buf, &size ) )
+		return 0;
+	
+	if( !SS3D_MeshData_Parse( buf, size, &mfd ) )
+		return sgs_Msg( C, SGS_WARNING, "could not parse mesh data" );
+	
+	/* load core mesh data */
+	sgs_PushObjectPtr( C, M->inh.renderer->_myobj );
+	sgs_PushStringBuf( C, mfd.formatData, mfd.formatSize );
+	if( SGS_FAILED( sgs_GlobalCall( C, "SS3D_MeshLoad_GetVertexDecl", 2, 1 ) ) )
+		return sgs_Msg( C, SGS_WARNING, "failed to call SS3D_MeshLoad_GetVertexDecl" );
+	if( !sgs_IsObject( C, -1, SS3D_VDecl_D3D9_iface ) )
+		return sgs_Msg( C, SGS_WARNING, "failed to parse vertex declaration" );
+	
+	sgs_ObjAssign( C, &M->inh.vertexDecl, sgs_GetObjectStruct( C, -1 ) );
+	sgs_Pop( C, 1 );
+	M->inh.dataFlags = ( mfd.dataFlags & SS3D_MDF__PUBFLAGMASK ) | SS3D_MDF__PUBFLAGBASE;
+	
+	mesh_vb_init( C, M, mfd.vertexDataSize );
+	mesh_vb_upload( C, M, mfd.vertexData, mfd.vertexDataSize );
+	
+	mesh_ib_init( C, M, mfd.indexDataSize, !!( mfd.dataFlags & SS3D_MDF_INDEX_32 ) );
+	mesh_ib_upload( C, M, mfd.indexData, mfd.indexDataSize );
+	
+	/* load part data */
+	mesh_set_num_parts( C, M, mfd.numParts ); /* count (should be) already validated */
+	for( p = 0; p < M->inh.numParts; ++p )
+	{
+		SS3D_MeshFilePartData* mfdp = mfd.parts + p;
+		
+		sgs_PushObjectPtr( C, M->inh.renderer->_myobj );
+		sgs_PushInt( C, mfdp->materialFlags );
+		sgs_PushStringBuf( C, mfdp->materialStrings[0], mfdp->materialStringSizes[0] );
+		for( t = 1; t <= 8; ++t )
+		{
+			if( mfdp->materialStrings[t] )
+				sgs_PushStringBuf( C, mfdp->materialStrings[t], mfdp->materialStringSizes[t] );
+			else
+				sgs_PushNull( C );
+		}
+		if( SGS_FAILED( sgs_GlobalCall( C, "SS3D_MeshLoad_GetMaterial", 11, 1 ) ) )
+			return sgs_Msg( C, SGS_WARNING, "failed to call SS3D_MeshLoad_GetMaterial" );
+		if( !sgs_IsObject( C, -1, SS3D_Material_iface ) )
+			return sgs_Msg( C, SGS_WARNING, "failed to load material" );
+		/* TODO: check for material compatibility with renderer */
+		
+		sgs_ObjAssign( C, &M->inh.parts[ p ].material, sgs_GetObjectStruct( C, -1 ) );
+		sgs_Pop( C, 1 );
+		
+		M->inh.parts[ p ].vertexOffset = mfdp->vertexOffset;
+		M->inh.parts[ p ].vertexCount = mfdp->vertexCount;
+		M->inh.parts[ p ].indexOffset = mfdp->indexOffset;
+		M->inh.parts[ p ].indexCount = mfdp->indexCount;
+	}
+	
+	memcpy( &M->inh.boundsMin, &mfd.boundsMin, sizeof(mfd.boundsMin) );
+	memcpy( &M->inh.boundsMax, &mfd.boundsMax, sizeof(mfd.boundsMax) );
+	memcpy( &M->inh.center, &mfd.center, sizeof(mfd.center) );
+	M->inh.radius = mfd.radius;
+	
+	return 1;
+}
+
 static int meshd3d9_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	M_HDR;
@@ -872,6 +955,7 @@ static int meshd3d9_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "updateVertexData" ) SGS_RETURN_CFUNC( meshd3d9i_updateVertexData )
 		SGS_CASE( "updateIndexData" )  SGS_RETURN_CFUNC( meshd3d9i_updateIndexData )
 		SGS_CASE( "setPart" )          SGS_RETURN_CFUNC( meshd3d9i_setPart )
+		SGS_CASE( "loadFromBuffer" )   SGS_RETURN_CFUNC( meshd3d9i_loadFromBuffer )
 	SGS_END_INDEXFUNC;
 }
 
@@ -881,16 +965,7 @@ static int meshd3d9_setindex( SGS_ARGS_SETINDEXFUNC )
 	SGS_BEGIN_INDEXFUNC
 		SGS_CASE( "numParts" )
 		{
-			int nnp = (int) sgs_GetIntP( C, val );
-			int cnp = M->inh.numParts;
-			while( cnp > nnp )
-			{
-				if( M->inh.parts[ cnp ].material )
-					sgs_ObjRelease( C, M->inh.parts[ cnp ].material );
-				memset( M->inh.parts + cnp, 0, sizeof( SS3D_MeshPart ) );
-				cnp--;
-			}
-			M->inh.numParts = nnp;
+			mesh_set_num_parts( C, M, (int) sgs_GetIntP( C, val ) );
 			return SGS_SUCCESS;
 		}
 		
@@ -1414,6 +1489,7 @@ int SS3D_PushRenderer_D3D9( SGS_CTX, void* device )
 	
 	SS3D_Renderer_Construct( &R->inh, C );
 	
+	R->inh._myobj = sgs_GetObjectStruct( C, -1 );
 	R->inh.API = "D3D9";
 	R->inh.ifMesh = SS3D_Mesh_D3D9_iface;
 	R->inh.ifTexture = SS3D_Texture_D3D9_iface;

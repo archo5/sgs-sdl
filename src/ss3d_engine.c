@@ -611,6 +611,117 @@ size_t SS3D_TextureData_GetMipDataSize( SS3D_TextureData* TD, int mip )
 
 
 //
+// MESH PARSING
+
+/* FORMAT
+	BUFFER: (min size = 4)
+	- uint32 size
+	- uint8 data[size]
+	
+	SMALLBUF: (min size = 1)
+	- uint8 size
+	- uint8 data[size]
+	
+	PART: (min size = 19)
+	- uint32 voff
+	- uint32 vcount
+	- uint32 ioff
+	- uint32 icount
+	- uint16 flags
+	- uint8 texcount
+	- smallbuf shader
+	- smallbuf textures[texcount]
+	
+	MESH:
+	- magic "SS3DMESH"
+	- uint32 flags
+	
+	- float boundsmin[3]
+	- float boundsmax[3]
+	- float center[3]
+	- float radius
+	
+	- buffer vdata
+	- buffer idata
+	- smallbuf format
+	- uint8 numparts
+	- part parts[numparts]
+	
+	minimum size = 12+40+10 = 62
+*/
+
+static int md_parse_buffer( char* buf, size_t size, char** outptr, uint32_t* outsize )
+{
+	if( size < 4 )
+		return 0;
+	memcpy( outsize, buf, 4 );
+	if( size < *outsize + 4 )
+		return 0;
+	*outptr = buf + 4;
+	return 1;
+}
+
+static int md_parse_smallbuf( char* buf, size_t size, char** outptr, uint8_t* outsize )
+{
+	if( size < 1 )
+		return 0;
+	memcpy( outsize, buf, 1 );
+	if( size < *outsize + 1 )
+		return 0;
+	*outptr = buf + 1;
+	return 1;
+}
+
+int SS3D_MeshData_Parse( char* buf, size_t size, SS3D_MeshFileData* out )
+{
+	uint8_t p, t;
+	size_t off = 0;
+	if( size < 61 || memcmp( buf, "SS3DMESH", 8 ) != 0 )
+		return 0;
+	memcpy( &out->dataFlags, buf + 8, 4 );
+	memcpy( &out->boundsMin, buf + 12, 12 );
+	memcpy( &out->boundsMax, buf + 24, 12 );
+	memcpy( &out->center, buf + 36, 12 );
+	memcpy( &out->radius, buf + 48, 4 );
+	off = 52;
+	if( !md_parse_buffer( buf + 52, size - 52, &out->vertexData, &out->vertexDataSize ) )
+		return 0;
+	off += 4 + out->vertexDataSize;
+	if( !md_parse_buffer( buf + off, size - off, &out->indexData, &out->indexDataSize ) )
+		return 0;
+	off += 4 + out->indexDataSize;
+	if( !md_parse_smallbuf( buf + off, size - off, &out->formatData, &out->formatSize ) )
+		return 0;
+	off += 1 + out->formatSize;
+	if( off >= size )
+		return 0;
+	out->numParts = (uint8_t) buf[ off++ ];
+	if( out->numParts > SS3D_MAX_MESH_PARTS )
+		return 0;
+	for( p = 0; p < out->numParts; ++p )
+	{
+		SS3D_MeshFilePartData* pout = out->parts + p;
+		memset( pout, 0, sizeof(*pout) );
+		if( off + 19 > size )
+			return 0;
+		memcpy( &pout->vertexOffset, buf + off, 4 ); off += 4;
+		memcpy( &pout->vertexCount, buf + off, 4 ); off += 4;
+		memcpy( &pout->indexOffset, buf + off, 4 ); off += 4;
+		memcpy( &pout->indexCount, buf + off, 4 ); off += 4;
+		memcpy( &pout->materialFlags, buf + off, 2 ); off += 2;
+		memcpy( &pout->materialTextureCount, buf + off, 1 ); off += 1;
+		for( t = 0; t < pout->materialTextureCount + 1; ++t )
+		{
+			if( !md_parse_smallbuf( buf + off, size - off, &pout->materialStrings[t], &pout->materialStringSizes[t] ) )
+				return 0;
+			off += 1 + pout->materialStringSizes[t];
+		}
+	}
+	return 1;
+}
+
+
+//
 // VDECL
 
 #define USAGE_PADDING 723
@@ -658,10 +769,13 @@ const char* SS3D_VDeclInfo_Parse( SS3D_VDeclInfo* info, const char* text )
 		}
 		else return "invalid data type specified";
 		
-		info->offsets[ count ] = offset;
-		info->types[ count ] = type;
-		info->usages[ count ] = usage;
-		count++;
+		if( usage != USAGE_PADDING )
+		{
+			info->offsets[ count ] = offset;
+			info->types[ count ] = type;
+			info->usages[ count ] = usage;
+			count++;
+		}
 		offset += size;
 	}
 	
@@ -735,11 +849,11 @@ static int material_setTexture( SGS_CTX )
 {
 	sgs_Int index;
 	MTL_IHDR( setTexture );
-	if( !sgs_LoadArgs( C, "i?o", &index, MTL->renderer->ifTexture ) )
+	if( !sgs_LoadArgs( C, "i|?o", &index, MTL->renderer->ifTexture ) )
 		return 0;
 	if( index < 0 || index >= SS3D_NUM_MATERIAL_TEXTURES )
 		return sgs_Msg( C, SGS_WARNING, "texture index %d not available", (int) index );
-	sgs_ObjAssign( C, &MTL->textures[ index ], sgs_GetObjectStruct( C, 1 ) );
+	sgs_ObjAssign( C, &MTL->textures[ index ], sgs_ItemType( C, 1 ) == SGS_VT_OBJECT ? sgs_GetObjectStruct( C, 1 ) : NULL );
 	SGS_RETURN_BOOL( 1 )
 }
 
