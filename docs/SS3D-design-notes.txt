@@ -1,0 +1,208 @@
+SGS3D
+
+
+LIGHTING SYSTEM
+
+Ability to combine various models and multiplications of such
+Modelling custom pass schemes is a must (!)
+
+/// DIRAMB: directional ambient lighting solution; SH or colors for all 6 directions (most likely latter)
+// 6 color method:
+//   fx_positive = saturate( normal.x ); fx_negative = saturate( -normal.x ); ...
+//   total_ambient = color_x_positive * fx_positive + ...
+//   total_ambient /= total_ambient.w; // normalize this way instead of squaring factors to make it smoother
+// ===
+
+Example #1:
+
+PASS1: [SOLID,STATIC] LIGHTMAP + SUN + 0-16 POINT LIGHTS (once)
+PASS2: [SOLID,DYNAMIC] DIRAMB + SUN + 0-16 POINT LIGHTS (once)
+PASS3: [SOLID,ANY] 0-16 POINT LIGHTS (as much as necessary)
+PASS4: [SOLID,ANY] 0-4 SPOT LIGHTS (as much as necessary)
+PASS5: [DEPTH] FOG
+PASS6: [TRANSPARENT,ANY] DIRAMB + SUN + 0-16 POINT LIGHTS (once)
+PASS7: [TRANSPARENT,ANY] 0-16 POINT LIGHTS (as much as necessary)
+PASS8: [TRANSPARENT,ANY] 0-4 SPOT LIGHTS (as much as necessary)
+
+Example #2:
+
+PASS1-5 as in Example #1
+PASS6: [TRANSPARENT,ANY] DIRAMB-DYNAMIC
+
+--------------
+To make this happen, pass specifications must be created:
+
+OBJECT PASS
+{
+	material type: solid / transparent / both
+	object type: static / dynamic / both
+	
+	point light data start (constant id)
+	max. point light count (0-128?)
+	spot light data start (constant id)
+	max. spot light count (0-4) // shadow / cookie texture limits
+	lightmap (0-4 per-instance textures)
+	diramb (constant id or -1 if not used)
+	
+	pixel shader stub name
+}
+SCREEN PASS
+{
+	shader name
+}
+CONTROL PASS
+{
+	type: reset light counts
+}
+
+--------------
+Potential issues
+
+- light queueing and culling
+
+for example, there's one object lit by one point light and another object lit by another one
+
+L1      L2
+ |      |
+O1      O2
+
+how will such pass configurations react to this?
+
+- given their vaguely descriptive nature, they could suggest that:
+> PASS with [pointlight=16] comes
+>> for each object, render as much point lights as possible with this pass
+! solved
+
+-- but what about ambient + lit?
+-- should be exactly the same
+
+either way, there HAS TO BE an object/light queue table
+
+- proposed data structure?
+ARRAY of LIGHT*
+> mesh instances store their entry point / light counts (or, rather, entry point and end point)
+> in the frame, they can use the pointer to R/W their light info
+> disabled lights/instances don't get to have anything, enabled ones MUST have valid range
+
+===END===
+
+
+OBJECT OWNERSHIP
+
+- generally, no object owns another object -> weak references
+	- the only exception is properties - they must be GC-safe
+- all sub-objects can be destroyed remotely
+- main algorithms:
+	> object-create: add object pointer to set
+	> object-destroy: invoke object's destructor
+	> object-destruct: if not destroying, remove object pointer from set; destruct object's internal representation
+	> manager-create: create set, set destroying to 0
+	> manager-destroy: set destroying to 1, delete set
+
+===END===
+
+
+enum s3dLightType
+{
+	S3DLIGHT_POINT
+	S3DLIGHT_SPOT
+	S3DLIGHT_DIRECT
+}
+
+enum s3dIndexType
+{
+	S3DINDEX_16
+	S3DINDEX_32
+}
+
+class s3dVertexFormat
+{
+	...
+}
+
+class s3dShader
+{
+	...
+}
+
+class s3dMaterial
+{
+	- [int] shaders
+}
+
+class s3dMesh
+{
+	+ setVertexData( buf, fmt )
+	+ setIndexData( buf, fmt : s3dIndexType )
+	+ setNumParts( num )
+	+ setPartData( from, to, material, textures )
+}
+
+class s3dMeshInstance
+{
+	- mesh
+	- matrix
+	- color
+}
+
+class s3dLight
+{
+	- type : s3dLightType
+	- isEnabled
+	- position
+	- direction
+	- color
+	- radius
+	- power
+	- minangle
+	- maxangle
+	- cookieTexture
+	- projMatrix
+	- hasShadows
+}
+
+class s3dCullScene
+{
+	+ cullAABB
+	+ cullOBB : def get AABB from OBB -> cullAABB
+	+ cullSphere : def get AABB from sphere -> cullAABB
+	+ cullSpotLight : def get sphere from radius -> cullSphere
+	- cullData
+}
+
+class s3dScene
+{
+	+ addStaticMeshInstance()
+	+ removeStaticMeshInstance( meshinst )
+	+ addLight()
+	+ removeLight( light )
+	
+	- camera
+	- cullScene
+}
+
+class s3dRenderer
+{
+	+ update( dt )
+	+ render()
+	+ resize( w, h )
+	+ onDeviceLost()
+	+ onDeviceReset()
+	
+	+ createScene()
+	+ destroyScene( scene )
+	+ getShader( name )
+	+ createTexture( type )
+	+ destroyTexture( tex )
+	+ createMesh()
+	+ destroyMesh( mesh )
+	
+	+ preloadShaders( list )
+	+ preloadMaterials( list )
+	+ unloadShaders( list )
+	+ unloadMaterials( list )
+	
+	- currentScene
+	- store
+}
+

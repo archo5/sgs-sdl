@@ -94,6 +94,21 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 #define SS3D_MDF__PUBFLAGMASK  0x03
 #define SS3D_MDF__PUBFLAGBASE  0
 
+/* render pass constants */
+#define SS3D_RPT_OBJECT     1
+#define SS3D_RPT_SCREEN     2
+
+#define SS3D_RPF_OBJ_STATIC      0x01
+#define SS3D_RPF_OBJ_DYNAMIC     0x02
+#define SS3D_RPF_OBJ_ALL        (SS3D_RPF_OBJ_STATIC|SS3D_RPF_OBJ_DYNAMIC)
+#define SS3D_RPF_MTL_SOLID       0x04
+#define SS3D_RPF_MTL_TRANSPARENT 0x08
+#define SS3D_RPF_MTL_ALL        (SS3D_RPF_MTL_SOLID|SS3D_RPF_MTL_TRANSPARENT)
+#define SS3D_RPF_ENABLED         0x80
+
+#define SS3D_SHADER_NAME_LENGTH 64
+#define SS3D_MAX_NUM_PASSES     16
+
 
 sgs_ObjInterface SS3D_Camera_iface[1];
 sgs_ObjInterface SS3D_Light_iface[1];
@@ -329,6 +344,21 @@ struct _SS3D_Scene
 	sgs_VarObj* viewport;
 };
 
+typedef struct _SS3D_RenderPass
+{
+	uint8_t type;
+	uint8_t flags;
+	int16_t maxruns;
+	int16_t pointlight_cb;
+	uint16_t pointlight_count;
+	int16_t spotlight_cb;
+	uint8_t spotlight_count;
+	uint8_t num_inst_textures;
+	int16_t diramb_cb;
+	char shname[ SS3D_SHADER_NAME_LENGTH ];
+}
+SS3D_RenderPass;
+
 struct _SS3D_Renderer
 {
 	SGS_CTX;
@@ -347,6 +377,9 @@ struct _SS3D_Renderer
 	sgs_ObjInterface* ifMesh;
 	sgs_ObjInterface* ifTexture;
 	sgs_ObjInterface* ifShader;
+	
+	SS3D_RenderPass passes[ SS3D_MAX_NUM_PASSES ];
+	int numPasses;
 };
 
 
