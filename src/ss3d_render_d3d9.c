@@ -1313,10 +1313,11 @@ static int rd3d9i_render( SGS_CTX )
 		VEC4 [px, py, pz, radius]
 		VEC4 [cr, cg, cb, power]
 		VEC4 [dx, dy, dz, angle]
-		VEC4 [--padding--]
+		VEC4 [ux, uy, uz, -]
 		VEC4x4 [shadow map matrix]
 		TEXTURES [cookie, shadowmap]
-	- DIRECTIONAL (SUN) LIGHT: (total size: 2 constants)
+	- AMBIENT + DIRECTIONAL (SUN) LIGHT: (total size: 3 constants)
+		VEC4 [ar, ag, ab, -]
 		VEC4 [dx, dy, dz, -]
 		VEC4 [cr, cg, cb, -]
 		TEXTURES [some number of shadowmaps]
@@ -1332,10 +1333,10 @@ static int rd3d9i_render( SGS_CTX )
 		0-3: camera inverse view matrix
 		12-13: fog data
 		14-19: dir.amb. data
-		20-21: dir. light
-		22: light counts (point, spot)
-		23-54: spot light data
-		55-86: point light data
+		20-22: dir. light
+		23: light counts (point, spot)
+		24-55: spot light data
+		56-87: point light data
 	*/
 	
 	/* upload unchanged data */
@@ -1350,14 +1351,15 @@ static int rd3d9i_render( SGS_CTX )
 	};
 	pshc_set_vec4array( R, 12, *fogdata, 2 );
 	
-	VEC4 dirlight[ 2 ] =
+	VEC4 dirlight[ 3 ] =
 	{
-		{ 0.7f, 0.7f, 0.7f, 0 },
+		{ 0.01f, 0.01f, 0.01f, 0 },
+		{ 0.7f, 0.7f, 0.07f, 0 },
 		{ 0.7f, 0.6f, 0.5f, 0 },
 	};
-	VEC3_Normalized( dirlight[0], dirlight[0] );
-	SS3D_Mtx_TransformNormal( dirlight[0], dirlight[0], cam->mView );
-	pshc_set_vec4array( R, 20, *dirlight, 2 );
+	VEC3_Normalized( dirlight[1], dirlight[1] );
+	SS3D_Mtx_TransformNormal( dirlight[1], dirlight[1], cam->mView );
+	pshc_set_vec4array( R, 20, *dirlight, 3 );
 	
 	for( pass_id = 0; pass_id < R->inh.numPasses; ++pass_id )
 	{
@@ -1424,7 +1426,7 @@ static int rd3d9i_render( SGS_CTX )
 							plt++;
 						}
 					}
-					pshc_set_vec4array( R, 55, lightdata[0], sizeof(VEC4) * 2 * pl_count );
+					pshc_set_vec4array( R, 56, lightdata[0], sizeof(VEC4) * 2 * pl_count );
 				}
 				if( pass->spotlight_count )
 				{
@@ -1466,14 +1468,19 @@ static int rd3d9i_render( SGS_CTX )
 							plt++;
 						}
 					}
-					pshc_set_vec4array( R, 23, lightdata[32], sizeof(VEC4) * 8 * sl_count );
+					pshc_set_vec4array( R, 24, lightdata[32], sizeof(VEC4) * 8 * sl_count );
 				}
 				
 				if( pass->flags & SS3D_RPF_LIGHTOVERLAY && pl_count + sl_count <= 0 )
 					continue;
 				
+				if( !( pass->flags & SS3D_RPF_LIGHTOVERLAY ) )
+				{
+					use_texture( R, 8, tx_cubemap );
+				}
+				
 				VEC4 lightcounts = { pl_count, sl_count, 0, 0 };
-				pshc_set_vec4array( R, 22, lightcounts, 1 );
+				pshc_set_vec4array( R, 23, lightcounts, 1 );
 				
 				SS3D_Mtx_Multiply( m_world_view, MI->matrix, cam->mView );
 				vshc_set_mat4( R, 0, m_world_view );

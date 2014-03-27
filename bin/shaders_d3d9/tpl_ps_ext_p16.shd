@@ -34,15 +34,16 @@ sampler2D Tex1 : register(s1);
 samplerCUBE EnvMap : register(s8);
 
 float4x4 mInvView : register(c0);
-float3 gDirLightDir : register(c20);
-float3 gDirLightColor : register(c21);
+float3 gAmbLightColor : register(c20);
+float3 gDirLightDir : register(c21);
+float3 gDirLightColor : register(c22);
 struct PointLight /* size: 2c */
 {
 	float4 vposrad;
 	float4 colpow;
 };
-float4 gLightCounts : register(c22);
-PointLight gPLights[16] : register(c55); /* :c86 */
+float4 gLightCounts : register(c23);
+PointLight gPLights[16] : register(c56); /* :c87 */
 
 void main
 (

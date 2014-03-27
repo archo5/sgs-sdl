@@ -1,0 +1,7 @@
+float4 diff = tex2D( Tex0, inTex0.xy );
+diff.rgb *= diff.rgb; // GAMMA CORRECTION HACK (for now)
+outDiffuseColor = diff.rgb;
+outOpacity = diff.a;
+float2 distort = tex2D( Tex0, inTex0.xy );
+outDistortion = distort.xy * 0.25 / inViewPos.z;
+outSpecularColor = float3( 0, 0, 0 );

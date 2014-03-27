@@ -24,19 +24,25 @@ function initialize()
 	println( "VD1: " $ _R.VD1 );
 	
 	_R.Mesh = _R.SS3D.createMesh();
-	if( 0 )
 	{
+		_R.PlaneMesh = _R.SS3D.createMesh();
 		vdata = fmt_pack( "12f 12f 12f 12f",
-			-1, -1, 1,  0, 0, 1,  1, 0, 0, 1,  0, 0,
-			1, -1, 1,   0, 0, 1,  1, 0, 0, 1,  1, 0,
-			1, 1, 1,    0, 0, 1,  1, 0, 0, 1,  1, 1,
-			-1, 1, 1,   0, 0, 1,  1, 0, 0, 1,  0, 1 );
-		_R.Mesh.setVertexData( vdata, _R.VD1, false );
-		_R.Mesh.setIndexData( fmt_pack( "6w", 0, 1, 2, 2, 3, 0 ), false );
-		_R.Mesh.numParts = 1;
-		_R.Mesh.setPart( 0, null, 0, 4, 0, 6 );
+			-50, -50, 0,  0, 0, 1,  1, 0, 0, 1,  0, 0,
+			 50, -50, 0,  0, 0, 1,  1, 0, 0, 1,  1, 0,
+			 50,  50, 0,  0, 0, 1,  1, 0, 0, 1,  1, 1,
+			-50,  50, 0,  0, 0, 1,  1, 0, 0, 1,  0, 1 );
+		_R.PlaneMesh.setVertexData( vdata, _R.VD1, false );
+		_R.PlaneMesh.setIndexData( fmt_pack( "6w", 0, 1, 2, 2, 3, 0 ), false );
+		_R.PlaneMesh.numParts = 1;
+		_R.PlaneMesh.setPartRanges( 0, 0, 4, 0, 6 );
+		_R.PlaneMesh.setPartFlags( 0, 0 );
+		_R.PlaneMesh.setPartShader( 0, "testFRrender" );
+		_R.PlaneMesh.setPartTexture( 0, 0, _R.SS3D.getTexture( "testdata/concretewall5.dds" ) );
+		_R.PlaneMesh.setPartTexture( 0, 1, _R.SS3D.getTexture( "testdata/concretewall5normal.png" ) );
+		_R.PlaneMeshMI = _R.Scene.createMeshInstance();
+		_R.PlaneMeshMI.mesh = _R.PlaneMesh;
 	}
-	else if(0)
+	if(0)
 	{
 		mesh = unserialize( io_file_read( "testdata/bunny.ssm" ) );
 		shader = _R.SS3D.getShader( "testFRrender2" );

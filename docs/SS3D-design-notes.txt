@@ -84,6 +84,22 @@ ARRAY of LIGHT*
 > in the frame, they can use the pointer to R/W their light info
 > disabled lights/instances don't get to have anything, enabled ones MUST have valid range
 
+--------------
+Shader code interface
+
+INPUTS:
+- Textures [0-15]
+- Constants (passed data)
+- Vertex (interpolated) attributes (view position, texcoord, vertex color, TBN matrix)
+OUTPUTS:
+- diffuse color (default=0.7)
+- opacity (default=1)
+- specular color (default=0.3)
+- specular power (default=32)
+- surface normal (default=0;0;1)
+- distortion vector (default=0;0)
+- ambient diffuse light (default=0;0;0)
+
 ===END===
 
 

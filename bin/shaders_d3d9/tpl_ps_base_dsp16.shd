@@ -34,56 +34,56 @@ sampler2D Tex1 : register(s1);
 samplerCUBE EnvMap : register(s8);
 
 float4x4 mInvView : register(c0);
-float3 gDirLightDir : register(c20);
-float3 gDirLightColor : register(c21);
+float3 gAmbLightColor : register(c20);
+float3 gDirLightDir : register(c21);
+float3 gDirLightColor : register(c22);
 struct PointLight /* size: 2c */
 {
 	float4 vposrad;
 	float4 colpow;
 };
-float4 gLightCounts : register(c22);
-PointLight gPLights[16] : register(c55); /* :c86 */
+float4 gLightCounts : register(c23);
+PointLight gPLights[16] : register(c56); /* :c87 */
 
 void main
 (
-	float4 itfpos : TEXCOORD1,
-	float4 iT : TEXCOORD2,
-	float3 iN : TEXCOORD3,
+	float4 inViewPos : TEXCOORD1,
+	float4 inTangentSign : TEXCOORD2,
+	float3 inNormal : TEXCOORD3,
 	float4 icol : COLOR0,
-	float2 itex : TEXCOORD0,
-	out float4 ocol0 : COLOR0,
-	out float4 ocol1 : COLOR1
+	float4 inTex0 : TEXCOORD0,
+	out float4 _outColor0 : COLOR0,
+	out float4 _outColor1 : COLOR1
 )
 {
 	float RdotV, specAmount;
 	
-	float4 col = tex2D( Tex0, itex ) * icol;
-	float3 nrm = tex2D( Tex1, itex ).rgb * 2 - 1;
-	float3 albedo = col.rgb * col.rgb;
-	
-	float3 T = iT.xyz;
-	float3 B = cross( iN, iT.xyz ) * iT.w;
-	float3 N = iN;
-	
-	float3 viewPos = itfpos.xyz;
+	float3 viewPos = inViewPos.xyz;
 	float3 viewDir = normalize( viewPos );
-	float3 viewNormal = nrm.x * T + nrm.y * B + nrm.z * N;
-	float3 refView = reflect( -normalize( viewPos ), viewNormal );
+	
+	float3 T = inTangentSign.xyz;
+	float3 B = cross( inNormal, inTangentSign.xyz ) * inTangentSign.w;
+	float3 N = inNormal;
+	
+	float3x3 TBN = float3x3( T, B, N );
+	
+	float3 outDiffuseColor = float3( 0.7, 0.7, 0.7 );
+	float outOpacity = 1.0;
+	float3 outSpecularColor = float3( 0.3, 0.3, 0.3 );
+	float outSpecularPower = 32;
+	float3 outNormal = inNormal;
+	float2 outDistortion = float2( 0, 0 );
+	float3 outAmbientDiffuseLight = float3( 0, 0, 0 );
+	float3 outAmbientSpecularLight = float3( 0, 0, 0 );
+	{
+__CODE__
+	}
+	
+	float3 refView = reflect( -viewDir, outNormal );
 	float3 refWorld = mul( mInvView, float4( refView, 0 ) ).xyz;
 	
-	
-	float fresnelish = 1 - abs( dot( viewNormal, normalize(viewPos) ) );
-	fresnelish *= fresnelish;
-	
-	
-	float specularFactor = 0.5 * fresnelish;
-	float specularPower = 256;
-	
-	float3 totalDiffuse = float3(0,0,0);
-	float3 totalSpecular = pow( texCUBElod( EnvMap, float4( refWorld.xzy*float3(1,-1,1), 1 ) ).rgb, 2 ) * specularFactor; // float3(0,0,0);
-	
-	/* AMBIENT TEST */
-	totalDiffuse += float3(0.01,0.01,0.01);
+	float3 totalDiffuse = gAmbLightColor + outAmbientDiffuseLight;
+	float3 totalSpecular = pow( texCUBElod( EnvMap, float4( refWorld.xzy*float3(1,-1,1), 1 ) ).rgb, 2 );
 	
 	/* DIR.AMB. LIGHT */
 	/* TODO */
@@ -99,16 +99,17 @@ void main
 		float3 lightColor = PL.colpow.rgb;
 		
 		float distFactor = pow( 1 - saturate( lightDist / PL.vposrad.w ), PL.colpow.w );
-		float NdotL = saturate( dot( viewNormal, lightDir ) );
+		float NdotL = saturate( dot( outNormal, lightDir ) );
 		
-		RdotV = saturate( dot( reflect( lightDir, viewNormal ), viewDir ) );
-		specAmount = pow( RdotV, specularPower ) * sqrt( specularPower ) * specularFactor * PL.vposrad.w / 10;
+		RdotV = saturate( dot( reflect( lightDir, outNormal ), viewDir ) );
+		specAmount = pow( RdotV, outSpecularPower ) * sqrt( outSpecularPower ) * PL.vposrad.w / 10;
 		
 		totalDiffuse += lightColor * NdotL * distFactor;
 		totalSpecular += lightColor * specAmount;
 	}
 	
-	ocol0 = float4( totalDiffuse * albedo + totalSpecular, col.a );
+	_outColor0 = float4( totalDiffuse * outDiffuseColor + totalSpecular * outSpecularColor, outOpacity );
+	_outColor1 = float4( outDistortion, 0, outOpacity );
 }
 
 #endif
