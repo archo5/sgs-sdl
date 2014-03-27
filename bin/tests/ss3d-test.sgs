@@ -90,13 +90,19 @@ function initialize()
 	_R.ParticleColors = floatarray( 1, 1, 1, 0.3 );
 	_R.ParticleSizes = floatarray( 5 );
 	
-	_R.ParticleMtl = _R.SS3D.createMaterial();
-	_R.ParticleMtl.transparent = true;
-	_R.ParticleMtl.shader = _R.SS3D.getShader( "sprite" );
-	_R.ParticleMtl.setTexture( 0, _R.SS3D.getTexture( "testdata/smoke.png" ) );
-	_R.ParticleMtl.setTexture( 1, _R.SS3D.getTexture( "testdata/smoke_normal.png" ) );
+//	_R.ParticleMtl = _R.SS3D.createMaterial();
+//	_R.ParticleMtl.transparent = true;
+//	_R.ParticleMtl.shader = _R.SS3D.getShader( "sprite" );
+//	_R.ParticleMtl.setTexture( 0, _R.SS3D.getTexture( "testdata/smoke.png" ) );
+//	_R.ParticleMtl.setTexture( 1, _R.SS3D.getTexture( "testdata/smoke_normal.png" ) );
 	
 	_R.ParticleMesh = _R.SS3D.createMesh( true );
+	_R.ParticleMesh.numParts = 1;
+	_R.ParticleMesh.setPartFlags( 0, 0x01 ); // transparent
+	_R.ParticleMesh.setPartShader( 0, "sprite" );
+	_R.ParticleMesh.setPartTexture( 0, 0, _R.SS3D.getTexture( "testdata/smoke.png" ) );
+	_R.ParticleMesh.setPartTexture( 0, 1, _R.SS3D.getTexture( "testdata/smoke_normal.png" ) );
+	
 	_R.ParticleMI = _R.Scene.createMeshInstance();
 	_R.ParticleMI.mesh = _R.ParticleMesh;
 	

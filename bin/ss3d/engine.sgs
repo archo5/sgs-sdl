@@ -36,7 +36,7 @@ function _SS3D_Shader_LoadFile( renderer, name )
 {
 	filename = SS3D_FileRoot $ "shaders_" $ renderer $ "/" $ name $ ".shd";
 	if( !io_file_exists( filename ) )
-		return null;
+		return WARNING( "shader file does not exist: " $ filename );
 	data = io_file_read( filename );
 	data = _SS3D_Shader_ParseIncludes( renderer, name, data );
 	return data;
@@ -51,7 +51,7 @@ function _SS3D_Shader_LoadCode( renderer, name )
 			return WARNING( "invalid material name, expected mtl:<name>:<type>" );
 		return string_replace
 		(
-			_SS3D_Shader_LoadFile( renderer, "tpl_mtl_" $ info[2] ),
+			_SS3D_Shader_LoadFile( renderer, "tpl_" $ info[2] ),
 			"__CODE__",
 			_SS3D_Shader_LoadFile( renderer, "mtl_" $ info[1] )
 		);
@@ -79,8 +79,9 @@ function SS3D_GetVertexDecl( ss3d, decl )
 // MESH LOADING
 
 function SS3D_MeshLoad_GetVertexDecl( ss3d, decl ){ return SS3D_GetVertexDecl( ss3d, decl ); }
-function SS3D_MeshLoad_GetShader( ss3d, shader ){ return ss3d.getShader( shader ); }
+// function SS3D_MeshLoad_GetShader( ss3d, shader ){ return ss3d.getShader( shader ); }
 function SS3D_MeshLoad_GetTexture( ss3d, texture ){ return ss3d.getTexture( SS3D_FileRoot $ texture ); }
+/*
 function SS3D_MeshLoad_GetMaterial( ss3d, flags, shader, t0, t1, t2, t3, t4, t5, t6, t7 )
 {
 	mtl = ss3d.createMaterial();
@@ -96,24 +97,25 @@ function SS3D_MeshLoad_GetMaterial( ss3d, flags, shader, t0, t1, t2, t3, t4, t5,
 	mtl.setTexture( 7, if( t7, SS3D_MeshLoad_GetTexture( ss3d, t7 ), null ) );
 	return mtl;
 }
+*/
 
 // MESH GEN
 
 global cSS3D_GenMeshVertexFormat = "pf30f2nf3tf4cf4";
 global cSS3D_GenParticleVertexFormat = "pf30f2cf4";
 
-function SS3D_CreateCubeMesh( ss3d, material, extents, position, color )
+function SS3D_CreateCubeMesh( ss3d, extents, position, color )
 {
 	(vdata,idata,vcount,icount) = SS3D_MeshGen_Cube( extents, position, color );
 	mesh = ss3d.createMesh();
 	mesh.setVertexData( vdata, SS3D_GetVertexDecl( ss3d, cSS3D_GenMeshVertexFormat ), false );
 	mesh.setIndexData( idata, false );
 	mesh.numParts = 1;
-	mesh.setPart( 0, material, 0, vcount, 0, icount );
+	mesh.setPart( 0, 0, vcount, 0, icount );
 	return mesh;
 }
 
-function SS3D_UpdateParticleMesh( ss3d, mesh, material, viewmatrix, positions, sizes, colors, angles )
+function SS3D_UpdateParticleMesh( ss3d, mesh, viewmatrix, positions, sizes, colors, angles )
 {
 	(vdata,idata,vcount,icount) = SS3D_MeshGen_Particles( viewmatrix, positions, sizes, colors, angles );
 	
@@ -126,5 +128,5 @@ function SS3D_UpdateParticleMesh( ss3d, mesh, material, viewmatrix, positions, s
 	mesh.updateIndexData( idata );
 	
 	mesh.numParts = 1;
-	mesh.setPart( 0, material, 0, vcount, 0, icount );
+	mesh.setPart( 0, 0, vcount, 0, icount );
 }

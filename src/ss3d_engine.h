@@ -17,6 +17,7 @@ typedef VEC4 MAT4[4];
 #define DEG2RAD( x ) ((x)/180.0f*M_PI)
 
 #define VEC3_Set( V, x, y, z ) V[0] = x; V[1] = y; V[2] = z;
+#define VEC3_Copy( V, X ) V[0] = X[0]; V[1] = X[1]; V[2] = X[2];
 #define VEC3_Add( V, A, B ) V[0]=A[0]+B[0]; V[1]=A[1]+B[1]; V[2]=A[2]+B[2];
 #define VEC3_Sub( V, A, B ) V[0]=A[0]-B[0]; V[1]=A[1]-B[1]; V[2]=A[2]-B[2];
 #define VEC3_Mul( V, A, B ) V[0]=A[0]*B[0]; V[1]=A[1]*B[1]; V[2]=A[2]*B[2];
@@ -24,7 +25,7 @@ typedef VEC4 MAT4[4];
 #define VEC3_Dot( A, B ) (A[0]*B[0]+A[1]*B[1]+A[2]*B[2])
 #define VEC3_Length( X ) sqrt( VEC3_Dot( X, X ) );
 #define VEC3_Cross( V, A, B ) V[0]=A[1]*B[2]-A[2]*B[1]; V[1]=A[2]*B[0]-A[0]*B[2]; V[2]=A[0]*B[1]-A[1]*B[0];
-#define VEC3_Normalized( V, X ) { float len = VEC3_Length( X ); if( len > 0 ){ V[0]=X[0]/len; V[1]=X[1]/len; V[2]=X[2]/len; } }
+#define VEC3_Normalized( V, X ) { float len = VEC3_Length( X ); if( len > 0 ){ V[0]=X[0]/len; V[1]=X[1]/len; V[2]=X[2]/len; }else{ VEC3_Set( V, 0, 0, 0 ); } }
 
 #define VEC4_Set( V, x, y, z, w ) V[0] = x; V[1] = y; V[2] = z; V[3] = w;
 #define VEC4_Copy( V, src ) V[0] = src[0]; V[1] = src[1]; V[2] = src[2]; V[3] = src[3];
@@ -34,6 +35,7 @@ void SS3D_Mtx_Transpose( MAT4 mtx );
 void SS3D_Mtx_Multiply( MAT4 out, MAT4 A, MAT4 B );
 void SS3D_Mtx_Transform( VEC4 out, VEC4 v, MAT4 mtx );
 void SS3D_Mtx_TransformPos( VEC3 out, VEC3 pos, MAT4 mtx );
+void SS3D_Mtx_TransformNormal( VEC3 out, VEC3 pos, MAT4 mtx );
 void SS3D_Mtx_Dump( MAT4 mtx );
 void SS3D_Mtx_LookAt( MAT4 out, VEC3 pos, VEC3 dir, VEC3 up );
 void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, float znear, float zfar );
@@ -94,6 +96,8 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 #define SS3D_MDF__PUBFLAGMASK  0x03
 #define SS3D_MDF__PUBFLAGBASE  0
 
+#define SS3D_MTL_TRANSPARENT   0x01
+
 /* render pass constants */
 #define SS3D_RPT_OBJECT     1
 #define SS3D_RPT_SCREEN     2
@@ -104,6 +108,7 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 #define SS3D_RPF_MTL_SOLID       0x04
 #define SS3D_RPF_MTL_TRANSPARENT 0x08
 #define SS3D_RPF_MTL_ALL        (SS3D_RPF_MTL_SOLID|SS3D_RPF_MTL_TRANSPARENT)
+#define SS3D_RPF_CALC_DIRAMB     0x10
 #define SS3D_RPF_ENABLED         0x80
 
 #define SS3D_SHADER_NAME_LENGTH 64
@@ -227,6 +232,7 @@ struct _SS3D_Light
 	int hasShadows;
 };
 
+#if 0
 struct _SS3D_Material
 {
 	SS3D_Renderer* renderer;
@@ -237,6 +243,7 @@ struct _SS3D_Material
 };
 
 extern sgs_ObjInterface SS3D_Material_iface[1];
+#endif
 
 int SS3D_Material_Create( SS3D_Renderer* R );
 
@@ -254,11 +261,15 @@ const char* SS3D_VDeclInfo_Parse( SS3D_VDeclInfo* info, const char* text );
 
 struct _SS3D_MeshPart
 {
-	sgs_VarObj* material;
 	uint32_t vertexOffset;
 	uint32_t vertexCount;
 	uint32_t indexOffset;
 	uint32_t indexCount;
+	
+	uint32_t materialFlags;
+	sgs_VarObj* shaders[ SS3D_MAX_NUM_PASSES ];
+	sgs_VarObj* textures[ SS3D_NUM_MATERIAL_TEXTURES ];
+	char shader_name[ SS3D_SHADER_NAME_LENGTH ];
 };
 
 struct _SS3D_Mesh
@@ -292,6 +303,10 @@ struct _SS3D_MeshInstance
 	MAT4 matrix;
 	VEC4 color;
 	int enabled;
+	
+	/* frame cache */
+	SS3D_Light** lightbuf_begin;
+	SS3D_Light** lightbuf_end;
 };
 
 typedef void (*fpSS3D_CullScene_SetCamera) ( void* /* data */, SS3D_Camera* );
@@ -349,12 +364,9 @@ typedef struct _SS3D_RenderPass
 	uint8_t type;
 	uint8_t flags;
 	int16_t maxruns;
-	int16_t pointlight_cb;
 	uint16_t pointlight_count;
-	int16_t spotlight_cb;
 	uint8_t spotlight_count;
 	uint8_t num_inst_textures;
-	int16_t diramb_cb;
 	char shname[ SS3D_SHADER_NAME_LENGTH ];
 }
 SS3D_RenderPass;

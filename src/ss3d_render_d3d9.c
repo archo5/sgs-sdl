@@ -266,7 +266,7 @@ static int get_shader_( SS3D_RD3D9* R, sgs_Variable* key )
 		sgs_PushVariable( C, key );
 		sgs_GlobalCall( C, "_SS3D_Shader_LoadCode", 2, 1 );
 		if( !sgs_ParseString( C, -1, &buf, &size ) )
-			return sgs_Msg( C, SGS_WARNING, "failed to load shader code" );
+			return sgs_Msg( C, SGS_WARNING, "failed to load shader code (%s)", sgs_var_cstr( key ) );
 		
 		// compile code
 		if( !shd3d9_init_source( R, &shader, buf, size ) )
@@ -293,6 +293,22 @@ static SS3D_Shader_D3D9* get_shader( SS3D_RD3D9* R, const char* name )
 	
 	if( get_shader_( R, &key ) )
 		out = (SS3D_Shader_D3D9*) sgs_GetObjectData( C, -1 );
+	sgs_SetStackSize( C, ssz );
+	return out;
+}
+
+static sgs_VarObj* get_shader_obj( SS3D_RD3D9* R, const char* name )
+{
+	sgs_Variable key;
+	SGS_CTX = R->inh.C;
+	sgs_SizeVal ssz = sgs_StackSize( C );
+	sgs_VarObj* out = NULL;
+	
+	sgs_PushString( C, name );
+	sgs_PeekStackItem( C, -1, &key );
+	
+	if( get_shader_( R, &key ) )
+		out = (sgs_VarObj*) sgs_GetObjectStruct( C, -1 );
 	sgs_SetStackSize( C, ssz );
 	return out;
 }
@@ -641,14 +657,18 @@ static int meshd3d9_destruct( SGS_CTX, sgs_VarObj* obj )
 
 static int meshd3d9_gcmark( SGS_CTX, sgs_VarObj* obj )
 {
-	int i;
+	int i, j;
 	M_HDR;
 	if( M->inh.vertexDecl )
 		sgs_ObjGCMark( C, M->inh.vertexDecl );
 	for( i = 0; i < M->inh.numParts; ++i )
 	{
-		if( M->inh.parts[ i ].material )
-			sgs_ObjGCMark( C, M->inh.parts[ i ].material );
+		for( j = 0; j < SS3D_NUM_MATERIAL_TEXTURES; ++j )
+			if( M->inh.parts[ i ].textures[ j ] )
+				sgs_ObjGCMark( C, M->inh.parts[ i ].textures[ j ] );
+		for( j = 0; j < SS3D_MAX_NUM_PASSES; ++j )
+			if( M->inh.parts[ i ].shaders[ j ] )
+				sgs_ObjGCMark( C, M->inh.parts[ i ].shaders[ j ] );
 	}
 	return SGS_SUCCESS;
 }
@@ -704,11 +724,16 @@ static int mesh_ib_upload( SGS_CTX, SS3D_Mesh_D3D9* M, void* data, sgs_SizeVal s
 }
 static void mesh_set_num_parts( SGS_CTX, SS3D_Mesh_D3D9* M, int num )
 {
-	int cnp = M->inh.numParts;
+	int j, cnp = M->inh.numParts;
 	while( cnp > num )
 	{
-		if( M->inh.parts[ cnp ].material )
-			sgs_ObjRelease( C, M->inh.parts[ cnp ].material );
+		for( j = 0; j < SS3D_NUM_MATERIAL_TEXTURES; ++j )
+			if( M->inh.parts[ cnp ].textures[ j ] )
+				sgs_ObjRelease( C, M->inh.parts[ cnp ].textures[ j ] );
+		for( j = 0; j < SS3D_MAX_NUM_PASSES; ++j )
+			if( M->inh.parts[ cnp ].shaders[ j ] )
+				sgs_ObjRelease( C, M->inh.parts[ cnp ].shaders[ j ] );
+		
 		memset( M->inh.parts + cnp, 0, sizeof( SS3D_MeshPart ) );
 		cnp--;
 	}
@@ -837,25 +862,91 @@ static int meshd3d9i_updateIndexData( SGS_CTX )
 	SGS_RETURN_BOOL( 1 )
 }
 
-static int meshd3d9i_setPart( SGS_CTX )
+static int meshd3d9i_setPartRanges( SGS_CTX )
 {
-	SS3D_Material* mtl;
 	sgs_Int pid, vo, vc, io, ic;
-	M_IHDR( setPart );
-	if( !sgs_LoadArgs( C, "ioiiii", &pid, SS3D_Material_iface, &mtl, &vo, &vc, &io, &ic ) )
+	M_IHDR( setPartRanges );
+	if( !sgs_LoadArgs( C, "iiiii", &pid, &vo, &vc, &io, &ic ) )
 		return 0;
 	
 	if( pid < 0 || pid >= M->inh.numParts )
 		return sgs_Msg( C, SGS_WARNING, "part %d is not made available", (int) pid );
 	
-	if( mtl->renderer != M->inh.renderer )
-		return sgs_Msg( C, SGS_WARNING, "material / mesh renderer mismatch" );
-	
-	sgs_ObjAssign( C, &M->inh.parts[ pid ].material, sgs_GetObjectStruct( C, 1 ) );
 	M->inh.parts[ pid ].vertexOffset = vo;
 	M->inh.parts[ pid ].vertexCount = vc;
 	M->inh.parts[ pid ].indexOffset = io;
 	M->inh.parts[ pid ].indexCount = ic;
+	SGS_RETURN_BOOL( 1 )
+}
+
+static int meshd3d9i_setPartFlags( SGS_CTX )
+{
+	sgs_Int pid, mfl;
+	M_IHDR( setPartRanges );
+	if( !sgs_LoadArgs( C, "ii", &pid, &mfl ) )
+		return 0;
+	
+	if( pid < 0 || pid >= M->inh.numParts )
+		return sgs_Msg( C, SGS_WARNING, "part %d is not made available", (int) pid );
+	
+	M->inh.parts[ pid ].materialFlags = mfl;
+	SGS_RETURN_BOOL( 1 )
+}
+
+
+static void mesh_set_part_shader( SS3D_Mesh_D3D9* M, int pid, char* shader )
+{
+	int i;
+	char buf[ 140 ];
+	SGS_CTX = M->inh.renderer->C;
+	
+	for( i = 0; i < SS3D_MAX_NUM_PASSES; ++i )
+		sgs_ObjAssign( C, &M->inh.parts[ pid ].shaders[ i ], NULL );
+	
+	strcpy( M->inh.parts[ pid ].shader_name, shader );
+	
+	memset( buf, 0, sizeof(buf) );
+	strcpy( buf, "mtl:" );
+	for( i = 0; i < M->inh.renderer->numPasses; ++i )
+	{
+		strcpy( buf + 4, shader );
+		strcat( buf, ":" );
+		strcat( buf, M->inh.renderer->passes[ i ].shname );
+		
+		sgs_ObjAssign( C, &M->inh.parts[ pid ].shaders[ i ], get_shader_obj( (SS3D_RD3D9*) M->inh.renderer, buf ) );
+	}
+}
+
+static int meshd3d9i_setPartShader( SGS_CTX )
+{
+	sgs_Int pid;
+	char* str;
+	M_IHDR( setPartShader );
+	if( !sgs_LoadArgs( C, "is", &pid, &str ) )
+		return 0;
+	
+	if( pid < 0 || pid >= M->inh.numParts )
+		return sgs_Msg( C, SGS_WARNING, "part %d is not made available", (int) pid );
+	if( strlen( str ) > 63 )
+		return sgs_Msg( C, SGS_WARNING, "shader name too long: %s", str );
+	
+	mesh_set_part_shader( M, pid, str );
+	SGS_RETURN_BOOL( 1 )
+}
+
+static int meshd3d9i_setPartTexture( SGS_CTX )
+{
+	sgs_Int pid, index;
+	M_IHDR( setPartTexture );
+	if( !sgs_LoadArgs( C, "ii|?o", &pid, &index, M->inh.renderer->ifTexture ) )
+		return 0;
+	
+	if( pid < 0 || pid >= M->inh.numParts )
+		return sgs_Msg( C, SGS_WARNING, "part %d is not made available", (int) pid );
+	if( index < 0 || index >= SS3D_NUM_MATERIAL_TEXTURES )
+		return sgs_Msg( C, SGS_WARNING, "texture index %d not available", (int) index );
+	
+	sgs_ObjAssign( C, &M->inh.parts[ pid ].textures[ index ], sgs_ItemType( C, 2 ) == SGS_VT_OBJECT ? sgs_GetObjectStruct( C, 2 ) : NULL );
 	SGS_RETURN_BOOL( 1 )
 }
 
@@ -897,25 +988,37 @@ static int meshd3d9i_loadFromBuffer( SGS_CTX )
 	{
 		SS3D_MeshFilePartData* mfdp = mfd.parts + p;
 		
-		sgs_PushObjectPtr( C, M->inh.renderer->_myobj );
-		sgs_PushInt( C, mfdp->materialFlags );
-		sgs_PushStringBuf( C, mfdp->materialStrings[0], mfdp->materialStringSizes[0] );
+		char ntbuf[ 64 ];
+		if( mfdp->materialStringSizes[0] > 63 )
+		{
+			memcpy( ntbuf, mfdp->materialStrings[0], 63 );
+			ntbuf[ 63 ] = 0;
+		}
+		else
+		{
+			memcpy( ntbuf, mfdp->materialStrings[0], mfdp->materialStringSizes[0] );
+			ntbuf[ mfdp->materialStringSizes[0] ] = 0;
+		}
+		mesh_set_part_shader( M, p, ntbuf );
+		
 		for( t = 1; t <= 8; ++t )
 		{
 			if( mfdp->materialStrings[t] )
+			{
+				sgs_PushObjectPtr( C, M->inh.renderer->_myobj );
 				sgs_PushStringBuf( C, mfdp->materialStrings[t], mfdp->materialStringSizes[t] );
+				if( SGS_FAILED( sgs_GlobalCall( C, "SS3D_MeshLoad_GetTexture", 2, 1 ) ) )
+					return sgs_Msg( C, SGS_WARNING, "failed to call SS3D_MeshLoad_GetTexture" );
+				if( !sgs_IsObject( C, -1, SS3D_VDecl_D3D9_iface ) )
+					return sgs_Msg( C, SGS_WARNING, "failed to load texture '%.*s'", mfdp->materialStringSizes[t], mfdp->materialStrings[t] );
+				sgs_ObjAssign( C, &M->inh.parts[ p ].textures[ t - 1 ], sgs_GetObjectStruct( C, -1 ) );
+				sgs_Pop( C, 1 );
+			}
 			else
-				sgs_PushNull( C );
+				sgs_ObjAssign( C, &M->inh.parts[ p ].textures[ t - 1 ], NULL );
 		}
-		if( SGS_FAILED( sgs_GlobalCall( C, "SS3D_MeshLoad_GetMaterial", 11, 1 ) ) )
-			return sgs_Msg( C, SGS_WARNING, "failed to call SS3D_MeshLoad_GetMaterial" );
-		if( !sgs_IsObject( C, -1, SS3D_Material_iface ) )
-			return sgs_Msg( C, SGS_WARNING, "failed to load material" );
-		/* TODO: check for material compatibility with renderer */
 		
-		sgs_ObjAssign( C, &M->inh.parts[ p ].material, sgs_GetObjectStruct( C, -1 ) );
-		sgs_Pop( C, 1 );
-		
+		M->inh.parts[ p ].materialFlags = mfdp->materialFlags;
 		M->inh.parts[ p ].vertexOffset = mfdp->vertexOffset;
 		M->inh.parts[ p ].vertexCount = mfdp->vertexCount;
 		M->inh.parts[ p ].indexOffset = mfdp->indexOffset;
@@ -954,7 +1057,10 @@ static int meshd3d9_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "initIndexBuffer" )  SGS_RETURN_CFUNC( meshd3d9i_initIndexBuffer )
 		SGS_CASE( "updateVertexData" ) SGS_RETURN_CFUNC( meshd3d9i_updateVertexData )
 		SGS_CASE( "updateIndexData" )  SGS_RETURN_CFUNC( meshd3d9i_updateIndexData )
-		SGS_CASE( "setPart" )          SGS_RETURN_CFUNC( meshd3d9i_setPart )
+		SGS_CASE( "setPartRanges" )    SGS_RETURN_CFUNC( meshd3d9i_setPartRanges )
+		SGS_CASE( "setPartFlags" )     SGS_RETURN_CFUNC( meshd3d9i_setPartFlags )
+		SGS_CASE( "setPartShader" )    SGS_RETURN_CFUNC( meshd3d9i_setPartShader )
+		SGS_CASE( "setPartTexture" )   SGS_RETURN_CFUNC( meshd3d9i_setPartTexture )
 		SGS_CASE( "loadFromBuffer" )   SGS_RETURN_CFUNC( meshd3d9i_loadFromBuffer )
 	SGS_END_INDEXFUNC;
 }
@@ -1121,7 +1227,7 @@ static void postproc_blit( SS3D_RD3D9* R, int ds )
 
 static int rd3d9i_render( SGS_CTX )
 {
-	int i;
+	int i, inst_id, pass_id, light_id;
 	R_IHDR( render );
 	
 	if( !R->inh.currentScene )
@@ -1147,16 +1253,44 @@ static int rd3d9i_render( SGS_CTX )
 	SS3D_Shader_D3D9* sh_post_blur_v = get_shader( R, "pp_bloom_blur_v" );
 	
 	
-	D3DCALL_( R->device, SetTransform, D3DTS_VIEW, (D3DMATRIX*) *cam->mView );
-	D3DCALL_( R->device, SetTransform, D3DTS_PROJECTION, (D3DMATRIX*) *cam->mProj );
+//	D3DCALL_( R->device, SetTransform, D3DTS_VIEW, (D3DMATRIX*) *cam->mView );
+//	D3DCALL_( R->device, SetTransform, D3DTS_PROJECTION, (D3DMATRIX*) *cam->mProj );
 	
 	
-	/* PASS 3: RENDER SOLID OBJECTS */
+	/* SORT OUT MESH INSTANCE / LIGHT RELATIONS */
+	sgs_MemBuf inst_light_buf = sgs_membuf_create();
+	for( inst_id = 0; inst_id < scene->meshInstances.size; ++inst_id )
+	{
+		SS3D_MeshInstance* MI = (SS3D_MeshInstance*) scene->meshInstances.vars[ inst_id ].val.data.O->data;
+		if( !MI->mesh || !MI->enabled )
+			continue;
+		MI->lightbuf_begin = (SS3D_Light**) inst_light_buf.size;
+		for( light_id = 0; light_id < scene->lights.size; ++light_id )
+		{
+			SS3D_Light* L = (SS3D_Light*) scene->lights.vars[ light_id ].val.data.O->data;
+			if( !L->isEnabled )
+				continue;
+			sgs_membuf_appbuf( &inst_light_buf, C, &L, sizeof(L) );
+		}
+		MI->lightbuf_end = (SS3D_Light**) inst_light_buf.size;
+	}
+	for( inst_id = 0; inst_id < scene->meshInstances.size; ++inst_id )
+	{
+		SS3D_MeshInstance* MI = (SS3D_MeshInstance*) scene->meshInstances.vars[ inst_id ].val.data.O->data;
+		if( !MI->mesh || !MI->enabled )
+			continue;
+		MI->lightbuf_begin = (SS3D_Light**)( (size_t) MI->lightbuf_begin + (size_t) inst_light_buf.ptr );
+		MI->lightbuf_end = (SS3D_Light**)( (size_t) MI->lightbuf_end + (size_t) inst_light_buf.ptr );
+	}
+	
+	/* RENDERING */
 	D3DCALL_( R->device, SetRenderTarget, 0, R->drd.RTS_OCOL );
 	D3DCALL_( R->device, SetRenderTarget, 1, R->drd.RTS_PARM );
 	D3DCALL_( R->device, SetDepthStencilSurface, R->drd.RTSD );
 	
 	D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 1 );
+	D3DCALL_( R->device, SetRenderState, D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
+	D3DCALL_( R->device, SetRenderState, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
 	
 	if( scene->viewport )
 	{
@@ -1167,16 +1301,207 @@ static int rd3d9i_render( SGS_CTX )
 	
 	D3DCALL_( R->device, Clear, 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, 0, 1.0f, 0 );
 	
+	/*
+		=== CONSTANT INFO ===
+	- POINT LIGHT: (total size: 2 constants, max. count: 16)
+		VEC4 [px, py, pz, radius]
+		VEC4 [cr, cg, cb, power]
+	- SPOT LIGHT: (total size: 8 constants, max. count: 4)
+		VEC4 [px, py, pz, radius]
+		VEC4 [cr, cg, cb, power]
+		VEC4 [dx, dy, dz, angle]
+		VEC4 [--padding--]
+		VEC4x4 [shadow map matrix]
+		TEXTURES [cookie, shadowmap]
+	- DIRECTIONAL (SUN) LIGHT: (total size: 2 constants)
+		VEC4 [dx, dy, dz, -]
+		VEC4 [cr, cg, cb, -]
+		TEXTURES [some number of shadowmaps]
+	- DIR. AMBIENT DATA: (total size: 6 constants)
+		VEC4 colorXP, colorXN, colorYP, colorYN, colorZP, colorZN
+	- FOG DATA: (total size: 2 constants)
+		VEC4 [cr, cg, cb, min.dst]
+		VEC4 [h1, d1, h2, d2] (heights, densities)
+	- VERTEX SHADER
+		0-3: camera view matrix
+		4-7: camera projection matrix
+	- PIXEL SHADER
+		0-3: camera inverse view matrix
+		12-13: fog data
+		14-19: dir.amb. data
+		20-21: dir. light
+		22: light counts (point, spot)
+		23-54: spot light data
+		55-86: point light data
+	*/
+	
+	/* upload unchanged data */
+	vshc_set_mat4( R, 0, cam->mView );
+	vshc_set_mat4( R, 4, cam->mProj );
+	pshc_set_mat4( R, 0, cam->mInvView );
+	
+	VEC4 fogdata[ 2 ] =
+	{
+		{ 0.2f, 0.3f, 0.4f, 0 },
+		{ 0.0f, 1.0f, 10.0f, 0.1f },
+	};
+	pshc_set_vec4array( R, 12, *fogdata, 2 );
+	
+	VEC4 dirlight[ 2 ] =
+	{
+		{ -0.7f, -0.7f, -0.7f, 0 },
+		{ 0.7f, 0.6f, 0.5f, 0 },
+	};
+	pshc_set_vec4array( R, 12, *dirlight, 2 );
+	
+	for( pass_id = 0; pass_id < R->inh.numPasses; ++pass_id )
+	{
+		SS3D_RenderPass* pass = R->inh.passes + pass_id;
+		
+		if( pass->type == SS3D_RPT_OBJECT )
+		{
+			int obj_type = !!( pass->flags & SS3D_RPF_OBJ_STATIC ) - !!( pass->flags & SS3D_RPF_OBJ_DYNAMIC );
+			int mtl_type = !!( pass->flags & SS3D_RPF_MTL_SOLID ) - !!( pass->flags & SS3D_RPF_MTL_TRANSPARENT );
+			
+			for( inst_id = 0; inst_id < scene->meshInstances.size; ++inst_id )
+			{
+				VEC4 lightdata[ 64 ];
+				float *pldata_it = lightdata[0], *sldata_it = lightdata[32];
+				int pl_count = 0, sl_count = 0;
+				
+				int part_id, tex_id;
+				MAT4 m_world_view;
+				
+				SS3D_MeshInstance* MI = (SS3D_MeshInstance*) scene->meshInstances.vars[ inst_id ].val.data.O->data;
+				if( !MI->mesh || !MI->enabled )
+					continue;
+				
+				SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) MI->mesh->data;
+				SS3D_VDecl_D3D9* VD = (SS3D_VDecl_D3D9*) M->inh.vertexDecl->data;
+				
+				if( pass->pointlight_count )
+				{
+					while( pl_count < pass->pointlight_count && MI->lightbuf_begin < MI->lightbuf_end )
+					{
+						SS3D_Light** plt = MI->lightbuf_begin;
+						while( plt < MI->lightbuf_end )
+						{
+							if( (*plt)->type == SS3DLIGHT_POINT )
+							{
+								SS3D_Light* light = *plt;
+								
+								// copy data
+								VEC3 viewpos;
+								SS3D_Mtx_TransformPos( viewpos, light->position, cam->mView );
+								VEC4 newdata[2] =
+								{
+									{ viewpos[0], viewpos[1], viewpos[2], light->range },
+									{ light->color[0], light->color[1], light->color[2], light->power }
+								};
+								memcpy( pldata_it, newdata, sizeof(VEC4)*2 );
+								pldata_it += 8;
+								pl_count++;
+								
+								// extract light from array
+								if( plt > MI->lightbuf_begin )
+									*plt = *MI->lightbuf_begin;
+								MI->lightbuf_begin++;
+								
+								break;
+							}
+							plt++;
+						}
+					}
+					pshc_set_vec4array( R, 55, lightdata[0], sizeof(VEC4) * 2 * pl_count );
+				}
+				if( pass->spotlight_count )
+				{
+					while( sl_count < pass->spotlight_count && MI->lightbuf_begin < MI->lightbuf_end )
+					{
+						SS3D_Light** plt = MI->lightbuf_begin;
+						while( plt < MI->lightbuf_end )
+						{
+							if( (*plt)->type == SS3DLIGHT_SPOT )
+							{
+								SS3D_Light* light = *plt;
+								
+								// copy data
+								MAT4 shm;
+								VEC3 viewpos, viewdir;
+								SS3D_Mtx_TransformPos( viewpos, light->position, cam->mView );
+								SS3D_Mtx_TransformNormal( viewpos, light->direction, cam->mView );
+								VEC3_Normalized( viewdir, viewdir );
+								VEC4 newdata[4] =
+								{
+									{ viewpos[0], viewpos[1], viewpos[2], light->range },
+									{ light->color[0], light->color[1], light->color[2], light->power },
+									{ viewdir[0], viewdir[1], viewdir[2], light->maxangle },
+									{ 0, 0, 0, 0 },
+								};
+								SS3D_Mtx_Identity( shm );
+								memcpy( sldata_it, newdata, sizeof(VEC4)*4 );
+								memcpy( sldata_it + 16, shm, sizeof(MAT4) );
+								sldata_it += 32;
+								sl_count++;
+								
+								// extract light from array
+								if( plt > MI->lightbuf_begin )
+									*plt = *MI->lightbuf_begin;
+								MI->lightbuf_begin++;
+								
+								break;
+							}
+							plt++;
+						}
+					}
+					pshc_set_vec4array( R, 23, lightdata[32], sizeof(VEC4) * 8 * sl_count );
+				}
+				
+				VEC4 lightcounts = { pl_count, sl_count, 0, 0 };
+				pshc_set_vec4array( R, 22, lightcounts, 1 );
+				
+				SS3D_Mtx_Multiply( m_world_view, MI->matrix, cam->mView );
+				vshc_set_mat4( R, 0, m_world_view );
+				
+				D3DCALL_( R->device, SetVertexDeclaration, VD->VD );
+				D3DCALL_( R->device, SetStreamSource, 0, M->VB, 0, VD->info.size );
+				D3DCALL_( R->device, SetIndices, M->IB );
+				
+				for( part_id = 0; part_id < M->inh.numParts; ++part_id )
+				{
+					SS3D_MeshPart* MP = M->inh.parts + part_id;
+					int transparent = MP->materialFlags & SS3D_MTL_TRANSPARENT;
+					
+					/* if (transparent & want solid) or (solid & want transparent), skip */
+					if( ( transparent && mtl_type > 0 ) || ( !transparent && mtl_type < 0 ) )
+						continue;
+					
+					use_shader( R, (SS3D_Shader_D3D9*) MP->shaders[ pass_id ]->data );
+					for( tex_id = 0; tex_id < SS3D_NUM_MATERIAL_TEXTURES; ++tex_id )
+						use_texture( R, tex_id, MP->textures[ tex_id ] ? (SS3D_Texture_D3D9*) MP->textures[ tex_id ]->data : NULL );
+					
+					if( MP->indexCount < 3 )
+						continue;
+					D3DCALL_( R->device, DrawIndexedPrimitive,
+						M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ? D3DPT_TRIANGLESTRIP : D3DPT_TRIANGLELIST,
+						MP->vertexOffset, 0, MP->vertexCount, MP->indexOffset, M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ? MP->indexCount - 2 : MP->indexCount / 3 );
+				}
+			}
+		}
+		else if( SS3D_RPT_SCREEN )
+		{
+		}
+	}
+	
+	sgs_membuf_destroy( &inst_light_buf, C );
+	
+#if 0
 	use_shader( R, sh_solid_render );
 	
 	vshc_set_mat4( R, 4, cam->mView );
 	vshc_set_mat4( R, 12, cam->mProj );
 	pshc_set_float( R, 0, cam->zfar );
 	pshc_set_mat4( R, 12, cam->mInvView );
-	
-	D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 1 );
-	D3DCALL_( R->device, SetRenderState, D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
-	D3DCALL_( R->device, SetRenderState, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
 	
 	VEC4 pointlightdata[ 2 * 32 ]; /* px, py, pz, radius, cr, cg, cb, power */
 	int plc = 0;
@@ -1247,7 +1572,6 @@ static int rd3d9i_render( SGS_CTX )
 		}
 	}
 	
-	
 	/* PASS 4: RENDER TRANSPARENT STUFF */
 	D3DCALL_( R->device, SetRenderState, D3DRS_ZWRITEENABLE, 0 );
 	for( i = 0; i < scene->meshInstances.size; ++i )
@@ -1289,6 +1613,7 @@ static int rd3d9i_render( SGS_CTX )
 		}
 	}
 	D3DCALL_( R->device, SetRenderState, D3DRS_ZWRITEENABLE, 1 );
+#endif
 	
 	
 	/* PASS 5: POST-PROCESS & RENDER TO BACKBUFFER */
@@ -1404,12 +1729,6 @@ static int rd3d9i_createVertexDecl( SGS_CTX )
 	return create_vdecl( R, str );
 }
 
-static int rd3d9i_createMaterial( SGS_CTX )
-{
-	R_IHDR( createMaterial );
-	return SS3D_Material_Create( &R->inh );
-}
-
 static int rd3d9i_createMesh( SGS_CTX )
 {
 	sgs_Bool dyn = 0;
@@ -1444,7 +1763,6 @@ static int rd3d9_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isp
 		SGS_CASE( "getShader" )        SGS_RETURN_CFUNC( rd3d9i_getShader )
 		SGS_CASE( "getTexture" )       SGS_RETURN_CFUNC( rd3d9i_getTexture )
 		SGS_CASE( "createVertexDecl" ) SGS_RETURN_CFUNC( rd3d9i_createVertexDecl )
-		SGS_CASE( "createMaterial" )   SGS_RETURN_CFUNC( rd3d9i_createMaterial )
 		SGS_CASE( "createMesh" )       SGS_RETURN_CFUNC( rd3d9i_createMesh )
 		SGS_CASE( "createScene" )      SGS_RETURN_CFUNC( rd3d9i_createScene )
 	SGS_END_INDEXFUNC;
