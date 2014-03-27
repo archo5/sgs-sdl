@@ -909,6 +909,9 @@ static void mesh_set_part_shader( SS3D_Mesh_D3D9* M, int pid, char* shader )
 	strcpy( buf, "mtl:" );
 	for( i = 0; i < M->inh.renderer->numPasses; ++i )
 	{
+		if( M->inh.renderer->passes[ i ].type != SS3D_RPT_OBJECT )
+			continue;
+		
 		strcpy( buf + 4, shader );
 		strcat( buf, ":" );
 		strcat( buf, M->inh.renderer->passes[ i ].shname );
@@ -1009,7 +1012,7 @@ static int meshd3d9i_loadFromBuffer( SGS_CTX )
 				sgs_PushStringBuf( C, mfdp->materialStrings[t], mfdp->materialStringSizes[t] );
 				if( SGS_FAILED( sgs_GlobalCall( C, "SS3D_MeshLoad_GetTexture", 2, 1 ) ) )
 					return sgs_Msg( C, SGS_WARNING, "failed to call SS3D_MeshLoad_GetTexture" );
-				if( !sgs_IsObject( C, -1, SS3D_VDecl_D3D9_iface ) )
+				if( !sgs_IsObject( C, -1, SS3D_Texture_D3D9_iface ) )
 					return sgs_Msg( C, SGS_WARNING, "failed to load texture '%.*s'", mfdp->materialStringSizes[t], mfdp->materialStrings[t] );
 				sgs_ObjAssign( C, &M->inh.parts[ p ].textures[ t - 1 ], sgs_GetObjectStruct( C, -1 ) );
 				sgs_Pop( C, 1 );
@@ -1349,10 +1352,12 @@ static int rd3d9i_render( SGS_CTX )
 	
 	VEC4 dirlight[ 2 ] =
 	{
-		{ -0.7f, -0.7f, -0.7f, 0 },
+		{ 0.7f, 0.7f, 0.7f, 0 },
 		{ 0.7f, 0.6f, 0.5f, 0 },
 	};
-	pshc_set_vec4array( R, 12, *dirlight, 2 );
+	VEC3_Normalized( dirlight[0], dirlight[0] );
+	SS3D_Mtx_TransformNormal( dirlight[0], dirlight[0], cam->mView );
+	pshc_set_vec4array( R, 20, *dirlight, 2 );
 	
 	for( pass_id = 0; pass_id < R->inh.numPasses; ++pass_id )
 	{
@@ -1362,6 +1367,9 @@ static int rd3d9i_render( SGS_CTX )
 		{
 			int obj_type = !!( pass->flags & SS3D_RPF_OBJ_STATIC ) - !!( pass->flags & SS3D_RPF_OBJ_DYNAMIC );
 			int mtl_type = !!( pass->flags & SS3D_RPF_MTL_SOLID ) - !!( pass->flags & SS3D_RPF_MTL_TRANSPARENT );
+			
+			D3DCALL_( R->device, SetRenderState, D3DRS_ZWRITEENABLE, mtl_type >= 0 );
+			D3DCALL_( R->device, SetRenderState, D3DRS_ALPHABLENDENABLE, mtl_type <= 0 );
 			
 			for( inst_id = 0; inst_id < scene->meshInstances.size; ++inst_id )
 			{
@@ -1375,6 +1383,10 @@ static int rd3d9i_render( SGS_CTX )
 				SS3D_MeshInstance* MI = (SS3D_MeshInstance*) scene->meshInstances.vars[ inst_id ].val.data.O->data;
 				if( !MI->mesh || !MI->enabled )
 					continue;
+				
+				/* TODO dynamic meshes */
+				if( obj_type < 0 )
+					continue; /* DISABLE them for now... */
 				
 				SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) MI->mesh->data;
 				SS3D_VDecl_D3D9* VD = (SS3D_VDecl_D3D9*) M->inh.vertexDecl->data;
@@ -1429,7 +1441,7 @@ static int rd3d9i_render( SGS_CTX )
 								MAT4 shm;
 								VEC3 viewpos, viewdir;
 								SS3D_Mtx_TransformPos( viewpos, light->position, cam->mView );
-								SS3D_Mtx_TransformNormal( viewpos, light->direction, cam->mView );
+								SS3D_Mtx_TransformNormal( viewdir, light->direction, cam->mView );
 								VEC3_Normalized( viewdir, viewdir );
 								VEC4 newdata[4] =
 								{
@@ -1456,6 +1468,9 @@ static int rd3d9i_render( SGS_CTX )
 					}
 					pshc_set_vec4array( R, 23, lightdata[32], sizeof(VEC4) * 8 * sl_count );
 				}
+				
+				if( pass->flags & SS3D_RPF_LIGHTOVERLAY && pl_count + sl_count <= 0 )
+					continue;
 				
 				VEC4 lightcounts = { pl_count, sl_count, 0, 0 };
 				pshc_set_vec4array( R, 22, lightcounts, 1 );

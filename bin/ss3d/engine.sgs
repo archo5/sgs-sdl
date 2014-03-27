@@ -128,5 +128,5 @@ function SS3D_UpdateParticleMesh( ss3d, mesh, viewmatrix, positions, sizes, colo
 	mesh.updateIndexData( idata );
 	
 	mesh.numParts = 1;
-	mesh.setPart( 0, 0, vcount, 0, icount );
+	mesh.setPartRanges( 0, 0, vcount, 0, icount );
 }

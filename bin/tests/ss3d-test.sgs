@@ -154,7 +154,7 @@ function update()
 	camera.position = vec3(cos(t)*20,sin(t)*20,13);
 	camera.direction = vec3(-cos(t),-sin(t),-0.6);
 	
-	SS3D_UpdateParticleMesh( _R.SS3D, _R.ParticleMesh, _R.ParticleMtl, camera.viewMatrix, _R.Particles, _R.ParticleSizes, _R.ParticleColors );
+	SS3D_UpdateParticleMesh( _R.SS3D, _R.ParticleMesh, camera.viewMatrix, _R.Particles, _R.ParticleSizes, _R.ParticleColors );
 	
 	_R.SS3D.render();
 	

@@ -109,6 +109,7 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 #define SS3D_RPF_MTL_TRANSPARENT 0x08
 #define SS3D_RPF_MTL_ALL        (SS3D_RPF_MTL_SOLID|SS3D_RPF_MTL_TRANSPARENT)
 #define SS3D_RPF_CALC_DIRAMB     0x10
+#define SS3D_RPF_LIGHTOVERLAY    0x20
 #define SS3D_RPF_ENABLED         0x80
 
 #define SS3D_SHADER_NAME_LENGTH 64

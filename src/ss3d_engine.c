@@ -77,7 +77,7 @@ void SS3D_Mtx_TransformNormal( VEC3 out, VEC3 pos, MAT4 mtx )
 {
 	VEC4 tmp, xpos = {pos[0],pos[1],pos[2],0};
 	SS3D_Mtx_Transform( tmp, xpos, mtx );
-	out[0] = tmp[0] / tmp[3]; out[1] = tmp[1] / tmp[3]; out[2] = tmp[2] / tmp[3];
+	out[0] = tmp[0]; out[1] = tmp[1]; out[2] = tmp[2];
 }
 
 void SS3D_Mtx_Dump( MAT4 mtx )
@@ -1573,7 +1573,7 @@ void SS3D_Renderer_Construct( SS3D_Renderer* R, SGS_CTX )
 	strcpy( R->passes[1].shname, "ps_base_dsp16" );
 	/* PASS3: [SOLID,ANY] 0-16 POINT LIGHTS (as much as necessary) */
 	R->passes[2].type = SS3D_RPT_OBJECT;
-	R->passes[2].flags = SS3D_RPF_MTL_SOLID | SS3D_RPF_OBJ_ALL | SS3D_RPF_ENABLED;
+	R->passes[2].flags = SS3D_RPF_MTL_SOLID | SS3D_RPF_OBJ_ALL | SS3D_RPF_ENABLED | SS3D_RPF_LIGHTOVERLAY;
 	R->passes[2].maxruns = -1;
 	R->passes[2].pointlight_count = 16;
 	R->passes[2].spotlight_count = 0;
@@ -1581,7 +1581,7 @@ void SS3D_Renderer_Construct( SS3D_Renderer* R, SGS_CTX )
 	strcpy( R->passes[2].shname, "ps_ext_p16" );
 	/* PASS4: [SOLID,ANY] 0-4 SPOT LIGHTS (as much as necessary) */
 	R->passes[3].type = SS3D_RPT_OBJECT;
-	R->passes[3].flags = SS3D_RPF_MTL_SOLID | SS3D_RPF_OBJ_ALL | SS3D_RPF_ENABLED;
+	R->passes[3].flags = SS3D_RPF_MTL_SOLID | SS3D_RPF_OBJ_ALL | SS3D_RPF_ENABLED | SS3D_RPF_LIGHTOVERLAY;
 	R->passes[3].maxruns = -1;
 	R->passes[3].pointlight_count = 0;
 	R->passes[3].spotlight_count = 4;
@@ -1600,7 +1600,7 @@ void SS3D_Renderer_Construct( SS3D_Renderer* R, SGS_CTX )
 	strcpy( R->passes[5].shname, "ps_base_dsp16" );
 	/* PASS7: [TRANSPARENT,ANY] 0-16 POINT LIGHTS (as much as necessary) */
 	R->passes[6].type = SS3D_RPT_OBJECT;
-	R->passes[6].flags = SS3D_RPF_MTL_TRANSPARENT | SS3D_RPF_OBJ_ALL | SS3D_RPF_ENABLED;
+	R->passes[6].flags = SS3D_RPF_MTL_TRANSPARENT | SS3D_RPF_OBJ_ALL | SS3D_RPF_ENABLED | SS3D_RPF_LIGHTOVERLAY;
 	R->passes[6].maxruns = -1;
 	R->passes[6].pointlight_count = 16;
 	R->passes[6].spotlight_count = 0;
@@ -1608,7 +1608,7 @@ void SS3D_Renderer_Construct( SS3D_Renderer* R, SGS_CTX )
 	strcpy( R->passes[6].shname, "ps_ext_p16" );
 	/* PASS8: [TRANSPARENT,ANY] 0-4 SPOT LIGHTS (as much as necessary) */
 	R->passes[7].type = SS3D_RPT_OBJECT;
-	R->passes[7].flags = SS3D_RPF_MTL_TRANSPARENT | SS3D_RPF_OBJ_ALL | SS3D_RPF_ENABLED;
+	R->passes[7].flags = SS3D_RPF_MTL_TRANSPARENT | SS3D_RPF_OBJ_ALL | SS3D_RPF_ENABLED | SS3D_RPF_LIGHTOVERLAY;
 	R->passes[7].maxruns = -1;
 	R->passes[7].pointlight_count = 0;
 	R->passes[7].spotlight_count = 4;
