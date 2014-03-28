@@ -91,12 +91,11 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 /* mesh data flags */
 #define SS3D_MDF_INDEX_32      0x01
 #define SS3D_MDF_TRIANGLESTRIP 0x02
-#define SS3D_MDF_DYNAMIC       0x04
+#define SS3D_MDF_DYNAMIC       0x04 /* dynamic buffer updating */
+#define SS3D_MDF_TRANSPARENT   0x10 /* mesh is required to be rendered transparent */
 
-#define SS3D_MDF__PUBFLAGMASK  0x03
+#define SS3D_MDF__PUBFLAGMASK (0x01|0x02|0x10)
 #define SS3D_MDF__PUBFLAGBASE  0
-
-#define SS3D_MTL_TRANSPARENT   0x01
 
 /* render pass constants */
 #define SS3D_RPT_OBJECT     1
@@ -176,7 +175,6 @@ typedef struct _SS3D_MeshFilePartData
 	uint32_t indexOffset;
 	uint32_t indexCount;
 	
-	uint16_t materialFlags;
 	uint8_t materialTextureCount; /* 0 - 8 */
 	uint8_t materialStringSizes[ SS3D_NUM_MATERIAL_TEXTURES + 1 ];
 	char* materialStrings[ SS3D_NUM_MATERIAL_TEXTURES + 1 ];
@@ -223,12 +221,14 @@ struct _SS3D_Light
 	int isEnabled;
 	VEC3 position;
 	VEC3 direction;
+	VEC3 updir;
 	VEC3 color;
 	float range;
 	float power;
-	float minangle;
-	float maxangle;
+	float angle;
+	float aspect;
 	sgs_VarObj* cookieTexture;
+	sgs_VarObj* shadowTexture;
 	MAT4 projMatrix;
 	int hasShadows;
 };
@@ -267,7 +267,6 @@ struct _SS3D_MeshPart
 	uint32_t indexOffset;
 	uint32_t indexCount;
 	
-	uint32_t materialFlags;
 	sgs_VarObj* shaders[ SS3D_MAX_NUM_PASSES ];
 	sgs_VarObj* textures[ SS3D_NUM_MATERIAL_TEXTURES ];
 	char shader_name[ SS3D_SHADER_NAME_LENGTH ];
@@ -278,7 +277,7 @@ struct _SS3D_Mesh
 	SS3D_Renderer* renderer;
 	
 	/* rendering info */
-	int dataFlags;
+	uint32_t dataFlags;
 	sgs_VarObj* vertexDecl;
 	uint32_t vertexCount;
 	uint32_t vertexDataSize;

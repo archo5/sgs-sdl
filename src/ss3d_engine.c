@@ -715,7 +715,6 @@ int SS3D_MeshData_Parse( char* buf, size_t size, SS3D_MeshFileData* out )
 		memcpy( &pout->vertexCount, buf + off, 4 ); off += 4;
 		memcpy( &pout->indexOffset, buf + off, 4 ); off += 4;
 		memcpy( &pout->indexCount, buf + off, 4 ); off += 4;
-		memcpy( &pout->materialFlags, buf + off, 2 ); off += 2;
 		memcpy( &pout->materialTextureCount, buf + off, 1 ); off += 1;
 		for( t = 0; t < pout->materialTextureCount + 1; ++t )
 		{
@@ -1001,11 +1000,12 @@ static int light_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "isEnabled" )     SGS_RETURN_BOOL( L->isEnabled )
 		SGS_CASE( "position" )      SGS_RETURN_VEC3P( L->position )
 		SGS_CASE( "direction" )     SGS_RETURN_VEC3P( L->direction )
+		SGS_CASE( "updir" )         SGS_RETURN_VEC3P( L->updir )
 		SGS_CASE( "color" )         SGS_RETURN_VEC3P( L->color )
 		SGS_CASE( "range" )         SGS_RETURN_REAL( L->range )
 		SGS_CASE( "power" )         SGS_RETURN_REAL( L->power )
-		SGS_CASE( "minangle" )      SGS_RETURN_REAL( L->minangle )
-		SGS_CASE( "maxangle" )      SGS_RETURN_REAL( L->maxangle )
+		SGS_CASE( "angle" )         SGS_RETURN_REAL( L->angle )
+		SGS_CASE( "aspect" )        SGS_RETURN_REAL( L->aspect )
 		SGS_CASE( "cookieTexture" ) SGS_RETURN_OBJECT( L->cookieTexture )
 		SGS_CASE( "projMatrix" )    SGS_RETURN_MAT4( *L->projMatrix )
 		SGS_CASE( "hasShadows" )    SGS_RETURN_BOOL( L->hasShadows )
@@ -1020,11 +1020,12 @@ static int light_setindex( SGS_ARGS_SETINDEXFUNC )
 		SGS_CASE( "isEnabled" )     SGS_PARSE_BOOL( L->isEnabled )
 		SGS_CASE( "position" )      SGS_PARSE_VEC3( L->position, 0 )
 		SGS_CASE( "direction" )     SGS_PARSE_VEC3( L->direction, 0 )
+		SGS_CASE( "updir" )         SGS_PARSE_VEC3( L->updir, 0 )
 		SGS_CASE( "color" )         SGS_PARSE_VEC3( L->color, 0 )
 		SGS_CASE( "range" )         SGS_PARSE_REAL( L->range )
 		SGS_CASE( "power" )         SGS_PARSE_REAL( L->power )
-		SGS_CASE( "minangle" )      SGS_PARSE_REAL( L->minangle )
-		SGS_CASE( "maxangle" )      SGS_PARSE_REAL( L->maxangle )
+		SGS_CASE( "angle" )         SGS_PARSE_REAL( L->angle )
+		SGS_CASE( "aspect" )        SGS_PARSE_REAL( L->aspect )
 		SGS_CASE( "cookieTexture" ) { if( !L->scene || !L->scene->renderer ) return SGS_EINPROC; SGS_PARSE_OBJECT( L->scene->renderer->ifTexture, L->cookieTexture, 0 ) }
 		SGS_CASE( "projMatrix" )    SGS_PARSE_MAT4( *L->projMatrix )
 		SGS_CASE( "hasShadows" )    SGS_PARSE_BOOL( L->hasShadows )
@@ -1055,11 +1056,12 @@ static int light_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 		"\nisEnabled=%s"
 		"\nposition=(%g;%g;%g)"
 		"\ndirection=(%g;%g;%g)"
+		"\nupdir=(%g;%g;%g)"
 		"\ncolor=(%g;%g;%g)"
 		"\nrange=%g"
 		"\npower=%g"
-		"\nminangle=%g"
-		"\nmaxangle=%g"
+		"\nangle=%g"
+		"\naspect=%g"
 		"\ncookieTexture=%p"
 		"\nprojMatrix=..."
 		"\nhasShadows=%s",
@@ -1067,11 +1069,12 @@ static int light_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 		L->isEnabled ? "true" : "false",
 		L->position[0], L->position[1], L->position[2],
 		L->direction[0], L->direction[1], L->direction[2],
+		L->updir[0], L->updir[1], L->updir[2],
 		L->color[0], L->color[1], L->color[2],
 		L->range,
 		L->power,
-		L->minangle,
-		L->maxangle,
+		L->angle,
+		L->aspect,
 		L->cookieTexture,
 		// projMatrix ...
 		L->hasShadows ? "true" : "false"
@@ -1385,6 +1388,9 @@ static int scenei_createLight( SGS_CTX )
 	
 	memset( L, 0, sizeof(*L) );
 	L->scene = S;
+	VEC3_Set( L->updir, 0, 0, 1 );
+	L->angle = 45;
+	L->aspect = 1;
 	
 	scene_poke_resource( S, &S->lights, sgs_GetObjectStruct( C, -1 ), 1 );
 	return 1;
@@ -1596,7 +1602,7 @@ void SS3D_Renderer_Construct( SS3D_Renderer* R, SGS_CTX )
 	R->passes[5].maxruns = 1;
 	R->passes[5].pointlight_count = 16;
 	R->passes[5].spotlight_count = 0;
-	R->passes[5].num_inst_textures = 0;
+	R->passes[5].num_inst_textures = 4;
 	strcpy( R->passes[5].shname, "ps_base_dsp16" );
 	/* PASS7: [TRANSPARENT,ANY] 0-16 POINT LIGHTS (as much as necessary) */
 	R->passes[6].type = SS3D_RPT_OBJECT;

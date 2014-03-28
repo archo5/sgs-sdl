@@ -35,7 +35,7 @@ function initialize()
 		_R.PlaneMesh.setIndexData( fmt_pack( "6w", 0, 1, 2, 2, 3, 0 ), false );
 		_R.PlaneMesh.numParts = 1;
 		_R.PlaneMesh.setPartRanges( 0, 0, 4, 0, 6 );
-		_R.PlaneMesh.setPartFlags( 0, 0 );
+	//	_R.PlaneMesh.transparent = true;
 		_R.PlaneMesh.setPartShader( 0, "testFRrender" );
 		_R.PlaneMesh.setPartTexture( 0, 0, _R.SS3D.getTexture( "testdata/concretewall5.dds" ) );
 		_R.PlaneMesh.setPartTexture( 0, 1, _R.SS3D.getTexture( "testdata/concretewall5normal.png" ) );
@@ -104,7 +104,7 @@ function initialize()
 	
 	_R.ParticleMesh = _R.SS3D.createMesh( true );
 	_R.ParticleMesh.numParts = 1;
-	_R.ParticleMesh.setPartFlags( 0, 0x01 ); // transparent
+	_R.ParticleMesh.transparent = true;
 	_R.ParticleMesh.setPartShader( 0, "sprite" );
 	_R.ParticleMesh.setPartTexture( 0, 0, _R.SS3D.getTexture( "testdata/smoke.png" ) );
 	_R.ParticleMesh.setPartTexture( 0, 1, _R.SS3D.getTexture( "testdata/smoke_normal.png" ) );
@@ -139,6 +139,17 @@ function initialize()
 	light2.power = 2;
 	light2.isEnabled = true;
 	printvar( light2 );
+	
+	_R.Light3 = light3 = _R.Scene.createLight();
+	light3.type = SS3DLIGHT_SPOT;
+	light3.color = vec3(0.1,1.9,0.1);
+	light3.position = vec3(0,10,3);
+	light3.range = 50;
+	light3.power = 1;
+	light3.direction = vec3(0,-1,-1).normalized;
+	light3.updir = vec3(0,0,1);
+	light3.angle = 45;
+	light3.isEnabled = 1;
 	
 	global camera = _R.Camera = SS3D_CreateCamera();
 	camera.position = vec3(10,10,10);

@@ -153,6 +153,7 @@ static void use_shader( SS3D_RD3D9* R, SS3D_Shader_D3D9* S )
 	D3DCALL_( R->device, SetVertexShader, S ? S->VS : NULL );
 }
 
+static void vshc_set_vec4array( SS3D_RD3D9* R, int pos, VEC4 data, int count ){ D3DCALL_( R->device, SetVertexShaderConstantF, pos, data, count ); }
 static void vshc_set_mat4( SS3D_RD3D9* R, int pos, MAT4 mtx ){ D3DCALL_( R->device, SetVertexShaderConstantF, pos, mtx[0], 4 ); }
 
 static void pshc_set_float( SS3D_RD3D9* R, int pos, float f ){ VEC4 v = { f, f, f, f }; D3DCALL_( R->device, SetPixelShaderConstantF, pos, v, 1 ); }
@@ -879,20 +880,6 @@ static int meshd3d9i_setPartRanges( SGS_CTX )
 	SGS_RETURN_BOOL( 1 )
 }
 
-static int meshd3d9i_setPartFlags( SGS_CTX )
-{
-	sgs_Int pid, mfl;
-	M_IHDR( setPartRanges );
-	if( !sgs_LoadArgs( C, "ii", &pid, &mfl ) )
-		return 0;
-	
-	if( pid < 0 || pid >= M->inh.numParts )
-		return sgs_Msg( C, SGS_WARNING, "part %d is not made available", (int) pid );
-	
-	M->inh.parts[ pid ].materialFlags = mfl;
-	SGS_RETURN_BOOL( 1 )
-}
-
 
 static void mesh_set_part_shader( SS3D_Mesh_D3D9* M, int pid, char* shader )
 {
@@ -1021,7 +1008,6 @@ static int meshd3d9i_loadFromBuffer( SGS_CTX )
 				sgs_ObjAssign( C, &M->inh.parts[ p ].textures[ t - 1 ], NULL );
 		}
 		
-		M->inh.parts[ p ].materialFlags = mfdp->materialFlags;
 		M->inh.parts[ p ].vertexOffset = mfdp->vertexOffset;
 		M->inh.parts[ p ].vertexCount = mfdp->vertexCount;
 		M->inh.parts[ p ].indexOffset = mfdp->indexOffset;
@@ -1044,6 +1030,7 @@ static int meshd3d9_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "useTriStrips" )     SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ) )
 		SGS_CASE( "useI32" )           SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_INDEX_32 ) )
 		SGS_CASE( "isDynamic" )        SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_DYNAMIC ) )
+		SGS_CASE( "transparent" )      SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_TRANSPARENT ) )
 		SGS_CASE( "vertexCount" )      SGS_RETURN_INT( M->inh.vertexCount )
 		SGS_CASE( "vertexDataSize" )   SGS_RETURN_INT( M->inh.vertexDataSize )
 		SGS_CASE( "indexCount" )       SGS_RETURN_INT( M->inh.indexCount )
@@ -1061,7 +1048,6 @@ static int meshd3d9_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "updateVertexData" ) SGS_RETURN_CFUNC( meshd3d9i_updateVertexData )
 		SGS_CASE( "updateIndexData" )  SGS_RETURN_CFUNC( meshd3d9i_updateIndexData )
 		SGS_CASE( "setPartRanges" )    SGS_RETURN_CFUNC( meshd3d9i_setPartRanges )
-		SGS_CASE( "setPartFlags" )     SGS_RETURN_CFUNC( meshd3d9i_setPartFlags )
 		SGS_CASE( "setPartShader" )    SGS_RETURN_CFUNC( meshd3d9i_setPartShader )
 		SGS_CASE( "setPartTexture" )   SGS_RETURN_CFUNC( meshd3d9i_setPartTexture )
 		SGS_CASE( "loadFromBuffer" )   SGS_RETURN_CFUNC( meshd3d9i_loadFromBuffer )
@@ -1075,6 +1061,11 @@ static int meshd3d9_setindex( SGS_ARGS_SETINDEXFUNC )
 		SGS_CASE( "numParts" )
 		{
 			mesh_set_num_parts( C, M, (int) sgs_GetIntP( C, val ) );
+			return SGS_SUCCESS;
+		}
+		SGS_CASE( "transparent" )
+		{
+			M->inh.dataFlags = ( M->inh.dataFlags & ~SS3D_MDF_TRANSPARENT ) | ( SS3D_MDF_TRANSPARENT * sgs_GetBoolP( C, val ) );
 			return SGS_SUCCESS;
 		}
 		
@@ -1309,13 +1300,15 @@ static int rd3d9i_render( SGS_CTX )
 	- POINT LIGHT: (total size: 2 constants, max. count: 16)
 		VEC4 [px, py, pz, radius]
 		VEC4 [cr, cg, cb, power]
-	- SPOT LIGHT: (total size: 8 constants, max. count: 4)
+	- SPOT LIGHT: (total size: 4 constants for each shader, 2 textures, max. count: 4)
+		TEXTURES [cookie, shadowmap]
+	[pixel shader]:
 		VEC4 [px, py, pz, radius]
 		VEC4 [cr, cg, cb, power]
 		VEC4 [dx, dy, dz, angle]
 		VEC4 [ux, uy, uz, -]
+	[vertex shader]:
 		VEC4x4 [shadow map matrix]
-		TEXTURES [cookie, shadowmap]
 	- AMBIENT + DIRECTIONAL (SUN) LIGHT: (total size: 3 constants)
 		VEC4 [ar, ag, ab, -]
 		VEC4 [dx, dy, dz, -]
@@ -1329,13 +1322,15 @@ static int rd3d9i_render( SGS_CTX )
 	- VERTEX SHADER
 		0-3: camera view matrix
 		4-7: camera projection matrix
+		23: light counts (point, spot)
+		24-39: VS spot light data
 	- PIXEL SHADER
 		0-3: camera inverse view matrix
 		12-13: fog data
 		14-19: dir.amb. data
 		20-22: dir. light
 		23: light counts (point, spot)
-		24-55: spot light data
+		24-39: PS spot light data
 		56-87: point light data
 	*/
 	
@@ -1376,7 +1371,7 @@ static int rd3d9i_render( SGS_CTX )
 			for( inst_id = 0; inst_id < scene->meshInstances.size; ++inst_id )
 			{
 				VEC4 lightdata[ 64 ];
-				float *pldata_it = lightdata[0], *sldata_it = lightdata[32];
+				float *pldata_it = lightdata[0], *sldata_ps_it = lightdata[32], *sldata_vs_it = lightdata[48];
 				int pl_count = 0, sl_count = 0;
 				
 				int part_id, tex_id;
@@ -1386,23 +1381,30 @@ static int rd3d9i_render( SGS_CTX )
 				if( !MI->mesh || !MI->enabled )
 					continue;
 				
+				SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) MI->mesh->data;
+				SS3D_VDecl_D3D9* VD = (SS3D_VDecl_D3D9*) M->inh.vertexDecl->data;
+				
+				/* if (transparent & want solid) or (solid & want transparent), skip */
+				if( ( ( M->inh.dataFlags & SS3D_MDF_TRANSPARENT ) && mtl_type > 0 ) || ( !( M->inh.dataFlags & SS3D_MDF_TRANSPARENT ) && mtl_type < 0 ) )
+					continue;
+				
 				/* TODO dynamic meshes */
 				if( obj_type < 0 )
 					continue; /* DISABLE them for now... */
-				
-				SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) MI->mesh->data;
-				SS3D_VDecl_D3D9* VD = (SS3D_VDecl_D3D9*) M->inh.vertexDecl->data;
 				
 				if( pass->pointlight_count )
 				{
 					while( pl_count < pass->pointlight_count && MI->lightbuf_begin < MI->lightbuf_end )
 					{
+						int found = 0;
 						SS3D_Light** plt = MI->lightbuf_begin;
 						while( plt < MI->lightbuf_end )
 						{
 							if( (*plt)->type == SS3DLIGHT_POINT )
 							{
 								SS3D_Light* light = *plt;
+								
+								found = 1;
 								
 								// copy data
 								VEC3 viewpos;
@@ -1425,6 +1427,8 @@ static int rd3d9i_render( SGS_CTX )
 							}
 							plt++;
 						}
+						if( !found )
+							break;
 					}
 					pshc_set_vec4array( R, 56, lightdata[0], sizeof(VEC4) * 2 * pl_count );
 				}
@@ -1432,12 +1436,15 @@ static int rd3d9i_render( SGS_CTX )
 				{
 					while( sl_count < pass->spotlight_count && MI->lightbuf_begin < MI->lightbuf_end )
 					{
+						int found = 0;
 						SS3D_Light** plt = MI->lightbuf_begin;
 						while( plt < MI->lightbuf_end )
 						{
 							if( (*plt)->type == SS3DLIGHT_SPOT )
 							{
 								SS3D_Light* light = *plt;
+								
+								found = 1;
 								
 								// copy data
 								MAT4 shm;
@@ -1449,13 +1456,14 @@ static int rd3d9i_render( SGS_CTX )
 								{
 									{ viewpos[0], viewpos[1], viewpos[2], light->range },
 									{ light->color[0], light->color[1], light->color[2], light->power },
-									{ viewdir[0], viewdir[1], viewdir[2], light->maxangle },
+									{ viewdir[0], viewdir[1], viewdir[2], DEG2RAD( light->angle ) },
 									{ 0, 0, 0, 0 },
 								};
 								SS3D_Mtx_Identity( shm );
-								memcpy( sldata_it, newdata, sizeof(VEC4)*4 );
-								memcpy( sldata_it + 16, shm, sizeof(MAT4) );
-								sldata_it += 32;
+								memcpy( sldata_ps_it, newdata, sizeof(VEC4)*4 );
+								memcpy( sldata_vs_it, shm, sizeof(MAT4) );
+								sldata_ps_it += 16;
+								sldata_vs_it += 16;
 								sl_count++;
 								
 								// extract light from array
@@ -1467,8 +1475,11 @@ static int rd3d9i_render( SGS_CTX )
 							}
 							plt++;
 						}
+						if( !found )
+							break;
 					}
-					pshc_set_vec4array( R, 24, lightdata[32], sizeof(VEC4) * 8 * sl_count );
+					vshc_set_vec4array( R, 24, lightdata[48], sizeof(VEC4) * 4 * sl_count );
+					pshc_set_vec4array( R, 24, lightdata[32], sizeof(VEC4) * 4 * sl_count );
 				}
 				
 				if( pass->flags & SS3D_RPF_LIGHTOVERLAY && pl_count + sl_count <= 0 )
@@ -1477,9 +1488,16 @@ static int rd3d9i_render( SGS_CTX )
 				if( !( pass->flags & SS3D_RPF_LIGHTOVERLAY ) )
 				{
 					use_texture( R, 8, tx_cubemap );
+					D3DCALL_( R->device, SetRenderState, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
+				}
+				else
+				{
+					D3DCALL_( R->device, SetRenderState, D3DRS_ALPHABLENDENABLE, TRUE );
+					D3DCALL_( R->device, SetRenderState, D3DRS_DESTBLEND, D3DBLEND_ONE );
 				}
 				
 				VEC4 lightcounts = { pl_count, sl_count, 0, 0 };
+				vshc_set_vec4array( R, 23, lightcounts, 1 );
 				pshc_set_vec4array( R, 23, lightcounts, 1 );
 				
 				SS3D_Mtx_Multiply( m_world_view, MI->matrix, cam->mView );
@@ -1492,11 +1510,6 @@ static int rd3d9i_render( SGS_CTX )
 				for( part_id = 0; part_id < M->inh.numParts; ++part_id )
 				{
 					SS3D_MeshPart* MP = M->inh.parts + part_id;
-					int transparent = MP->materialFlags & SS3D_MTL_TRANSPARENT;
-					
-					/* if (transparent & want solid) or (solid & want transparent), skip */
-					if( ( transparent && mtl_type > 0 ) || ( !transparent && mtl_type < 0 ) )
-						continue;
 					
 					use_shader( R, (SS3D_Shader_D3D9*) MP->shaders[ pass_id ]->data );
 					for( tex_id = 0; tex_id < SS3D_NUM_MATERIAL_TEXTURES; ++tex_id )
