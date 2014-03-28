@@ -142,14 +142,18 @@ function initialize()
 	
 	_R.Light3 = light3 = _R.Scene.createLight();
 	light3.type = SS3DLIGHT_SPOT;
-	light3.color = vec3(0.1,1.9,0.1);
-	light3.position = vec3(0,10,3);
+	light3.color = vec3(1.9,1.0,0.1);
+	light3.position = vec3(0,10,10);
 	light3.range = 50;
-	light3.power = 1;
+	light3.power = 2;
 	light3.direction = vec3(0,-1,-1).normalized;
 	light3.updir = vec3(0,0,1);
-	light3.angle = 45;
+	light3.angle = 90;
 	light3.isEnabled = 1;
+	light3.genProjMatrix();
+	light3.cookieTexture = _R.SS3D.getTexture( "testdata/cookie1.png" );
+	println( "SPOTLIGHT PROJECTION MATRIX" );
+	printvar( light3.projMatrix );
 	
 	global camera = _R.Camera = SS3D_CreateCamera();
 	camera.position = vec3(10,10,10);

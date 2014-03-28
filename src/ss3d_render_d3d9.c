@@ -1447,7 +1447,6 @@ static int rd3d9i_render( SGS_CTX )
 								found = 1;
 								
 								// copy data
-								MAT4 shm;
 								VEC3 viewpos, viewdir;
 								SS3D_Mtx_TransformPos( viewpos, light->position, cam->mView );
 								SS3D_Mtx_TransformNormal( viewdir, light->direction, cam->mView );
@@ -1459,11 +1458,13 @@ static int rd3d9i_render( SGS_CTX )
 									{ viewdir[0], viewdir[1], viewdir[2], DEG2RAD( light->angle ) },
 									{ 0, 0, 0, 0 },
 								};
-								SS3D_Mtx_Identity( shm );
 								memcpy( sldata_ps_it, newdata, sizeof(VEC4)*4 );
-								memcpy( sldata_vs_it, shm, sizeof(MAT4) );
+								memcpy( sldata_vs_it, light->projMatrix, sizeof(MAT4) );
 								sldata_ps_it += 16;
 								sldata_vs_it += 16;
+								
+								use_texture( R, 8 + sl_count * 2, light->cookieTexture ? (SS3D_Texture_D3D9*) light->cookieTexture->data : NULL );
+								use_texture( R, 8 + sl_count * 2 + 1, NULL );
 								sl_count++;
 								
 								// extract light from array

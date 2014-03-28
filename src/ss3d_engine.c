@@ -991,6 +991,21 @@ sgs_ObjInterface SS3D_MeshInstance_iface[1] =
 // LIGHT
 
 #define L_HDR SS3D_Light* L = (SS3D_Light*) obj->data;
+#define L_IHDR( funcname ) SS3D_Light* L; \
+	if( !SGS_PARSE_METHOD( C, SS3D_Light_iface, L, SS3D_Light, funcname ) ) return 0;
+
+static int lighti_genProjMatrix( SGS_CTX )
+{
+	MAT4 viewmtx, projmtx;
+	
+	L_IHDR( genProjMatrix );
+	
+	SS3D_Mtx_LookAt( viewmtx, L->position, L->direction, L->updir );
+	SS3D_Mtx_Perspective( projmtx, L->angle, L->aspect, 0.5, L->range * 0.001f, L->range );
+	SS3D_Mtx_Multiply( L->projMatrix, viewmtx, projmtx );
+	
+	return 0;
+}
 
 static int light_getindex( SGS_ARGS_GETINDEXFUNC )
 {
@@ -1009,6 +1024,8 @@ static int light_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "cookieTexture" ) SGS_RETURN_OBJECT( L->cookieTexture )
 		SGS_CASE( "projMatrix" )    SGS_RETURN_MAT4( *L->projMatrix )
 		SGS_CASE( "hasShadows" )    SGS_RETURN_BOOL( L->hasShadows )
+		
+		SGS_CASE( "genProjMatrix" ) SGS_RETURN_CFUNC( lighti_genProjMatrix )
 	SGS_END_INDEXFUNC;
 }
 

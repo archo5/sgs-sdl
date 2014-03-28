@@ -100,6 +100,22 @@ OUTPUTS:
 - distortion vector (default=0;0)
 - ambient diffuse light (default=0;0;0)
 
+--------------
+Shadow mapping in the engine
+- lots of settings to change for the texture, possibly with extensions
+- for the light - just one, whether shadows are necessary
+- different situation for the directional light but there's only one such light and technically, it's not even a light
+--- to be revisited, right now concerned about spotlight shadows
+! NEED a render target texture
+> must be a natural extension of a basic texture; possible to use it anywhere
+> need to build a RTT system first, attaching it to a light would just automate the process
+--- culling efforts should not be doubled! in render(): first cull all (by building mesh/light tables), then do light shadow fast path, then do main passes and post-processing in the end
+
+--------------
+RTT system:
+renderer.createRT( width, height, format ), returns RT/texture-compatible object
+renderer.currentRT - render target to render to
+
 ===END===
 
 

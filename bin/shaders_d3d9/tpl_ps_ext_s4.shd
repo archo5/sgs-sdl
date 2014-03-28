@@ -17,6 +17,10 @@ void main
 	out float4 otfpos : TEXCOORD1,
 	out float4 oT : TEXCOORD2,
 	out float3 oN : TEXCOORD3,
+	out float4 oshpos0 : TEXCOORD8,
+	out float4 oshpos1 : TEXCOORD9,
+	out float4 oshpos2 : TEXCOORD10,
+	out float4 oshpos3 : TEXCOORD11,
 	out float4 ocol : COLOR0,
 	out float2 otex : TEXCOORD0
 )
@@ -28,13 +32,19 @@ void main
 	oN = mul( mWorldView, float4( inrm, 0 ) ).xyz;
 	ocol = icol;
 	otex = itex;
+	
+	oshpos0 = mul( gSLightMatrices[0], ipos );
+	oshpos1 = mul( gSLightMatrices[1], ipos );
+	oshpos2 = mul( gSLightMatrices[2], ipos );
+	oshpos3 = mul( gSLightMatrices[3], ipos );
 }
 
 #elif defined(PS)
 
 sampler2D Tex0 : register(s0);
 sampler2D Tex1 : register(s1);
-samplerCUBE EnvMap : register(s8);
+
+sampler2D SpotLightTextures[8] : register(s8);
 
 float4x4 mInvView : register(c0);
 float3 gAmbLightColor : register(c20);
@@ -55,6 +65,10 @@ void main
 	float4 inViewPos : TEXCOORD1,
 	float4 inTangentSign : TEXCOORD2,
 	float3 inNormal : TEXCOORD3,
+	float4 inSLPPos0 : TEXCOORD8,
+	float4 inSLPPos1 : TEXCOORD9,
+	float4 inSLPPos2 : TEXCOORD10,
+	float4 inSLPPos3 : TEXCOORD11,
 	float4 icol : COLOR0,
 	float4 inTex0 : TEXCOORD0,
 	out float4 _outColor0 : COLOR0,
@@ -86,7 +100,9 @@ __CODE__
 	float3 totalDiffuse = float3(0,0,0);
 	float3 totalSpecular = float3(0,0,0);
 	
-	/* POINT LIGHTS */
+	float4 SLPositions[ 4 ] = { inSLPPos0, inSLPPos1, inSLPPos2, inSLPPos3 };
+	
+	/* SPOT LIGHTS */
 	for( int i = 0; i < gLightCounts.y; ++i )
 	{
 		SpotLight SL = gSLights[ i ];
@@ -95,6 +111,12 @@ __CODE__
 		float lightDist = length( lightDir );
 		lightDir /= lightDist;
 		float3 lightColor = SL.colpow.rgb;
+		
+		float3 slpos = SLPositions[ i ].xyz / SLPositions[ i ].w;
+		clip( -(abs( slpos ) -1) );
+		float3 cookieSample = tex2Dlod( SpotLightTextures[ i * 2 ], float4( slpos.xy * 0.5 + 0.5, 0, 0 ) );
+		
+		lightColor *= cookieSample;
 		
 		float distFactor = pow( 1 - saturate( lightDist / SL.vposrad.w ), SL.colpow.w );
 		float NdotL = saturate( dot( outNormal, lightDir ) );
