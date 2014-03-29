@@ -103,6 +103,7 @@ function SS3D_MeshLoad_GetMaterial( ss3d, flags, shader, t0, t1, t2, t3, t4, t5,
 
 global cSS3D_GenMeshVertexFormat = "pf30f2nf3tf4cf4";
 global cSS3D_GenParticleVertexFormat = "pf30f2cf4";
+global cSS3D_GenTerrainVertexFormat = "pf30f21f2nf3tf4";
 
 function SS3D_CreateCubeMesh( ss3d, extents, position, color )
 {
@@ -111,7 +112,7 @@ function SS3D_CreateCubeMesh( ss3d, extents, position, color )
 	mesh.setVertexData( vdata, SS3D_GetVertexDecl( ss3d, cSS3D_GenMeshVertexFormat ), false );
 	mesh.setIndexData( idata, false );
 	mesh.numParts = 1;
-	mesh.setPart( 0, 0, vcount, 0, icount );
+	mesh.setPartRanges( 0, 0, vcount, 0, icount );
 	return mesh;
 }
 
@@ -129,4 +130,20 @@ function SS3D_UpdateParticleMesh( ss3d, mesh, viewmatrix, positions, sizes, colo
 	
 	mesh.numParts = 1;
 	mesh.setPartRanges( 0, 0, vcount, 0, icount );
+}
+
+function SS3D_CreateTerrainMeshFromImage( ss3d, filename, min, max )
+{
+	image = SS_LoadImage( filename );
+	if( !image )
+		return null;
+	heights = floatarray_from_uint8_buffer( image.getData(), 1/255, 4 );
+	(vdata,idata,vcount,icount) = SS3D_MeshGen_Terrain( image.width, image.height, heights, min, max );
+	
+	mesh = ss3d.createMesh();
+	mesh.setVertexData( vdata, SS3D_GetVertexDecl( ss3d, cSS3D_GenTerrainVertexFormat ), false );
+	mesh.setIndexData( idata, true );
+	mesh.numParts = 1;
+	mesh.setPartRanges( 0, 0, vcount, 0, icount );
+	return mesh;
 }

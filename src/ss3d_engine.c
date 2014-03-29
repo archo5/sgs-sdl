@@ -339,6 +339,102 @@ static int SS3D_MeshGen_Particles( SGS_CTX )
 	return 4;
 }
 
+typedef struct _terrainVtx
+{
+	VEC3 pos;
+	float t1x, t1y;
+	float t2x, t2y;
+	VEC3 normal;
+	VEC4 tg;
+}
+terrainVtx;
+
+static int SS3D_MeshGen_Terrain( SGS_CTX )
+{
+	sgs_SizeVal x, y;
+	sgs_Int width, height;
+	xgm_vtarray* heightlist;
+	VEC3 v_minpos;
+	VEC3 v_maxpos;
+	
+	terrainVtx* vdata, *pv;
+	uint32_t* idata;
+	
+	SGSFN( "SS3D_MeshGen_Terrain" );
+	if( !sgs_LoadArgs( C, "iixxx", &width, &height, sgs_ArgCheck_FloatArray, &heightlist, sgs_ArgCheck_Vec3, v_minpos, sgs_ArgCheck_Vec3, v_maxpos ) )
+		return 0;
+	
+	if( width < 1 || height < 1 )
+		return sgs_Msg( C, SGS_WARNING, "invalid width and/or height" );
+	if( width * height > heightlist->size )
+		return sgs_Msg( C, SGS_WARNING, "not enough data for specified terrain size" );
+	
+	sgs_PushStringBuf( C, NULL, width * height * sizeof(*vdata) );
+	pv = vdata = (terrainVtx*) sgs_GetStringPtr( C, -1 );
+	for( y = 0; y < height; ++y )
+	{
+		for( x = 0; x < width; ++x )
+		{
+			float fx = (float) x / (float) ( width - 1 );
+			float fy = (float) y / (float) ( height - 1 );
+			float fz = heightlist->data[ x + width * y ];
+			
+			pv->pos[0] = LERP( v_minpos[0], v_maxpos[0], fx );
+			pv->pos[1] = LERP( v_minpos[1], v_maxpos[1], fy );
+			pv->pos[2] = LERP( v_minpos[2], v_maxpos[2], fz );
+			
+			pv->t1x = (float) x;
+			pv->t1y = (float) y;
+			pv->t2x = fx;
+			pv->t2y = fy;
+			
+			pv->tg[3] = 1;
+			
+			pv++;
+		}
+	}
+	/* normal/tangent generation */
+	for( y = 0; y < height; ++y )
+	{
+		for( x = 0; x < width; ++x )
+		{
+			VEC3 v01, v11, v21, v10, v12, vdx, vdy, nrm;
+			VEC3_Copy( v11, vdata[ x + width * y ].pos );
+			if( x > 0 ){ VEC3_Copy( v01, vdata[ x - 1 + width * y ].pos ); } else { VEC3_Copy( v01, v11 ); }
+			if( x < width - 1 ){ VEC3_Copy( v21, vdata[ x + 1 + width * y ].pos ); } else { VEC3_Copy( v21, v11 ); }
+			if( y > 0 ){ VEC3_Copy( v10, vdata[ x + width * ( y - 1 ) ].pos ); } else { VEC3_Copy( v10, v11 ); }
+			if( y < height - 1 ){ VEC3_Copy( v12, vdata[ x + width * ( y + 1 ) ].pos ); } else { VEC3_Copy( v12, v11 ); }
+			
+			VEC3_Sub( vdx, v21, v01 );
+			VEC3_Sub( vdy, v12, v10 );
+			VEC3_Normalized( vdata[ x + width * y ].tg, vdx );
+			VEC3_Set( nrm, -vdx[2] / vdx[0], -vdy[2] / vdy[1], 1 );
+			VEC3_Normalized( vdata[ x + width * y ].normal, nrm );
+		}
+	}
+	
+	sgs_PushStringBuf( C, NULL, ( width - 1 ) * ( height - 1 ) * 6 * sizeof(*idata) );
+	idata = (uint32_t*) sgs_GetStringPtr( C, -1 );
+	for( y = 0; y < height - 1; ++y )
+	{
+		for( x = 0; x < width - 1; ++x )
+		{
+			idata[0] = width * y + x;
+			idata[1] = width * y + x + 1;
+			idata[2] = width * ( y + 1 ) + x + 1;
+			idata[3] = idata[2];
+			idata[4] = width * ( y + 1 ) + x;
+			idata[5] = idata[0];
+			idata += 6;
+		}
+	}
+	
+	sgs_PushInt( C, width * height );
+	sgs_PushInt( C, ( width - 1 ) * ( height - 1 ) * 6 );
+	
+	return 4;
+}
+
 
 //
 // MISC. UTILITY
@@ -1452,6 +1548,13 @@ static int scene_getindex( SGS_ARGS_GETINDEXFUNC )
 		// properties
 		SGS_CASE( "cullScene" ) SGS_RETURN_OBJECT( S->cullScene )
 		SGS_CASE( "camera" )    SGS_RETURN_OBJECT( S->camera )
+		
+		SGS_CASE( "fogColor" )         SGS_RETURN_VEC3P( S->fogColor )
+		SGS_CASE( "fogHeightFactor" )  SGS_RETURN_REAL( S->fogHeightFactor )
+		SGS_CASE( "fogDensity" )       SGS_RETURN_REAL( S->fogDensity )
+		SGS_CASE( "fogHeightDensity" ) SGS_RETURN_REAL( S->fogHeightDensity )
+		SGS_CASE( "fogStartHeight" )   SGS_RETURN_REAL( S->fogStartHeight )
+		SGS_CASE( "fogMinDist" )       SGS_RETURN_REAL( S->fogMinDist )
 	SGS_END_INDEXFUNC;
 }
 
@@ -1487,6 +1590,13 @@ static int scene_setindex( SGS_ARGS_SETINDEXFUNC )
 			}
 			return SGS_EINVAL;
 		}
+		
+		SGS_CASE( "fogColor" )         SGS_PARSE_VEC3( S->fogColor, 0 )
+		SGS_CASE( "fogHeightFactor" )  SGS_PARSE_REAL( S->fogHeightFactor )
+		SGS_CASE( "fogDensity" )       SGS_PARSE_REAL( S->fogDensity )
+		SGS_CASE( "fogHeightDensity" ) SGS_PARSE_REAL( S->fogHeightDensity )
+		SGS_CASE( "fogStartHeight" )   SGS_PARSE_REAL( S->fogStartHeight )
+		SGS_CASE( "fogMinDist" )       SGS_PARSE_REAL( S->fogMinDist )
 	SGS_END_INDEXFUNC;
 }
 
@@ -1685,6 +1795,14 @@ void SS3D_Renderer_PushScene( SS3D_Renderer* R )
 	sgs_vht_init( &S->lights, R->C, 128, 128 );
 	S->camera = NULL;
 	S->cullScene = NULL;
+	
+	VEC3_Set( S->fogColor, 0, 0, 0 );
+	S->fogHeightFactor = 0;
+	S->fogDensity = 0;
+	S->fogHeightDensity = 0;
+	S->fogStartHeight = 0;
+	S->fogMinDist = 0;
+	
 	SS3D_Renderer_PokeResource( R, sgs_GetObjectStruct( R->C, -1 ), 1 );
 }
 
@@ -1715,6 +1833,7 @@ static sgs_RegFuncConst ss3d_fconsts[] =
 {
 	FN( MeshGen_Cube ),
 	FN( MeshGen_Particles ),
+	FN( MeshGen_Terrain ),
 	
 	FN( CreateCamera ),
 	FN( CreateViewport ),

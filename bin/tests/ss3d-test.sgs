@@ -17,6 +17,11 @@ function initialize()
 	println( "SS3D: " $ _R.SS3D );
 	
 	_R.Scene = _R.SS3D.createScene();
+	_R.Scene.fogColor = vec3(0.2,0.4,0.6);
+	_R.Scene.fogDensity = 0.001;
+	_R.Scene.fogHeightDensity = 0.01;
+	_R.Scene.fogStartHeight = 0;
+	_R.Scene.fogHeightFactor = 1;//0.5;
 	println( "Scene: " $ _R.Scene );
 	_R.SS3D.currentScene = _R.Scene;
 	
@@ -93,6 +98,13 @@ function initialize()
 		}
 		_R.insts = insts;
 	}
+	
+	// TERRAIN
+	_R.TerrainMesh = SS3D_CreateTerrainMeshFromImage( _R.SS3D, "testdata/heightmap.png", vec3( -500, -500, -200 ), vec3( 500, 500, 50 ) );
+	_R.TerrainMesh.setPartShader( 0, "testFRrender3" );
+	_R.TerrainMesh.setPartTexture( 0, 0, _R.SS3D.getTexture( "testdata/moss.png" ) );
+	_R.TerrainMeshMI = _R.Scene.createMeshInstance();
+	_R.TerrainMeshMI.mesh = _R.TerrainMesh;
 	
 	// PARTICLES
 	_R.Particles = floatarray_buffer( 128 * 3 );
@@ -177,7 +189,7 @@ function update()
 	
 	t = ftime();
 	camera.position = vec3(cos(t)*20,sin(t)*20,13);
-	camera.direction = vec3(-cos(t),-sin(t),-0.6);
+	camera.direction = vec3(-cos(t),-sin(t),-0.5);
 	
 	_R.PlaneMeshMI.enabled = false;
 	_R.SS3D.currentRT = _R.RT;

@@ -1503,8 +1503,8 @@ static int rd3d9i_render( SGS_CTX )
 	
 	VEC4 fogdata[ 2 ] =
 	{
-		{ 0.2f, 0.3f, 0.4f, 0 },
-		{ 0.0f, 1.0f, 10.0f, 0.1f },
+		{ scene->fogColor[0] * scene->fogColor[0], scene->fogColor[1] * scene->fogColor[1], scene->fogColor[2] * scene->fogColor[2], scene->fogHeightFactor },
+		{ scene->fogDensity, scene->fogHeightDensity, scene->fogStartHeight, scene->fogMinDist },
 	};
 	pshc_set_vec4array( R, 12, *fogdata, 2 );
 	
@@ -1673,6 +1673,9 @@ static int rd3d9i_render( SGS_CTX )
 				for( part_id = 0; part_id < M->inh.numParts; ++part_id )
 				{
 					SS3D_MeshPart* MP = M->inh.parts + part_id;
+					
+					if( !MP->shaders[ pass_id ] )
+						continue;
 					
 					use_shader( R, (SS3D_Shader_D3D9*) MP->shaders[ pass_id ]->data );
 					for( tex_id = 0; tex_id < SS3D_NUM_MATERIAL_TEXTURES; ++tex_id )

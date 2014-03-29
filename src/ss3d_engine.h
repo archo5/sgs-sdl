@@ -17,6 +17,7 @@ typedef VEC4 MAT4[4];
 typedef uint32_t bitfield_t;
 
 #define DEG2RAD( x ) ((x)/180.0f*M_PI)
+#define LERP( a, b, t ) ((a)*(1-(t))+(b)*(t))
 
 #define VEC3_Set( V, x, y, z ) V[0] = x; V[1] = y; V[2] = z;
 #define VEC3_Copy( V, X ) V[0] = X[0]; V[1] = X[1]; V[2] = X[2];
@@ -362,6 +363,13 @@ struct _SS3D_Scene
 	
 	sgs_VarObj* cullScene;
 	sgs_VarObj* camera;
+	
+	VEC3 fogColor;
+	float fogHeightFactor;
+	float fogDensity;
+	float fogHeightDensity;
+	float fogStartHeight;
+	float fogMinDist;
 };
 
 typedef struct _SS3D_RenderPass

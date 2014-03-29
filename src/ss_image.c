@@ -18,6 +18,9 @@
 SGS_DECLARE sgs_ObjInterface image_iface[1];
 #define IMGHDR SS_Image* img = (SS_Image*) data->data
 
+#define IMG_IHDR( funcname ) SS_Image* ii; \
+	if( !SGS_PARSE_METHOD( C, image_iface, ii, SS_Image, funcname ) ) return 0;
+
 static int _make_image( SGS_CTX, int16_t w, int16_t h, const void* src )
 {
 	SS_Image* ii = sgs_Alloc( SS_Image );
@@ -42,16 +45,9 @@ static int ss_image_destruct( SGS_CTX, sgs_VarObj* data )
 
 static int ss_image_resize( SGS_CTX )
 {
-	SS_Image* ii = NULL;
 	sgs_Integer w = 0, h = 0;
 	
-	SGSFN( "image.resize" );
-	
-	sgs_Method( C );
-	if( !ss_ParseImage( C, 0, &ii ) )
-		_WARN( "'this' is not an image" )
-	sgs_ForceHideThis( C );
-	
+	IMG_IHDR( resize );
 	if( !sgs_LoadArgs( C, "ii", &w, &h ) )
 		return 0;
 	
@@ -88,17 +84,10 @@ end:
 
 static int ss_image_clear( SGS_CTX )
 {
-	SS_Image* ii = NULL;
 	uint32_t i = 0, cc = 0;
 	uint8_t r = 0, g = 0, b = 0, a = 255;
 	
-	SGSFN( "image.clear" );
-	
-	sgs_Method( C );
-	if( !ss_ParseImage( C, 0, &ii ) )
-		_WARN( "'this' is not an image" )
-	sgs_ForceHideThis( C );
-	
+	IMG_IHDR( clear );
 	if( !sgs_LoadArgs( C, "^+ccc|c", &r, &g, &b, &a ) )
 		return 0;
 	
@@ -109,20 +98,21 @@ static int ss_image_clear( SGS_CTX )
 	return 0;
 }
 
+static int ss_image_getData( SGS_CTX )
+{
+	IMG_IHDR( getData );
+	
+	sgs_PushStringBuf( C, ii->data, ii->width * ii->height * 4 );
+	return 1;
+}
+
 static int ss_image_setData( SGS_CTX )
 {
 	int ret = 0;
-	SS_Image* ii = NULL;
 	char* buf = NULL;
 	sgs_SizeVal size = 0, i = 0, pxcnt = 0;
 	
-	SGSFN( "image.setData" );
-	
-	sgs_Method( C );
-	if( !ss_ParseImage( C, 0, &ii ) )
-		_WARN( "'this' is not an image" )
-	sgs_ForceHideThis( C );
-	
+	IMG_IHDR( setData );
 	if( !sgs_LoadArgs( C, "m", &buf, &size ) )
 		return 0;
 	
@@ -163,6 +153,7 @@ static int ss_image_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int 
 		if( !strcmp( str, "height" ) ){ sgs_PushInt( C, img->height ); return SGS_SUCCESS; }
 		if( !strcmp( str, "resize" ) ){ sgs_PushCFunction( C, ss_image_resize ); return SGS_SUCCESS; }
 		if( !strcmp( str, "clear" ) ){ sgs_PushCFunction( C, ss_image_clear ); return SGS_SUCCESS; }
+		if( !strcmp( str, "getData" ) ){ sgs_PushCFunction( C, ss_image_getData ); return SGS_SUCCESS; }
 		if( !strcmp( str, "setData" ) ){ sgs_PushCFunction( C, ss_image_setData ); return SGS_SUCCESS; }
 	}
 	return SGS_ENOTFND;
