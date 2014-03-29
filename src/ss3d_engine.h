@@ -14,6 +14,8 @@ typedef float VEC4[4];
 typedef VEC3 MAT3[3];
 typedef VEC4 MAT4[4];
 
+typedef uint32_t bitfield_t;
+
 #define DEG2RAD( x ) ((x)/180.0f*M_PI)
 
 #define VEC3_Set( V, x, y, z ) V[0] = x; V[1] = y; V[2] = z;
@@ -60,6 +62,9 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 #define SS3DFORMAT_DXT3   13
 #define SS3DFORMAT_DXT5   15
 #define SS3DFORMAT_ISBLOCK4FORMAT( x ) ((x)==SS3DFORMAT_DXT1||(x)==SS3DFORMAT_DXT3||(x)==SS3DFORMAT_DXT5)
+
+#define SS3DRT_FORMAT_BACKBUFFER 0
+#define SS3DRT_FORMAT_DEPTH      1
 
 #define SS3DLIGHT_POINT  1
 #define SS3DLIGHT_SPOT   2
@@ -117,6 +122,7 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 
 sgs_ObjInterface SS3D_Camera_iface[1];
 sgs_ObjInterface SS3D_Light_iface[1];
+sgs_ObjInterface SS3D_Viewport_iface[1];
 sgs_ObjInterface SS3D_Scene_iface[1];
 
 typedef struct _SS3D_Light SS3D_Light;
@@ -356,7 +362,6 @@ struct _SS3D_Scene
 	
 	sgs_VarObj* cullScene;
 	sgs_VarObj* camera;
-	sgs_VarObj* viewport;
 };
 
 typedef struct _SS3D_RenderPass
@@ -382,6 +387,9 @@ struct _SS3D_Renderer
 	sgs_VarObj* _myobj;
 	sgs_VarObj* currentScene;
 	sgs_VarObj* store;
+	sgs_VarObj* currentRT;
+	sgs_VarObj* viewport;
+	bitfield_t disablePostProcessing : 1;
 	
 	/* to be initialized by derived class */
 	int width, height;
@@ -389,6 +397,7 @@ struct _SS3D_Renderer
 	sgs_ObjInterface* ifMesh;
 	sgs_ObjInterface* ifTexture;
 	sgs_ObjInterface* ifShader;
+	sgs_ObjInterface* ifRT;
 	
 	SS3D_RenderPass passes[ SS3D_MAX_NUM_PASSES ];
 	int numPasses;

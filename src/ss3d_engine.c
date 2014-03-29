@@ -1170,6 +1170,20 @@ static void camera_recalc_projmtx( SS3D_Camera* CAM )
 #define CAM_IHDR( funcname ) SS3D_Camera* CAM; \
 	if( !SGS_PARSE_METHOD( C, SS3D_Camera_iface, CAM, SS3D_Camera, funcname ) ) return 0;
 
+static int camerai_genViewMatrix( SGS_CTX )
+{
+	CAM_IHDR( genViewMatrix );
+	camera_recalc_viewmtx( CAM );
+	return 0;
+}
+
+static int camerai_genProjMatrix( SGS_CTX )
+{
+	CAM_IHDR( genProjMatrix );
+	camera_recalc_projmtx( CAM );
+	return 0;
+}
+
 static int camerai_worldToScreen( SGS_CTX )
 {
 	VEC3 pos;
@@ -1202,6 +1216,8 @@ static int camera_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "invViewMatrix" ) SGS_RETURN_MAT4( *CAM->mInvView )
 		SGS_CASE( "projMatrix" ) SGS_RETURN_MAT4( *CAM->mProj )
 		
+		SGS_CASE( "genViewMatrix" ) SGS_RETURN_CFUNC( camerai_genViewMatrix )
+		SGS_CASE( "genProjMatrix" ) SGS_RETURN_CFUNC( camerai_genProjMatrix )
 		SGS_CASE( "worldToScreen" ) SGS_RETURN_CFUNC( camerai_worldToScreen )
 	SGS_END_INDEXFUNC;
 }
@@ -1436,7 +1452,6 @@ static int scene_getindex( SGS_ARGS_GETINDEXFUNC )
 		// properties
 		SGS_CASE( "cullScene" ) SGS_RETURN_OBJECT( S->cullScene )
 		SGS_CASE( "camera" )    SGS_RETURN_OBJECT( S->camera )
-		SGS_CASE( "viewport" )  SGS_RETURN_OBJECT( S->viewport )
 	SGS_END_INDEXFUNC;
 }
 
@@ -1448,17 +1463,12 @@ static int scene_setindex( SGS_ARGS_SETINDEXFUNC )
 		{
 			if( val->type == SGS_VT_NULL )
 			{
-				if( S->cullScene )
-					sgs_ObjRelease( C, S->cullScene );
-				S->cullScene = NULL;
+				sgs_ObjAssign( C, &S->cullScene, NULL );
 				return SGS_SUCCESS;
 			}
-			if( sgs_IsObjectP( val, SS3D_CullScene_iface ) )
+			else if( sgs_IsObjectP( val, SS3D_CullScene_iface ) )
 			{
-				if( S->cullScene )
-					sgs_ObjRelease( C, S->cullScene );
-				S->cullScene = sgs_GetObjectStructP( val );
-				sgs_ObjAcquire( C, S->cullScene );
+				sgs_ObjAssign( C, &S->cullScene, sgs_GetObjectStructP( val ) );
 				return SGS_SUCCESS;
 			}
 			return SGS_EINVAL;
@@ -1467,36 +1477,12 @@ static int scene_setindex( SGS_ARGS_SETINDEXFUNC )
 		{
 			if( val->type == SGS_VT_NULL )
 			{
-				if( S->camera )
-					sgs_ObjRelease( C, S->camera );
-				S->camera = NULL;
+				sgs_ObjAssign( C, &S->camera, NULL );
 				return SGS_SUCCESS;
 			}
-			if( sgs_IsObjectP( val, SS3D_Camera_iface ) )
+			else if( sgs_IsObjectP( val, SS3D_Camera_iface ) )
 			{
-				if( S->camera )
-					sgs_ObjRelease( C, S->camera );
-				S->camera = sgs_GetObjectStructP( val );
-				sgs_ObjAcquire( C, S->camera );
-				return SGS_SUCCESS;
-			}
-			return SGS_EINVAL;
-		}
-		SGS_CASE( "viewport" )
-		{
-			if( val->type == SGS_VT_NULL )
-			{
-				if( S->viewport )
-					sgs_ObjRelease( C, S->viewport );
-				S->viewport = NULL;
-				return SGS_SUCCESS;
-			}
-			if( sgs_IsObjectP( val, SS3D_Viewport_iface ) )
-			{
-				if( S->viewport )
-					sgs_ObjRelease( C, S->viewport );
-				S->viewport = sgs_GetObjectStructP( val );
-				sgs_ObjAcquire( C, S->viewport );
+				sgs_ObjAssign( C, &S->camera, sgs_GetObjectStructP( val ) );
 				return SGS_SUCCESS;
 			}
 			return SGS_EINVAL;
@@ -1570,7 +1556,12 @@ void SS3D_Renderer_Construct( SS3D_Renderer* R, SGS_CTX )
 	sgs_vht_init( &R->shaders, C, 128, 128 );
 	sgs_vht_init( &R->textures, C, 128, 128 );
 	sgs_vht_init( &R->materials, C, 128, 128 );
+	
 	R->currentScene = NULL;
+	R->currentRT = NULL;
+	R->viewport = NULL;
+	
+	R->disablePostProcessing = 0;
 	
 	sgs_InitDict( C, &storeVar, 0 );
 	R->store = sgs_GetObjectStructP( &storeVar );
@@ -1612,7 +1603,7 @@ void SS3D_Renderer_Construct( SS3D_Renderer* R, SGS_CTX )
 	strcpy( R->passes[3].shname, "ps_ext_s4" );
 	/* PASS5: [DEPTH] FOG */
 	R->passes[4].type = SS3D_RPT_SCREEN;
-	strcpy( R->passes[4].shname, "ps_scr_fog" );
+	strcpy( R->passes[4].shname, "pp_ss_fog" );
 	/* PASS6: [TRANSPARENT,ANY] DIRAMB + SUN + 0-16 POINT LIGHTS (once) */
 	R->passes[5].type = SS3D_RPT_OBJECT;
 	R->passes[5].flags = SS3D_RPF_MTL_TRANSPARENT | SS3D_RPF_OBJ_ALL | SS3D_RPF_ENABLED | SS3D_RPF_CALC_DIRAMB;
@@ -1654,6 +1645,10 @@ void SS3D_Renderer_Destruct( SS3D_Renderer* R )
 	sgs_vht_free( &R->materials, R->C );
 	if( R->currentScene )
 		sgs_ObjRelease( R->C, R->currentScene );
+	if( R->currentRT )
+		sgs_ObjRelease( R->C, R->currentRT );
+	if( R->viewport )
+		sgs_ObjRelease( R->C, R->viewport );
 	sgs_ObjRelease( R->C, R->store );
 }
 
@@ -1690,7 +1685,6 @@ void SS3D_Renderer_PushScene( SS3D_Renderer* R )
 	sgs_vht_init( &S->lights, R->C, 128, 128 );
 	S->camera = NULL;
 	S->cullScene = NULL;
-	S->viewport = NULL;
 	SS3D_Renderer_PokeResource( R, sgs_GetObjectStruct( R->C, -1 ), 1 );
 }
 
@@ -1730,6 +1724,7 @@ static sgs_RegFuncConst ss3d_fconsts[] =
 static sgs_RegIntConst ss3d_iconsts[] =
 {
 	CN( LIGHT_POINT ), CN( LIGHT_DIRECT ), CN( LIGHT_SPOT ),
+	CN( RT_FORMAT_BACKBUFFER ), CN( RT_FORMAT_DEPTH ),
 };
 
 

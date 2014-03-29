@@ -1,0 +1,10 @@
+float4 diff = tex2D( Tex0, inTex0.xy );
+diff.rgb *= diff.rgb; // GAMMA CORRECTION HACK (for now)
+outDiffuseColor = diff.rgb;
+float3 normal = tex2D( Tex1, inTex0.xy ).rgb * 2 - 1;
+float fresnel = 1 - abs( dot( inNormal, normalize(viewPos) ) );
+outOpacity = diff.a;
+outSpecularColor = float3( 0.5, 0.5, 0.5 ) * lerp( 0.5, 1, fresnel * fresnel );
+outSpecularPower = 256;
+outNormal = mul( normal, TBN );
+outAmbientSpecularLight = tex2D( Tex2, inProjPos.xy / inProjPos.w * float2(-0.5,-0.5) + 0.5 );

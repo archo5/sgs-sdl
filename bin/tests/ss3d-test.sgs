@@ -23,6 +23,9 @@ function initialize()
 	_R.VD1 = _R.SS3D.createVertexDecl( "pf3nf3tf40f2" );
 	println( "VD1: " $ _R.VD1 );
 	
+	_R.RT = _R.SS3D.createRT( Window.width, Window.height, SS3DRT_FORMAT_BACKBUFFER );
+	println( "RT: " $ _R.RT );
+	
 	_R.Mesh = _R.SS3D.createMesh();
 	{
 		_R.PlaneMesh = _R.SS3D.createMesh();
@@ -36,11 +39,12 @@ function initialize()
 		_R.PlaneMesh.numParts = 1;
 		_R.PlaneMesh.setPartRanges( 0, 0, 4, 0, 6 );
 	//	_R.PlaneMesh.transparent = true;
-		_R.PlaneMesh.setPartShader( 0, "testFRrender" );
+		_R.PlaneMesh.setPartShader( 0, "mirror" );//"testFRrender" );
 		_R.PlaneMesh.setPartTexture( 0, 0, _R.SS3D.getTexture( "testdata/concretewall5.dds" ) );
 		_R.PlaneMesh.setPartTexture( 0, 1, _R.SS3D.getTexture( "testdata/concretewall5normal.png" ) );
 		_R.PlaneMeshMI = _R.Scene.createMeshInstance();
 		_R.PlaneMeshMI.mesh = _R.PlaneMesh;
+		_R.PlaneMesh.setPartTexture( 0, 2, _R.RT );
 	}
 	if(0)
 	{
@@ -175,8 +179,26 @@ function update()
 	camera.position = vec3(cos(t)*20,sin(t)*20,13);
 	camera.direction = vec3(-cos(t),-sin(t),-0.6);
 	
-	SS3D_UpdateParticleMesh( _R.SS3D, _R.ParticleMesh, camera.viewMatrix, _R.Particles, _R.ParticleSizes, _R.ParticleColors );
+	_R.PlaneMeshMI.enabled = false;
+	_R.SS3D.currentRT = _R.RT;
+	_R.SS3D.disablePostProcessing = true;
+	camera.position *= vec3(1,1,-1);
+	camera.direction *= vec3(1,1,-1);
+	camera.up *= vec3(1,1,-1);
+	camera.genViewMatrix();
 	
+	SS3D_UpdateParticleMesh( _R.SS3D, _R.ParticleMesh, camera.viewMatrix, _R.Particles, _R.ParticleSizes, _R.ParticleColors );
+	_R.SS3D.render();
+	
+	_R.PlaneMeshMI.enabled = true;
+	_R.SS3D.currentRT = null;
+	_R.SS3D.disablePostProcessing = false;
+	camera.position *= vec3(1,1,-1);
+	camera.direction *= vec3(1,1,-1);
+	camera.up *= vec3(1,1,-1);
+	camera.genViewMatrix();
+	
+	SS3D_UpdateParticleMesh( _R.SS3D, _R.ParticleMesh, camera.viewMatrix, _R.Particles, _R.ParticleSizes, _R.ParticleColors );
 	_R.SS3D.render();
 	
 	point = camera.worldToScreen( vec3(-5,0,10) );

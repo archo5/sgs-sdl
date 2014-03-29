@@ -12,8 +12,9 @@ void main
 	float2 itex : TEXCOORD0,
 	out float4 opos : POSITION0,
 	out float4 otfpos : TEXCOORD1,
-	out float4 oT : TEXCOORD2,
-	out float3 oN : TEXCOORD3,
+	out float4 oftfpos : TEXCOORD2,
+	out float4 oT : TEXCOORD6,
+	out float3 oN : TEXCOORD7,
 	out float4 ocol : COLOR0,
 	out float2 otex : TEXCOORD0
 )
@@ -21,6 +22,7 @@ void main
 	float4 viewPos = mul( mWorldView, ipos );
 	opos = mul( mProj, viewPos );
 	otfpos = viewPos;
+	oftfpos = opos;
 	oT = float4( mul( mWorldView, float4( 1, 0, 0, 0 ) ).xyz, 1 );
 	oN = mul( mWorldView, float4( inrm, 0 ) ).xyz;
 	ocol = icol;
@@ -31,6 +33,12 @@ void main
 
 sampler2D Tex0 : register(s0);
 sampler2D Tex1 : register(s1);
+sampler2D Tex2 : register(s2);
+sampler2D Tex3 : register(s3);
+sampler2D Tex4 : register(s4);
+sampler2D Tex5 : register(s5);
+sampler2D Tex6 : register(s6);
+sampler2D Tex7 : register(s7);
 samplerCUBE EnvMap : register(s8);
 
 float4x4 mInvView : register(c0);
@@ -48,12 +56,14 @@ PointLight gPLights[16] : register(c56); /* :c87 */
 void main
 (
 	float4 inViewPos : TEXCOORD1,
-	float4 inTangentSign : TEXCOORD2,
-	float3 inNormal : TEXCOORD3,
+	float4 inProjPos : TEXCOORD2,
+	float4 inTangentSign : TEXCOORD6,
+	float3 inNormal : TEXCOORD7,
 	float4 icol : COLOR0,
 	float4 inTex0 : TEXCOORD0,
 	out float4 _outColor0 : COLOR0,
-	out float4 _outColor1 : COLOR1
+	out float4 _outColor1 : COLOR1,
+	out float4 _outColor2 : COLOR2
 )
 {
 	float RdotV, specAmount;
@@ -74,6 +84,7 @@ void main
 	float3 outNormal = inNormal;
 	float2 outDistortion = float2( 0, 0 );
 	float3 outAmbientDiffuseLight = float3( 0, 0, 0 );
+	float3 outAmbientSpecularLight = float3( 0, 0, 0 );
 	{
 __CODE__
 	}
@@ -82,7 +93,7 @@ __CODE__
 	float3 refWorld = mul( mInvView, float4( refView, 0 ) ).xyz;
 	
 	float3 totalDiffuse = gAmbLightColor + outAmbientDiffuseLight;
-	float3 totalSpecular = pow( texCUBElod( EnvMap, float4( refWorld.xzy*float3(1,-1,1), 1 ) ).rgb, 2 );
+	float3 totalSpecular = outAmbientSpecularLight + pow( texCUBElod( EnvMap, float4( refWorld.xzy*float3(1,-1,1), 1 ) ).rgb, 2 );
 	
 	/* DIRECTIONAL LIGHT */
 	totalDiffuse += saturate( dot( outNormal, gDirLightDir ) ) * gDirLightColor;
@@ -112,6 +123,7 @@ __CODE__
 	
 	_outColor0 = float4( totalDiffuse * outDiffuseColor + totalSpecular * outSpecularColor, outOpacity );
 	_outColor1 = float4( outDistortion, 0, outOpacity );
+	_outColor2 = float4( 1 / inViewPos.z, 0, 0, 1 );
 }
 
 #endif

@@ -1,0 +1,57 @@
+
+#ifdef VS
+
+void main
+(
+	float4 ipos : POSITION0,
+	float2 itex0 : TEXCOORD0,
+	float2 itex1 : TEXCOORD1,
+	out float4 opos : POSITION0,
+	out float2 otex : TEXCOORD0,
+	out float2 ofpos : TEXCOORD1
+)
+{
+	opos = ipos;
+	otex = itex0;
+	ofpos = itex1;
+}
+
+#elif defined(PS)
+
+sampler2D texDEPTH : register(s0);
+
+float4x4 mInvView : register(c0);
+float3 cameraPos : register(c4);
+
+float4 main( float2 itex : TEXCOORD0, float2 fpos : TEXCOORD1 ) : COLOR0
+{
+	float minFogDist = 1;
+	float fogDensity = 0.5;
+	float fogHeightStart = 10;
+	float fogHeightDensity = 0.3;
+	float3 fogColor = float3( 0.1, 0.15, 0.2 );
+	
+	float distance = 1 / ( tex2D( texDEPTH, itex ).r + 0.001 );
+	
+	float vdistance;
+	float3 rayPos = cameraPos;
+	float3 dir = mul( mInvView, float4( fpos, 1, 0 ) * distance ).xyz;
+	float3 rayEnd = cameraPos + dir;
+	float fogEntryZ = min( fogHeightStart, rayPos.z );
+	if( rayEnd.z < fogEntryZ ) // ray going down
+	{
+		vdistance = fogEntryZ - rayEnd.z;
+	}
+	else // ray going up, possibly exiting fog halfspace
+	{
+		float fogExitZ = min( fogHeightStart, rayEnd.z );
+		vdistance = max( 0, fogExitZ - fogEntryZ );
+	}
+	
+	float distAmount = 1 - exp( -distance * fogDensity );
+	float heightAmount = 1 - exp( -vdistance * fogHeightDensity );
+	float fogfactor = saturate( max( 0, distAmount ) * max( 0, heightAmount ) );
+	return float4( fogColor, fogfactor );
+}
+
+#endif
