@@ -623,13 +623,13 @@ static int rtd3d9_create( SS3D_RD3D9* R, int width, int height, int format )
 		hr = D3DCALL_( R->device, CreateTexture, width, height, 1, D3DUSAGE_RENDERTARGET, d3dfmt, D3DPOOL_DEFAULT, &RT->inh.ptr.tex2d, NULL );
 		sgs_BreakIf( FAILED( hr ) || !RT->inh.ptr.tex2d || !"failed to create render target texture" );
 		
-		hr = D3DCALL_( R->device, CreateDepthStencilSurface, width, height, D3DFMT_D24S8, D3DMULTISAMPLE_NONE, 0, TRUE, &RT->DS, NULL );
-		sgs_BreakIf( FAILED( hr ) || !RT->DS || !"failed to create d24s8 depth+stencil surface" );
+		hr = D3DCALL_( R->device, CreateDepthStencilSurface, width, height, D3DFMT_D24S8, D3DMULTISAMPLE_NONE, 0, TRUE, &RT->DSS, NULL );
+		sgs_BreakIf( FAILED( hr ) || !RT->DSS || !"failed to create d24s8 depth+stencil surface" );
 		
 		D3DCALL_( RT->inh.ptr.tex2d, GetSurfaceLevel, 0, &RT->CS );
 		
-		RT->DT = RT->inh.ptr.tex2d;
-		D3DCALL( RT->DT, AddRef );
+	//	RT->DT = RT->inh.ptr.tex2d;
+	//	D3DCALL( RT->DT, AddRef );
 	}
 	else
 	{
@@ -1014,7 +1014,8 @@ static void mesh_set_part_shader( SS3D_Mesh_D3D9* M, int pid, char* shader )
 	strcpy( buf, "mtl:" );
 	for( i = 0; i < M->inh.renderer->numPasses; ++i )
 	{
-		if( M->inh.renderer->passes[ i ].type != SS3D_RPT_OBJECT )
+		int type = M->inh.renderer->passes[ i ].type;
+		if( type != SS3D_RPT_OBJECT && type != SS3D_RPT_SHADOWS )
 			continue;
 		
 		strcpy( buf + 4, shader );
@@ -1353,9 +1354,16 @@ static void postproc_blit( SS3D_RD3D9* R, rtoutinfo* pRTOUT, int ds, int ppdata_
 	D3DCALL_( R->device, DrawPrimitiveUP, D3DPT_TRIANGLEFAN, 2, ssVertices, sizeof(*ssVertices) );
 }
 
+static int sort_meshinstlight_by_light( const void* p1, const void* p2 )
+{
+	SS3D_MeshInstLight* mil1 = (SS3D_MeshInstLight*) p1;
+	SS3D_MeshInstLight* mil2 = (SS3D_MeshInstLight*) p2;
+	return mil1 == mil2 ? 0 : ( mil1 < mil2 ? -1 : 1 );
+}
+
 static int rd3d9i_render( SGS_CTX )
 {
-	int i, inst_id, pass_id, light_id;
+	int i, inst_id, pass_id, light_id, part_id, tex_id;
 	R_IHDR( render );
 	
 	if( !R->inh.currentScene )
@@ -1401,31 +1409,127 @@ static int rd3d9i_render( SGS_CTX )
 	
 	/* SORT OUT MESH INSTANCE / LIGHT RELATIONS */
 	sgs_MemBuf inst_light_buf = sgs_membuf_create();
+	sgs_MemBuf light_inst_buf = sgs_membuf_create();
+	/* CULL */
 	for( inst_id = 0; inst_id < scene->meshInstances.size; ++inst_id )
 	{
 		SS3D_MeshInstance* MI = (SS3D_MeshInstance*) scene->meshInstances.vars[ inst_id ].val.data.O->data;
 		if( !MI->mesh || !MI->enabled )
 			continue;
-		MI->lightbuf_begin = (SS3D_Light**) inst_light_buf.size;
+		MI->lightbuf_begin = (SS3D_MeshInstLight*) inst_light_buf.size;
 		for( light_id = 0; light_id < scene->lights.size; ++light_id )
 		{
 			SS3D_Light* L = (SS3D_Light*) scene->lights.vars[ light_id ].val.data.O->data;
 			if( !L->isEnabled )
 				continue;
-			sgs_membuf_appbuf( &inst_light_buf, C, &L, sizeof(L) );
+			SS3D_MeshInstLight mil = { MI, L };
+			sgs_membuf_appbuf( &inst_light_buf, C, &mil, sizeof(mil) );
 		}
-		MI->lightbuf_end = (SS3D_Light**) inst_light_buf.size;
+		MI->lightbuf_end = (SS3D_MeshInstLight*) inst_light_buf.size;
 	}
 	for( inst_id = 0; inst_id < scene->meshInstances.size; ++inst_id )
 	{
 		SS3D_MeshInstance* MI = (SS3D_MeshInstance*) scene->meshInstances.vars[ inst_id ].val.data.O->data;
 		if( !MI->mesh || !MI->enabled )
 			continue;
-		MI->lightbuf_begin = (SS3D_Light**)( (size_t) MI->lightbuf_begin + (size_t) inst_light_buf.ptr );
-		MI->lightbuf_end = (SS3D_Light**)( (size_t) MI->lightbuf_end + (size_t) inst_light_buf.ptr );
+		MI->lightbuf_begin = (SS3D_MeshInstLight*)( (size_t) MI->lightbuf_begin + (size_t) inst_light_buf.ptr );
+		MI->lightbuf_end = (SS3D_MeshInstLight*)( (size_t) MI->lightbuf_end + (size_t) inst_light_buf.ptr );
+	}
+	/*  insts -> lights  TO  lights -> insts  */
+	sgs_membuf_resize( &light_inst_buf, C, inst_light_buf.size );
+	memcpy( light_inst_buf.ptr, inst_light_buf.ptr, inst_light_buf.size );
+	qsort( light_inst_buf.ptr, light_inst_buf.size / sizeof( SS3D_MeshInstLight ), sizeof( SS3D_MeshInstLight ), sort_meshinstlight_by_light );
+	SS3D_MeshInstLight* pmil = (SS3D_MeshInstLight*) light_inst_buf.ptr;
+	SS3D_MeshInstLight* pmilend = pmil + ( light_inst_buf.size / sizeof( SS3D_MeshInstLight ) );
+	for( light_id = 0; light_id < scene->lights.size; ++light_id )
+	{
+		SS3D_Light* L = (SS3D_Light*) scene->lights.vars[ light_id ].val.data.O->data;
+		if( !L->isEnabled )
+			continue;
+		L->mibuf_begin = NULL;
+		L->mibuf_end = NULL;
+	}
+	while( pmil < pmilend )
+	{
+		if( !pmil->L->mibuf_begin )
+			pmil->L->mibuf_begin = pmil;
+		pmil->L->mibuf_end = pmil + 1;
+		pmil++;
 	}
 	
-	/* RENDERING */
+	D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 1 );
+	D3DCALL_( R->device, SetRenderState, D3DRS_ZWRITEENABLE, 1 );
+	
+	/* SHADOW RENDERING */
+	D3DCALL_( R->device, SetRenderTarget, 1, NULL );
+	D3DCALL_( R->device, SetRenderTarget, 2, NULL );
+	for( pass_id = 0; pass_id < R->inh.numPasses; ++pass_id )
+	{
+		SS3D_RenderPass* pass = R->inh.passes + pass_id;
+		
+		if( pass->type != SS3D_RPT_SHADOWS )
+			continue;
+		
+		for( light_id = 0; light_id < scene->lights.size; ++light_id )
+		{
+			MAT4 m_world_view, m_inv_view;
+			
+			SS3D_Light* L = (SS3D_Light*) scene->lights.vars[ light_id ].val.data.O->data;
+			if( !L->isEnabled || !L->shadowTexture )
+				continue;
+			
+			SS3D_RenderTexture_D3D9* RT = (SS3D_RenderTexture_D3D9*) L->shadowTexture->data;
+			
+			D3DCALL_( R->device, SetRenderTarget, 0, RT->CS );
+			D3DCALL_( R->device, SetDepthStencilSurface, RT->DSS );
+			D3DCALL_( R->device, Clear, 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, 0xffffffff, 1.0f, 0 );
+			
+			vshc_set_mat4( R, 4, L->projMatrix );
+			memcpy( m_inv_view, L->viewMatrix, sizeof( m_inv_view ) );
+			SS3D_Mtx_Transpose( m_inv_view );
+			pshc_set_mat4( R, 0, m_inv_view );
+			
+			pmil = L->mibuf_begin;
+			pmilend = L->mibuf_end;
+			for( ; pmil < pmilend; ++pmil )
+			{
+				SS3D_MeshInstance* MI = pmil->MI;
+				if( !MI->mesh || !MI->enabled )
+					continue;
+				
+				SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) MI->mesh->data;
+				SS3D_VDecl_D3D9* VD = (SS3D_VDecl_D3D9*) M->inh.vertexDecl->data;
+				
+				/* if (transparent & want solid) or (solid & want transparent), skip */
+				if( M->inh.dataFlags & SS3D_MDF_TRANSPARENT )
+					continue;
+				
+				SS3D_Mtx_Multiply( m_world_view, MI->matrix, L->viewMatrix );
+				vshc_set_mat4( R, 0, m_world_view );
+				
+				D3DCALL_( R->device, SetVertexDeclaration, VD->VD );
+				D3DCALL_( R->device, SetStreamSource, 0, M->VB, 0, VD->info.size );
+				D3DCALL_( R->device, SetIndices, M->IB );
+				
+				for( part_id = 0; part_id < M->inh.numParts; ++part_id )
+				{
+					SS3D_MeshPart* MP = M->inh.parts + part_id;
+					
+					use_shader( R, (SS3D_Shader_D3D9*) MP->shaders[ pass_id ]->data );
+					for( tex_id = 0; tex_id < SS3D_NUM_MATERIAL_TEXTURES; ++tex_id )
+						use_texture( R, tex_id, MP->textures[ tex_id ] ? (SS3D_Texture_D3D9*) MP->textures[ tex_id ]->data : NULL );
+					
+					if( MP->indexCount < 3 )
+						continue;
+					D3DCALL_( R->device, DrawIndexedPrimitive,
+						M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ? D3DPT_TRIANGLESTRIP : D3DPT_TRIANGLELIST,
+						MP->vertexOffset, 0, MP->vertexCount, MP->indexOffset, M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ? MP->indexCount - 2 : MP->indexCount / 3 );
+				}
+			}
+		}
+	}
+	
+	/* MAIN RENDERING */
 	if( R->inh.disablePostProcessing )
 	{
 		D3DCALL_( R->device, SetRenderTarget, 0, RTOUT.CS );
@@ -1441,7 +1545,6 @@ static int rd3d9i_render( SGS_CTX )
 		D3DCALL_( R->device, SetDepthStencilSurface, R->drd.RTSD );
 	}
 	
-	D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 1 );
 	D3DCALL_( R->device, SetRenderState, D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
 	D3DCALL_( R->device, SetRenderState, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
 	
@@ -1536,7 +1639,6 @@ static int rd3d9i_render( SGS_CTX )
 				float *pldata_it = lightdata[0], *sldata_ps_it = lightdata[32], *sldata_vs_it = lightdata[48];
 				int pl_count = 0, sl_count = 0;
 				
-				int part_id, tex_id;
 				MAT4 m_world_view;
 				
 				SS3D_MeshInstance* MI = (SS3D_MeshInstance*) scene->meshInstances.vars[ inst_id ].val.data.O->data;
@@ -1559,12 +1661,12 @@ static int rd3d9i_render( SGS_CTX )
 					while( pl_count < pass->pointlight_count && MI->lightbuf_begin < MI->lightbuf_end )
 					{
 						int found = 0;
-						SS3D_Light** plt = MI->lightbuf_begin;
+						SS3D_MeshInstLight* plt = MI->lightbuf_begin;
 						while( plt < MI->lightbuf_end )
 						{
-							if( (*plt)->type == SS3DLIGHT_POINT )
+							if( plt->L->type == SS3DLIGHT_POINT )
 							{
-								SS3D_Light* light = *plt;
+								SS3D_Light* light = plt->L;
 								
 								found = 1;
 								
@@ -1599,12 +1701,12 @@ static int rd3d9i_render( SGS_CTX )
 					while( sl_count < pass->spotlight_count && MI->lightbuf_begin < MI->lightbuf_end )
 					{
 						int found = 0;
-						SS3D_Light** plt = MI->lightbuf_begin;
+						SS3D_MeshInstLight* plt = MI->lightbuf_begin;
 						while( plt < MI->lightbuf_end )
 						{
-							if( (*plt)->type == SS3DLIGHT_SPOT )
+							if( plt->L->type == SS3DLIGHT_SPOT )
 							{
-								SS3D_Light* light = *plt;
+								SS3D_Light* light = plt->L;
 								
 								found = 1;
 								
@@ -1613,20 +1715,29 @@ static int rd3d9i_render( SGS_CTX )
 								SS3D_Mtx_TransformPos( viewpos, light->position, cam->mView );
 								SS3D_Mtx_TransformNormal( viewdir, light->direction, cam->mView );
 								VEC3_Normalized( viewdir, viewdir );
+								float tszx = 1, tszy = 1;
+								if( light->shadowTexture )
+								{
+									SS3D_Texture_D3D9* tex = (SS3D_Texture_D3D9*) light->shadowTexture->data;
+									tszx = tex->inh.info.width;
+									tszy = tex->inh.info.height;
+								}
 								VEC4 newdata[4] =
 								{
 									{ viewpos[0], viewpos[1], viewpos[2], light->range },
 									{ light->color[0], light->color[1], light->color[2], light->power },
 									{ viewdir[0], viewdir[1], viewdir[2], DEG2RAD( light->angle ) },
-									{ 0, 0, 0, 0 },
+									{ tszx, tszy, 1.0f / tszx, 1.0f / tszy },
 								};
 								memcpy( sldata_ps_it, newdata, sizeof(VEC4)*4 );
-								memcpy( sldata_vs_it, light->projMatrix, sizeof(MAT4) );
+								MAT4 tmp;
+								SS3D_Mtx_Multiply( tmp, MI->matrix, light->viewProjMatrix );
+								memcpy( sldata_vs_it, tmp, sizeof(MAT4) );
 								sldata_ps_it += 16;
 								sldata_vs_it += 16;
 								
 								use_texture( R, 8 + sl_count * 2, light->cookieTexture ? (SS3D_Texture_D3D9*) light->cookieTexture->data : NULL );
-								use_texture( R, 8 + sl_count * 2 + 1, NULL );
+								use_texture( R, 8 + sl_count * 2 + 1, light->shadowTexture ? (SS3D_Texture_D3D9*) light->shadowTexture->data : NULL );
 								sl_count++;
 								
 								// extract light from array
@@ -1689,7 +1800,7 @@ static int rd3d9i_render( SGS_CTX )
 				}
 			}
 		}
-		else if( SS3D_RPT_SCREEN )
+		else if( pass->type == SS3D_RPT_SCREEN )
 		{
 			D3DCALL_( R->device, SetRenderState, D3DRS_ALPHABLENDENABLE, 1 );
 			D3DCALL_( R->device, SetRenderState, D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
@@ -1719,9 +1830,11 @@ static int rd3d9i_render( SGS_CTX )
 			
 			D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 1 );
 		}
+		/* shadow passes rendered above */
 	}
 	
 	sgs_membuf_destroy( &inst_light_buf, C );
+	sgs_membuf_destroy( &light_inst_buf, C );
 	
 #if 0
 	use_shader( R, sh_solid_render );

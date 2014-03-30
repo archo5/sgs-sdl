@@ -106,6 +106,7 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 /* render pass constants */
 #define SS3D_RPT_OBJECT     1
 #define SS3D_RPT_SCREEN     2
+#define SS3D_RPT_SHADOWS    3
 
 #define SS3D_RPF_OBJ_STATIC      0x01
 #define SS3D_RPF_OBJ_DYNAMIC     0x02
@@ -220,6 +221,13 @@ typedef struct _SS3D_Texture
 }
 SS3D_Texture;
 
+typedef struct _SS3D_MeshInstLight
+{
+	SS3D_MeshInstance* MI;
+	SS3D_Light* L;
+}
+SS3D_MeshInstLight;
+
 struct _SS3D_Light
 {
 	SS3D_Scene* scene;
@@ -236,8 +244,14 @@ struct _SS3D_Light
 	float aspect;
 	sgs_VarObj* cookieTexture;
 	sgs_VarObj* shadowTexture;
+	MAT4 viewMatrix;
 	MAT4 projMatrix;
+	MAT4 viewProjMatrix;
 	int hasShadows;
+	
+	/* frame cache */
+	SS3D_MeshInstLight* mibuf_begin;
+	SS3D_MeshInstLight* mibuf_end;
 };
 
 #if 0
@@ -312,8 +326,8 @@ struct _SS3D_MeshInstance
 	int enabled;
 	
 	/* frame cache */
-	SS3D_Light** lightbuf_begin;
-	SS3D_Light** lightbuf_end;
+	SS3D_MeshInstLight* lightbuf_begin;
+	SS3D_MeshInstLight* lightbuf_end;
 };
 
 typedef void (*fpSS3D_CullScene_SetCamera) ( void* /* data */, SS3D_Camera* );

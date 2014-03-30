@@ -1090,15 +1090,13 @@ sgs_ObjInterface SS3D_MeshInstance_iface[1] =
 #define L_IHDR( funcname ) SS3D_Light* L; \
 	if( !SGS_PARSE_METHOD( C, SS3D_Light_iface, L, SS3D_Light, funcname ) ) return 0;
 
-static int lighti_genProjMatrix( SGS_CTX )
+static int lighti_genSpotLightMatrices( SGS_CTX )
 {
-	MAT4 viewmtx, projmtx;
+	L_IHDR( genSpotLightMatrices );
 	
-	L_IHDR( genProjMatrix );
-	
-	SS3D_Mtx_LookAt( viewmtx, L->position, L->direction, L->updir );
-	SS3D_Mtx_Perspective( projmtx, L->angle, L->aspect, 0.5, L->range * 0.001f, L->range );
-	SS3D_Mtx_Multiply( L->projMatrix, viewmtx, projmtx );
+	SS3D_Mtx_LookAt( L->viewMatrix, L->position, L->direction, L->updir );
+	SS3D_Mtx_Perspective( L->projMatrix, L->angle, L->aspect, 0.5, L->range * 0.001f, L->range );
+	SS3D_Mtx_Multiply( L->viewProjMatrix, L->viewMatrix, L->projMatrix );
 	
 	return 0;
 }
@@ -1118,10 +1116,11 @@ static int light_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "angle" )         SGS_RETURN_REAL( L->angle )
 		SGS_CASE( "aspect" )        SGS_RETURN_REAL( L->aspect )
 		SGS_CASE( "cookieTexture" ) SGS_RETURN_OBJECT( L->cookieTexture )
+		SGS_CASE( "shadowTexture" ) SGS_RETURN_OBJECT( L->shadowTexture )
 		SGS_CASE( "projMatrix" )    SGS_RETURN_MAT4( *L->projMatrix )
 		SGS_CASE( "hasShadows" )    SGS_RETURN_BOOL( L->hasShadows )
 		
-		SGS_CASE( "genProjMatrix" ) SGS_RETURN_CFUNC( lighti_genProjMatrix )
+		SGS_CASE( "genSpotLightMatrices" ) SGS_RETURN_CFUNC( lighti_genSpotLightMatrices )
 	SGS_END_INDEXFUNC;
 }
 
@@ -1139,7 +1138,18 @@ static int light_setindex( SGS_ARGS_SETINDEXFUNC )
 		SGS_CASE( "power" )         SGS_PARSE_REAL( L->power )
 		SGS_CASE( "angle" )         SGS_PARSE_REAL( L->angle )
 		SGS_CASE( "aspect" )        SGS_PARSE_REAL( L->aspect )
-		SGS_CASE( "cookieTexture" ) { if( !L->scene || !L->scene->renderer ) return SGS_EINPROC; SGS_PARSE_OBJECT( L->scene->renderer->ifTexture, L->cookieTexture, 0 ) }
+		SGS_CASE( "cookieTexture" )
+		{
+			if( !L->scene || !L->scene->renderer ) return SGS_EINPROC;
+			if( val->type == SGS_VT_NULL )
+				sgs_ObjAssign( C, &L->cookieTexture, NULL );
+			else if( sgs_IsObjectP( val, L->scene->renderer->ifTexture ) || sgs_IsObjectP( val, L->scene->renderer->ifRT ) )
+				sgs_ObjAssign( C, &L->cookieTexture, sgs_GetObjectStructP( val ) );
+			else
+				return SGS_EINVAL;
+			return SGS_SUCCESS;
+		}
+		SGS_CASE( "shadowTexture" ) { if( !L->scene || !L->scene->renderer ) return SGS_EINPROC; SGS_PARSE_OBJECT( L->scene->renderer->ifRT, L->shadowTexture, 0 ) }
 		SGS_CASE( "projMatrix" )    SGS_PARSE_MAT4( *L->projMatrix )
 		SGS_CASE( "hasShadows" )    SGS_PARSE_BOOL( L->hasShadows )
 	SGS_END_INDEXFUNC;
@@ -1518,7 +1528,7 @@ static int scenei_createLight( SGS_CTX )
 	memset( L, 0, sizeof(*L) );
 	L->scene = S;
 	VEC3_Set( L->updir, 0, 0, 1 );
-	L->angle = 45;
+	L->angle = 60;
 	L->aspect = 1;
 	
 	scene_poke_resource( S, &S->lights, sgs_GetObjectStruct( C, -1 ), 1 );
@@ -1678,66 +1688,69 @@ void SS3D_Renderer_Construct( SS3D_Renderer* R, SGS_CTX )
 	
 	/* default pass info */
 	memset( R->passes, 0, sizeof(R->passes) );
-	R->numPasses = 8;
+	R->numPasses = 9;
+	/* SHADOW PASS INFO */
+	R->passes[0].type = SS3D_RPT_SHADOWS;
+	strcpy( R->passes[0].shname, "ps_shadow" );
 	/* PASS1: [SOLID,STATIC] LIGHTMAP + SUN + 0-16 POINT LIGHTS (once) */
-	R->passes[0].type = SS3D_RPT_OBJECT;
-	R->passes[0].flags = SS3D_RPF_MTL_SOLID | SS3D_RPF_OBJ_STATIC | SS3D_RPF_ENABLED;
-	R->passes[0].maxruns = 1;
-	R->passes[0].pointlight_count = 16;
-	R->passes[0].spotlight_count = 0;
-	R->passes[0].num_inst_textures = 4;
-	strcpy( R->passes[0].shname, "ps_base_isp16" );
-	/* PASS2: [SOLID,DYNAMIC] DIRAMB + SUN + 0-16 POINT LIGHTS (once) */
 	R->passes[1].type = SS3D_RPT_OBJECT;
-	R->passes[1].flags = SS3D_RPF_MTL_SOLID | SS3D_RPF_OBJ_DYNAMIC | SS3D_RPF_ENABLED | SS3D_RPF_CALC_DIRAMB;
+	R->passes[1].flags = SS3D_RPF_MTL_SOLID | SS3D_RPF_OBJ_STATIC | SS3D_RPF_ENABLED;
 	R->passes[1].maxruns = 1;
 	R->passes[1].pointlight_count = 16;
 	R->passes[1].spotlight_count = 0;
-	R->passes[1].num_inst_textures = 0;
-	strcpy( R->passes[1].shname, "ps_base_dsp16" );
-	/* PASS3: [SOLID,ANY] 0-16 POINT LIGHTS (as much as necessary) */
+	R->passes[1].num_inst_textures = 4;
+	strcpy( R->passes[1].shname, "ps_base_isp16" );
+	/* PASS2: [SOLID,DYNAMIC] DIRAMB + SUN + 0-16 POINT LIGHTS (once) */
 	R->passes[2].type = SS3D_RPT_OBJECT;
-	R->passes[2].flags = SS3D_RPF_MTL_SOLID | SS3D_RPF_OBJ_ALL | SS3D_RPF_ENABLED | SS3D_RPF_LIGHTOVERLAY;
-	R->passes[2].maxruns = -1;
+	R->passes[2].flags = SS3D_RPF_MTL_SOLID | SS3D_RPF_OBJ_DYNAMIC | SS3D_RPF_ENABLED | SS3D_RPF_CALC_DIRAMB;
+	R->passes[2].maxruns = 1;
 	R->passes[2].pointlight_count = 16;
 	R->passes[2].spotlight_count = 0;
 	R->passes[2].num_inst_textures = 0;
-	strcpy( R->passes[2].shname, "ps_ext_p16" );
-	/* PASS4: [SOLID,ANY] 0-4 SPOT LIGHTS (as much as necessary) */
+	strcpy( R->passes[2].shname, "ps_base_dsp16" );
+	/* PASS3: [SOLID,ANY] 0-16 POINT LIGHTS (as much as necessary) */
 	R->passes[3].type = SS3D_RPT_OBJECT;
 	R->passes[3].flags = SS3D_RPF_MTL_SOLID | SS3D_RPF_OBJ_ALL | SS3D_RPF_ENABLED | SS3D_RPF_LIGHTOVERLAY;
 	R->passes[3].maxruns = -1;
-	R->passes[3].pointlight_count = 0;
-	R->passes[3].spotlight_count = 4;
+	R->passes[3].pointlight_count = 16;
+	R->passes[3].spotlight_count = 0;
 	R->passes[3].num_inst_textures = 0;
-	strcpy( R->passes[3].shname, "ps_ext_s4" );
+	strcpy( R->passes[3].shname, "ps_ext_p16" );
+	/* PASS4: [SOLID,ANY] 0-4 SPOT LIGHTS (as much as necessary) */
+	R->passes[4].type = SS3D_RPT_OBJECT;
+	R->passes[4].flags = SS3D_RPF_MTL_SOLID | SS3D_RPF_OBJ_ALL | SS3D_RPF_ENABLED | SS3D_RPF_LIGHTOVERLAY;
+	R->passes[4].maxruns = -1;
+	R->passes[4].pointlight_count = 0;
+	R->passes[4].spotlight_count = 4;
+	R->passes[4].num_inst_textures = 0;
+	strcpy( R->passes[4].shname, "ps_ext_s4" );
 	/* PASS5: [DEPTH] FOG */
-	R->passes[4].type = SS3D_RPT_SCREEN;
-	strcpy( R->passes[4].shname, "pp_ss_fog" );
+	R->passes[5].type = SS3D_RPT_SCREEN;
+	strcpy( R->passes[5].shname, "pp_ss_fog" );
 	/* PASS6: [TRANSPARENT,ANY] DIRAMB + SUN + 0-16 POINT LIGHTS (once) */
-	R->passes[5].type = SS3D_RPT_OBJECT;
-	R->passes[5].flags = SS3D_RPF_MTL_TRANSPARENT | SS3D_RPF_OBJ_ALL | SS3D_RPF_ENABLED | SS3D_RPF_CALC_DIRAMB;
-	R->passes[5].maxruns = 1;
-	R->passes[5].pointlight_count = 16;
-	R->passes[5].spotlight_count = 0;
-	R->passes[5].num_inst_textures = 4;
-	strcpy( R->passes[5].shname, "ps_base_dsp16" );
-	/* PASS7: [TRANSPARENT,ANY] 0-16 POINT LIGHTS (as much as necessary) */
 	R->passes[6].type = SS3D_RPT_OBJECT;
-	R->passes[6].flags = SS3D_RPF_MTL_TRANSPARENT | SS3D_RPF_OBJ_ALL | SS3D_RPF_ENABLED | SS3D_RPF_LIGHTOVERLAY;
-	R->passes[6].maxruns = -1;
+	R->passes[6].flags = SS3D_RPF_MTL_TRANSPARENT | SS3D_RPF_OBJ_ALL | SS3D_RPF_ENABLED | SS3D_RPF_CALC_DIRAMB;
+	R->passes[6].maxruns = 1;
 	R->passes[6].pointlight_count = 16;
 	R->passes[6].spotlight_count = 0;
-	R->passes[6].num_inst_textures = 0;
-	strcpy( R->passes[6].shname, "ps_ext_p16" );
-	/* PASS8: [TRANSPARENT,ANY] 0-4 SPOT LIGHTS (as much as necessary) */
+	R->passes[6].num_inst_textures = 4;
+	strcpy( R->passes[6].shname, "ps_base_dsp16" );
+	/* PASS7: [TRANSPARENT,ANY] 0-16 POINT LIGHTS (as much as necessary) */
 	R->passes[7].type = SS3D_RPT_OBJECT;
 	R->passes[7].flags = SS3D_RPF_MTL_TRANSPARENT | SS3D_RPF_OBJ_ALL | SS3D_RPF_ENABLED | SS3D_RPF_LIGHTOVERLAY;
 	R->passes[7].maxruns = -1;
-	R->passes[7].pointlight_count = 0;
-	R->passes[7].spotlight_count = 4;
+	R->passes[7].pointlight_count = 16;
+	R->passes[7].spotlight_count = 0;
 	R->passes[7].num_inst_textures = 0;
-	strcpy( R->passes[7].shname, "ps_ext_s4" );
+	strcpy( R->passes[7].shname, "ps_ext_p16" );
+	/* PASS8: [TRANSPARENT,ANY] 0-4 SPOT LIGHTS (as much as necessary) */
+	R->passes[8].type = SS3D_RPT_OBJECT;
+	R->passes[8].flags = SS3D_RPF_MTL_TRANSPARENT | SS3D_RPF_OBJ_ALL | SS3D_RPF_ENABLED | SS3D_RPF_LIGHTOVERLAY;
+	R->passes[8].maxruns = -1;
+	R->passes[8].pointlight_count = 0;
+	R->passes[8].spotlight_count = 4;
+	R->passes[8].num_inst_textures = 0;
+	strcpy( R->passes[8].shname, "ps_ext_s4" );
 }
 
 void SS3D_Renderer_Destruct( SS3D_Renderer* R )
