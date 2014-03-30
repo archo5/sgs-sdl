@@ -1,5 +1,57 @@
 SGS3D
 
+CULLING SYSTEM
+
+- culling should be separate, vectorized and most of all, it should be possible to mix-and-match methods and add new ones
+
+list of data that can be stored without much effort:
+- bounding box
+- bounding volume
+
+no guarantees can be made about their correctness, however it should be possible to pull that data out of the same kind of data that would be passed for setVertexData in meshes
+- generateAABB( vertexdata, vdecl )
+- generateBoundingSphere( vertexdata, vdecl )
+
+>> culling method #1: bounding volume tests (frustum/OBB/sphere combos)
+object combos:
+- camera/mesh (frustum/OBB)
+- camera/point light (frustum/sphere)
+- camera/spotlight (frustum/frustum)
+- mesh/point light (OBB/sphere)
+- mesh/spotlight (OBB/frustum)
+
+this reminds me that different methods need different amount of overrides
+- lights don't necessarily need occlusion culling but it might benefit if done optionally
+- depending on the type, only point-volume methods may work (so far there is no place for volume-volume methods but let's not close doors just yet)
+- also, in-development methods would benefit from partial implementations
+
+#### cullscene vectorization ####
+- data in: relevant (non-disabled) volumes and volume arrays
+- data out: packed bitfields
+! bitfields are AND-merged and bounced back to origin (so far I don't see any other way to guarantee some stability, considering that mesh instances could be disabled manually between cull/render)
+
+#### cullscene interface ####
+> generally there are two methods
+- a list for each function
+- a list for function groups
+> former is easier to handle, latter is easier to debug
+debuggability depends on possibility to disable any culling function
+! also need quick ordering
+> let's go with "cullscene group arrays with properties for usage of each function
+
+brainfart: we don't want more complex culling functions to work on already-culled data
+> cullscenes should be called in the specified order, using bitfields to reduce input for the following cullscenes
+> what's left the end is merely a list of pointers containing the visible objects
+**** TO CLARIFY: CullScene = group of culling functions and associated data ****
+! associability will be guaranteed by pointer/type inclusion into volume data, considering that after several runs, cullscene output won't be related to the enabled objects list (except in order)
+
+!! another important thing to mention: cullscenes are just interface structures; the default ones can be cloned and have their functions swapped, they won't use the user data pointer just in case that happens
+
+!! and something else: cullscene does not deal in SGScript functions due to the fact that there's no way any benefits can be found in a considerably heavily (more than once) memory-allocating system
+!! -- though it will be an object that can be modified in SGScript, all function pointers will be of `pointer` type, as will the data pointer; boolean attributes will internally be a bitfield
+
+
+===END===
 
 LIGHTING SYSTEM
 

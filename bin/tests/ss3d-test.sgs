@@ -112,12 +112,6 @@ function initialize()
 	_R.ParticleColors = floatarray( 1, 1, 1, 0.3 );
 	_R.ParticleSizes = floatarray( 5 );
 	
-//	_R.ParticleMtl = _R.SS3D.createMaterial();
-//	_R.ParticleMtl.transparent = true;
-//	_R.ParticleMtl.shader = _R.SS3D.getShader( "sprite" );
-//	_R.ParticleMtl.setTexture( 0, _R.SS3D.getTexture( "testdata/smoke.png" ) );
-//	_R.ParticleMtl.setTexture( 1, _R.SS3D.getTexture( "testdata/smoke_normal.png" ) );
-	
 	_R.ParticleMesh = _R.SS3D.createMesh( true );
 	_R.ParticleMesh.numParts = 1;
 	_R.ParticleMesh.transparent = true;
@@ -127,6 +121,23 @@ function initialize()
 	
 	_R.ParticleMI = _R.Scene.createMeshInstance();
 	_R.ParticleMI.mesh = _R.ParticleMesh;
+	
+	
+	// CLOUDS
+	_R.Clouds = floatarray_buffer( 128 * 3 );
+	_R.Clouds.randbox( vec3(-1000,-1000,100), vec3(1000,1000,200) );
+	_R.CloudColors = floatarray( 1, 1, 1, 0.5 );
+	_R.CloudSizes = floatarray( 300 );
+	
+	_R.CloudMesh = _R.SS3D.createMesh( true );
+	_R.CloudMesh.numParts = 1;
+	_R.CloudMesh.transparent = true;
+	_R.CloudMesh.setPartShader( 0, "sprite" );
+	_R.CloudMesh.setPartTexture( 0, 0, _R.SS3D.getTexture( "testdata/smoke.png" ) );
+	_R.CloudMesh.setPartTexture( 0, 1, _R.SS3D.getTexture( "testdata/smoke_normal.png" ) );
+	
+	_R.CloudMI = _R.Scene.createMeshInstance();
+	_R.CloudMI.mesh = _R.CloudMesh;
 	
 	
 	_R.MI = _R.Scene.createMeshInstance();
@@ -176,7 +187,7 @@ function initialize()
 	camera.position = vec3(10,10,10);
 	camera.direction = vec3(-1,-1,-1);
 	camera.aspect = 16/9;
-	camera.angle = 45;
+	camera.angle = 100;
 	printvar( camera );
 	
 	_R.Scene.camera = camera;
@@ -202,6 +213,7 @@ function update()
 	camera.genViewMatrix();
 	
 	SS3D_UpdateParticleMesh( _R.SS3D, _R.ParticleMesh, camera.viewMatrix, _R.Particles, _R.ParticleSizes, _R.ParticleColors );
+	SS3D_UpdateParticleMesh( _R.SS3D, _R.CloudMesh, camera.viewMatrix, _R.Clouds, _R.CloudSizes, _R.CloudColors );
 	_R.SS3D.render();
 	
 	_R.PlaneMeshMI.enabled = true;
@@ -213,6 +225,7 @@ function update()
 	camera.genViewMatrix();
 	
 	SS3D_UpdateParticleMesh( _R.SS3D, _R.ParticleMesh, camera.viewMatrix, _R.Particles, _R.ParticleSizes, _R.ParticleColors );
+	SS3D_UpdateParticleMesh( _R.SS3D, _R.CloudMesh, camera.viewMatrix, _R.Clouds, _R.CloudSizes, _R.CloudColors );
 	_R.SS3D.render();
 	
 	point = camera.worldToScreen( vec3(-5,0,10) );
