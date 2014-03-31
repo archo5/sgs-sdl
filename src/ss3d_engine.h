@@ -121,6 +121,12 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 #define SS3D_SHADER_NAME_LENGTH 64
 #define SS3D_MAX_NUM_PASSES     16
 
+#define SS3D_CF_ENABLE_CAM_MESH 0x01
+#define SS3D_CF_ENABLE_CAM_PLT  0x02
+#define SS3D_CF_ENABLE_CAM_SLT  0x04
+#define SS3D_CF_ENABLE_MESH_PLT 0x08
+#define SS3D_CF_ENABLE_MESH_SLT 0x10
+
 
 sgs_ObjInterface SS3D_Camera_iface[1];
 sgs_ObjInterface SS3D_Light_iface[1];
@@ -330,21 +336,56 @@ struct _SS3D_MeshInstance
 	SS3D_MeshInstLight* lightbuf_end;
 };
 
-typedef void (*fpSS3D_CullScene_SetCamera) ( void* /* data */, SS3D_Camera* );
-typedef int (*fpSS3D_CullScene_AABB)       ( void* /* data */, VEC3 /* from */, VEC3 /* to */ );
-typedef int (*fpSS3D_CullScene_OBB)        ( void* /* data */, VEC3 /* center */, VEC3 /* extents */, MAT3 /* rotation */ );
-typedef int (*fpSS3D_CullScene_Sphere)     ( void* /* data */, VEC3 /* center */, float /* radius */ );
-typedef int (*fpSS3D_CullScene_Spotlight)  ( void* /* data */, VEC3 /* origin */, float /* radius */, VEC3 /* direction */, float /* halfAngle */ );
+
+typedef struct _SS3D_CullSceneFrustum
+{
+	VEC3 position;
+	VEC3 direction;
+	VEC3 up;
+	float hangle;
+	float vangle;
+	float zmin;
+	float zmax;
+}
+SS3D_CullSceneFrustum;
+typedef struct _SS3D_CullSceneCamera
+{
+	SS3D_CullSceneFrustum frustum;
+	MAT4 viewProjMatrix;
+}
+SS3D_CullSceneCamera;
+typedef struct _SS3D_CullScenePointLight
+{
+	VEC3 position;
+	float radius;
+}
+SS3D_CullScenePointLight;
+typedef struct _SS3D_CullSceneMesh
+{
+	MAT4 transform;
+	VEC3 min, max;
+	SS3D_MeshInstance* meshinst;
+}
+SS3D_CullSceneMesh;
+
+typedef int (*fpSS3D_CullScene_Camera_MeshList) ( void* /* data */, uint32_t /* count */, SS3D_CullSceneCamera* /* camera */, SS3D_CullSceneMesh* /* meshes */, uint32_t* /* outbitfield */ );
+typedef int (*fpSS3D_CullScene_Camera_PointLightList) ( void* /* data */, uint32_t /* count */, SS3D_CullSceneCamera* /* camera */, SS3D_CullScenePointLight* /* lights */, uint32_t* /* outbitfield */ );
+typedef int (*fpSS3D_CullScene_Camera_SpotLightList) ( void* /* data */, uint32_t /* count */, SS3D_CullSceneCamera* /* camera */, SS3D_CullSceneFrustum* /* data */, float* /* matrices */, uint32_t* /* outbitfield */ );
+typedef int (*fpSS3D_CullScene_Mesh_PointLightList) ( void* /* data */, uint32_t /* count */, SS3D_CullSceneMesh* /* mesh */, SS3D_CullScenePointLight* /* lights */, uint32_t* /* outbitfield */ );
+typedef int (*fpSS3D_CullScene_Mesh_SpotLightList) ( void* /* data */, uint32_t /* count */, SS3D_CullSceneMesh* /* mesh */, SS3D_CullSceneFrustum* /* data */, float* /* matrices */, uint32_t* /* outbitfield */ );
 
 struct _SS3D_CullScene
 {
-	fpSS3D_CullScene_SetCamera setCameraFunc;
-	fpSS3D_CullScene_AABB      AABBFunc;
-	fpSS3D_CullScene_OBB       OBBFunc;
-	fpSS3D_CullScene_Sphere    sphereFunc;
-	fpSS3D_CullScene_Spotlight spotlightFunc;
-	void* dataStruct;
+	fpSS3D_CullScene_Camera_MeshList       camera_meshlist;
+	fpSS3D_CullScene_Camera_PointLightList camera_pointlightlist;
+	fpSS3D_CullScene_Camera_SpotLightList  camera_spotlightlist;
+	fpSS3D_CullScene_Mesh_PointLightList   mesh_pointlightlist;
+	fpSS3D_CullScene_Mesh_SpotLightList    mesh_spotlightlist;
+	void* data;
+	uint32_t flags;
+	sgs_Variable store;
 };
+
 
 struct _SS3D_Camera
 {

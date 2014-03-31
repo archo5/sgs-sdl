@@ -1247,14 +1247,88 @@ sgs_ObjInterface SS3D_Light_iface[1] =
 //
 // CULL SCENE
 
+/* todo merge: */
+#define SGS_RETURN_PTR( value ) { sgs_PushPtr( C, value ); return SGS_SUCCESS; }
+#define SGS_PARSE_PTR( out ) { void* V; if( sgs_ParsePtrP( C, val, &V ) ){ out = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+
+#define CS_HDR SS3D_CullScene* CS = (SS3D_CullScene*) obj->data;
+
+static int cullscene_destruct( SGS_CTX, sgs_VarObj* obj )
+{
+	CS_HDR;
+	sgs_Release( C, &CS->store );
+	return SGS_SUCCESS;
+}
+
+static int cullscene_gcmark( SGS_CTX, sgs_VarObj* obj )
+{
+	CS_HDR;
+	sgs_GCMark( C, &CS->store );
+	return SGS_SUCCESS;
+}
+
+static int cullscene_getindex( SGS_ARGS_GETINDEXFUNC )
+{
+	CS_HDR;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "camera_meshlist" ) SGS_RETURN_PTR( CS->camera_meshlist )
+		SGS_CASE( "camera_pointlightlist" ) SGS_RETURN_PTR( CS->camera_pointlightlist )
+		SGS_CASE( "camera_spotlightlist" ) SGS_RETURN_PTR( CS->camera_spotlightlist )
+		SGS_CASE( "mesh_pointlightlist" ) SGS_RETURN_PTR( CS->mesh_pointlightlist )
+		SGS_CASE( "mesh_spotlightlist" ) SGS_RETURN_PTR( CS->mesh_spotlightlist )
+		SGS_CASE( "data" ) SGS_RETURN_PTR( CS->data )
+		SGS_CASE( "store" ) { sgs_PushVariable( C, &CS->store ); return SGS_SUCCESS; }
+		
+		SGS_CASE( "enable_camera_meshlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_CAM_MESH )
+		SGS_CASE( "enable_camera_pointlightlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_CAM_PLT )
+		SGS_CASE( "enable_camera_spotlightlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_CAM_SLT )
+		SGS_CASE( "enable_mesh_pointlightlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_MESH_PLT )
+		SGS_CASE( "enable_mesh_spotlightlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_MESH_SLT )
+	SGS_END_INDEXFUNC;
+}
+
+static int cullscene_setindex( SGS_ARGS_SETINDEXFUNC )
+{
+	CS_HDR;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "camera_meshlist" ) SGS_PARSE_PTR( CS->camera_meshlist )
+		SGS_CASE( "camera_pointlightlist" ) SGS_PARSE_PTR( CS->camera_pointlightlist )
+		SGS_CASE( "camera_spotlightlist" ) SGS_PARSE_PTR( CS->camera_spotlightlist )
+		SGS_CASE( "mesh_pointlightlist" ) SGS_PARSE_PTR( CS->mesh_pointlightlist )
+		SGS_CASE( "mesh_spotlightlist" ) SGS_PARSE_PTR( CS->mesh_spotlightlist )
+		SGS_CASE( "data" ) SGS_PARSE_PTR( CS->data )
+		SGS_CASE( "store" ) { sgs_Assign( C, &CS->store, val ); return SGS_SUCCESS; }
+		
+		SGS_CASE( "enable_camera_meshlist" ) { sgs_Bool v; if( sgs_ParseBoolP( C, val, &v ) ){ CS->flags = ( CS->flags & ~SS3D_CF_ENABLE_CAM_MESH ) | ( v * SS3D_CF_ENABLE_CAM_MESH ); return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "enable_camera_pointlightlist" ) { sgs_Bool v; if( sgs_ParseBoolP( C, val, &v ) ){ CS->flags = ( CS->flags & ~SS3D_CF_ENABLE_CAM_PLT ) | ( v * SS3D_CF_ENABLE_CAM_PLT ); return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "enable_camera_spotlightlist" ) { sgs_Bool v; if( sgs_ParseBoolP( C, val, &v ) ){ CS->flags = ( CS->flags & ~SS3D_CF_ENABLE_CAM_SLT ) | ( v * SS3D_CF_ENABLE_CAM_SLT ); return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "enable_mesh_pointlightlist" ) { sgs_Bool v; if( sgs_ParseBoolP( C, val, &v ) ){ CS->flags = ( CS->flags & ~SS3D_CF_ENABLE_MESH_PLT ) | ( v * SS3D_CF_ENABLE_MESH_PLT ); return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "enable_mesh_spotlightlist" ) { sgs_Bool v; if( sgs_ParseBoolP( C, val, &v ) ){ CS->flags = ( CS->flags & ~SS3D_CF_ENABLE_MESH_SLT ) | ( v * SS3D_CF_ENABLE_MESH_SLT ); return SGS_SUCCESS; } return SGS_EINVAL; }
+	SGS_END_INDEXFUNC;
+}
+
 sgs_ObjInterface SS3D_CullScene_iface[1] =
 {{
 	"SS3D_CullScene",
-	NULL, NULL,
-	NULL, NULL,
+	cullscene_destruct, cullscene_gcmark,
+	cullscene_getindex, cullscene_setindex,
 	NULL, NULL, NULL, NULL,
 	NULL, NULL,
 }};
+
+static SS3D_CullScene* push_cullscene( SGS_CTX )
+{
+	SS3D_CullScene* cs = (SS3D_CullScene*) sgs_PushObjectIPA( C, sizeof(*cs), SS3D_CullScene_iface );
+	memset( cs, 0, sizeof(*cs) );
+	return cs;
+}
+
+static int SS3D_CreateCullScene( SGS_CTX )
+{
+	SGSFN( "SS3D_CreateCullScene" );
+	push_cullscene( C );
+	return 1;
+}
 
 
 //
@@ -1395,7 +1469,7 @@ sgs_ObjInterface SS3D_Camera_iface[1] =
 	NULL, NULL,
 }};
 
-int SS3D_CreateCamera( SGS_CTX )
+static int SS3D_CreateCamera( SGS_CTX )
 {
 	SS3D_Camera* CAM = (SS3D_Camera*) sgs_PushObjectIPA( C, sizeof(*CAM), SS3D_Camera_iface );
 	VEC3_Set( CAM->position, 0, 0, 0 );
@@ -1474,7 +1548,7 @@ sgs_ObjInterface SS3D_Viewport_iface[1] =
 	NULL, NULL,
 }};
 
-int SS3D_CreateViewport( SGS_CTX )
+static int SS3D_CreateViewport( SGS_CTX )
 {
 	SS3D_Viewport* VP = (SS3D_Viewport*) sgs_PushObjectIPA( C, sizeof(*VP), SS3D_Viewport_iface );
 	VP->x1 = 0;
@@ -1848,6 +1922,7 @@ static sgs_RegFuncConst ss3d_fconsts[] =
 	FN( MeshGen_Particles ),
 	FN( MeshGen_Terrain ),
 	
+	FN( CreateCullScene ),
 	FN( CreateCamera ),
 	FN( CreateViewport ),
 	FN( CreateRenderer ),
