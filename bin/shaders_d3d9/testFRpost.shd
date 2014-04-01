@@ -25,7 +25,11 @@ float4 main( float2 itex : TEXCOORD0 ) : COLOR0
 	itex += parm.xy;
 	float3 ocol = tex2D( texOCOL, itex ).rgb;
 	float3 bloom = tex2D( texBLOOM, itex ).rgb;
-	ocol += bloom / 2;
+	ocol += pow(bloom,1) * 0.5;
+	ocol -= 1;
+	ocol *= 1.01;
+	ocol += 1;
+	ocol = max( 0, ocol );
 	ocol = sqrt( ocol );
 	return float4(ocol,1);
 }

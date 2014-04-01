@@ -1613,9 +1613,9 @@ static int rd3d9i_render( SGS_CTX )
 	
 	VEC4 dirlight[ 3 ] =
 	{
-		{ 0.01f, 0.01f, 0.01f, 0 },
-		{ 0.7f, 0.7f, 0.07f, 0 },
-		{ 0.7f, 0.6f, 0.5f, 0 },
+		{ scene->ambientLightColor[0], scene->ambientLightColor[1], scene->ambientLightColor[2], 1 },
+		{ -scene->dirLightDir[0], -scene->dirLightDir[1], -scene->dirLightDir[2], 0 },
+		{ scene->dirLightColor[0], scene->dirLightColor[1], scene->dirLightColor[2], 1 },
 	};
 	VEC3_Normalized( dirlight[1], dirlight[1] );
 	SS3D_Mtx_TransformNormal( dirlight[1], dirlight[1], cam->mView );

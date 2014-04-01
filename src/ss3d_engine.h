@@ -36,6 +36,7 @@ typedef uint32_t bitfield_t;
 void SS3D_Mtx_Identity( MAT4 out );
 void SS3D_Mtx_Transpose( MAT4 mtx );
 void SS3D_Mtx_Multiply( MAT4 out, MAT4 A, MAT4 B );
+int SS3D_Mtx_Invert( MAT4 out, MAT4 M );
 void SS3D_Mtx_Transform( VEC4 out, VEC4 v, MAT4 mtx );
 void SS3D_Mtx_TransformPos( VEC3 out, VEC3 pos, MAT4 mtx );
 void SS3D_Mtx_TransformNormal( VEC3 out, VEC3 pos, MAT4 mtx );
@@ -329,7 +330,8 @@ struct _SS3D_MeshInstance
 	sgs_VarObj* mesh;
 	MAT4 matrix;
 	VEC4 color;
-	int enabled;
+	bitfield_t enabled : 1;
+	bitfield_t visible : 1;
 	
 	/* frame cache */
 	SS3D_MeshInstLight* lightbuf_begin;
@@ -344,14 +346,15 @@ typedef struct _SS3D_CullSceneFrustum
 	VEC3 up;
 	float hangle;
 	float vangle;
-	float zmin;
-	float zmax;
+	float znear;
+	float zfar;
 }
 SS3D_CullSceneFrustum;
 typedef struct _SS3D_CullSceneCamera
 {
 	SS3D_CullSceneFrustum frustum;
 	MAT4 viewProjMatrix;
+	MAT4 invViewProjMatrix;
 }
 SS3D_CullSceneCamera;
 typedef struct _SS3D_CullScenePointLight
@@ -364,7 +367,6 @@ typedef struct _SS3D_CullSceneMesh
 {
 	MAT4 transform;
 	VEC3 min, max;
-	SS3D_MeshInstance* meshinst;
 }
 SS3D_CullSceneMesh;
 
@@ -416,7 +418,7 @@ struct _SS3D_Scene
 	sgs_VHTable meshInstances;
 	sgs_VHTable lights;
 	
-	sgs_VarObj* cullScene;
+	sgs_VarObj* cullScenes;
 	sgs_VarObj* camera;
 	
 	VEC3 fogColor;
@@ -425,6 +427,10 @@ struct _SS3D_Scene
 	float fogHeightDensity;
 	float fogStartHeight;
 	float fogMinDist;
+	
+	VEC3 ambientLightColor;
+	VEC3 dirLightColor;
+	VEC3 dirLightDir;
 };
 
 typedef struct _SS3D_RenderPass

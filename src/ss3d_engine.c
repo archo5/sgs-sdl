@@ -9,6 +9,17 @@
 #define CN( x ) { "SS3D" #x, SS3D##x }
 
 
+/* todo merge: */
+#define SGS_RETURN_PTR( value ) { sgs_PushPtr( C, value ); return SGS_SUCCESS; }
+#define SGS_PARSE_PTR( out ) { void* V; if( sgs_ParsePtrP( C, val, &V ) ){ out = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+
+
+
+static size_t divideup( size_t x, int d )
+{
+	return ( x + d - 1 ) / d;
+}
+
 //
 // MATH
 
@@ -52,6 +63,136 @@ void SS3D_Mtx_Multiply( MAT4 out, MAT4 A, MAT4 B )
 	out[3][2] = A[3][0] * B[0][2] + A[3][1] * B[1][2] + A[3][2] * B[2][2] + A[3][3] * B[3][2];
 	out[3][3] = A[3][0] * B[0][3] + A[3][1] * B[1][3] + A[3][2] * B[2][3] + A[3][3] * B[3][3];
 };
+
+int SS3D_Mtx_Invert( MAT4 out, MAT4 M )
+{
+	float inv[16], *m = M[0], *outInv = out[0], det;
+	int i;
+	
+	inv[0] = m[5]  * m[10] * m[15] -
+			 m[5]  * m[11] * m[14] -
+			 m[9]  * m[6]  * m[15] +
+			 m[9]  * m[7]  * m[14] +
+			 m[13] * m[6]  * m[11] -
+			 m[13] * m[7]  * m[10];
+	
+	inv[4] = -m[4]  * m[10] * m[15] +
+			  m[4]  * m[11] * m[14] +
+			  m[8]  * m[6]  * m[15] -
+			  m[8]  * m[7]  * m[14] -
+			  m[12] * m[6]  * m[11] +
+			  m[12] * m[7]  * m[10];
+	
+	inv[8] = m[4]  * m[9] * m[15] -
+			 m[4]  * m[11] * m[13] -
+			 m[8]  * m[5] * m[15] +
+			 m[8]  * m[7] * m[13] +
+			 m[12] * m[5] * m[11] -
+			 m[12] * m[7] * m[9];
+	
+	inv[12] = -m[4]  * m[9] * m[14] +
+			   m[4]  * m[10] * m[13] +
+			   m[8]  * m[5] * m[14] -
+			   m[8]  * m[6] * m[13] -
+			   m[12] * m[5] * m[10] +
+			   m[12] * m[6] * m[9];
+	
+	inv[1] = -m[1]  * m[10] * m[15] +
+			  m[1]  * m[11] * m[14] +
+			  m[9]  * m[2] * m[15] -
+			  m[9]  * m[3] * m[14] -
+			  m[13] * m[2] * m[11] +
+			  m[13] * m[3] * m[10];
+	
+	inv[5] = m[0]  * m[10] * m[15] -
+			 m[0]  * m[11] * m[14] -
+			 m[8]  * m[2] * m[15] +
+			 m[8]  * m[3] * m[14] +
+			 m[12] * m[2] * m[11] -
+			 m[12] * m[3] * m[10];
+	
+	inv[9] = -m[0]  * m[9] * m[15] +
+			  m[0]  * m[11] * m[13] +
+			  m[8]  * m[1] * m[15] -
+			  m[8]  * m[3] * m[13] -
+			  m[12] * m[1] * m[11] +
+			  m[12] * m[3] * m[9];
+	
+	inv[13] = m[0]  * m[9] * m[14] -
+			  m[0]  * m[10] * m[13] -
+			  m[8]  * m[1] * m[14] +
+			  m[8]  * m[2] * m[13] +
+			  m[12] * m[1] * m[10] -
+			  m[12] * m[2] * m[9];
+	
+	inv[2] = m[1]  * m[6] * m[15] -
+			 m[1]  * m[7] * m[14] -
+			 m[5]  * m[2] * m[15] +
+			 m[5]  * m[3] * m[14] +
+			 m[13] * m[2] * m[7] -
+			 m[13] * m[3] * m[6];
+	
+	inv[6] = -m[0]  * m[6] * m[15] +
+			  m[0]  * m[7] * m[14] +
+			  m[4]  * m[2] * m[15] -
+			  m[4]  * m[3] * m[14] -
+			  m[12] * m[2] * m[7] +
+			  m[12] * m[3] * m[6];
+	
+	inv[10] = m[0]  * m[5] * m[15] -
+			  m[0]  * m[7] * m[13] -
+			  m[4]  * m[1] * m[15] +
+			  m[4]  * m[3] * m[13] +
+			  m[12] * m[1] * m[7] -
+			  m[12] * m[3] * m[5];
+	
+	inv[14] = -m[0]  * m[5] * m[14] +
+			   m[0]  * m[6] * m[13] +
+			   m[4]  * m[1] * m[14] -
+			   m[4]  * m[2] * m[13] -
+			   m[12] * m[1] * m[6] +
+			   m[12] * m[2] * m[5];
+	
+	inv[3] = -m[1] * m[6] * m[11] +
+			  m[1] * m[7] * m[10] +
+			  m[5] * m[2] * m[11] -
+			  m[5] * m[3] * m[10] -
+			  m[9] * m[2] * m[7] +
+			  m[9] * m[3] * m[6];
+	
+	inv[7] = m[0] * m[6] * m[11] -
+			 m[0] * m[7] * m[10] -
+			 m[4] * m[2] * m[11] +
+			 m[4] * m[3] * m[10] +
+			 m[8] * m[2] * m[7] -
+			 m[8] * m[3] * m[6];
+	
+	inv[11] = -m[0] * m[5] * m[11] +
+			   m[0] * m[7] * m[9] +
+			   m[4] * m[1] * m[11] -
+			   m[4] * m[3] * m[9] -
+			   m[8] * m[1] * m[7] +
+			   m[8] * m[3] * m[5];
+	
+	inv[15] = m[0] * m[5] * m[10] -
+			  m[0] * m[6] * m[9] -
+			  m[4] * m[1] * m[10] +
+			  m[4] * m[2] * m[9] +
+			  m[8] * m[1] * m[6] -
+			  m[8] * m[2] * m[5];
+	
+	det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
+	
+	if( det == 0 )
+		return 0;
+	
+	det = 1.0f / det;
+	
+	for( i = 0; i < 16; ++i )
+		outInv[ i ] = inv[ i ] * det;
+	
+	return 1;
+}
 
 void SS3D_Mtx_Transform( VEC4 out, VEC4 v, MAT4 mtx )
 {
@@ -123,6 +264,17 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 	out[2][0] = out[2][1] = 0; out[2][3] = 1;
 	out[3][2] = -znear * zfar / ( zfar - znear );
 	out[3][0] = out[3][1] = out[3][3] = 0;
+}
+
+void SS3D_PerspectiveAngles( float angle, float aspect, float aamix, float* outh, float* outv )
+{
+	float tha = tan( DEG2RAD( angle ) / 2.0f );
+	if( tha < 0.001f ) tha = 0.001f;
+	float itha = 1.0f / tha;
+	float xscale = itha / pow( aspect, aamix );
+	float yscale = itha * pow( aspect, 1 - aamix );
+	if( outh ) *outh = atan( xscale );
+	if( outv ) *outv = atan( yscale );
 }
 
 
@@ -456,11 +608,6 @@ static void scene_poke_resource( SS3D_Scene* S, sgs_VHTable* which, sgs_VarObj* 
 
 //
 // TEXTURE
-
-static size_t divideup( size_t x, int d )
-{
-	return ( x + d - 1 ) / d;
-}
 
 size_t SS3D_TextureInfo_GetTextureSideSize( SS3D_TextureInfo* TI )
 {
@@ -1247,10 +1394,6 @@ sgs_ObjInterface SS3D_Light_iface[1] =
 //
 // CULL SCENE
 
-/* todo merge: */
-#define SGS_RETURN_PTR( value ) { sgs_PushPtr( C, value ); return SGS_SUCCESS; }
-#define SGS_PARSE_PTR( out ) { void* V; if( sgs_ParsePtrP( C, val, &V ) ){ out = V; return SGS_SUCCESS; } return SGS_EINVAL; }
-
 #define CS_HDR SS3D_CullScene* CS = (SS3D_CullScene*) obj->data;
 
 static int cullscene_destruct( SGS_CTX, sgs_VarObj* obj )
@@ -1619,6 +1762,94 @@ static int scenei_destroyLight( SGS_CTX )
 	return 0;
 }
 
+
+/************ SCENE CULLING *************/
+static void get_frustum_from_camera( SS3D_Camera* CAM, SS3D_CullSceneCamera* out )
+{
+	VEC3_Copy( out->frustum.position, CAM->position );
+	VEC3_Copy( out->frustum.direction, CAM->direction );
+	VEC3_Copy( out->frustum.up, CAM->up );
+	SS3D_PerspectiveAngles( CAM->angle, CAM->aspect, CAM->aamix, &out->frustum.hangle, &out->frustum.vangle );
+	out->frustum.znear = CAM->znear;
+	out->frustum.zfar = CAM->zfar;
+	SS3D_Mtx_Multiply( out->viewProjMatrix, CAM->mView, CAM->mProj );
+	SS3D_Mtx_Identity( out->invViewProjMatrix );
+	SS3D_Mtx_Invert( out->invViewProjMatrix, out->viewProjMatrix );
+}
+
+void SS3D_Scene_Cull_Camera_MeshList( SGS_CTX, SS3D_Scene* S )
+{
+	SS3D_Camera* CAM = (SS3D_Camera*) S->camera->data;
+	if( !CAM )
+		return;
+	
+	uint32_t i, data_size = 0;
+	
+	SS3D_CullSceneCamera camera_frustum;
+	get_frustum_from_camera( CAM, &camera_frustum );
+	
+	SS3D_MeshInstance** mesh_instances = sgs_Alloc_n( SS3D_MeshInstance*, S->meshInstances.size );
+	SS3D_CullSceneMesh* mesh_bounds = sgs_Alloc_n( SS3D_CullSceneMesh, S->meshInstances.size );
+	uint32_t* mesh_visiblity = sgs_Alloc_n( uint32_t, divideup( S->meshInstances.size, 32 ) );
+	
+	/* fill in instance data */
+	sgs_SizeVal inst_id;
+	for( inst_id = 0; inst_id < S->meshInstances.size; ++inst_id )
+	{
+		SS3D_MeshInstance* MI = (SS3D_MeshInstance*) S->meshInstances.vars[ inst_id ].val.data.O->data;
+		MI->visible = 0;
+		if( !MI->mesh || !MI->enabled )
+			continue;
+		SS3D_Mesh* M = (SS3D_Mesh*) MI->mesh->data;
+		
+		mesh_instances[ data_size ] = MI;
+		memcpy( mesh_bounds[ data_size ].transform, MI->matrix, sizeof( MAT4 ) );
+		memcpy( mesh_bounds[ data_size ].min, M->boundsMin, sizeof( VEC3 ) );
+		memcpy( mesh_bounds[ data_size ].max, M->boundsMax, sizeof( VEC3 ) );
+		data_size++;
+	}
+	
+	/* iterate all cullscenes */
+	sgs_Variable arr, it, val;
+	sgs_InitObjectPtr( &arr, S->cullScenes );
+	sgs_GetIteratorP( C, &arr, &it );
+	while( sgs_IterAdvanceP( C, &it ) > 0 )
+	{
+		sgs_IterGetDataP( C, &it, NULL, &val );
+		if( sgs_IsObjectP( &val, SS3D_CullScene_iface ) )
+		{
+			SS3D_CullScene* CS = (SS3D_CullScene*) sgs_GetObjectDataP( &val );
+			
+			if( CS->camera_meshlist && ( CS->flags & SS3D_CF_ENABLE_CAM_MESH ) != 0 )
+			{
+				if( CS->camera_meshlist( CS->data, data_size, &camera_frustum, mesh_bounds, mesh_visiblity ) )
+				{
+					uint32_t outpos = 0;
+					for( i = 0; i < data_size; ++i )
+					{
+						if( mesh_visiblity[ i / 32 ] & ( 1 << ( i % 32 ) ) )
+						{
+							if( i > outpos )
+							{
+								mesh_instances[ outpos ] = mesh_instances[ i ];
+								memcpy( &mesh_bounds[ outpos ], &mesh_bounds[ i ], sizeof( mesh_bounds[0] ) );
+							}
+							outpos++;
+						}
+					}
+					data_size = outpos;
+				}
+			}
+		}
+		sgs_Release( C, &val );
+	}
+	sgs_Release( C, &it );
+	
+	for( i = 0; i < data_size; ++i )
+		mesh_instances[ i ]->visible = 1;
+}
+/********** SCENE CULLING END ***********/
+
 static int scene_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	SC_HDR;
@@ -1630,7 +1861,7 @@ static int scene_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "destroyLight" )        SGS_RETURN_CFUNC( scenei_destroyLight )
 		
 		// properties
-		SGS_CASE( "cullScene" ) SGS_RETURN_OBJECT( S->cullScene )
+		SGS_CASE( "cullScenes" ) SGS_RETURN_OBJECT( S->cullScenes )
 		SGS_CASE( "camera" )    SGS_RETURN_OBJECT( S->camera )
 		
 		SGS_CASE( "fogColor" )         SGS_RETURN_VEC3P( S->fogColor )
@@ -1639,6 +1870,10 @@ static int scene_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "fogHeightDensity" ) SGS_RETURN_REAL( S->fogHeightDensity )
 		SGS_CASE( "fogStartHeight" )   SGS_RETURN_REAL( S->fogStartHeight )
 		SGS_CASE( "fogMinDist" )       SGS_RETURN_REAL( S->fogMinDist )
+		
+		SGS_CASE( "ambientLightColor" ) SGS_RETURN_VEC3P( S->ambientLightColor )
+		SGS_CASE( "dirLightColor" )     SGS_RETURN_VEC3P( S->dirLightColor )
+		SGS_CASE( "dirLightDir" )       SGS_RETURN_VEC3P( S->dirLightDir )
 	SGS_END_INDEXFUNC;
 }
 
@@ -1646,20 +1881,6 @@ static int scene_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	SC_HDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "cullScene" )
-		{
-			if( val->type == SGS_VT_NULL )
-			{
-				sgs_ObjAssign( C, &S->cullScene, NULL );
-				return SGS_SUCCESS;
-			}
-			else if( sgs_IsObjectP( val, SS3D_CullScene_iface ) )
-			{
-				sgs_ObjAssign( C, &S->cullScene, sgs_GetObjectStructP( val ) );
-				return SGS_SUCCESS;
-			}
-			return SGS_EINVAL;
-		}
 		SGS_CASE( "camera" )
 		{
 			if( val->type == SGS_VT_NULL )
@@ -1681,6 +1902,10 @@ static int scene_setindex( SGS_ARGS_SETINDEXFUNC )
 		SGS_CASE( "fogHeightDensity" ) SGS_PARSE_REAL( S->fogHeightDensity )
 		SGS_CASE( "fogStartHeight" )   SGS_PARSE_REAL( S->fogStartHeight )
 		SGS_CASE( "fogMinDist" )       SGS_PARSE_REAL( S->fogMinDist )
+		
+		SGS_CASE( "ambientLightColor" ) SGS_PARSE_VEC3( S->ambientLightColor, 0 )
+		SGS_CASE( "dirLightColor" )     SGS_PARSE_VEC3( S->dirLightColor, 0 )
+		SGS_CASE( "dirLightDir" )       SGS_PARSE_VEC3( S->dirLightDir, 0 )
 	SGS_END_INDEXFUNC;
 }
 
@@ -1718,10 +1943,10 @@ static int scene_destruct( SGS_CTX, sgs_VarObj* obj )
 		}
 		sgs_vht_free( &S->meshInstances, C );
 		sgs_vht_free( &S->lights, C );
-		if( S->cullScene )
+		if( S->cullScenes )
 		{
-			sgs_ObjRelease( C, S->cullScene );
-			S->cullScene = NULL;
+			sgs_ObjRelease( C, S->cullScenes );
+			S->cullScenes = NULL;
 		}
 	}
 	return SGS_SUCCESS;
@@ -1881,7 +2106,10 @@ void SS3D_Renderer_PushScene( SS3D_Renderer* R )
 	sgs_vht_init( &S->meshInstances, R->C, 128, 128 );
 	sgs_vht_init( &S->lights, R->C, 128, 128 );
 	S->camera = NULL;
-	S->cullScene = NULL;
+	
+	sgs_Variable cullScenes;
+	sgs_InitArray( R->C, &cullScenes, 0 );
+	S->cullScenes = sgs_GetObjectStructP( &cullScenes );
 	
 	VEC3_Set( S->fogColor, 0, 0, 0 );
 	S->fogHeightFactor = 0;
@@ -1889,6 +2117,9 @@ void SS3D_Renderer_PushScene( SS3D_Renderer* R )
 	S->fogHeightDensity = 0;
 	S->fogStartHeight = 0;
 	S->fogMinDist = 0;
+	VEC3_Set( S->ambientLightColor, 0, 0, 0 );
+	VEC3_Set( S->dirLightColor, 0, 0, 0 );
+	VEC3_Set( S->dirLightDir, 0, 0, -1 );
 	
 	SS3D_Renderer_PokeResource( R, sgs_GetObjectStruct( R->C, -1 ), 1 );
 }

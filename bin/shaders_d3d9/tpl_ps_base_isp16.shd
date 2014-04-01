@@ -115,7 +115,7 @@ __CODE__
 		float NdotL = saturate( dot( outNormal, lightDir ) );
 		
 		RdotV = saturate( dot( reflect( lightDir, outNormal ), viewDir ) );
-		specAmount = pow( RdotV, outSpecularPower ) * sqrt( outSpecularPower ) * PL.vposrad.w / 10;
+		specAmount = pow( RdotV, outSpecularPower ) * sqrt( outSpecularPower );
 		
 		totalDiffuse += lightColor * NdotL * distFactor;
 		totalSpecular += lightColor * specAmount;
