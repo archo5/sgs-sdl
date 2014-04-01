@@ -1406,15 +1406,16 @@ static int rd3d9i_render( SGS_CTX )
 //	D3DCALL_( R->device, SetTransform, D3DTS_VIEW, (D3DMATRIX*) *cam->mView );
 //	D3DCALL_( R->device, SetTransform, D3DTS_PROJECTION, (D3DMATRIX*) *cam->mProj );
 	
+	/* CULL */
+	SS3D_Scene_Cull_Camera_MeshList( C, scene );
 	
 	/* SORT OUT MESH INSTANCE / LIGHT RELATIONS */
 	sgs_MemBuf inst_light_buf = sgs_membuf_create();
 	sgs_MemBuf light_inst_buf = sgs_membuf_create();
-	/* CULL */
 	for( inst_id = 0; inst_id < scene->meshInstances.size; ++inst_id )
 	{
 		SS3D_MeshInstance* MI = (SS3D_MeshInstance*) scene->meshInstances.vars[ inst_id ].val.data.O->data;
-		if( !MI->mesh || !MI->enabled )
+		if( !MI->mesh || !MI->enabled || !MI->visible )
 			continue;
 		MI->lightbuf_begin = (SS3D_MeshInstLight*) inst_light_buf.size;
 		for( light_id = 0; light_id < scene->lights.size; ++light_id )
@@ -1430,11 +1431,12 @@ static int rd3d9i_render( SGS_CTX )
 	for( inst_id = 0; inst_id < scene->meshInstances.size; ++inst_id )
 	{
 		SS3D_MeshInstance* MI = (SS3D_MeshInstance*) scene->meshInstances.vars[ inst_id ].val.data.O->data;
-		if( !MI->mesh || !MI->enabled )
+		if( !MI->mesh || !MI->enabled || !MI->visible )
 			continue;
 		MI->lightbuf_begin = (SS3D_MeshInstLight*)( (size_t) MI->lightbuf_begin + (size_t) inst_light_buf.ptr );
 		MI->lightbuf_end = (SS3D_MeshInstLight*)( (size_t) MI->lightbuf_end + (size_t) inst_light_buf.ptr );
 	}
+	
 	/*  insts -> lights  TO  lights -> insts  */
 	sgs_membuf_resize( &light_inst_buf, C, inst_light_buf.size );
 	memcpy( light_inst_buf.ptr, inst_light_buf.ptr, inst_light_buf.size );
@@ -1456,6 +1458,7 @@ static int rd3d9i_render( SGS_CTX )
 		pmil->L->mibuf_end = pmil + 1;
 		pmil++;
 	}
+	
 	
 	D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 1 );
 	D3DCALL_( R->device, SetRenderState, D3DRS_ZWRITEENABLE, 1 );
@@ -1494,7 +1497,7 @@ static int rd3d9i_render( SGS_CTX )
 			for( ; pmil < pmilend; ++pmil )
 			{
 				SS3D_MeshInstance* MI = pmil->MI;
-				if( !MI->mesh || !MI->enabled )
+				if( !MI->mesh || !MI->enabled || !MI->visible )
 					continue;
 				
 				SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) MI->mesh->data;
@@ -1642,7 +1645,7 @@ static int rd3d9i_render( SGS_CTX )
 				MAT4 m_world_view;
 				
 				SS3D_MeshInstance* MI = (SS3D_MeshInstance*) scene->meshInstances.vars[ inst_id ].val.data.O->data;
-				if( !MI->mesh || !MI->enabled )
+				if( !MI->mesh || !MI->enabled || !MI->visible )
 					continue;
 				
 				SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) MI->mesh->data;

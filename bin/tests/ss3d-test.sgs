@@ -215,9 +215,9 @@ function update()
 	camera.up *= vec3(1,1,-1);
 	camera.genViewMatrix();
 	
-	SS3D_UpdateParticleMesh( _R.SS3D, _R.ParticleMesh, camera.viewMatrix, _R.Particles, _R.ParticleSizes, _R.ParticleColors );
-	SS3D_UpdateParticleMesh( _R.SS3D, _R.CloudMesh, camera.viewMatrix, _R.Clouds, _R.CloudSizes, _R.CloudColors );
-	_R.SS3D.render();
+//	SS3D_UpdateParticleMesh( _R.SS3D, _R.ParticleMesh, camera.viewMatrix, _R.Particles, _R.ParticleSizes, _R.ParticleColors );
+//	SS3D_UpdateParticleMesh( _R.SS3D, _R.CloudMesh, camera.viewMatrix, _R.Clouds, _R.CloudSizes, _R.CloudColors );
+//	_R.SS3D.render();
 	
 	_R.PlaneMeshMI.enabled = true;
 	_R.SS3D.currentRT = null;

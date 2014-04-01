@@ -1392,6 +1392,129 @@ sgs_ObjInterface SS3D_Light_iface[1] =
 
 
 //
+// DEFAULT CULLING FUNCTIONS
+
+#define FRUSTUM_PLANE_NEAR   0
+#define FRUSTUM_PLANE_FAR    1
+#define FRUSTUM_PLANE_LEFT   2
+#define FRUSTUM_PLANE_RIGHT  3
+#define FRUSTUM_PLANE_TOP    4
+#define FRUSTUM_PLANE_BOTTOM 5
+
+static void SS3D_MakePlaneFromPoints( PLANE plane, VEC3 p0, VEC3 p1, VEC3 p2 )
+{
+	VEC3 p0p1, p0p2;
+	VEC3_Sub( p0p1, p1, p0 );
+	VEC3_Sub( p0p2, p2, p0 );
+	VEC3_Cross( plane, p0p1, p0p2 );
+	VEC3_Normalized( plane, plane );
+	plane[3] = VEC3_Dot( plane, p0 );
+}
+
+static void SS3D_MakePlanesFromBoxPoints( PLANE planes[6], VEC3 points[8] )
+{
+	SS3D_MakePlaneFromPoints( planes[ FRUSTUM_PLANE_NEAR   ], points[0], points[1], points[2] );
+	SS3D_MakePlaneFromPoints( planes[ FRUSTUM_PLANE_FAR    ], points[7], points[6], points[5] );
+	SS3D_MakePlaneFromPoints( planes[ FRUSTUM_PLANE_LEFT   ], points[0], points[3], points[4] );
+	SS3D_MakePlaneFromPoints( planes[ FRUSTUM_PLANE_RIGHT  ], points[1], points[5], points[2] );
+	SS3D_MakePlaneFromPoints( planes[ FRUSTUM_PLANE_TOP    ], points[2], points[6], points[3] );
+	SS3D_MakePlaneFromPoints( planes[ FRUSTUM_PLANE_BOTTOM ], points[0], points[4], points[1] );
+}
+
+static void SS3D_GetFrustumPlanes( PLANE frustum[6], MAT4 mIVP )
+{
+	static VEC3 psp[8] =
+	{
+		{ -1, -1, 0 },
+		{  1, -1, 0 },
+		{  1,  1, 0 },
+		{ -1,  1, 0 },
+		{ -1, -1, 1 },
+		{  1, -1, 1 },
+		{  1,  1, 1 },
+		{ -1,  1, 1 },
+	};
+	
+	int i;
+	VEC3 wsp[8];
+	for( i = 0; i < 8; ++i )
+		SS3D_Mtx_TransformPos( wsp[i], psp[i], mIVP );
+	
+	SS3D_MakePlanesFromBoxPoints( frustum, wsp );
+}
+
+static void SS3D_GetTfAABB( VEC3 aabb[2], MAT4 mtx, VEC3 min, VEC3 max )
+{
+	VEC3 wsp[8] =
+	{
+		{ min[0], min[1], min[2] },
+		{ max[0], min[1], min[2] },
+		{ max[0], max[1], min[2] },
+		{ min[0], max[1], min[2] },
+		{ min[0], min[1], max[2] },
+		{ max[0], min[1], max[2] },
+		{ max[0], max[1], max[2] },
+		{ min[0], max[1], max[2] },
+	};
+	
+	int i;
+	SS3D_Mtx_TransformPos( aabb[0], wsp[0], mtx );
+	VEC3_Copy( aabb[1], aabb[0] );
+	for( i = 1; i < 8; ++i )
+	{
+		VEC3 tmp;
+		SS3D_Mtx_TransformPos( tmp, wsp[i], mtx );
+		VEC3_Min( aabb[0], aabb[0], tmp );
+		VEC3_Max( aabb[1], aabb[1], tmp );
+	}
+}
+
+static int SS3D_FrustumAABBIntersection( PLANE planes[6], VEC3 min, VEC3 max )
+{
+	int i;
+	for( i = 0; i < 6; ++i )
+	{
+		VEC3 vcmp =
+		{
+			planes[i][0] > 0 ? min[0] : max[0],
+			planes[i][1] > 0 ? min[1] : max[1],
+			planes[i][2] > 0 ? min[2] : max[2],
+		};
+		if( VEC3_Dot( vcmp, planes[i] ) > planes[i][3] )
+			return 0;
+	}
+	return 1;
+}
+
+static int SS3D_ISCF_Camera_MeshList( void* data, uint32_t count, SS3D_CullSceneCamera* camera, SS3D_CullSceneMesh* meshes, uint32_t* outbitfield )
+{
+	uint32_t i, o = 0;
+	PLANE frustum[6];
+	VEC3* meshaabbs = malloc( 2 * sizeof(VEC3) * count );
+	
+	SS3D_GetFrustumPlanes( frustum, camera->invViewProjMatrix );
+	for( i = 0; i < count; ++i )
+		SS3D_GetTfAABB( meshaabbs + i * 2, meshes[ i ].transform, meshes[ i ].min, meshes[ i ].max );
+	
+	for( i = 0; i < count; )
+	{
+		uint32_t bfout = 0;
+		while( i < count )
+		{
+			uint32_t mask = 1 << ( i % 32 );
+			if( SS3D_FrustumAABBIntersection( frustum, meshaabbs[ i * 2 ], meshaabbs[ i * 2 + 1 ] ) )
+				bfout |= mask;
+			i++;
+		}
+		outbitfield[ o++ ] = bfout;
+	}
+	
+	free( meshaabbs );
+	return 1;
+}
+
+
+//
 // CULL SCENE
 
 #define CS_HDR SS3D_CullScene* CS = (SS3D_CullScene*) obj->data;
@@ -1463,7 +1586,14 @@ static SS3D_CullScene* push_cullscene( SGS_CTX )
 {
 	SS3D_CullScene* cs = (SS3D_CullScene*) sgs_PushObjectIPA( C, sizeof(*cs), SS3D_CullScene_iface );
 	memset( cs, 0, sizeof(*cs) );
+	cs->flags = SS3D_CF_ENABLE_ALL;
 	return cs;
+}
+
+static void push_default_cullscene( SGS_CTX )
+{
+	SS3D_CullScene* CS = push_cullscene( C );
+	CS->camera_meshlist = SS3D_ISCF_Camera_MeshList;
 }
 
 static int SS3D_CreateCullScene( SGS_CTX )
@@ -1847,6 +1977,10 @@ void SS3D_Scene_Cull_Camera_MeshList( SGS_CTX, SS3D_Scene* S )
 	
 	for( i = 0; i < data_size; ++i )
 		mesh_instances[ i ]->visible = 1;
+	
+	sgs_Dealloc( mesh_instances );
+	sgs_Dealloc( mesh_bounds );
+	sgs_Dealloc( mesh_visiblity );
 }
 /********** SCENE CULLING END ***********/
 
@@ -2108,7 +2242,8 @@ void SS3D_Renderer_PushScene( SS3D_Renderer* R )
 	S->camera = NULL;
 	
 	sgs_Variable cullScenes;
-	sgs_InitArray( R->C, &cullScenes, 0 );
+	push_default_cullscene( R->C );
+	sgs_InitArray( R->C, &cullScenes, 1 );
 	S->cullScenes = sgs_GetObjectStructP( &cullScenes );
 	
 	VEC3_Set( S->fogColor, 0, 0, 0 );
@@ -2168,6 +2303,12 @@ static sgs_RegIntConst ss3d_iconsts[] =
 
 SGS_APIFUNC int sgscript_main( SGS_CTX )
 {
+	push_default_cullscene( C );
+	sgs_StoreGlobal( C, "SS3D_MainCullScene" );
+	
+	sgs_PushPtr( C, SS3D_ISCF_Camera_MeshList );
+	sgs_StoreGlobal( C, "SS3D_ISCF_Camera_MeshList" );
+	
 	sgs_RegFuncConsts( C, ss3d_fconsts, sizeof(ss3d_fconsts) / sizeof(ss3d_fconsts[0]) );
 	sgs_RegIntConsts( C, ss3d_iconsts, sizeof(ss3d_iconsts) / sizeof(ss3d_iconsts[0]) );
 	if( !sgs_Include( C, "ss3d/engine" ) )
