@@ -1369,13 +1369,15 @@ static void postproc_blit( SS3D_RD3D9* R, rtoutinfo* pRTOUT, int ds, int ppdata_
 	
 	D3DCALL_( R->device, SetFVF, D3DFVF_XYZ | D3DFVF_TEX2 );
 	D3DCALL_( R->device, DrawPrimitiveUP, D3DPT_TRIANGLEFAN, 2, ssVertices, sizeof(*ssVertices) );
+	R->inh.stat_numDrawCalls++;
+	R->inh.stat_numPDrawCalls++;
 }
 
 static int sort_meshinstlight_by_light( const void* p1, const void* p2 )
 {
 	SS3D_MeshInstLight* mil1 = (SS3D_MeshInstLight*) p1;
 	SS3D_MeshInstLight* mil2 = (SS3D_MeshInstLight*) p2;
-	return mil1 == mil2 ? 0 : ( mil1 < mil2 ? -1 : 1 );
+	return mil1->L == mil2->L ? 0 : ( mil1->L < mil2->L ? -1 : 1 );
 }
 
 static int rd3d9i_render( SGS_CTX )
@@ -1408,23 +1410,25 @@ static int rd3d9i_render( SGS_CTX )
 	int w = RTOUT.w, h = RTOUT.h;
 	
 	
-//	SS3D_Texture_D3D9* tx_diffusemap = get_texture( R, "testdata/concretewall5.dds" );
-//	SS3D_Texture_D3D9* tx_normalmap = get_texture( R, "testdata/concretewall5normal.png" );
 	SS3D_Texture_D3D9* tx_cubemap = get_texture( R, "testdata/cubemap_pbr.dds" );
 	
 	
-//	SS3D_Shader_D3D9* sh_solid_render = get_shader( R, "testFRrender" );
 	SS3D_Shader_D3D9* sh_post_process = get_shader( R, "testFRpost" );
 	SS3D_Shader_D3D9* sh_post_dshp = get_shader( R, "pp_bloom_dshp" );
 	SS3D_Shader_D3D9* sh_post_blur_h = get_shader( R, "pp_bloom_blur_h" );
 	SS3D_Shader_D3D9* sh_post_blur_v = get_shader( R, "pp_bloom_blur_v" );
 	
 	
-//	D3DCALL_( R->device, SetTransform, D3DTS_VIEW, (D3DMATRIX*) *cam->mView );
-//	D3DCALL_( R->device, SetTransform, D3DTS_PROJECTION, (D3DMATRIX*) *cam->mProj );
-	
 	/* CULL */
-	SS3D_Scene_Cull_Camera_MeshList( C, scene );
+	sgs_MemBuf visible_mesh_buf = sgs_membuf_create();
+	uint32_t visible_mesh_count = SS3D_Scene_Cull_Camera_MeshList( C, &visible_mesh_buf, scene );
+	SS3D_MeshInstance** visible_meshes = (SS3D_MeshInstance**) visible_mesh_buf.ptr;
+	
+	R->inh.stat_numVisMeshes = visible_mesh_count;
+	R->inh.stat_numDrawCalls = 0;
+	R->inh.stat_numSDrawCalls = 0;
+	R->inh.stat_numMDrawCalls = 0;
+	R->inh.stat_numPDrawCalls = 0;
 	
 	/* SORT OUT MESH INSTANCE / LIGHT RELATIONS */
 	sgs_MemBuf inst_light_buf = sgs_membuf_create();
@@ -1432,7 +1436,7 @@ static int rd3d9i_render( SGS_CTX )
 	for( inst_id = 0; inst_id < scene->meshInstances.size; ++inst_id )
 	{
 		SS3D_MeshInstance* MI = (SS3D_MeshInstance*) scene->meshInstances.vars[ inst_id ].val.data.O->data;
-		if( !MI->mesh || !MI->enabled || !MI->visible )
+		if( !MI->mesh || !MI->enabled )
 			continue;
 		MI->lightbuf_begin = (SS3D_MeshInstLight*) inst_light_buf.size;
 		for( light_id = 0; light_id < scene->lights.size; ++light_id )
@@ -1448,7 +1452,7 @@ static int rd3d9i_render( SGS_CTX )
 	for( inst_id = 0; inst_id < scene->meshInstances.size; ++inst_id )
 	{
 		SS3D_MeshInstance* MI = (SS3D_MeshInstance*) scene->meshInstances.vars[ inst_id ].val.data.O->data;
-		if( !MI->mesh || !MI->enabled || !MI->visible )
+		if( !MI->mesh || !MI->enabled )
 			continue;
 		MI->lightbuf_begin = (SS3D_MeshInstLight*)( (size_t) MI->lightbuf_begin + (size_t) inst_light_buf.ptr );
 		MI->lightbuf_end = (SS3D_MeshInstLight*)( (size_t) MI->lightbuf_end + (size_t) inst_light_buf.ptr );
@@ -1514,7 +1518,7 @@ static int rd3d9i_render( SGS_CTX )
 			for( ; pmil < pmilend; ++pmil )
 			{
 				SS3D_MeshInstance* MI = pmil->MI;
-				if( !MI->mesh || !MI->enabled || !MI->visible )
+				if( !MI->mesh || !MI->enabled )
 					continue;
 				
 				SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) MI->mesh->data;
@@ -1544,6 +1548,8 @@ static int rd3d9i_render( SGS_CTX )
 					D3DCALL_( R->device, DrawIndexedPrimitive,
 						M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ? D3DPT_TRIANGLESTRIP : D3DPT_TRIANGLELIST,
 						MP->vertexOffset, 0, MP->vertexCount, MP->indexOffset, M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ? MP->indexCount - 2 : MP->indexCount / 3 );
+					R->inh.stat_numDrawCalls++;
+					R->inh.stat_numSDrawCalls++;
 				}
 			}
 		}
@@ -1653,17 +1659,15 @@ static int rd3d9i_render( SGS_CTX )
 			D3DCALL_( R->device, SetRenderState, D3DRS_ZWRITEENABLE, mtl_type >= 0 );
 			D3DCALL_( R->device, SetRenderState, D3DRS_ALPHABLENDENABLE, mtl_type <= 0 );
 			
-			for( inst_id = 0; inst_id < scene->meshInstances.size; ++inst_id )
+			for( inst_id = 0; inst_id < visible_mesh_count; ++inst_id )
 			{
+				SS3D_MeshInstance* MI = visible_meshes[ inst_id ];
+				
 				VEC4 lightdata[ 64 ];
 				float *pldata_it = lightdata[0], *sldata_ps_it = lightdata[32], *sldata_vs_it = lightdata[48];
 				int pl_count = 0, sl_count = 0;
 				
 				MAT4 m_world_view;
-				
-				SS3D_MeshInstance* MI = (SS3D_MeshInstance*) scene->meshInstances.vars[ inst_id ].val.data.O->data;
-				if( !MI->mesh || !MI->enabled || !MI->visible )
-					continue;
 				
 				SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) MI->mesh->data;
 				SS3D_VDecl_D3D9* VD = (SS3D_VDecl_D3D9*) M->inh.vertexDecl->data;
@@ -1714,7 +1718,7 @@ static int rd3d9i_render( SGS_CTX )
 						if( !found )
 							break;
 					}
-					pshc_set_vec4array( R, 56, lightdata[0], sizeof(VEC4) * 2 * pl_count );
+					pshc_set_vec4array( R, 56, lightdata[0], 2 * pl_count );
 				}
 				if( pass->spotlight_count )
 				{
@@ -1772,8 +1776,8 @@ static int rd3d9i_render( SGS_CTX )
 						if( !found )
 							break;
 					}
-					vshc_set_vec4array( R, 24, lightdata[48], sizeof(VEC4) * 4 * sl_count );
-					pshc_set_vec4array( R, 24, lightdata[32], sizeof(VEC4) * 4 * sl_count );
+					vshc_set_vec4array( R, 24, lightdata[48], 4 * sl_count );
+					pshc_set_vec4array( R, 24, lightdata[32], 4 * sl_count );
 				}
 				
 				if( pass->flags & SS3D_RPF_LIGHTOVERLAY && pl_count + sl_count <= 0 )
@@ -1817,6 +1821,8 @@ static int rd3d9i_render( SGS_CTX )
 					D3DCALL_( R->device, DrawIndexedPrimitive,
 						M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ? D3DPT_TRIANGLESTRIP : D3DPT_TRIANGLELIST,
 						MP->vertexOffset, 0, MP->vertexCount, MP->indexOffset, M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ? MP->indexCount - 2 : MP->indexCount / 3 );
+					R->inh.stat_numDrawCalls++;
+					R->inh.stat_numMDrawCalls++;
 				}
 			}
 		}
@@ -1855,129 +1861,10 @@ static int rd3d9i_render( SGS_CTX )
 	
 	sgs_membuf_destroy( &inst_light_buf, C );
 	sgs_membuf_destroy( &light_inst_buf, C );
-	
-#if 0
-	use_shader( R, sh_solid_render );
-	
-	vshc_set_mat4( R, 4, cam->mView );
-	vshc_set_mat4( R, 12, cam->mProj );
-	pshc_set_float( R, 0, cam->zfar );
-	pshc_set_mat4( R, 12, cam->mInvView );
-	
-	VEC4 pointlightdata[ 2 * 32 ]; /* px, py, pz, radius, cr, cg, cb, power */
-	int plc = 0;
-	for( i = 0; i < scene->lights.size && plc < 32; ++i )
-	{
-		SS3D_Light* light = (SS3D_Light*) scene->lights.vars[i].val.data.O->data;
-		if( light->type == SS3DLIGHT_POINT )
-		{
-			VEC3 viewpos;
-			SS3D_Mtx_TransformPos( viewpos, light->position, cam->mView );
-			VEC4 newdata[2] =
-			{
-				{ viewpos[0], viewpos[1], viewpos[2], light->range },
-				{ light->color[0], light->color[1], light->color[2], light->power }
-			};
-			memcpy( pointlightdata[ plc * 2 ], newdata, sizeof(VEC4)*2 );
-			plc++;
-		}
-	}
-	if( plc )
-		pshc_set_vec4array( R, 32, *pointlightdata, 2 * plc );
-	pshc_set_float( R, 28, plc ); /* point light count */
-	
-	use_texture( R, 0, tx_diffusemap );
-	use_texture( R, 1, tx_normalmap );
-	use_texture( R, 8, tx_cubemap );
+	sgs_membuf_destroy( &visible_mesh_buf, C );
 	
 	
-	D3DCALL_( R->device, SetFVF, D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_DIFFUSE | D3DFVF_TEX1 );
-	D3DCALL_( R->device, DrawIndexedPrimitiveUP, D3DPT_TRIANGLELIST, 0, 12, 2, testIndices, D3DFMT_INDEX16, testVertices, sizeof(*testVertices) );
-	
-	for( i = 0; i < scene->meshInstances.size; ++i )
-	{
-		int p, t;
-		MAT4 m_world_view;
-		
-		SS3D_MeshInstance* MI = (SS3D_MeshInstance*) scene->meshInstances.vars[ i ].val.data.O->data;
-		if( !MI->mesh || !MI->enabled )
-			continue;
-		
-		SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) MI->mesh->data;
-		SS3D_VDecl_D3D9* VD = (SS3D_VDecl_D3D9*) M->inh.vertexDecl->data;
-		
-		SS3D_Mtx_Multiply( m_world_view, MI->matrix, cam->mView );
-		vshc_set_mat4( R, 4, m_world_view );
-		
-		D3DCALL_( R->device, SetVertexDeclaration, VD->VD );
-		D3DCALL_( R->device, SetStreamSource, 0, M->VB, 0, VD->info.size );
-		D3DCALL_( R->device, SetIndices, M->IB );
-		
-		for( p = 0; p < M->inh.numParts; ++p )
-		{
-			SS3D_MeshPart* MP = M->inh.parts + p;
-			SS3D_Material* MTL = (SS3D_Material*) MP->material->data;
-			
-			if( MTL->transparent )
-				continue;
-			
-			use_shader( R, (SS3D_Shader_D3D9*) MTL->shader->data );
-			for( t = 0; t < SS3D_NUM_MATERIAL_TEXTURES; ++t )
-				use_texture( R, t, MTL->textures[ t ] ? (SS3D_Texture_D3D9*) MTL->textures[ t ]->data : NULL );
-			
-			if( MP->indexCount < 3 )
-				continue;
-			D3DCALL_( R->device, DrawIndexedPrimitive,
-				M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ? D3DPT_TRIANGLESTRIP : D3DPT_TRIANGLELIST,
-				MP->vertexOffset, 0, MP->vertexCount, MP->indexOffset, M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ? MP->indexCount - 2 : MP->indexCount / 3 );
-		}
-	}
-	
-	/* PASS 4: RENDER TRANSPARENT STUFF */
-	D3DCALL_( R->device, SetRenderState, D3DRS_ZWRITEENABLE, 0 );
-	for( i = 0; i < scene->meshInstances.size; ++i )
-	{
-		int p, t;
-		MAT4 m_world_view;
-		
-		SS3D_MeshInstance* MI = (SS3D_MeshInstance*) scene->meshInstances.vars[ i ].val.data.O->data;
-		if( !MI->mesh || !MI->enabled )
-			continue;
-		
-		SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) MI->mesh->data;
-		SS3D_VDecl_D3D9* VD = (SS3D_VDecl_D3D9*) M->inh.vertexDecl->data;
-		
-		SS3D_Mtx_Multiply( m_world_view, MI->matrix, cam->mView );
-		vshc_set_mat4( R, 4, m_world_view );
-		
-		D3DCALL_( R->device, SetVertexDeclaration, VD->VD );
-		D3DCALL_( R->device, SetStreamSource, 0, M->VB, 0, VD->info.size );
-		D3DCALL_( R->device, SetIndices, M->IB );
-		
-		for( p = 0; p < M->inh.numParts; ++p )
-		{
-			SS3D_MeshPart* MP = M->inh.parts + p;
-			SS3D_Material* MTL = (SS3D_Material*) MP->material->data;
-			
-			if( !MTL->transparent )
-				continue;
-			
-			use_shader( R, (SS3D_Shader_D3D9*) MTL->shader->data );
-			for( t = 0; t < SS3D_NUM_MATERIAL_TEXTURES; ++t )
-				use_texture( R, t, MTL->textures[ t ] ? (SS3D_Texture_D3D9*) MTL->textures[ t ]->data : NULL );
-			
-			if( MP->indexCount < 3 )
-				continue;
-			D3DCALL_( R->device, DrawIndexedPrimitive,
-				M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ? D3DPT_TRIANGLESTRIP : D3DPT_TRIANGLELIST,
-				MP->vertexOffset, 0, MP->vertexCount, MP->indexOffset, M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ? MP->indexCount - 2 : MP->indexCount / 3 );
-		}
-	}
-	D3DCALL_( R->device, SetRenderState, D3DRS_ZWRITEENABLE, 1 );
-#endif
-	
-	
-	/* PASS 5: POST-PROCESS & RENDER TO BACKBUFFER */
+	/* POST-PROCESS & RENDER TO BACKBUFFER */
 	D3DCALL_( R->device, SetRenderState, D3DRS_ALPHABLENDENABLE, 0 );
 	D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 0 );
 	
@@ -2134,6 +2021,12 @@ static int rd3d9_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isp
 		SGS_CASE( "viewport" )         SGS_RETURN_OBJECT( R->inh.viewport )
 		
 		SGS_CASE( "disablePostProcessing" ) SGS_RETURN_BOOL( R->inh.disablePostProcessing )
+		
+		SGS_CASE( "stat_numVisMeshes" )  SGS_RETURN_INT( R->inh.stat_numVisMeshes )
+		SGS_CASE( "stat_numDrawCalls" )  SGS_RETURN_INT( R->inh.stat_numDrawCalls )
+		SGS_CASE( "stat_numSDrawCalls" ) SGS_RETURN_INT( R->inh.stat_numSDrawCalls )
+		SGS_CASE( "stat_numMDrawCalls" ) SGS_RETURN_INT( R->inh.stat_numMDrawCalls )
+		SGS_CASE( "stat_numPDrawCalls" ) SGS_RETURN_INT( R->inh.stat_numPDrawCalls )
 		
 		// methods
 		SGS_CASE( "update" )           SGS_RETURN_CFUNC( rd3d9i_update )

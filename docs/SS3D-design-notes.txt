@@ -50,6 +50,15 @@ brainfart: we don't want more complex culling functions to work on already-culle
 !! and something else: cullscene does not deal in SGScript functions due to the fact that there's no way any benefits can be found in a considerably heavily (more than once) memory-allocating system
 !! -- though it will be an object that can be modified in SGScript, all function pointers will be of `pointer` type, as will the data pointer; boolean attributes will internally be a bitfield
 
+#### issue 1: light <-> mesh maps & cullscenes ####
+> description
+- all lights are stored in an array (both point lights and spotlights, possibly others in the future)
+- all light types must be culled separately against frustum and meshes
+- how to associate the data? all we really need to do is to reintegrate the culling results as far as rendering function is concerned...
+- this essentially means that a VISIBLE/CULLED VALUE must correspond to each INDEX OR POINTER or a LIST OF VISIBLE POINTERS must be accessible
+> options
+:A: return the list of visible pointers from the culling function, do no writebacks to source data
+
 
 ===END===
 

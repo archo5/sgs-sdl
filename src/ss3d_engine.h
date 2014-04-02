@@ -269,20 +269,6 @@ struct _SS3D_Light
 	SS3D_MeshInstLight* mibuf_end;
 };
 
-#if 0
-struct _SS3D_Material
-{
-	SS3D_Renderer* renderer;
-	
-	int transparent;
-	sgs_VarObj* shader;
-	sgs_VarObj* textures[ SS3D_NUM_MATERIAL_TEXTURES ];
-};
-
-extern sgs_ObjInterface SS3D_Material_iface[1];
-#endif
-
-int SS3D_Material_Create( SS3D_Renderer* R );
 
 typedef struct _SS3D_VDeclInfo
 {
@@ -340,7 +326,6 @@ struct _SS3D_MeshInstance
 	MAT4 matrix;
 	VEC4 color;
 	bitfield_t enabled : 1;
-	bitfield_t visible : 1;
 	
 	/* frame cache */
 	SS3D_MeshInstLight* lightbuf_begin;
@@ -397,7 +382,7 @@ struct _SS3D_CullScene
 	sgs_Variable store;
 };
 
-void SS3D_Scene_Cull_Camera_MeshList( SGS_CTX, SS3D_Scene* S );
+uint32_t SS3D_Scene_Cull_Camera_MeshList( SGS_CTX, sgs_MemBuf* MB, SS3D_Scene* S );
 
 
 struct _SS3D_Camera
@@ -470,6 +455,13 @@ struct _SS3D_Renderer
 	sgs_VarObj* currentRT;
 	sgs_VarObj* viewport;
 	bitfield_t disablePostProcessing : 1;
+	
+	/* common rendering stats */
+	uint32_t stat_numVisMeshes;
+	uint32_t stat_numDrawCalls;
+	uint32_t stat_numSDrawCalls;
+	uint32_t stat_numMDrawCalls;
+	uint32_t stat_numPDrawCalls;
 	
 	/* to be initialized by derived class */
 	int width, height;

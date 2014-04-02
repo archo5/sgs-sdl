@@ -1134,109 +1134,6 @@ fail:
 
 
 //
-// MATERIAL
-
-#if 0
-#define MTL_HDR SS3D_Material* MTL = (SS3D_Material*) obj->data;
-#define MTL_IHDR( funcname ) SS3D_Material* MTL; \
-	if( !SGS_PARSE_METHOD( C, SS3D_Material_iface, MTL, SS3D_Material, funcname ) ) return 0;
-
-static int material_destruct( SGS_CTX, sgs_VarObj* obj )
-{
-	MTL_HDR;
-	if( MTL->renderer )
-	{
-		int i;
-		MTL->renderer = NULL;
-		if( MTL->shader )
-		{
-			sgs_ObjRelease( C, MTL->shader );
-			MTL->shader = NULL;
-		}
-		for( i = 0; i < SS3D_NUM_MATERIAL_TEXTURES; ++i )
-		{
-			if( MTL->textures[i] )
-			{
-				sgs_ObjRelease( C, MTL->textures[i] );
-				MTL->textures[i] = NULL;
-			}
-		}
-	}
-	return SGS_SUCCESS;
-}
-
-static int material_gcmark( SGS_CTX, sgs_VarObj* obj )
-{
-	int i;
-	MTL_HDR;
-	if( MTL->shader )
-	{
-		sgs_ObjGCMark( C, MTL->shader );
-		MTL->shader = NULL;
-	}
-	for( i = 0; i < SS3D_NUM_MATERIAL_TEXTURES; ++i )
-	{
-		if( MTL->textures[i] )
-		{
-			sgs_ObjGCMark( C, MTL->textures[i] );
-			MTL->textures[i] = NULL;
-		}
-	}
-	return SGS_SUCCESS;
-}
-
-static int material_setTexture( SGS_CTX )
-{
-	sgs_Int index;
-	MTL_IHDR( setTexture );
-	if( !sgs_LoadArgs( C, "i|?o", &index, MTL->renderer->ifTexture ) )
-		return 0;
-	if( index < 0 || index >= SS3D_NUM_MATERIAL_TEXTURES )
-		return sgs_Msg( C, SGS_WARNING, "texture index %d not available", (int) index );
-	sgs_ObjAssign( C, &MTL->textures[ index ], sgs_ItemType( C, 1 ) == SGS_VT_OBJECT ? sgs_GetObjectStruct( C, 1 ) : NULL );
-	SGS_RETURN_BOOL( 1 )
-}
-
-static int material_getindex( SGS_ARGS_GETINDEXFUNC )
-{
-	MTL_HDR;
-	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "transparent" ) SGS_RETURN_BOOL( MTL->transparent )
-		SGS_CASE( "shader" )     SGS_RETURN_OBJECT( MTL->shader )
-		
-		SGS_CASE( "setTexture" ) SGS_RETURN_CFUNC( material_setTexture )
-	SGS_END_INDEXFUNC;
-}
-
-static int material_setindex( SGS_ARGS_SETINDEXFUNC )
-{
-	MTL_HDR;
-	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "transparent" ) SGS_PARSE_BOOL( MTL->transparent )
-		SGS_CASE( "shader" )    { if( !MTL->renderer ) return SGS_EINPROC; SGS_PARSE_OBJECT( MTL->renderer->ifShader, MTL->shader, 0 ) }
-	SGS_END_INDEXFUNC;
-}
-
-sgs_ObjInterface SS3D_Material_iface[1] =
-{{
-	"SS3D_Material",
-	material_destruct, material_gcmark,
-	material_getindex, material_setindex,
-	NULL, NULL, NULL, NULL,
-	NULL, NULL
-}};
-
-int SS3D_Material_Create( SS3D_Renderer* R )
-{
-	SS3D_Material* MTL = (SS3D_Material*) sgs_PushObjectIPA( R->C, sizeof(*MTL), SS3D_Material_iface );
-	memset( MTL, 0, sizeof(*MTL) );
-	MTL->renderer = R;
-	return 1;
-}
-#endif
-
-
-//
 // MESH
 
 void SS3D_Mesh_Init( SS3D_Mesh* mesh )
@@ -1423,6 +1320,7 @@ static int light_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 		"\nangle=%g"
 		"\naspect=%g"
 		"\ncookieTexture=%p"
+		"\nshadowTexture=%p"
 		"\nprojMatrix=..."
 		"\nhasShadows=%s",
 		L->type,
@@ -1436,6 +1334,7 @@ static int light_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 		L->angle,
 		L->aspect,
 		L->cookieTexture,
+		L->shadowTexture,
 		// projMatrix ...
 		L->hasShadows ? "true" : "false"
 	);
@@ -1450,8 +1349,8 @@ static int light_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 static int light_gcmark( SGS_CTX, sgs_VarObj* obj )
 {
 	L_HDR;
-	if( L->cookieTexture )
-		sgs_ObjGCMark( C, L->cookieTexture );
+	if( L->cookieTexture ) sgs_ObjGCMark( C, L->cookieTexture );
+	if( L->shadowTexture ) sgs_ObjGCMark( C, L->shadowTexture );
 	return SGS_SUCCESS;
 }
 
@@ -1462,11 +1361,16 @@ static int light_destruct( SGS_CTX, sgs_VarObj* obj )
 	{
 		scene_poke_resource( L->scene, &L->scene->lights, obj, 0 );
 		L->scene = NULL;
-		if( L->cookieTexture )
-		{
-			sgs_ObjRelease( C, L->cookieTexture );
-			L->cookieTexture = NULL;
-		}
+	}
+	if( L->cookieTexture )
+	{
+		sgs_ObjRelease( C, L->cookieTexture );
+		L->cookieTexture = NULL;
+	}
+	if( L->shadowTexture )
+	{
+		sgs_ObjRelease( C, L->shadowTexture );
+		L->shadowTexture = NULL;
 	}
 	return SGS_SUCCESS;
 }
@@ -1997,18 +1901,20 @@ static void get_frustum_from_camera( SS3D_Camera* CAM, SS3D_CullSceneCamera* out
 	SS3D_Mtx_Invert( out->invViewProjMatrix, out->viewProjMatrix );
 }
 
-void SS3D_Scene_Cull_Camera_MeshList( SGS_CTX, SS3D_Scene* S )
+uint32_t SS3D_Scene_Cull_Camera_MeshList( SGS_CTX, sgs_MemBuf* MB, SS3D_Scene* S )
 {
 	SS3D_Camera* CAM = (SS3D_Camera*) S->camera->data;
 	if( !CAM )
-		return;
+		return 0;
 	
 	uint32_t i, data_size = 0;
+	size_t mbsize = MB->size;
 	
 	SS3D_CullSceneCamera camera_frustum;
 	get_frustum_from_camera( CAM, &camera_frustum );
 	
-	SS3D_MeshInstance** mesh_instances = sgs_Alloc_n( SS3D_MeshInstance*, S->meshInstances.size );
+	sgs_membuf_resize( MB, C, mbsize + sizeof(SS3D_MeshInstance*) * S->meshInstances.size );
+	SS3D_MeshInstance** mesh_instances = (SS3D_MeshInstance**) ( MB->ptr + mbsize );
 	SS3D_CullSceneMesh* mesh_bounds = sgs_Alloc_n( SS3D_CullSceneMesh, S->meshInstances.size );
 	uint32_t* mesh_visiblity = sgs_Alloc_n( uint32_t, divideup( S->meshInstances.size, 32 ) );
 	
@@ -2017,7 +1923,6 @@ void SS3D_Scene_Cull_Camera_MeshList( SGS_CTX, SS3D_Scene* S )
 	for( inst_id = 0; inst_id < S->meshInstances.size; ++inst_id )
 	{
 		SS3D_MeshInstance* MI = (SS3D_MeshInstance*) S->meshInstances.vars[ inst_id ].val.data.O->data;
-		MI->visible = 0;
 		if( !MI->mesh || !MI->enabled )
 			continue;
 		SS3D_Mesh* M = (SS3D_Mesh*) MI->mesh->data;
@@ -2065,12 +1970,11 @@ void SS3D_Scene_Cull_Camera_MeshList( SGS_CTX, SS3D_Scene* S )
 	}
 	sgs_Release( C, &it );
 	
-	for( i = 0; i < data_size; ++i )
-		mesh_instances[ i ]->visible = 1;
-	
-	sgs_Dealloc( mesh_instances );
 	sgs_Dealloc( mesh_bounds );
 	sgs_Dealloc( mesh_visiblity );
+	
+	sgs_membuf_resize( MB, C, mbsize + sizeof(SS3D_MeshInstance*) * data_size );
+	return data_size;
 }
 /********** SCENE CULLING END ***********/
 
@@ -2205,6 +2109,12 @@ void SS3D_Renderer_Construct( SS3D_Renderer* R, SGS_CTX )
 	R->viewport = NULL;
 	
 	R->disablePostProcessing = 0;
+	
+	R->stat_numVisMeshes = 0;
+	R->stat_numDrawCalls = 0;
+	R->stat_numSDrawCalls = 0;
+	R->stat_numMDrawCalls = 0;
+	R->stat_numPDrawCalls = 0;
 	
 	sgs_InitDict( C, &storeVar, 0 );
 	R->store = sgs_GetObjectStructP( &storeVar );

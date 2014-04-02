@@ -187,6 +187,33 @@ function initialize()
 	println( "SPOTLIGHT PROJECTION MATRIX" );
 	printvar( light3.projMatrix );
 	
+	_R.Light4 = light4 = _R.Scene.createLight();
+	light4.type = SS3DLIGHT_SPOT;
+	light4.color = vec3(0.9,0.1,0.05)*0.02;
+	light4.position = vec3(0,-10,10);
+	light4.range = 100;
+	light4.power = 2;
+	light4.direction = vec3(0,1,-1).normalized;
+	light4.updir = vec3(0,0,1);
+	light4.angle = 90;
+	light4.isEnabled = 1;
+	light4.genSpotLightMatrices();
+	light4.cookieTexture = _R.SS3D.getTexture( "testdata/cookie1.png" );
+	light4.shadowTexture = _R.SS3D.createRT( 256, 256, SS3DRT_FORMAT_DEPTH );
+	
+	// spinning point lights
+	global spls = [];
+	for( i = 0; i < 12; ++i )
+	{
+		spl = _R.Scene.createLight();
+		spl.type = SS3DLIGHT_POINT;
+		spl.color = vec3(1,1,1);
+		spl.range = 30;
+		spl.power = 2;
+		spl.isEnabled = true;
+		spls.push( spl );
+	}
+	
 	global camera = _R.Camera = SS3D_CreateCamera();
 	camera.position = vec3(10,10,10);
 	camera.direction = vec3(-1,-1,-1);
@@ -207,6 +234,13 @@ function update()
 	t = ftime();
 	camera.position = vec3(cos(t)*20,sin(t)*20,13);
 	camera.direction = vec3(-cos(t),-sin(t),-0.5);
+	
+	spldst = 80;
+	foreach( i, spl : spls )
+	{
+		angle = i / spls.size * M_PI * 2 - t;
+		spl.position = vec3( cos( angle ) * spldst, sin( angle ) * spldst, 5 );
+	}
 	
 	_R.PlaneMeshMI.enabled = false;
 	_R.SS3D.currentRT = _R.RT;
@@ -244,6 +278,15 @@ function update()
 		SS_DrawColorRect_WH( tX - 2, tY - 2, width + 4, Font.size + 4, 0.1, 0.2, 0.4, 0.5 );
 		SS_DrawTextLine( text, Font, tX, tY, color(1,1,1,1) );
 	}
+	
+	statinfo = "--- Last render stats ---\n"
+		$"Number of meshes visible by main camera: " $ _R.SS3D.stat_numVisMeshes $ "\n"
+		$"Number of draw calls (total): " $ _R.SS3D.stat_numDrawCalls $ "\n"
+		$"Number of draw calls (shadow): " $ _R.SS3D.stat_numSDrawCalls $ "\n"
+		$"Number of draw calls (main): " $ _R.SS3D.stat_numMDrawCalls $ "\n"
+		$"Number of draw calls (screen): " $ _R.SS3D.stat_numPDrawCalls $ "\n"
+	;
+	SS_DrawTextRect( statinfo, Font, color(1), DT_LEFT | DT_TOP, 16, 320, 16, 320 );
 	
 	SS_Present();
 }

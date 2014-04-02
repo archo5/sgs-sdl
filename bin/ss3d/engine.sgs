@@ -120,9 +120,11 @@ function SS3D_UpdateParticleMesh( ss3d, mesh, viewmatrix, positions, sizes, colo
 {
 	(vdata,idata,vcount,icount) = SS3D_MeshGen_Particles( viewmatrix, positions, sizes, colors, angles );
 	
+	vdecl = SS3D_GetVertexDecl( ss3d, cSS3D_GenParticleVertexFormat );
 	if( mesh.vertexDataSize < vdata.length )
 		mesh.initVertexBuffer( vdata.length );
-	mesh.updateVertexData( vdata, SS3D_GetVertexDecl( ss3d, cSS3D_GenParticleVertexFormat ), false );
+	mesh.updateVertexData( vdata, vdecl, false );
+	mesh.setAABBFromVertexData( vdata, vdecl );
 	
 	if( mesh.indexDataSize < idata.length )
 		mesh.initIndexBuffer( idata.length, false );
