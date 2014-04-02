@@ -47,9 +47,9 @@ SS3D_RenderTexture_D3D9;
 
 typedef struct _SS3D_VDecl_D3D9
 {
-	struct _SS3D_RD3D9* renderer;
-	
 	SS3D_VDeclInfo info;
+	
+	struct _SS3D_RD3D9* renderer;
 	IDirect3DVertexDeclaration9* VD;
 }
 SS3D_VDecl_D3D9;
@@ -981,6 +981,22 @@ static int meshd3d9i_updateIndexData( SGS_CTX )
 	SGS_RETURN_BOOL( 1 )
 }
 
+static int meshd3d9i_setAABBFromVertexData( SGS_CTX )
+{
+	SS3D_VDeclInfo* vdinfo = NULL;
+	char* buf;
+	sgs_SizeVal size;
+	M_IHDR( setAABBFromVertexData );
+	if( !sgs_LoadArgs( C, "m!o", &buf, &size, SS3D_VDecl_D3D9_iface, &vdinfo ) )
+		return 0;
+	if( SS3D_GetAABBFromVertexData( vdinfo, buf, size, M->inh.boundsMin, M->inh.boundsMax ) )
+	{
+		sgs_PushBool( C, 1 );
+		return 1;
+	}
+	return 0;
+}
+
 static int meshd3d9i_setPartRanges( SGS_CTX )
 {
 	sgs_Int pid, vo, vc, io, ic;
@@ -1164,6 +1180,7 @@ static int meshd3d9_getindex( SGS_ARGS_GETINDEXFUNC )
 		
 		SGS_CASE( "setVertexData" )    SGS_RETURN_CFUNC( meshd3d9i_setVertexData )
 		SGS_CASE( "setIndexData" )     SGS_RETURN_CFUNC( meshd3d9i_setIndexData )
+		SGS_CASE( "setAABBFromVertexData" ) SGS_RETURN_CFUNC( meshd3d9i_setAABBFromVertexData )
 		SGS_CASE( "initVertexBuffer" ) SGS_RETURN_CFUNC( meshd3d9i_initVertexBuffer )
 		SGS_CASE( "initIndexBuffer" )  SGS_RETURN_CFUNC( meshd3d9i_initIndexBuffer )
 		SGS_CASE( "updateVertexData" ) SGS_RETURN_CFUNC( meshd3d9i_updateVertexData )

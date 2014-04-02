@@ -43,6 +43,7 @@ function initialize()
 			 50,  50, 0,  0, 0, 1,  1, 0, 0, 1,  1, 1,
 			-50,  50, 0,  0, 0, 1,  1, 0, 0, 1,  0, 1 );
 		_R.PlaneMesh.setVertexData( vdata, _R.VD1, false );
+		_R.PlaneMesh.setAABBFromVertexData( vdata, _R.VD1 );
 		_R.PlaneMesh.setIndexData( fmt_pack( "6w", 0, 1, 2, 2, 3, 0 ), false );
 		_R.PlaneMesh.numParts = 1;
 		_R.PlaneMesh.setPartRanges( 0, 0, 4, 0, 6 );

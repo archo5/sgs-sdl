@@ -140,8 +140,10 @@ function SS3D_CreateTerrainMeshFromImage( ss3d, filename, min, max )
 	heights = floatarray_from_uint8_buffer( image.getData(), 1/255, 4 );
 	(vdata,idata,vcount,icount) = SS3D_MeshGen_Terrain( image.width, image.height, heights, min, max );
 	
+	vdecl = SS3D_GetVertexDecl( ss3d, cSS3D_GenTerrainVertexFormat );
 	mesh = ss3d.createMesh();
-	mesh.setVertexData( vdata, SS3D_GetVertexDecl( ss3d, cSS3D_GenTerrainVertexFormat ), false );
+	mesh.setVertexData( vdata, vdecl, false );
+	mesh.setAABBFromVertexData( vdata, vdecl );
 	mesh.setIndexData( idata, true );
 	mesh.numParts = 1;
 	mesh.setPartRanges( 0, 0, vcount, 0, icount );

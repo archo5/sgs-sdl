@@ -295,6 +295,7 @@ typedef struct _SS3D_VDeclInfo
 SS3D_VDeclInfo;
 
 const char* SS3D_VDeclInfo_Parse( SS3D_VDeclInfo* info, const char* text );
+int SS3D_GetAABBFromVertexData( SS3D_VDeclInfo* info, const char* vdata, size_t vdsize, VEC3 outMin, VEC3 outMax );
 
 struct _SS3D_MeshPart
 {

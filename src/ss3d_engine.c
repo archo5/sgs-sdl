@@ -1042,6 +1042,96 @@ const char* SS3D_VDeclInfo_Parse( SS3D_VDeclInfo* info, const char* text )
 	return NULL;
 }
 
+int SS3D_GetAABBFromVertexData( SS3D_VDeclInfo* info, const char* vdata, size_t vdsize, VEC3 outMin, VEC3 outMax )
+{
+	int i;
+	const char* vdend;
+	float tmp1, tmp2;
+	VEC3 tmpv;
+	uint8_t* pudata;
+	if( vdsize < info->size )
+		goto fail;
+	
+	for( i = 0; i < info->count; ++i )
+	{
+		if( info->usages[ i ] == SS3D_VDECLUSAGE_POSITION )
+			break;
+	}
+	if( i == info->count )
+		goto fail;
+	
+	vdata += info->offsets[ i ];
+	vdend = vdata + vdsize;
+	switch( info->types[ i ] )
+	{
+	case SS3D_VDECLTYPE_FLOAT1: /* read 1 float, y;z=0;0 */
+		tmp1 = ((float*) vdata)[0];
+		VEC3_Set( outMin, tmp1, 0, 0 );
+		VEC3_Set( outMax, tmp1, 0, 0 );
+		vdata += info->size;
+		while( vdata + info->size <= vdend )
+		{
+			tmp1 = ((float*) vdata)[0];
+			if( outMin[0] > tmp1 ) outMin[0] = tmp1;
+			if( outMax[0] < tmp1 ) outMax[0] = tmp1;
+			vdata += info->size;
+		}
+		break;
+	case SS3D_VDECLTYPE_FLOAT2: /* read 2 floats, z=0 */
+		tmp1 = ((float*) vdata)[0];
+		tmp2 = ((float*) vdata)[1];
+		VEC3_Set( outMin, tmp1, tmp2, 0 );
+		VEC3_Set( outMax, tmp1, tmp2, 0 );
+		vdata += info->size;
+		while( vdata + info->size <= vdend )
+		{
+			tmp1 = ((float*) vdata)[0];
+			tmp2 = ((float*) vdata)[1];
+			if( outMin[0] > tmp1 ) outMin[0] = tmp1;
+			if( outMax[0] < tmp1 ) outMax[0] = tmp1;
+			if( outMin[1] > tmp2 ) outMin[1] = tmp2;
+			if( outMax[1] < tmp2 ) outMax[1] = tmp2;
+			vdata += info->size;
+		}
+		break;
+	case SS3D_VDECLTYPE_FLOAT3:
+	case SS3D_VDECLTYPE_FLOAT4: /* read 3 floats */
+		VEC3_Copy( tmpv, ((float*)vdata) );
+		VEC3_Copy( outMin, tmpv );
+		VEC3_Copy( outMax, tmpv );
+		vdata += info->size;
+		while( vdata + info->size <= vdend )
+		{
+			VEC3_Copy( tmpv, ((float*)vdata) );
+			VEC3_Min( outMin, outMin, tmpv );
+			VEC3_Max( outMax, outMax, tmpv );
+			vdata += info->size;
+		}
+		break;
+	case SS3D_VDECLTYPE_BCOL4: /* read u8[3] */
+		pudata = (uint8_t*) vdata;
+		VEC3_Set( tmpv, pudata[0] * (1.0f/255.0f), pudata[1] * (1.0f/255.0f), pudata[2] * (1.0f/255.0f) );
+		VEC3_Copy( outMin, tmpv );
+		VEC3_Copy( outMax, tmpv );
+		vdata += info->size;
+		while( vdata + info->size <= vdend )
+		{
+			VEC3_Set( tmpv, pudata[0] * (1.0f/255.0f), pudata[1] * (1.0f/255.0f), pudata[2] * (1.0f/255.0f) );
+			VEC3_Min( outMin, outMin, tmpv );
+			VEC3_Max( outMax, outMax, tmpv );
+			vdata += info->size;
+		}
+		break;
+	}
+	
+	return 1;
+	
+fail:
+	VEC3_Set( outMin, 0, 0, 0 );
+	VEC3_Set( outMax, 0, 0, 0 );
+	return 0;
+}
+
 
 //
 // MATERIAL
