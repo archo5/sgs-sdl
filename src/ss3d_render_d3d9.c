@@ -1424,7 +1424,13 @@ static int rd3d9i_render( SGS_CTX )
 	uint32_t visible_mesh_count = SS3D_Scene_Cull_Camera_MeshList( C, &visible_mesh_buf, scene );
 	SS3D_MeshInstance** visible_meshes = (SS3D_MeshInstance**) visible_mesh_buf.ptr;
 	
+	sgs_MemBuf visible_point_light_buf = sgs_membuf_create();
+	uint32_t visible_point_light_count = SS3D_Scene_Cull_Camera_PointLightList( C, &visible_point_light_buf, scene );
+	SS3D_Light** visible_point_lights = (SS3D_Light**) visible_point_light_buf.ptr;
+	
 	R->inh.stat_numVisMeshes = visible_mesh_count;
+	R->inh.stat_numVisPLights = visible_point_light_count;
+	R->inh.stat_numVisSLights = 0;
 	R->inh.stat_numDrawCalls = 0;
 	R->inh.stat_numSDrawCalls = 0;
 	R->inh.stat_numMDrawCalls = 0;
@@ -1439,10 +1445,18 @@ static int rd3d9i_render( SGS_CTX )
 		if( !MI->mesh || !MI->enabled )
 			continue;
 		MI->lightbuf_begin = (SS3D_MeshInstLight*) inst_light_buf.size;
+		// POINT LIGHTS
+		for( light_id = 0; light_id < visible_point_light_count; ++light_id )
+		{
+			SS3D_Light* L = visible_point_lights[ light_id ];
+			SS3D_MeshInstLight mil = { MI, L };
+			sgs_membuf_appbuf( &inst_light_buf, C, &mil, sizeof(mil) );
+		}
+		// SPOTLIGHTS
 		for( light_id = 0; light_id < scene->lights.size; ++light_id )
 		{
 			SS3D_Light* L = (SS3D_Light*) scene->lights.vars[ light_id ].val.data.O->data;
-			if( !L->isEnabled )
+			if( !L->isEnabled || L->type != SS3DLIGHT_SPOT )
 				continue;
 			SS3D_MeshInstLight mil = { MI, L };
 			sgs_membuf_appbuf( &inst_light_buf, C, &mil, sizeof(mil) );
@@ -1862,6 +1876,7 @@ static int rd3d9i_render( SGS_CTX )
 	sgs_membuf_destroy( &inst_light_buf, C );
 	sgs_membuf_destroy( &light_inst_buf, C );
 	sgs_membuf_destroy( &visible_mesh_buf, C );
+	sgs_membuf_destroy( &visible_point_light_buf, C );
 	
 	
 	/* POST-PROCESS & RENDER TO BACKBUFFER */
@@ -2023,6 +2038,8 @@ static int rd3d9_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isp
 		SGS_CASE( "disablePostProcessing" ) SGS_RETURN_BOOL( R->inh.disablePostProcessing )
 		
 		SGS_CASE( "stat_numVisMeshes" )  SGS_RETURN_INT( R->inh.stat_numVisMeshes )
+		SGS_CASE( "stat_numVisPLights" ) SGS_RETURN_INT( R->inh.stat_numVisPLights )
+		SGS_CASE( "stat_numVisSLights" ) SGS_RETURN_INT( R->inh.stat_numVisSLights )
 		SGS_CASE( "stat_numDrawCalls" )  SGS_RETURN_INT( R->inh.stat_numDrawCalls )
 		SGS_CASE( "stat_numSDrawCalls" ) SGS_RETURN_INT( R->inh.stat_numSDrawCalls )
 		SGS_CASE( "stat_numMDrawCalls" ) SGS_RETURN_INT( R->inh.stat_numMDrawCalls )

@@ -285,8 +285,9 @@ function update()
 		$"Number of draw calls (shadow): " $ _R.SS3D.stat_numSDrawCalls $ "\n"
 		$"Number of draw calls (main): " $ _R.SS3D.stat_numMDrawCalls $ "\n"
 		$"Number of draw calls (screen): " $ _R.SS3D.stat_numPDrawCalls $ "\n"
+		$"Number of lights visible by main camera: " $ _R.SS3D.stat_numVisPLights $ " point, " $ _R.SS3D.stat_numVisSLights $ " spot\n"
 	;
-	SS_DrawTextRect( statinfo, Font, color(1), DT_LEFT | DT_TOP, 16, 320, 16, 320 );
+	SS_DrawTextRect( statinfo, Font, color(1), DT_LEFT | DT_TOP, 16, 3200, 16, 3200 );
 	
 	SS_Present();
 }

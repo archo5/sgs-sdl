@@ -77,7 +77,6 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 
 #define SS3DLIGHT_POINT  1
 #define SS3DLIGHT_SPOT   2
-#define SS3DLIGHT_DIRECT 3
 
 #define SS3DINDEX_16 0
 #define SS3DINDEX_32 1
@@ -383,6 +382,7 @@ struct _SS3D_CullScene
 };
 
 uint32_t SS3D_Scene_Cull_Camera_MeshList( SGS_CTX, sgs_MemBuf* MB, SS3D_Scene* S );
+uint32_t SS3D_Scene_Cull_Camera_PointLightList( SGS_CTX, sgs_MemBuf* MB, SS3D_Scene* S );
 
 
 struct _SS3D_Camera
@@ -458,6 +458,8 @@ struct _SS3D_Renderer
 	
 	/* common rendering stats */
 	uint32_t stat_numVisMeshes;
+	uint32_t stat_numVisPLights;
+	uint32_t stat_numVisSLights;
 	uint32_t stat_numDrawCalls;
 	uint32_t stat_numSDrawCalls;
 	uint32_t stat_numMDrawCalls;
