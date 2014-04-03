@@ -123,35 +123,38 @@ __CODE__
 		float3 lightColor = SL.colpow.rgb;
 		
 		float3 slpos = SLPositions[ i ].xyz / SLPositions[ i ].w;
-		clip( -(abs( slpos ) -1) );
-		float2 sltex = slpos.xy * float2(0.5,-0.5) + 0.5;
-		float3 cookieSample = tex2Dlod( SpotLightTextures[ i * 2 ], float4( sltex, 0, 0 ) );
-		
-		float4 sizeinfo = SL.shminfo;
-		float2 coord = sltex * sizeinfo.xy;
-		float2 fv = frac( coord );
-		sampler2D shmap = SpotLightTextures[ i * 2 + 1 ];
-		float coord0x = floor( coord.x ) * sizeinfo.z;
-		float coord1x = ceil( coord.x ) * sizeinfo.z;
-		float coord0y = floor( coord.y ) * sizeinfo.w;
-		float coord1y = ceil( coord.y ) * sizeinfo.w;
-		float s00 = step( slpos.z, tex2Dlod( shmap, float4( coord0x, coord0y, 0, 0 ) ).r );
-		float s10 = step( slpos.z, tex2Dlod( shmap, float4( coord1x, coord0y, 0, 0 ) ).r );
-		float s01 = step( slpos.z, tex2Dlod( shmap, float4( coord0x, coord1y, 0, 0 ) ).r );
-		float s11 = step( slpos.z, tex2Dlod( shmap, float4( coord1x, coord1y, 0, 0 ) ).r );
-		float smix = lerp( lerp( s00, s10, fv.x ), lerp( s01, s11, fv.x ), fv.y );
-		
-		lightColor *= cookieSample * smix;
-		
-		float distFactor = pow( 1 - saturate( lightDist / SL.vposrad.w ), SL.colpow.w );
-		float NdotL = saturate( dot( outNormal, lightDir ) );
-		
-		RdotV = saturate( dot( reflect( lightDir, outNormal ), viewDir ) );
-		specAmount = pow( RdotV, outSpecularPower ) * sqrt( outSpecularPower );
-		
-		totalDiffuse += lightColor * NdotL * distFactor;
-		totalSpecular += lightColor * specAmount;
+		if( dot(step(-(abs( slpos ) -1),0),1) <= 0 )
+		{
+			float2 sltex = slpos.xy * float2(0.5,-0.5) + 0.5;
+			float3 cookieSample = tex2Dlod( SpotLightTextures[ i * 2 ], float4( sltex, 0, 0 ) );
+			
+			float4 sizeinfo = SL.shminfo;
+			float2 coord = sltex * sizeinfo.xy;
+			float2 fv = frac( coord );
+			sampler2D shmap = SpotLightTextures[ i * 2 + 1 ];
+			float coord0x = floor( coord.x ) * sizeinfo.z;
+			float coord1x = ceil( coord.x ) * sizeinfo.z;
+			float coord0y = floor( coord.y ) * sizeinfo.w;
+			float coord1y = ceil( coord.y ) * sizeinfo.w;
+			float s00 = step( slpos.z, tex2Dlod( shmap, float4( coord0x, coord0y, 0, 0 ) ).r );
+			float s10 = step( slpos.z, tex2Dlod( shmap, float4( coord1x, coord0y, 0, 0 ) ).r );
+			float s01 = step( slpos.z, tex2Dlod( shmap, float4( coord0x, coord1y, 0, 0 ) ).r );
+			float s11 = step( slpos.z, tex2Dlod( shmap, float4( coord1x, coord1y, 0, 0 ) ).r );
+			float smix = lerp( lerp( s00, s10, fv.x ), lerp( s01, s11, fv.x ), fv.y );
+			
+			lightColor *= cookieSample * smix;
+			
+			float distFactor = pow( 1 - saturate( lightDist / SL.vposrad.w ), SL.colpow.w );
+			float NdotL = saturate( dot( outNormal, lightDir ) );
+			
+			RdotV = saturate( dot( reflect( lightDir, outNormal ), viewDir ) );
+			specAmount = pow( RdotV, outSpecularPower ) * sqrt( outSpecularPower );
+			
+			totalDiffuse += lightColor * NdotL * distFactor;
+			totalSpecular += lightColor * specAmount;
+		}
 	}
+	clip( totalDiffuse + totalSpecular );
 	
 	_outColor0 = float4( totalDiffuse * outDiffuseColor + totalSpecular * outSpecularColor, outOpacity );
 	_outColor1 = float4( 0, 0, 0, 0 );

@@ -189,7 +189,7 @@ function initialize()
 	
 	_R.Light4 = light4 = _R.Scene.createLight();
 	light4.type = SS3DLIGHT_SPOT;
-	light4.color = vec3(0.9,0.1,0.05)*0.02;
+	light4.color = vec3(0.9,0.1,0.05)*2;
 	light4.position = vec3(0,-10,10);
 	light4.range = 100;
 	light4.power = 2;
