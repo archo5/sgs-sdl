@@ -365,9 +365,9 @@ SS3D_CullSceneMesh;
 
 typedef int (*fpSS3D_CullScene_Camera_MeshList) ( void* /* data */, uint32_t /* count */, SS3D_CullSceneCamera* /* camera */, SS3D_CullSceneMesh* /* meshes */, uint32_t* /* outbitfield */ );
 typedef int (*fpSS3D_CullScene_Camera_PointLightList) ( void* /* data */, uint32_t /* count */, SS3D_CullSceneCamera* /* camera */, SS3D_CullScenePointLight* /* lights */, uint32_t* /* outbitfield */ );
-typedef int (*fpSS3D_CullScene_Camera_SpotLightList) ( void* /* data */, uint32_t /* count */, SS3D_CullSceneCamera* /* camera */, SS3D_CullSceneFrustum* /* data */, float* /* matrices */, uint32_t* /* outbitfield */ );
+typedef int (*fpSS3D_CullScene_Camera_SpotLightList) ( void* /* data */, uint32_t /* count */, SS3D_CullSceneCamera* /* camera */, SS3D_CullSceneFrustum* /* frusta */, MAT4* /* inv_matrices */, uint32_t* /* outbitfield */ );
 typedef int (*fpSS3D_CullScene_Mesh_PointLightList) ( void* /* data */, uint32_t /* count */, SS3D_CullSceneMesh* /* mesh */, SS3D_CullScenePointLight* /* lights */, uint32_t* /* outbitfield */ );
-typedef int (*fpSS3D_CullScene_Mesh_SpotLightList) ( void* /* data */, uint32_t /* count */, SS3D_CullSceneMesh* /* mesh */, SS3D_CullSceneFrustum* /* data */, float* /* matrices */, uint32_t* /* outbitfield */ );
+typedef int (*fpSS3D_CullScene_Mesh_SpotLightList) ( void* /* data */, uint32_t /* count */, SS3D_CullSceneMesh* /* mesh */, SS3D_CullSceneFrustum* /* frusta */, MAT4* /* inv_matrices */, uint32_t* /* outbitfield */ );
 
 struct _SS3D_CullScene
 {
@@ -383,6 +383,7 @@ struct _SS3D_CullScene
 
 uint32_t SS3D_Scene_Cull_Camera_MeshList( SGS_CTX, sgs_MemBuf* MB, SS3D_Scene* S );
 uint32_t SS3D_Scene_Cull_Camera_PointLightList( SGS_CTX, sgs_MemBuf* MB, SS3D_Scene* S );
+uint32_t SS3D_Scene_Cull_Camera_SpotLightList( SGS_CTX, sgs_MemBuf* MB, SS3D_Scene* S );
 
 
 struct _SS3D_Camera

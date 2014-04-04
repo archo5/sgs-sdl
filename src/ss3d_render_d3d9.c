@@ -1428,9 +1428,13 @@ static int rd3d9i_render( SGS_CTX )
 	uint32_t visible_point_light_count = SS3D_Scene_Cull_Camera_PointLightList( C, &visible_point_light_buf, scene );
 	SS3D_Light** visible_point_lights = (SS3D_Light**) visible_point_light_buf.ptr;
 	
+	sgs_MemBuf visible_spot_light_buf = sgs_membuf_create();
+	uint32_t visible_spot_light_count = SS3D_Scene_Cull_Camera_SpotLightList( C, &visible_spot_light_buf, scene );
+	SS3D_Light** visible_spot_lights = (SS3D_Light**) visible_spot_light_buf.ptr;
+	
 	R->inh.stat_numVisMeshes = visible_mesh_count;
 	R->inh.stat_numVisPLights = visible_point_light_count;
-	R->inh.stat_numVisSLights = 0;
+	R->inh.stat_numVisSLights = visible_spot_light_count;
 	R->inh.stat_numDrawCalls = 0;
 	R->inh.stat_numSDrawCalls = 0;
 	R->inh.stat_numMDrawCalls = 0;
@@ -1453,11 +1457,9 @@ static int rd3d9i_render( SGS_CTX )
 			sgs_membuf_appbuf( &inst_light_buf, C, &mil, sizeof(mil) );
 		}
 		// SPOTLIGHTS
-		for( light_id = 0; light_id < scene->lights.size; ++light_id )
+		for( light_id = 0; light_id < visible_spot_light_count; ++light_id )
 		{
-			SS3D_Light* L = (SS3D_Light*) scene->lights.vars[ light_id ].val.data.O->data;
-			if( !L->isEnabled || L->type != SS3DLIGHT_SPOT )
-				continue;
+			SS3D_Light* L = visible_spot_lights[ light_id ];
 			SS3D_MeshInstLight mil = { MI, L };
 			sgs_membuf_appbuf( &inst_light_buf, C, &mil, sizeof(mil) );
 		}
@@ -1877,6 +1879,7 @@ static int rd3d9i_render( SGS_CTX )
 	sgs_membuf_destroy( &light_inst_buf, C );
 	sgs_membuf_destroy( &visible_mesh_buf, C );
 	sgs_membuf_destroy( &visible_point_light_buf, C );
+	sgs_membuf_destroy( &visible_spot_light_buf, C );
 	
 	
 	/* POST-PROCESS & RENDER TO BACKBUFFER */

@@ -1437,6 +1437,33 @@ static void SS3D_GetFrustumPlanes( PLANE frustum[6], MAT4 mIVP )
 	SS3D_MakePlanesFromBoxPoints( frustum, wsp );
 }
 
+static void SS3D_GetFrustumAABB( VEC3 aabb[2], MAT4 mIVP )
+{
+	static VEC3 psp[8] =
+	{
+		{ -1, -1, 0 },
+		{  1, -1, 0 },
+		{  1,  1, 0 },
+		{ -1,  1, 0 },
+		{ -1, -1, 1 },
+		{  1, -1, 1 },
+		{  1,  1, 1 },
+		{ -1,  1, 1 },
+	};
+	
+	int i;
+	VEC3 tmp;
+	SS3D_Mtx_TransformPos( tmp, psp[0], mIVP );
+	VEC3_Copy( aabb[0], tmp );
+	VEC3_Copy( aabb[1], tmp );
+	for( i = 1; i < 8; ++i )
+	{
+		SS3D_Mtx_TransformPos( tmp, psp[i], mIVP );
+		VEC3_Min( aabb[0], aabb[0], tmp );
+		VEC3_Max( aabb[1], aabb[1], tmp );
+	}
+}
+
 static void SS3D_GetTfAABB( VEC3 aabb[2], MAT4 mtx, VEC3 min, VEC3 max )
 {
 	VEC3 wsp[8] =
@@ -1542,6 +1569,33 @@ static int SS3D_ISCF_Camera_PointLightList( void* data, uint32_t count, SS3D_Cul
 	return 1;
 }
 
+static int SS3D_ISCF_Camera_SpotLightList( void* data, uint32_t count, SS3D_CullSceneCamera* camera, SS3D_CullSceneFrustum* frusta, MAT4* inv_matrices, uint32_t* outbitfield )
+{
+	uint32_t i, o = 0;
+	PLANE frustum[6];
+	VEC3* lightaabbs = malloc( 2 * sizeof(VEC3) * count );
+	
+	SS3D_GetFrustumPlanes( frustum, camera->invViewProjMatrix );
+	for( i = 0; i < count; ++i )
+		SS3D_GetFrustumAABB( lightaabbs + i * 2, inv_matrices[ i ] );
+	
+	for( i = 0; i < count; )
+	{
+		uint32_t bfout = 0;
+		while( i < count )
+		{
+			uint32_t mask = 1 << ( i % 32 );
+			if( SS3D_FrustumAABBIntersection( frustum, lightaabbs[ i * 2 ], lightaabbs[ i * 2 + 1 ] ) )
+				bfout |= mask;
+			i++;
+		}
+		outbitfield[ o++ ] = bfout;
+	}
+	
+	free( lightaabbs );
+	return 1;
+}
+
 
 //
 // CULL SCENE
@@ -1624,6 +1678,7 @@ static void push_default_cullscene( SGS_CTX )
 	SS3D_CullScene* CS = push_cullscene( C );
 	CS->camera_meshlist = SS3D_ISCF_Camera_MeshList;
 	CS->camera_pointlightlist = SS3D_ISCF_Camera_PointLightList;
+	CS->camera_spotlightlist = SS3D_ISCF_Camera_SpotLightList;
 }
 
 static int SS3D_CreateCullScene( SGS_CTX )
@@ -1937,6 +1992,19 @@ static void get_frustum_from_camera( SS3D_Camera* CAM, SS3D_CullSceneCamera* out
 	SS3D_Mtx_Invert( out->invViewProjMatrix, out->viewProjMatrix );
 }
 
+static void get_frustum_from_light( SS3D_Light* L, SS3D_CullSceneCamera* out )
+{
+	VEC3_Copy( out->frustum.position, L->position );
+	VEC3_Copy( out->frustum.direction, L->direction );
+	VEC3_Copy( out->frustum.up, L->updir );
+	SS3D_PerspectiveAngles( L->angle, L->aspect, 0.5, &out->frustum.hangle, &out->frustum.vangle );
+	out->frustum.znear = L->range * 0.001f;
+	out->frustum.zfar = L->range;
+	memcpy( out->viewProjMatrix, L->viewProjMatrix, sizeof( L->viewProjMatrix ) );
+	SS3D_Mtx_Identity( out->invViewProjMatrix );
+	SS3D_Mtx_Invert( out->invViewProjMatrix, out->viewProjMatrix );
+}
+
 uint32_t SS3D_Scene_Cull_Camera_MeshList( SGS_CTX, sgs_MemBuf* MB, SS3D_Scene* S )
 {
 	SS3D_Camera* CAM = (SS3D_Camera*) S->camera->data;
@@ -2083,7 +2151,86 @@ uint32_t SS3D_Scene_Cull_Camera_PointLightList( SGS_CTX, sgs_MemBuf* MB, SS3D_Sc
 	sgs_Dealloc( light_bounds );
 	sgs_Dealloc( light_visiblity );
 	
-	sgs_membuf_resize( MB, C, mbsize + sizeof(SS3D_MeshInstance*) * data_size );
+	sgs_membuf_resize( MB, C, mbsize + sizeof(SS3D_Light*) * data_size );
+	return data_size;
+}
+
+uint32_t SS3D_Scene_Cull_Camera_SpotLightList( SGS_CTX, sgs_MemBuf* MB, SS3D_Scene* S )
+{
+	SS3D_Camera* CAM = (SS3D_Camera*) S->camera->data;
+	if( !CAM )
+		return 0;
+	
+	uint32_t i, data_size = 0;
+	size_t mbsize = MB->size;
+	
+	SS3D_CullSceneCamera camera_frustum;
+	get_frustum_from_camera( CAM, &camera_frustum );
+	
+	sgs_membuf_resize( MB, C, mbsize + sizeof(SS3D_Light*) * S->lights.size );
+	SS3D_Light** light_instances = (SS3D_Light**) ( MB->ptr + mbsize );
+	SS3D_CullSceneFrustum* light_bounds = sgs_Alloc_n( SS3D_CullSceneFrustum, S->lights.size );
+	MAT4* light_matrices = sgs_Alloc_n( MAT4, S->lights.size );
+	uint32_t* light_visiblity = sgs_Alloc_n( uint32_t, divideup( S->lights.size, 32 ) );
+	
+	/* fill in light data */
+	sgs_SizeVal light_id;
+	for( light_id = 0; light_id < S->lights.size; ++light_id )
+	{
+		SS3D_CullSceneCamera light_frustum;
+		SS3D_Light* L = (SS3D_Light*) S->lights.vars[ light_id ].val.data.O->data;
+		if( !L->isEnabled || L->type != SS3DLIGHT_SPOT )
+			continue;
+		
+		get_frustum_from_light( L, &light_frustum );
+		light_instances[ data_size ] = L;
+		memcpy( &light_bounds[ data_size ], &light_frustum.frustum, sizeof( light_frustum.frustum ) );
+		memcpy( &light_matrices[ data_size ], &light_frustum.invViewProjMatrix, sizeof( light_frustum.invViewProjMatrix ) );
+		data_size++;
+	}
+	
+	/* iterate all cullscenes */
+	sgs_Variable arr, it, val;
+	sgs_InitObjectPtr( &arr, S->cullScenes );
+	sgs_GetIteratorP( C, &arr, &it );
+	while( sgs_IterAdvanceP( C, &it ) > 0 )
+	{
+		sgs_IterGetDataP( C, &it, NULL, &val );
+		if( sgs_IsObjectP( &val, SS3D_CullScene_iface ) )
+		{
+			SS3D_CullScene* CS = (SS3D_CullScene*) sgs_GetObjectDataP( &val );
+			
+			if( CS->camera_spotlightlist && ( CS->flags & SS3D_CF_ENABLE_CAM_PLT ) != 0 )
+			{
+				if( CS->camera_spotlightlist( CS->data, data_size, &camera_frustum, light_bounds, light_matrices, light_visiblity ) )
+				{
+					uint32_t outpos = 0;
+					for( i = 0; i < data_size; ++i )
+					{
+						if( light_visiblity[ i / 32 ] & ( 1 << ( i % 32 ) ) )
+						{
+							if( i > outpos )
+							{
+								light_instances[ outpos ] = light_instances[ i ];
+								memcpy( &light_bounds[ outpos ], &light_bounds[ i ], sizeof( light_bounds[0] ) );
+								memcpy( &light_matrices[ outpos ], &light_matrices[ i ], sizeof( light_matrices[0] ) );
+							}
+							outpos++;
+						}
+					}
+					data_size = outpos;
+				}
+			}
+		}
+		sgs_Release( C, &val );
+	}
+	sgs_Release( C, &it );
+	
+	sgs_Dealloc( light_matrices );
+	sgs_Dealloc( light_bounds );
+	sgs_Dealloc( light_visiblity );
+	
+	sgs_membuf_resize( MB, C, mbsize + sizeof(SS3D_Light*) * data_size );
 	return data_size;
 }
 /********** SCENE CULLING END ***********/
