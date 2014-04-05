@@ -897,8 +897,6 @@ size_t SS3D_TextureData_GetMipDataSize( SS3D_TextureData* TD, int mip )
 	
 	- float boundsmin[3]
 	- float boundsmax[3]
-	- float center[3]
-	- float radius
 	
 	- buffer vdata
 	- buffer idata
@@ -906,7 +904,7 @@ size_t SS3D_TextureData_GetMipDataSize( SS3D_TextureData* TD, int mip )
 	- uint8 numparts
 	- part parts[numparts]
 	
-	minimum size = 12+40+10 = 62
+	minimum size = 12+24+10 = 46
 */
 
 static int md_parse_buffer( char* buf, size_t size, char** outptr, uint32_t* outsize )
@@ -940,10 +938,8 @@ int SS3D_MeshData_Parse( char* buf, size_t size, SS3D_MeshFileData* out )
 	memcpy( &out->dataFlags, buf + 8, 4 );
 	memcpy( &out->boundsMin, buf + 12, 12 );
 	memcpy( &out->boundsMax, buf + 24, 12 );
-	memcpy( &out->center, buf + 36, 12 );
-	memcpy( &out->radius, buf + 48, 4 );
-	off = 52;
-	if( !md_parse_buffer( buf + 52, size - 52, &out->vertexData, &out->vertexDataSize ) )
+	off = 36;
+	if( !md_parse_buffer( buf + off, size - off, &out->vertexData, &out->vertexDataSize ) )
 		return 0;
 	off += 4 + out->vertexDataSize;
 	if( !md_parse_buffer( buf + off, size - off, &out->indexData, &out->indexDataSize ) )
@@ -1160,8 +1156,6 @@ void SS3D_Mesh_Init( SS3D_Mesh* mesh )
 	
 	VEC3_Set( mesh->boundsMin, 0, 0, 0 );
 	VEC3_Set( mesh->boundsMax, 0, 0, 0 );
-	VEC3_Set( mesh->center, 0, 0, 0 );
-	mesh->radius = 0;
 }
 
 

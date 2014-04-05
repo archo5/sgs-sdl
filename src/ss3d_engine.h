@@ -219,16 +219,14 @@ typedef struct _SS3D_MeshFileData
 	
 	VEC3 boundsMin;
 	VEC3 boundsMax;
-	VEC3 center;
-	float radius;
 	
 	uint8_t numParts;
 	uint8_t formatSize;
-	/* size w/o padding at this point = 54+[12/24] = 66/78 */
+	/* size w/o padding at this point = 38+[12/24] = 50/62 */
 	
 	SS3D_MeshFilePartData parts[ SS3D_MAX_MESH_PARTS ];
 }
-SS3D_MeshFileData; /* size w/o padding = 66/78 + 64/100 x8 = 578/878 */
+SS3D_MeshFileData; /* size w/o padding = 50/62 + 64/100 x8 = 562/862 */
 
 int SS3D_MeshData_Parse( char* buf, size_t size, SS3D_MeshFileData* out );
 
@@ -316,8 +314,6 @@ struct _SS3D_Mesh
 	/* collision detection */
 	VEC3 boundsMin;
 	VEC3 boundsMax;
-	VEC3 center;
-	float radius;
 };
 
 void SS3D_Mesh_Init( SS3D_Mesh* mesh );

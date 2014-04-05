@@ -1,7 +1,7 @@
-float4 diff = tex2D( Tex0, inTex0.xy );
+float4 diff = tex2D( Tex0, inTex0.xy * 0.5 );
 outDiffuseColor = diff.rgb;
-outOpacity = diff.a;
+outOpacity = 1;
 float fresnel = 1 - abs( dot( inNormal, normalize(viewPos) ) );
-outSpecularColor = lerp( 0.0, 0.1, fresnel );
+outSpecularColor = lerp( 0.0, 0.01, fresnel );
 outSpecularPower = 16;
 outNormal = inNormal;

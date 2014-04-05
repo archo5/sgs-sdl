@@ -1161,8 +1161,6 @@ static int meshd3d9i_loadFromBuffer( SGS_CTX )
 	
 	memcpy( &M->inh.boundsMin, &mfd.boundsMin, sizeof(mfd.boundsMin) );
 	memcpy( &M->inh.boundsMax, &mfd.boundsMax, sizeof(mfd.boundsMax) );
-	memcpy( &M->inh.center, &mfd.center, sizeof(mfd.center) );
-	M->inh.radius = mfd.radius;
 	
 	return 1;
 }
@@ -1183,8 +1181,6 @@ static int meshd3d9_getindex( SGS_ARGS_GETINDEXFUNC )
 		
 		SGS_CASE( "boundsMin" )        SGS_RETURN_VEC3P( M->inh.boundsMin )
 		SGS_CASE( "boundsMax" )        SGS_RETURN_VEC3P( M->inh.boundsMax )
-		SGS_CASE( "center" )           SGS_RETURN_VEC3P( M->inh.center )
-		SGS_CASE( "radius" )           SGS_RETURN_REAL( M->inh.radius )
 		
 		SGS_CASE( "setVertexData" )    SGS_RETURN_CFUNC( meshd3d9i_setVertexData )
 		SGS_CASE( "setIndexData" )     SGS_RETURN_CFUNC( meshd3d9i_setIndexData )
@@ -1217,8 +1213,6 @@ static int meshd3d9_setindex( SGS_ARGS_SETINDEXFUNC )
 		
 		SGS_CASE( "boundsMin" ) SGS_PARSE_VEC3( M->inh.boundsMin, 0 )
 		SGS_CASE( "boundsMax" ) SGS_PARSE_VEC3( M->inh.boundsMax, 0 )
-		SGS_CASE( "center" )    SGS_PARSE_VEC3( M->inh.center, 0 )
-		SGS_CASE( "radius" )    SGS_PARSE_REAL( M->inh.radius )
 	SGS_END_INDEXFUNC;
 }
 
