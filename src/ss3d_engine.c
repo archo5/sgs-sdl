@@ -256,7 +256,7 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 	float xscale = itha / pow( aspect, aamix );
 	float yscale = itha * pow( aspect, 1 - aamix );
 	
-	out[0][0] = -xscale;
+	out[0][0] = xscale;
 	out[0][1] = out[0][2] = out[0][3] = 0;
 	out[1][1] = yscale;
 	out[1][0] = out[1][2] = out[1][3] = 0;
@@ -1421,14 +1421,14 @@ static void SS3D_GetFrustumPlanes( PLANE frustum[6], MAT4 mIVP )
 {
 	static VEC3 psp[8] =
 	{
-		{ -1, -1, 0 },
-		{  1, -1, 0 },
-		{  1,  1, 0 },
 		{ -1,  1, 0 },
-		{ -1, -1, 1 },
-		{  1, -1, 1 },
-		{  1,  1, 1 },
+		{  1,  1, 0 },
+		{  1, -1, 0 },
+		{ -1, -1, 0 },
 		{ -1,  1, 1 },
+		{  1,  1, 1 },
+		{  1, -1, 1 },
+		{ -1, -1, 1 },
 	};
 	
 	int i;
@@ -1443,14 +1443,14 @@ static void SS3D_GetFrustumAABB( VEC3 aabb[2], MAT4 mIVP )
 {
 	static VEC3 psp[8] =
 	{
-		{ -1, -1, 0 },
-		{  1, -1, 0 },
-		{  1,  1, 0 },
 		{ -1,  1, 0 },
-		{ -1, -1, 1 },
-		{  1, -1, 1 },
-		{  1,  1, 1 },
+		{  1,  1, 0 },
+		{  1, -1, 0 },
+		{ -1, -1, 0 },
 		{ -1,  1, 1 },
+		{  1,  1, 1 },
+		{  1, -1, 1 },
+		{ -1, -1, 1 },
 	};
 	
 	int i;
@@ -1533,8 +1533,9 @@ static int SS3D_ISCF_Camera_MeshList( void* data, uint32_t count, SS3D_CullScene
 	
 	for( i = 0; i < count; )
 	{
+		int sub = 32;
 		uint32_t bfout = 0;
-		while( i < count )
+		while( i < count && sub --> 0 )
 		{
 			uint32_t mask = 1 << ( i % 32 );
 			if( SS3D_FrustumAABBIntersection( frustum, meshaabbs[ i * 2 ], meshaabbs[ i * 2 + 1 ] ) )
@@ -1557,8 +1558,9 @@ static int SS3D_ISCF_Camera_PointLightList( void* data, uint32_t count, SS3D_Cul
 	
 	for( i = 0; i < count; )
 	{
+		int sub = 32;
 		uint32_t bfout = 0;
-		while( i < count )
+		while( i < count && sub --> 0 )
 		{
 			uint32_t mask = 1 << ( i % 32 );
 			if( SS3D_FrustumSphereIntersection( frustum, lights[ i ].position, lights[ i ].radius ) )
@@ -1583,8 +1585,9 @@ static int SS3D_ISCF_Camera_SpotLightList( void* data, uint32_t count, SS3D_Cull
 	
 	for( i = 0; i < count; )
 	{
+		int sub = 32;
 		uint32_t bfout = 0;
-		while( i < count )
+		while( i < count && sub --> 0 )
 		{
 			uint32_t mask = 1 << ( i % 32 );
 			if( SS3D_FrustumAABBIntersection( frustum, lightaabbs[ i * 2 ], lightaabbs[ i * 2 + 1 ] ) )
@@ -2390,6 +2393,7 @@ void SS3D_Renderer_Construct( SS3D_Renderer* R, SGS_CTX )
 	R->viewport = NULL;
 	
 	R->disablePostProcessing = 0;
+	R->dbg_rt = 0;
 	
 	R->stat_numVisMeshes = 0;
 	R->stat_numVisPLights = 0;

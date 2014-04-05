@@ -1938,7 +1938,7 @@ static int rd3d9i_render( SGS_CTX )
 	use_texture_int( R, 0, NULL, 0 );
 	use_shader( R, NULL );
 	
-	if( !R->inh.currentRT )
+	if( !R->inh.currentRT && R->inh.dbg_rt )
 	{
 		RECT srcRect = { 0, 0, w, h };
 		RECT srcRect2 = { 0, 0, w/4, h/4 };
@@ -2053,6 +2053,7 @@ static int rd3d9_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isp
 		SGS_CASE( "viewport" )         SGS_RETURN_OBJECT( R->inh.viewport )
 		
 		SGS_CASE( "disablePostProcessing" ) SGS_RETURN_BOOL( R->inh.disablePostProcessing )
+		SGS_CASE( "dbg_rt" ) SGS_RETURN_BOOL( R->inh.dbg_rt )
 		
 		SGS_CASE( "stat_numVisMeshes" )  SGS_RETURN_INT( R->inh.stat_numVisMeshes )
 		SGS_CASE( "stat_numVisPLights" ) SGS_RETURN_INT( R->inh.stat_numVisPLights )
@@ -2100,6 +2101,7 @@ static int rd3d9_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Var
 		}
 		
 		SGS_CASE( "disablePostProcessing" ) SGS_PARSE_BOOL( R->inh.disablePostProcessing )
+		SGS_CASE( "dbg_rt" ) SGS_PARSE_BOOL( R->inh.dbg_rt )
 	SGS_END_INDEXFUNC;
 }
 
