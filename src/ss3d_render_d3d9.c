@@ -339,15 +339,23 @@ static sgs_VarObj* get_shader_obj( SS3D_RD3D9* R, const char* name )
 //  T E X T U R E S
 //
 
-static void use_texture( SS3D_RD3D9* R, int slot, SS3D_Texture_D3D9* T )
+static void use_texture_int( SS3D_RD3D9* R, int slot, IDirect3DBaseTexture9* T, int usage )
 {
-	D3DCALL_( R->device, SetTexture, slot, T ? T->ptr.base : NULL );
+	D3DCALL_( R->device, SetTexture, slot, T );
 	if( T )
 	{
 		D3DCALL_( R->device, SetSamplerState, slot, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
 		D3DCALL_( R->device, SetSamplerState, slot, D3DSAMP_MINFILTER, D3DTEXF_LINEAR );
 		D3DCALL_( R->device, SetSamplerState, slot, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
+		D3DCALL_( R->device, SetSamplerState, slot, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
+		D3DCALL_( R->device, SetSamplerState, slot, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
+		D3DCALL_( R->device, SetSamplerState, slot, D3DSAMP_SRGBTEXTURE, usage == SS3DTEXTURE_USAGE_ALBEDO );
 	}
+}
+
+static void use_texture( SS3D_RD3D9* R, int slot, SS3D_Texture_D3D9* T )
+{
+	use_texture_int( R, slot, T ? T->ptr.base : NULL, T ? T->inh.info.usage : 0 );
 }
 
 static D3DFORMAT texfmt2d3d( int fmt )
@@ -522,7 +530,7 @@ static int get_texture_( SS3D_RD3D9* R, sgs_Variable* key )
 		SS3D_TextureData texdata;
 		SS3D_Texture_D3D9 texture, *T;
 		
-		err = SS3D_TextureData_LoadFromFile( &texdata, sgs_var_cstr( key ) );
+		err = SS3D_TextureData_LoadFromFile( C, &texdata, key );
 		if( err != SGS_SUCCESS )
 			return sgs_Msg( C, SGS_WARNING, "failed to load texture %s from file", sgs_var_cstr( key ) );
 		
@@ -1852,7 +1860,7 @@ static int rd3d9i_render( SGS_CTX )
 			D3DCALL_( R->device, SetRenderTarget, 2, NULL );
 			D3DCALL_( R->device, SetDepthStencilSurface, NULL );
 			
-			D3DCALL_( R->device, SetTexture, 0, (IDirect3DBaseTexture9*) tx_depth );
+			use_texture_int( R, 0, (IDirect3DBaseTexture9*) tx_depth, 0 );
 			
 			use_shader( R, get_shader( R, pass->shname ) );
 			pshc_set_vec4array( R, 4, campos4, 1 );
@@ -1894,34 +1902,33 @@ static int rd3d9i_render( SGS_CTX )
 		
 		D3DCALL_( R->device, SetRenderTarget, 0, R->drd.RTS_BLOOM_DSHP );
 		D3DCALL_( R->device, Clear, 0, NULL, D3DCLEAR_TARGET, 0, 1.0f, 0 );
-		D3DCALL_( R->device, SetTexture, 0, (IDirect3DBaseTexture9*) R->drd.RTT_OCOL );
+		use_texture_int( R, 0, (IDirect3DBaseTexture9*) R->drd.RTT_OCOL, 0 );
 		use_shader( R, sh_post_dshp );
 		postproc_blit( R, &RTOUT, 4, 0 );
 		
 		D3DCALL_( R->device, SetRenderTarget, 0, R->drd.RTS_BLOOM_BLUR1 );
 		D3DCALL_( R->device, Clear, 0, NULL, D3DCLEAR_TARGET, 0, 1.0f, 0 );
-		D3DCALL_( R->device, SetTexture, 0, (IDirect3DBaseTexture9*) R->drd.RTT_BLOOM_DSHP );
+		use_texture_int( R, 0, (IDirect3DBaseTexture9*) R->drd.RTT_BLOOM_DSHP, 0 );
 		use_shader( R, sh_post_blur_h );
 		postproc_blit( R, &RTOUT, 4, 0 );
 		
 		D3DCALL_( R->device, SetRenderTarget, 0, R->drd.RTS_BLOOM_BLUR2 );
 		D3DCALL_( R->device, Clear, 0, NULL, D3DCLEAR_TARGET, 0, 1.0f, 0 );
-		D3DCALL_( R->device, SetTexture, 0, (IDirect3DBaseTexture9*) R->drd.RTT_BLOOM_BLUR1 );
+		use_texture_int( R, 0, (IDirect3DBaseTexture9*) R->drd.RTT_BLOOM_BLUR1, 0 );
 		use_shader( R, sh_post_blur_v );
 		postproc_blit( R, &RTOUT, 4, 0 );
 		
 		D3DCALL_( R->device, SetRenderTarget, 0, RTOUT.CS );
 	//	D3DCALL_( R->device, Clear, 0, NULL, D3DCLEAR_TARGET, 0, 1.0f, 0 );
 		use_shader( R, sh_post_process );
-		D3DCALL_( R->device, SetTexture, 0, (IDirect3DBaseTexture9*) R->drd.RTT_OCOL );
-		D3DCALL_( R->device, SetTexture, 1, (IDirect3DBaseTexture9*) R->drd.RTT_PARM );
-		D3DCALL_( R->device, SetTexture, 2, (IDirect3DBaseTexture9*) R->drd.RTT_BLOOM_BLUR2 );
-		D3DCALL_( R->device, SetSamplerState, 2, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
+		use_texture_int( R, 0, (IDirect3DBaseTexture9*) R->drd.RTT_OCOL, 0 );
+		use_texture_int( R, 1, (IDirect3DBaseTexture9*) R->drd.RTT_PARM, 0 );
+		use_texture_int( R, 2, (IDirect3DBaseTexture9*) R->drd.RTT_BLOOM_BLUR2, 0 );
 		postproc_blit( R, &RTOUT, 1, 0 );
 	}
 	
 	
-	D3DCALL_( R->device, SetTexture, 0, NULL );
+	use_texture_int( R, 0, NULL, 0 );
 	use_shader( R, NULL );
 	
 	if( !R->inh.currentRT )

@@ -39,9 +39,9 @@ function initialize()
 		_R.PlaneMesh = _R.SS3D.createMesh();
 		vdata = fmt_pack( "12f 12f 12f 12f",
 			-50, -50, 0,  0, 0, 1,  1, 0, 0, 1,  0, 0,
-			 50, -50, 0,  0, 0, 1,  1, 0, 0, 1,  1, 0,
-			 50,  50, 0,  0, 0, 1,  1, 0, 0, 1,  1, 1,
-			-50,  50, 0,  0, 0, 1,  1, 0, 0, 1,  0, 1 );
+			 50, -50, 0,  0, 0, 1,  1, 0, 0, 1,  2, 0,
+			 50,  50, 0,  0, 0, 1,  1, 0, 0, 1,  2, 2,
+			-50,  50, 0,  0, 0, 1,  1, 0, 0, 1,  0, 2 );
 		_R.PlaneMesh.setVertexData( vdata, _R.VD1, false );
 		_R.PlaneMesh.setAABBFromVertexData( vdata, _R.VD1 );
 		_R.PlaneMesh.setIndexData( fmt_pack( "6w", 0, 1, 2, 2, 3, 0 ), false );

@@ -734,7 +734,7 @@ static int ddsfmt_to_enginefmt( dds_u32 fmt )
 	}
 }
 
-SGSRESULT SS3D_TextureData_LoadFromFile( SS3D_TextureData* TD, const char* file )
+SGSRESULT SS3D_TextureData_LoadFromFile( SGS_CTX, SS3D_TextureData* TD, sgs_Variable* vFile )
 {
 	unsigned char* out;
 	unsigned w, h;
@@ -746,7 +746,7 @@ SGSRESULT SS3D_TextureData_LoadFromFile( SS3D_TextureData* TD, const char* file 
 	memset( TD, 0, sizeof(*TD) );
 	
 	// Try to load DDS
-	err = dds_load_from_file( file, &ddsinfo, dds_supfmt );
+	err = dds_load_from_file( sgs_var_cstr( vFile ), &ddsinfo, dds_supfmt );
 	if( err == DDS_ENOTFND ) return SGS_ENOTFND;
 	if( err == DDS_SUCCESS )
 	{
@@ -769,7 +769,7 @@ SGSRESULT SS3D_TextureData_LoadFromFile( SS3D_TextureData* TD, const char* file 
 	}
 	
 	// Try to load PNG
-	err = lodepng_decode32_file( &out, &w, &h, file );
+	err = lodepng_decode32_file( &out, &w, &h, sgs_var_cstr( vFile ) );
 	if( err == 78 ) return SGS_ENOTFND;
 	if( err == 0 )
 	{
@@ -822,7 +822,16 @@ success_genmips:
 		}
 	}
 success:
+	
 	TD->data = out;
+	
+	sgs_PushVariable( C, vFile );
+	if( SGS_SUCCEEDED( sgs_GlobalCall( C, "_SS3D_Texture_GetType", 1, 1 ) ) )
+	{
+		TD->info.usage = (int) sgs_GetInt( C, -1 );
+		sgs_Pop( C, 1 );
+	}
+	
 	return SGS_SUCCESS;
 failure:
 	return SGS_ENOTSUP;
@@ -2555,6 +2564,7 @@ static sgs_RegFuncConst ss3d_fconsts[] =
 
 static sgs_RegIntConst ss3d_iconsts[] =
 {
+	CN( TEXTURE_USAGE_MISC ), CN( TEXTURE_USAGE_ALBEDO ), CN( TEXTURE_USAGE_NORMAL ),
 	CN( LIGHT_POINT ), CN( LIGHT_SPOT ),
 	CN( RT_FORMAT_BACKBUFFER ), CN( RT_FORMAT_DEPTH ),
 };

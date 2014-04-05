@@ -63,6 +63,10 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 #define SS3DTEXFLAGS_CLAMP_X 0x10
 #define SS3DTEXFLAGS_CLAMP_Y 0x20
 
+#define SS3DTEXTURE_USAGE_MISC   0
+#define SS3DTEXTURE_USAGE_NORMAL 1
+#define SS3DTEXTURE_USAGE_ALBEDO 2
+
 #define SS3DFORMAT_UNKNOWN 0
 #define SS3DFORMAT_RGBA8  1
 #define SS3DFORMAT_BGRA8  2
@@ -156,6 +160,7 @@ typedef struct _SS3D_Renderer SS3D_Renderer;
 typedef struct _SS3D_TextureInfo
 {
 	int type;
+	int usage;
 	int width;
 	int height;
 	int depth;
@@ -184,7 +189,7 @@ typedef struct _SS3D_TextureData
 }
 SS3D_TextureData;
 
-SGSRESULT SS3D_TextureData_LoadFromFile( SS3D_TextureData* TD, const char* file );
+SGSRESULT SS3D_TextureData_LoadFromFile( SGS_CTX, SS3D_TextureData* TD, sgs_Variable* vFile );
 void SS3D_TextureData_Free( SS3D_TextureData* TD );
 size_t SS3D_TextureData_GetMipDataOffset( SS3D_TextureData* TD, int side, int mip );
 size_t SS3D_TextureData_GetMipDataSize( SS3D_TextureData* TD, int mip );

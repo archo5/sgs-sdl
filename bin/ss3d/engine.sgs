@@ -1,6 +1,15 @@
 
 global SS3D_FileRoot = "";
 
+// TEXTURES
+
+function _SS3D_Texture_GetType( filepath )
+{
+	if( string_find( filepath, "normal" ) !== null ) return SS3DTEXTURE_USAGE_NORMAL;
+	if( string_find( string_tolower( filepath ), "ui/" ) !== null ) return SS3DTEXTURE_USAGE_MISC;
+	return SS3DTEXTURE_USAGE_ALBEDO;
+}
+
 // SHADERS
 
 function _SS3D_Shader_NamePath( name )
@@ -79,25 +88,7 @@ function SS3D_GetVertexDecl( ss3d, decl )
 // MESH LOADING
 
 function SS3D_MeshLoad_GetVertexDecl( ss3d, decl ){ return SS3D_GetVertexDecl( ss3d, decl ); }
-// function SS3D_MeshLoad_GetShader( ss3d, shader ){ return ss3d.getShader( shader ); }
 function SS3D_MeshLoad_GetTexture( ss3d, texture ){ return ss3d.getTexture( SS3D_FileRoot $ texture ); }
-/*
-function SS3D_MeshLoad_GetMaterial( ss3d, flags, shader, t0, t1, t2, t3, t4, t5, t6, t7 )
-{
-	mtl = ss3d.createMaterial();
-	mtl.transparent = flags & 1;
-	mtl.shader = SS3D_MeshLoad_GetShader( ss3d, shader );
-	mtl.setTexture( 0, if( t0, SS3D_MeshLoad_GetTexture( ss3d, t0 ), null ) );
-	mtl.setTexture( 1, if( t1, SS3D_MeshLoad_GetTexture( ss3d, t1 ), null ) );
-	mtl.setTexture( 2, if( t2, SS3D_MeshLoad_GetTexture( ss3d, t2 ), null ) );
-	mtl.setTexture( 3, if( t3, SS3D_MeshLoad_GetTexture( ss3d, t3 ), null ) );
-	mtl.setTexture( 4, if( t4, SS3D_MeshLoad_GetTexture( ss3d, t4 ), null ) );
-	mtl.setTexture( 5, if( t5, SS3D_MeshLoad_GetTexture( ss3d, t5 ), null ) );
-	mtl.setTexture( 6, if( t6, SS3D_MeshLoad_GetTexture( ss3d, t6 ), null ) );
-	mtl.setTexture( 7, if( t7, SS3D_MeshLoad_GetTexture( ss3d, t7 ), null ) );
-	return mtl;
-}
-*/
 
 // MESH GEN
 

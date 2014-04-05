@@ -1,6 +1,5 @@
 float4 diff = tex2D( Tex0, inTex0.xy );
 float3 normal = tex2D( Tex1, inTex0.xy ).rgb * 2 - 1;
-diff.rgb *= diff.rgb; // GAMMA CORRECTION HACK (for now)
 outDiffuseColor = diff.rgb;
 outOpacity = diff.a;
 float fresnel = 1 - abs( dot( inNormal, normalize(viewPos) ) );

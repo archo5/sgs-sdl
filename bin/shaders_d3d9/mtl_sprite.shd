@@ -1,5 +1,4 @@
 float4 diff = tex2D( Tex0, inTex0.xy );
-diff.rgb *= diff.rgb; // GAMMA CORRECTION HACK (for now)
 outDiffuseColor = diff.rgb;
 outOpacity = diff.a * 0.5;
 float2 distort = tex2D( Tex1, inTex0.xy ).xy * 2 - 1;
