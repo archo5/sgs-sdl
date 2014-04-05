@@ -2268,6 +2268,8 @@ static int scene_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "ambientLightColor" ) SGS_RETURN_VEC3P( S->ambientLightColor )
 		SGS_CASE( "dirLightColor" )     SGS_RETURN_VEC3P( S->dirLightColor )
 		SGS_CASE( "dirLightDir" )       SGS_RETURN_VEC3P( S->dirLightDir )
+		
+		SGS_CASE( "skyTexture" )       SGS_RETURN_OBJECT( S->skyTexture )
 	SGS_END_INDEXFUNC;
 }
 
@@ -2300,6 +2302,21 @@ static int scene_setindex( SGS_ARGS_SETINDEXFUNC )
 		SGS_CASE( "ambientLightColor" ) SGS_PARSE_VEC3( S->ambientLightColor, 0 )
 		SGS_CASE( "dirLightColor" )     SGS_PARSE_VEC3( S->dirLightColor, 0 )
 		SGS_CASE( "dirLightDir" )       SGS_PARSE_VEC3( S->dirLightDir, 0 )
+		
+		SGS_CASE( "skyTexture" )
+		{
+			if( val->type == SGS_VT_NULL )
+			{
+				sgs_ObjAssign( C, &S->skyTexture, NULL );
+				return SGS_SUCCESS;
+			}
+			else if( sgs_IsObjectP( val, S->renderer->ifTexture ) )
+			{
+				sgs_ObjAssign( C, &S->skyTexture, sgs_GetObjectStructP( val ) );
+				return SGS_SUCCESS;
+			}
+			return SGS_EINVAL;
+		}
 	SGS_END_INDEXFUNC;
 }
 
@@ -2341,6 +2358,11 @@ static int scene_destruct( SGS_CTX, sgs_VarObj* obj )
 		{
 			sgs_ObjRelease( C, S->cullScenes );
 			S->cullScenes = NULL;
+		}
+		if( S->skyTexture )
+		{
+			sgs_ObjRelease( C, S->skyTexture );
+			S->skyTexture = NULL;
 		}
 	}
 	return SGS_SUCCESS;
@@ -2523,6 +2545,8 @@ void SS3D_Renderer_PushScene( SS3D_Renderer* R )
 	VEC3_Set( S->ambientLightColor, 0, 0, 0 );
 	VEC3_Set( S->dirLightColor, 0, 0, 0 );
 	VEC3_Set( S->dirLightDir, 0, 0, -1 );
+	
+	S->skyTexture = NULL;
 	
 	SS3D_Renderer_PokeResource( R, sgs_GetObjectStruct( R->C, -1 ), 1 );
 }

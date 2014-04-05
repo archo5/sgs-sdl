@@ -1418,7 +1418,7 @@ static int rd3d9i_render( SGS_CTX )
 	int w = RTOUT.w, h = RTOUT.h;
 	
 	
-	SS3D_Texture_D3D9* tx_cubemap = get_texture( R, "testdata/cubemap_pbr.dds" );
+	SS3D_Texture_D3D9* tx_cubemap = get_texture( R, "testdata/cubemap_beach_reflect.dds" );
 	
 	
 	SS3D_Shader_D3D9* sh_post_process = get_shader( R, "testFRpost" );
@@ -1628,6 +1628,8 @@ static int rd3d9i_render( SGS_CTX )
 		TEXTURES [some number of shadowmaps]
 	- DIR. AMBIENT DATA: (total size: 6 constants)
 		VEC4 colorXP, colorXN, colorYP, colorYN, colorZP, colorZN
+	- SKY DATA: (total size: 1 constant)
+		VEC4 [skyblend, -, -, -]
 	- FOG DATA: (total size: 2 constants)
 		VEC4 [cr, cg, cb, min.dst]
 		VEC4 [h1, d1, h2, d2] (heights, densities)
@@ -1639,6 +1641,7 @@ static int rd3d9i_render( SGS_CTX )
 	- PIXEL SHADER
 		0-3: camera inverse view matrix
 		4: camera position
+		11: sky data
 		12-13: fog data
 		14-19: dir.amb. data
 		20-22: dir. light
@@ -1654,6 +1657,11 @@ static int rd3d9i_render( SGS_CTX )
 	VEC4 campos4 = { cam->position[0], cam->position[1], cam->position[2], 0 };
 	pshc_set_vec4array( R, 4, campos4, 1 );
 	
+	VEC4 skydata[ 1 ] =
+	{
+		{ scene->skyTexture ? 1 : 0, 0, 0, 0 },
+	};
+	pshc_set_vec4array( R, 11, *skydata, 1 );
 	VEC4 fogdata[ 2 ] =
 	{
 		{ scene->fogColor[0] * scene->fogColor[0], scene->fogColor[1] * scene->fogColor[1], scene->fogColor[2] * scene->fogColor[2], scene->fogHeightFactor },
@@ -1861,6 +1869,7 @@ static int rd3d9i_render( SGS_CTX )
 			D3DCALL_( R->device, SetDepthStencilSurface, NULL );
 			
 			use_texture_int( R, 0, (IDirect3DBaseTexture9*) tx_depth, 0 );
+			use_texture( R, 4, scene->skyTexture ? (SS3D_Texture_D3D9*) scene->skyTexture->data : NULL );
 			
 			use_shader( R, get_shader( R, pass->shname ) );
 			pshc_set_vec4array( R, 4, campos4, 1 );

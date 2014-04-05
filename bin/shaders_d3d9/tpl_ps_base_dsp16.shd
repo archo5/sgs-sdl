@@ -93,7 +93,7 @@ __CODE__
 	float3 refWorld = mul( mInvView, float4( refView, 0 ) ).xyz;
 	
 	float3 totalDiffuse = gAmbLightColor + outAmbientDiffuseLight;
-	float3 totalSpecular = outAmbientSpecularLight + pow( texCUBElod( EnvMap, float4( refWorld.xzy*float3(1,-1,1), 1 ) ).rgb, 2 );
+	float3 totalSpecular = outAmbientSpecularLight + texCUBElod( EnvMap, float4( refWorld.xzy, 0 ) ).rgb;
 	
 	/* DIR.AMB. LIGHT */
 	/* TODO */

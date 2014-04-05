@@ -433,6 +433,8 @@ struct _SS3D_Scene
 	VEC3 ambientLightColor;
 	VEC3 dirLightColor;
 	VEC3 dirLightDir;
+	
+	sgs_VarObj* skyTexture;
 };
 
 typedef struct _SS3D_RenderPass

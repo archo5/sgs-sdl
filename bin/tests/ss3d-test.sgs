@@ -17,14 +17,15 @@ function initialize()
 	println( "SS3D: " $ _R.SS3D );
 	
 	_R.Scene = _R.SS3D.createScene();
-	_R.Scene.fogColor = vec3(0.2,0.3,0.4);
+	_R.Scene.fogColor = vec3(0.50,0.55,0.48);
 	_R.Scene.fogDensity = 0.001;
-	_R.Scene.fogHeightDensity = 0.005;
+	_R.Scene.fogHeightDensity = 0.003;
 	_R.Scene.fogStartHeight = 0;
 	_R.Scene.fogHeightFactor = 1;//0.5;
 	_R.Scene.ambientLightColor = vec3(0.01);
 	_R.Scene.dirLightColor = vec3(0.4,0.3,0.2);
 	_R.Scene.dirLightDir = vec3(-4,-4,-1);
+	_R.Scene.skyTexture = _R.SS3D.getTexture( "testdata/cubemap_beach_skybox.dds" );
 	println( "Scene: " $ _R.Scene );
 	_R.SS3D.currentScene = _R.Scene;
 	
@@ -241,6 +242,17 @@ function update()
 		angle = i / spls.size * M_PI * 2 - t;
 		spl.position = vec3( cos( angle ) * spldst, sin( angle ) * spldst, 5 );
 	}
+	
+	a = -t;
+	ca = cos( a );
+	sa = sin( a );
+	_R.MI.matrix = mat4
+	(
+		ca, -sa, 0, 0,
+		sa, ca, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1
+	);
 	
 	_R.PlaneMeshMI.enabled = false;
 	_R.SS3D.currentRT = _R.RT;

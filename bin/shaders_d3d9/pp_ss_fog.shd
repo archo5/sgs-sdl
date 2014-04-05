@@ -19,10 +19,12 @@ void main
 #elif defined(PS)
 
 sampler2D texDEPTH : register(s0);
+samplerCUBE texSKY : register(s4);
 
 float4x4 mInvView : register(c0);
 float3 cameraPos : register(c4);
 
+float4 skyDATA : register(c11);
 float4 fogRGBS : register(c12);
 float4 fogDATA : register(c13);
 
@@ -57,7 +59,13 @@ float4 main( float2 itex : TEXCOORD0, float2 fpos : TEXCOORD1 ) : COLOR0
 //	float totalFogDensity = fogDensity + max( 0, 1 - exp( -sqrt( vdistance ) * fogHeightDensity ) );
 	float fogfactor = saturate( 1 - exp( -distance * fogDensity - pow( vdistance * fogHeightDensity, 2 ) ) );
 	if( distance <= 0 )
+	{
+		float3 sbcoord = normalize( mul( mInvView, float4( fpos, 1, 0 ) ).xyz );
+		sbcoord = sbcoord.xzy;
+		float3 skycolor = texCUBElod( texSKY, float4( sbcoord, 0 ) ).rgb;
+		fogColor = lerp( fogColor, skycolor, skyDATA.x );
 		fogfactor = 1;
+	}
 	return float4( fogColor, fogfactor );
 }
 
