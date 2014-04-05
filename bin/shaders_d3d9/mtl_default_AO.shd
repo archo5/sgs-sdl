@@ -1,0 +1,9 @@
+float4 diff = tex2D( Tex0, inTex0.xy );
+float3 normal = tex2D( Tex1, inTex0.xy ).rgb * 2 - 1;
+outDiffuseColor = diff.rgb;
+outDiffuseColor *= tex2D( Tex2, inTex1.xy );
+outOpacity = diff.a;
+float fresnel = 1 - abs( dot( inNormal, normalize(viewPos) ) );
+outSpecularColor = float3( 0.2, 0.2, 0.2 ) * ( fresnel * fresnel );
+outSpecularPower = 64;
+outNormal = mul( normal, TBN );

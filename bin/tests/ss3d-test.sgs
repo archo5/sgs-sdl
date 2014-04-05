@@ -72,7 +72,8 @@ function initialize()
 	}
 	else if(1)
 	{
-		mesh = io_file_read( "testdata/bunny.real.ssm" );
+	//	mesh = io_file_read( "testdata/bunny.real.ssm" );
+		mesh = io_file_read( "testdata/extest0.ssm" );
 		_R.Mesh.loadFromBuffer( mesh );
 	}
 	else
@@ -243,7 +244,7 @@ function update()
 		spl.position = vec3( cos( angle ) * spldst, sin( angle ) * spldst, 5 );
 	}
 	
-	a = -t;
+	a = M_PI*0.5;//-t;
 	ca = cos( a );
 	sa = sin( a );
 	_R.MI.matrix = mat4

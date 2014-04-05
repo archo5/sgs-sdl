@@ -1089,6 +1089,7 @@ static int meshd3d9i_loadFromBuffer( SGS_CTX )
 {
 	int p, t;
 	char* buf;
+	const char* err;
 	sgs_SizeVal size;
 	SS3D_MeshFileData mfd;
 	
@@ -1096,8 +1097,9 @@ static int meshd3d9i_loadFromBuffer( SGS_CTX )
 	if( !sgs_LoadArgs( C, "m", &buf, &size ) )
 		return 0;
 	
-	if( !SS3D_MeshData_Parse( buf, size, &mfd ) )
-		return sgs_Msg( C, SGS_WARNING, "could not parse mesh data" );
+	err = SS3D_MeshData_Parse( buf, size, &mfd );
+	if( err )
+		return sgs_Msg( C, SGS_WARNING, "could not parse mesh data: %s", err );
 	
 	/* load core mesh data */
 	sgs_PushObjectPtr( C, M->inh.renderer->_myobj );
@@ -1530,6 +1532,7 @@ static int rd3d9i_render( SGS_CTX )
 			memcpy( m_inv_view, L->viewMatrix, sizeof( m_inv_view ) );
 			SS3D_Mtx_Transpose( m_inv_view );
 			pshc_set_mat4( R, 0, m_inv_view );
+			pshc_set_mat4( R, 4, L->projMatrix );
 			
 			pmil = L->mibuf_begin;
 			pmilend = L->mibuf_end;
@@ -1648,6 +1651,7 @@ static int rd3d9i_render( SGS_CTX )
 	vshc_set_mat4( R, 0, cam->mView );
 	vshc_set_mat4( R, 4, cam->mProj );
 	pshc_set_mat4( R, 0, cam->mInvView );
+	pshc_set_mat4( R, 4, cam->mProj );
 	VEC4 campos4 = { cam->position[0], cam->position[1], cam->position[2], 0 };
 	pshc_set_vec4array( R, 4, campos4, 1 );
 	

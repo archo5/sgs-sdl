@@ -886,7 +886,6 @@ size_t SS3D_TextureData_GetMipDataSize( SS3D_TextureData* TD, int mip )
 	- uint32 vcount
 	- uint32 ioff
 	- uint32 icount
-	- uint16 flags
 	- uint8 texcount
 	- smallbuf shader
 	- smallbuf textures[texcount]
@@ -929,36 +928,36 @@ static int md_parse_smallbuf( char* buf, size_t size, char** outptr, uint8_t* ou
 	return 1;
 }
 
-int SS3D_MeshData_Parse( char* buf, size_t size, SS3D_MeshFileData* out )
+const char* SS3D_MeshData_Parse( char* buf, size_t size, SS3D_MeshFileData* out )
 {
 	uint8_t p, t;
 	size_t off = 0;
-	if( size < 61 || memcmp( buf, "SS3DMESH", 8 ) != 0 )
-		return 0;
+	if( size < 46 || memcmp( buf, "SS3DMESH", 8 ) != 0 )
+		return "file too small or not SS3DMESH";
 	memcpy( &out->dataFlags, buf + 8, 4 );
 	memcpy( &out->boundsMin, buf + 12, 12 );
 	memcpy( &out->boundsMax, buf + 24, 12 );
 	off = 36;
 	if( !md_parse_buffer( buf + off, size - off, &out->vertexData, &out->vertexDataSize ) )
-		return 0;
+		return "failed to parse VDATA buffer";
 	off += 4 + out->vertexDataSize;
 	if( !md_parse_buffer( buf + off, size - off, &out->indexData, &out->indexDataSize ) )
-		return 0;
+		return "failed to parse IDATA buffer";
 	off += 4 + out->indexDataSize;
 	if( !md_parse_smallbuf( buf + off, size - off, &out->formatData, &out->formatSize ) )
-		return 0;
+		return "failed to parse FORMAT buffer";
 	off += 1 + out->formatSize;
 	if( off >= size )
-		return 0;
+		return "mesh incomplete (missing part data)";
 	out->numParts = (uint8_t) buf[ off++ ];
 	if( out->numParts > SS3D_MAX_MESH_PARTS )
-		return 0;
+		return "invalid part count";
 	for( p = 0; p < out->numParts; ++p )
 	{
 		SS3D_MeshFilePartData* pout = out->parts + p;
 		memset( pout, 0, sizeof(*pout) );
 		if( off + 19 > size )
-			return 0;
+			return "mesh incomplete (corrupted part data)";
 		memcpy( &pout->vertexOffset, buf + off, 4 ); off += 4;
 		memcpy( &pout->vertexCount, buf + off, 4 ); off += 4;
 		memcpy( &pout->indexOffset, buf + off, 4 ); off += 4;
@@ -967,11 +966,11 @@ int SS3D_MeshData_Parse( char* buf, size_t size, SS3D_MeshFileData* out )
 		for( t = 0; t < pout->materialTextureCount + 1; ++t )
 		{
 			if( !md_parse_smallbuf( buf + off, size - off, &pout->materialStrings[t], &pout->materialStringSizes[t] ) )
-				return 0;
+				return "failed to parse material string buffer";
 			off += 1 + pout->materialStringSizes[t];
 		}
 	}
-	return 1;
+	return NULL;
 }
 
 

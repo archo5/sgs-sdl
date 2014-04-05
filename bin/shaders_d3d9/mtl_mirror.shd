@@ -6,4 +6,4 @@ outOpacity = diff.a;
 outSpecularColor = float3( 0.5, 0.5, 0.5 ) * lerp( 0.5, 1, fresnel * fresnel );
 outSpecularPower = 256;
 outNormal = mul( normal, TBN );
-outAmbientSpecularLight = tex2D( Tex2, inProjPos.xy / inProjPos.w * float2(-0.5,-0.5) + 0.5 );
+outAmbientSpecularLight = tex2D( Tex2, projPos.xy / projPos.w * float2(-0.5,-0.5) + 0.5 );

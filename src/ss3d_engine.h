@@ -228,7 +228,7 @@ typedef struct _SS3D_MeshFileData
 }
 SS3D_MeshFileData; /* size w/o padding = 50/62 + 64/100 x8 = 562/862 */
 
-int SS3D_MeshData_Parse( char* buf, size_t size, SS3D_MeshFileData* out );
+const char* SS3D_MeshData_Parse( char* buf, size_t size, SS3D_MeshFileData* out );
 
 
 typedef struct _SS3D_Texture

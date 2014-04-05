@@ -12,10 +12,10 @@ void main
 	float4 ipos : POSITION0,
 	float3 inrm : NORMAL0,
 	float4 icol : COLOR0,
-	float2 itex : TEXCOORD0,
+	float4 itex0 : TEXCOORD0,
+	float4 itex1 : TEXCOORD1,
 	out float4 opos : POSITION0,
-	out float4 otfpos : TEXCOORD1,
-	out float4 oftfpos : TEXCOORD2,
+	out float4 otfpos : TEXCOORD4,
 	out float4 oT : TEXCOORD6,
 	out float3 oN : TEXCOORD7,
 	out float4 oshpos0 : TEXCOORD8,
@@ -23,17 +23,18 @@ void main
 	out float4 oshpos2 : TEXCOORD10,
 	out float4 oshpos3 : TEXCOORD11,
 	out float4 ocol : COLOR0,
-	out float2 otex : TEXCOORD0
+	out float4 otex0 : TEXCOORD0,
+	out float4 otex1 : TEXCOORD1
 )
 {
 	float4 viewPos = mul( mWorldView, ipos );
 	opos = mul( mProj, viewPos );
 	otfpos = viewPos;
-	oftfpos = opos;
 	oT = float4( mul( mWorldView, float4( 1, 0, 0, 0 ) ).xyz, 1 );
 	oN = mul( mWorldView, float4( inrm, 0 ) ).xyz;
 	ocol = icol;
-	otex = itex;
+	otex0 = itex0;
+	otex1 = itex1;
 	
 	oshpos0 = mul( gSLightMatrices[0], ipos );
 	oshpos1 = mul( gSLightMatrices[1], ipos );
@@ -55,6 +56,7 @@ sampler2D Tex7 : register(s7);
 sampler2D SpotLightTextures[8] : register(s8);
 
 float4x4 mInvView : register(c0);
+float4x4 mProj : register(c4);
 float3 gAmbLightColor : register(c20);
 float3 gDirLightDir : register(c21);
 float3 gDirLightColor : register(c22);
@@ -70,8 +72,7 @@ SpotLight gSLights[4] : register(c24); /* :c39 */
 
 void main
 (
-	float4 inViewPos : TEXCOORD1,
-	float4 inProjPos : TEXCOORD2,
+	float4 inViewPos : TEXCOORD4,
 	float4 inTangentSign : TEXCOORD6,
 	float3 inNormal : TEXCOORD7,
 	float4 inSLPPos0 : TEXCOORD8,
@@ -80,6 +81,7 @@ void main
 	float4 inSLPPos3 : TEXCOORD11,
 	float4 icol : COLOR0,
 	float4 inTex0 : TEXCOORD0,
+	float4 inTex1 : TEXCOORD1,
 	out float4 _outColor0 : COLOR0,
 	out float4 _outColor1 : COLOR1
 )
@@ -87,6 +89,7 @@ void main
 	float RdotV, specAmount;
 	
 	float3 viewPos = inViewPos.xyz;
+	float4 projPos = mul( mProj, inViewPos );
 	float3 viewDir = normalize( viewPos );
 	
 	float3 T = inTangentSign.xyz;
