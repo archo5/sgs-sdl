@@ -617,6 +617,7 @@ size_t SS3D_TextureInfo_GetTextureSideSize( SS3D_TextureInfo* TI )
 	{
 	/* bytes per pixel */
 	case SS3DFORMAT_BGRA8:
+	case SS3DFORMAT_BGRX8:
 	case SS3DFORMAT_RGBA8: bpu = 4; break;
 	case SS3DFORMAT_R5G6B5: bpu = 2; break;
 	/* bytes per block */
@@ -647,6 +648,7 @@ void SS3D_TextureInfo_GetCopyDims( SS3D_TextureInfo* TI, size_t* outcopyrowsize,
 	{
 	/* bytes per pixel */
 	case SS3DFORMAT_BGRA8:
+	case SS3DFORMAT_BGRX8:
 	case SS3DFORMAT_RGBA8: bpu = 4; break;
 	case SS3DFORMAT_R5G6B5: bpu = 2; break;
 	/* bytes per block */
@@ -727,6 +729,7 @@ static int ddsfmt_to_enginefmt( dds_u32 fmt )
 	{
 	case DDS_FMT_R8G8B8A8: return SS3DFORMAT_RGBA8;
 	case DDS_FMT_B8G8R8A8: return SS3DFORMAT_BGRA8;
+	case DDS_FMT_B8G8R8X8: return SS3DFORMAT_BGRX8;
 	case DDS_FMT_DXT1: return SS3DFORMAT_DXT1;
 	case DDS_FMT_DXT3: return SS3DFORMAT_DXT3;
 	case DDS_FMT_DXT5: return SS3DFORMAT_DXT5;
@@ -740,7 +743,7 @@ SGSRESULT SS3D_TextureData_LoadFromFile( SGS_CTX, SS3D_TextureData* TD, sgs_Vari
 	unsigned w, h;
 	int err;
 	
-	static const dds_u32 dds_supfmt[] = { DDS_FMT_R8G8B8A8, DDS_FMT_B8G8R8A8, DDS_FMT_DXT1, DDS_FMT_DXT3, DDS_FMT_DXT5, 0 };
+	static const dds_u32 dds_supfmt[] = { DDS_FMT_R8G8B8A8, DDS_FMT_B8G8R8A8, DDS_FMT_B8G8R8X8, DDS_FMT_DXT1, DDS_FMT_DXT3, DDS_FMT_DXT5, 0 };
 	dds_info ddsinfo;
 	
 	memset( TD, 0, sizeof(*TD) );

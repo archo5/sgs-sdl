@@ -362,6 +362,7 @@ static D3DFORMAT texfmt2d3d( int fmt )
 {
 	switch( fmt )
 	{
+	case SS3DFORMAT_BGRX8: return D3DFMT_X8R8G8B8;
 	case SS3DFORMAT_BGRA8:
 	case SS3DFORMAT_RGBA8: return D3DFMT_A8R8G8B8;
 	case SS3DFORMAT_R5G6B5: return D3DFMT_R5G6B5;

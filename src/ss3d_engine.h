@@ -70,6 +70,7 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 #define SS3DFORMAT_UNKNOWN 0
 #define SS3DFORMAT_RGBA8  1
 #define SS3DFORMAT_BGRA8  2
+#define SS3DFORMAT_BGRX8  3
 #define SS3DFORMAT_R5G6B5 5
 #define SS3DFORMAT_DXT1   11
 #define SS3DFORMAT_DXT3   13

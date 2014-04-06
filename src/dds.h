@@ -9,6 +9,7 @@
 #define DDS_FMT_UNKNOWN  0
 #define DDS_FMT_R8G8B8A8 1
 #define DDS_FMT_B8G8R8A8 2
+#define DDS_FMT_B8G8R8X8 3
 #define DDS_FMT_DXT1     50
 #define DDS_FMT_DXT3     51
 #define DDS_FMT_DXT5     52
