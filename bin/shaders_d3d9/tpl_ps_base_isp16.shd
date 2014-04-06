@@ -8,6 +8,7 @@ void main
 (
 	float4 ipos : POSITION0,
 	float3 inrm : NORMAL0,
+	float4 itan : TANGENT0,
 	float4 icol : COLOR0,
 	float4 itex0 : TEXCOORD0,
 	float4 itex1 : TEXCOORD1,
@@ -23,7 +24,7 @@ void main
 	float4 viewPos = mul( mWorldView, ipos );
 	opos = mul( mProj, viewPos );
 	otfpos = viewPos;
-	oT = float4( mul( mWorldView, float4( 1, 0, 0, 0 ) ).xyz, 1 );
+	oT = float4( mul( mWorldView, float4( itan.xyz, 0 ) ).xyz, itan.w );
 	oN = mul( mWorldView, float4( inrm, 0 ) ).xyz;
 	ocol = icol;
 	otex0 = itex0;

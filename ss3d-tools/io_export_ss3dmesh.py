@@ -104,6 +104,8 @@ def write_mesh( f, meshdata ):
 	print( "Index count: %d" % ( len(indices) ) )
 	print( "Format string: " + format )
 	print( "Part count: %d" % ( len(parts) ) )
+	for part_id, part in enumerate( parts ):
+		print( "- part %d: voff=%d vcount=%d ioff=%d icount=%d texcount=%d shader='%s'" % ( part_id, part["voff"], part["vcount"], part["ioff"], part["icount"], len( part["textures"] ), part["shader"] ) )
 	
 	f.write( bytes( "SS3DMESH", "UTF-8" ) )
 	f.write( struct.pack( "L", (1 if is_i32 else 0) * 0x01 + (1 if is_transparent else 0) * 0x10 ) ) # flags
@@ -131,12 +133,12 @@ def write_mesh( f, meshdata ):
 	return
 #
 
-def addCached( olist, o ):
+def addCached( olist, o, minpos = 0 ):
 	try:
-		return olist.index( o )
+		return olist[ minpos: ].index( o )
 	except:
 		olist.append( o )
-		return len( olist ) - 1
+		return len( olist ) - 1 - minpos
 #
 
 def find_in_userdata( obj, key ):
@@ -228,6 +230,7 @@ def parse_geometry( MESH, materials ):
 	mtl_id = -1
 	for part in genParts:
 		mtl_id += 1
+		vroot = len(vertices)
 		outpart = { "voff": len(vertices), "vcount": 0, "ioff": len(indices), "icount": 0, "shader": materials[ mtl_id ]["shader"], "textures": materials[ mtl_id ]["textures"] }
 		
 		for face in part:
@@ -245,7 +248,7 @@ def parse_geometry( MESH, materials ):
 					C = Clists[ si ][ vertex[ vip ] ]
 					vip += 1
 					vertexdata += struct.pack( "4B", C.r * 255, C.g * 255, C.b * 255, 255 )
-				tmpidcs.append( addCached( vertices, vertexdata ) )
+				tmpidcs.append( addCached( vertices, vertexdata, vroot ) )
 			#
 			for i in range( 2, len( tmpidcs ) ):
 				indices.append( tmpidcs[ 0 ] )
@@ -257,6 +260,72 @@ def parse_geometry( MESH, materials ):
 		outpart["vcount"] = len(vertices) - outpart["voff"]
 		outpart["icount"] = len(indices) - outpart["ioff"]
 		parts.append( outpart )
+	#
+	
+	# TANGENT SPACE CALC
+	if len( Tlists ) > 0:
+		tan1list = [ Vector([0,0,0]) for i in range(len(vertices)) ]
+		tan2list = [ Vector([0,0,0]) for i in range(len(vertices)) ]
+		
+		for face_start in range( 0, len( parts ), 3 ):
+			i1 = indices[ i + 0 ]
+			i2 = indices[ i + 1 ]
+			i3 = indices[ i + 2 ]
+			
+			Pdc1 = struct.unpack( "3f", vertices[ i1 ][ :12 ] )
+			Pdc2 = struct.unpack( "3f", vertices[ i2 ][ :12 ] )
+			Pdc3 = struct.unpack( "3f", vertices[ i3 ][ :12 ] )
+			
+			v1 = Vector([ Pdc1[0], Pdc1[1], Pdc1[2] ])
+			v2 = Vector([ Pdc2[0], Pdc2[1], Pdc2[2] ])
+			v3 = Vector([ Pdc3[0], Pdc3[1], Pdc3[2] ])
+			
+			Tdc1 = struct.unpack( "2f", vertices[ i1 ][ 24:32 ] )
+			Tdc2 = struct.unpack( "2f", vertices[ i2 ][ 24:32 ] )
+			Tdc3 = struct.unpack( "2f", vertices[ i3 ][ 24:32 ] )
+			
+			w1 = Vector([ Tdc1[0], Tdc1[1], 0 ])
+			w2 = Vector([ Tdc2[0], Tdc2[1], 0 ])
+			w3 = Vector([ Tdc3[0], Tdc3[1], 0 ])
+			
+			x1 = v2.x - v1.x;
+			x2 = v3.x - v1.x;
+			y1 = v2.y - v1.y;
+			y2 = v3.y - v1.y;
+			z1 = v2.z - v1.z;
+			z2 = v3.z - v1.z;
+			
+			s1 = w2.x - w1.x;
+			s2 = w3.x - w1.x;
+			t1 = w2.y - w1.y;
+			t2 = w3.y - w1.y;
+			
+			ir = s1 * t2 - s2 * t1
+			if abs( ir ) > 0.001:
+				r = 1.0 / ir
+				sdir = Vector([(t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r, (t2 * z1 - t1 * z2) * r])
+				tdir = Vector([(s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r, (s1 * z2 - s2 * z1) * r])
+				
+				tan1list[ i1 ] += sdir
+				tan1list[ i2 ] += sdir
+				tan1list[ i3 ] += sdir
+				
+				tan2list[ i1 ] += tdir
+				tan2list[ i2 ] += tdir
+				tan2list[ i3 ] += tdir
+			#
+		#
+		
+		for v_id, vertex in enumerate( vertices ):
+			Ndc = struct.unpack( "3f", vertex[ 12:24 ] )
+			n = Vector([ Ndc[0], Ndc[1], Ndc[2] ])
+			t = tan1list[ v_id ]
+			t2 = tan2list[ v_id ]
+			
+			outtan = ( t - n * n.dot( t ) ).normalized()
+			sign = -1.0 if n.cross( t ).dot( t2 ) < 0.0 else 1.0
+			vertices[ v_id ] = vertex[ :24 ] + struct.pack( "4f", outtan.x, outtan.y, outtan.z, sign ) + vertex[ 24: ]
+		#
 	#
 	
 	# AABB
@@ -278,7 +347,7 @@ def parse_geometry( MESH, materials ):
 	#
 	
 	# FORMAT STRING
-	format = "pf3nf3"
+	format = "pf3nf3tf4"
 	for si in range( len( Tlists ) ):
 		format += "%df2" % ( si )
 	for si in range( len( Clists ) ): # only one expected
@@ -301,27 +370,15 @@ def write_ss3dmesh( ctx, filepath ):
 		textures[ tex.name ] = texpath
 	print( "OK!" )
 	
-	#materials = {}
-	#print( "Parsing materials... ", end="" )
-	#for mtl in bpy.data.materials:
-	#	outmtl = { "textures": [], "shader": "default" }
-	#	for tex in  mtl.texture_slots:
-	#		outmtl["textures"].append( textures[ tex.name ] if tex != None else "" )
-	#	while len(outmtl["textures"]) and outmtl["textures"][-1] == "":
-	#		outmtl["textures"].pop()
-	#	shdr = find_in_userdata( mtl, "shader" )
-	#	if type( shdr ) == str:
-	#		outmtl["shader"] = shdr
-	#	materials[ mtl.name ] = outmtl
-	#print( "OK!" )
-	
-	geom_node = None
-	scene = ctx.scene
 	print( "Parsing nodes... ", end="" )
-	for node in scene.objects:
-		if node.type == "MESH":
-			geom_node = node
-			break
+	geom_node = bpy.context.active_object
+	if geom_node == None:
+		scene = ctx.scene
+		for node in scene.objects:
+			if node.type == "MESH":
+				geom_node = node
+				break
+	#
 	if geom_node == None:
 		print( "ERROR: no MESH nodes!" )
 		return {'FAILED'}
