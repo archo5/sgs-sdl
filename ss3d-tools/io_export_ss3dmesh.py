@@ -100,6 +100,7 @@ def write_mesh( f, meshdata ):
 	is_i32 = len( vertices ) > 65535
 	
 	print( "--- MESH STATS ---" )
+	print( "Transparent: %s" % ( "true" if is_transparent else "false" ) )
 	print( "Vertex count: %d" % ( len(vertices) ) )
 	print( "Index count: %d" % ( len(indices) ) )
 	print( "Format string: " + format )
@@ -354,7 +355,7 @@ def parse_geometry( MESH, materials ):
 		format += "cf2" % ( si )
 	#
 	
-	return { "is_transparent": False, "bbmin": bbmin, "bbmax": bbmax, "vertices": vertices, "indices": indices, "format": format, "parts": parts }
+	return { "is_transparent": find_in_userdata( MESH, "transparent" ) != False, "bbmin": bbmin, "bbmax": bbmax, "vertices": vertices, "indices": indices, "format": format, "parts": parts }
 #
 
 def write_ss3dmesh( ctx, filepath ):

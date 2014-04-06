@@ -88,6 +88,7 @@ void main
 	float2 outDistortion = float2( 0, 0 );
 	float3 outAmbientDiffuseLight = float3( 0, 0, 0 );
 	float3 outAmbientSpecularLight = float3( 0, 0, 0 );
+	float3 outEmissiveLight = float3( 0, 0, 0 );
 	{
 __CODE__
 	}

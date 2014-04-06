@@ -89,6 +89,7 @@ void main
 	float2 outDistortion = float2( 0, 0 );
 	float3 outAmbientDiffuseLight = float3( 0, 0, 0 );
 	float3 outAmbientSpecularLight = float3( 0, 0, 0 );
+	float3 outEmissiveLight = float3( 0, 0, 0 );
 	{
 __CODE__
 	}
@@ -128,7 +129,7 @@ __CODE__
 		totalSpecular += lightColor * specAmount;
 	}
 	
-	_outColor0 = float4( totalDiffuse * outDiffuseColor + totalSpecular * outSpecularColor, outOpacity );
+	_outColor0 = float4( totalDiffuse * outDiffuseColor + totalSpecular * outSpecularColor + outEmissiveLight, outOpacity );
 	_outColor1 = float4( outDistortion, 0, outOpacity );
 	_outColor2 = float4( inViewPos.z, 0, 0, 1 );
 }
