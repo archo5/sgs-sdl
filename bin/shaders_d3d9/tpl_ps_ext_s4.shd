@@ -53,6 +53,10 @@ sampler2D Tex4 : register(s4);
 sampler2D Tex5 : register(s5);
 sampler2D Tex6 : register(s6);
 sampler2D Tex7 : register(s7);
+samplerCUBE InstTex0 : register(s8);
+samplerCUBE InstTex1 : register(s9);
+samplerCUBE InstTex2 : register(s10);
+samplerCUBE InstTex3 : register(s11);
 
 sampler2D SpotLightTextures[8] : register(s8);
 
@@ -70,6 +74,8 @@ struct SpotLight /* size: 4c */
 };
 float4 gLightCounts : register(c23);
 SpotLight gSLights[4] : register(c24); /* :c39 */
+
+float4 gInstanceData[16] : register(c100); /* :c115 */
 
 void main
 (

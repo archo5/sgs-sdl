@@ -1,5 +1,24 @@
 SGS3D
 
+PER-INSTANCE RENDER DATA
+
+- 4 textures (8-11)
+	+ only available on base passes
+	- texture 8 assumed to be envmap by default
+		+ or better yet, assume nothing - leave it up to the shaders to set ambient specular lighting
+- some pixel shader constants (for colors, maybe some matrices, some random data)
+	+ 4 matrices (16 float4 lines) should be enough
+	+ ALWAYS available (base passes or otherwise - they must be accessible to the shader)
+
+# the interface #
+
+- the 4 textures are just a list of textures
+- constants are write-only, possible to set from int/real,vec2,vec3,vec4,color,mat4,floatarray at any float4-rounded offset that would not create overflow
+	(mat4 at offset 2 is fine, mat4 at offset 13 is not - offset 16 marks end of data)
+
+
+===END===
+
 CULLING SYSTEM
 
 - culling should be separate, vectorized and most of all, it should be possible to mix-and-match methods and add new ones

@@ -132,6 +132,8 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 
 #define SS3D_SHADER_NAME_LENGTH 64
 #define SS3D_MAX_NUM_PASSES     16
+#define SS3D_MAX_MI_TEXTURES    4
+#define SS3D_MAX_MI_CONSTANTS   16
 
 #define SS3D_CF_ENABLE_CAM_MESH 0x01
 #define SS3D_CF_ENABLE_CAM_PLT  0x02
@@ -144,6 +146,7 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 sgs_ObjInterface SS3D_Camera_iface[1];
 sgs_ObjInterface SS3D_Light_iface[1];
 sgs_ObjInterface SS3D_Viewport_iface[1];
+sgs_ObjInterface SS3D_MeshInstance_iface[1];
 sgs_ObjInterface SS3D_Scene_iface[1];
 
 typedef struct _SS3D_Light SS3D_Light;
@@ -327,6 +330,9 @@ struct _SS3D_MeshInstance
 	MAT4 matrix;
 	VEC4 color;
 	bitfield_t enabled : 1;
+	
+	sgs_VarObj* textures[ SS3D_MAX_MI_TEXTURES ];
+	VEC4 constants[ SS3D_MAX_MI_CONSTANTS ];
 	
 	/* frame cache */
 	SS3D_MeshInstLight* lightbuf_begin;

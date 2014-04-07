@@ -1165,28 +1165,120 @@ void SS3D_Mesh_Init( SS3D_Mesh* mesh )
 // MESH INSTANCE
 
 #define MI_HDR SS3D_MeshInstance* MI = (SS3D_MeshInstance*) obj->data
+#define MI_IHDR( funcname ) SS3D_MeshInstance* MI; \
+	if( !SGS_PARSE_METHOD( C, SS3D_MeshInstance_iface, MI, SS3D_MeshInstance, funcname ) ) return 0;
+
+static int meshinsti_setConstF( SGS_CTX )
+{
+	int32_t pos;
+	float val;
+	
+	MI_IHDR( setConstF );
+	if( !sgs_LoadArgs( C, "lf", &pos, &val ) )
+		return 0;
+	if( pos < 0 || pos >= SS3D_MAX_MI_CONSTANTS )
+		return sgs_Msg( C, SGS_WARNING, "invalid target position: %d (must be between 0 and %d)", pos, SS3D_MAX_MI_CONSTANTS - 1 );
+	
+	VEC4_Set( MI->constants[ pos ], val, val, val, val );
+	return 0;
+}
+
+static int meshinsti_setConstV2( SGS_CTX )
+{
+	int32_t pos;
+	float val[2];
+	
+	MI_IHDR( setConstV2 );
+	if( !sgs_LoadArgs( C, "lx", &pos, sgs_ArgCheck_Vec2, val ) )
+		return 0;
+	if( pos < 0 || pos >= SS3D_MAX_MI_CONSTANTS )
+		return sgs_Msg( C, SGS_WARNING, "invalid target position: %d (must be between 0 and %d)", pos, SS3D_MAX_MI_CONSTANTS - 1 );
+	
+	VEC4_Set( MI->constants[ pos ], val[0], val[1], 0, 0 );
+	return 0;
+}
+
+static int meshinsti_setConstV3( SGS_CTX )
+{
+	int32_t pos;
+	float val[3];
+	
+	MI_IHDR( setConstV3 );
+	if( !sgs_LoadArgs( C, "lx", &pos, sgs_ArgCheck_Vec3, val ) )
+		return 0;
+	if( pos < 0 || pos >= SS3D_MAX_MI_CONSTANTS )
+		return sgs_Msg( C, SGS_WARNING, "invalid target position: %d (must be between 0 and %d)", pos, SS3D_MAX_MI_CONSTANTS - 1 );
+	
+	VEC4_Set( MI->constants[ pos ], val[0], val[1], val[2], 0 );
+	return 0;
+}
+
+static int meshinsti_setConstV4( SGS_CTX )
+{
+	int32_t pos;
+	float val[4];
+	
+	MI_IHDR( setConstV4 );
+	if( !sgs_LoadArgs( C, "lx", &pos, sgs_ArgCheck_Vec4, val ) )
+		return 0;
+	if( pos < 0 || pos >= SS3D_MAX_MI_CONSTANTS )
+		return sgs_Msg( C, SGS_WARNING, "invalid target position: %d (must be between 0 and %d)", pos, SS3D_MAX_MI_CONSTANTS - 1 );
+	
+	VEC4_Set( MI->constants[ pos ], val[0], val[1], val[2], val[3] );
+	return 0;
+}
+
+static int meshinsti_setConstM4( SGS_CTX )
+{
+	int32_t pos;
+	MAT4 val;
+	
+	MI_IHDR( setConstM4 );
+	if( !sgs_LoadArgs( C, "lx", &pos, sgs_ArgCheck_Mat4, val ) )
+		return 0;
+	if( pos < 0 || pos >= SS3D_MAX_MI_CONSTANTS - 3 )
+		return sgs_Msg( C, SGS_WARNING, "invalid target position: %d (must be between 0 and %d)", pos, SS3D_MAX_MI_CONSTANTS - 4 );
+	
+	memcpy( MI->constants[ pos ], val, sizeof(val) );
+	return 0;
+}
+
+static int meshinsti_setTexture( SGS_CTX )
+{
+	int32_t pos;
+	
+	MI_IHDR( setTexture );
+	if( !sgs_LoadArgs( C, "l?x", &pos, MI->scene->renderer->ifTexture ) )
+		return 0;
+	if( pos < 0 || pos >= SS3D_MAX_MI_TEXTURES )
+		return sgs_Msg( C, SGS_WARNING, "invalid texture slot: %d (must be between 0 and %d)", pos, SS3D_MAX_MI_TEXTURES - 1 );
+	
+	sgs_ObjAssign( C, &MI->textures[ pos ], sgs_GetObjectStruct( C, 1 ) );
+	return 0;
+}
 
 static int meshinst_destruct( SGS_CTX, sgs_VarObj* obj )
 {
 	MI_HDR;
 	if( MI->scene )
 	{
+		int i;
 		scene_poke_resource( MI->scene, &MI->scene->meshInstances, obj, 0 );
 		MI->scene = NULL;
-		if( MI->mesh )
-		{
-			sgs_ObjRelease( C, MI->mesh );
-			MI->mesh = NULL;
-		}
+		sgs_ObjAssign( C, &MI->mesh, NULL );
+		for( i = 0; i < SS3D_MAX_MI_TEXTURES; ++i )
+			sgs_ObjAssign( C, &MI->textures[ i ], NULL );
 	}
 	return SGS_SUCCESS;
 }
 
 static int meshinst_gcmark( SGS_CTX, sgs_VarObj* obj )
 {
+	int i;
 	MI_HDR;
-	if( MI->mesh )
-		sgs_ObjGCMark( C, MI->mesh );
+	if( MI->mesh ) sgs_ObjGCMark( C, MI->mesh );
+	for( i = 0; i < SS3D_MAX_MI_TEXTURES; ++i )
+		sgs_ObjGCMark( C, MI->textures[ i ] );
 	return SGS_SUCCESS;
 }
 
@@ -1198,6 +1290,18 @@ static int meshinst_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "matrix" )  SGS_RETURN_MAT4( *MI->matrix )
 		SGS_CASE( "color" )   SGS_RETURN_COLOR( MI->color )
 		SGS_CASE( "enabled" ) SGS_RETURN_BOOL( MI->enabled )
+		
+		SGS_CASE( "setConstF" ) SGS_RETURN_CFUNC( meshinsti_setConstF )
+		SGS_CASE( "setConstV2" ) SGS_RETURN_CFUNC( meshinsti_setConstV2 )
+		SGS_CASE( "setConstV3" ) SGS_RETURN_CFUNC( meshinsti_setConstV3 )
+		SGS_CASE( "setConstV4" ) SGS_RETURN_CFUNC( meshinsti_setConstV4 )
+		SGS_CASE( "setConstM4" ) SGS_RETURN_CFUNC( meshinsti_setConstM4 )
+		SGS_CASE( "setTexture" ) SGS_RETURN_CFUNC( meshinsti_setTexture )
+		
+		SGS_CASE( "texture0" ) SGS_RETURN_OBJECT( MI->textures[0] )
+		SGS_CASE( "texture1" ) SGS_RETURN_OBJECT( MI->textures[1] )
+		SGS_CASE( "texture2" ) SGS_RETURN_OBJECT( MI->textures[2] )
+		SGS_CASE( "texture3" ) SGS_RETURN_OBJECT( MI->textures[3] )
 	SGS_END_INDEXFUNC;
 }
 
@@ -1209,6 +1313,11 @@ static int meshinst_setindex( SGS_ARGS_SETINDEXFUNC )
 		SGS_CASE( "matrix" )  SGS_PARSE_MAT4( *MI->matrix )
 		SGS_CASE( "color" )   SGS_PARSE_COLOR( MI->color, 0 )
 		SGS_CASE( "enabled" ) SGS_PARSE_BOOL( MI->enabled )
+		
+		SGS_CASE( "texture0" ) { if( !MI->scene || !MI->scene->renderer ) return SGS_EINPROC; SGS_PARSE_OBJECT( MI->scene->renderer->ifTexture, MI->textures[0], 0 ) }
+		SGS_CASE( "texture1" ) { if( !MI->scene || !MI->scene->renderer ) return SGS_EINPROC; SGS_PARSE_OBJECT( MI->scene->renderer->ifTexture, MI->textures[1], 0 ) }
+		SGS_CASE( "texture2" ) { if( !MI->scene || !MI->scene->renderer ) return SGS_EINPROC; SGS_PARSE_OBJECT( MI->scene->renderer->ifTexture, MI->textures[2], 0 ) }
+		SGS_CASE( "texture3" ) { if( !MI->scene || !MI->scene->renderer ) return SGS_EINPROC; SGS_PARSE_OBJECT( MI->scene->renderer->ifTexture, MI->textures[3], 0 ) }
 	SGS_END_INDEXFUNC;
 }
 
@@ -1935,6 +2044,7 @@ static int SS3D_CreateViewport( SGS_CTX )
 
 static int scenei_createMeshInstance( SGS_CTX )
 {
+	int i;
 	SS3D_MeshInstance* MI;
 	SC_IHDR( createMeshInstance );
 	MI = (SS3D_MeshInstance*) sgs_PushObjectIPA( C, sizeof(*MI), SS3D_MeshInstance_iface );
@@ -1944,6 +2054,12 @@ static int scenei_createMeshInstance( SGS_CTX )
 	SS3D_Mtx_Identity( MI->matrix );
 	VEC4_Set( MI->color, 1, 1, 1, 1 );
 	MI->enabled = 1;
+	for( i = 0; i < SS3D_MAX_MI_CONSTANTS; ++i )
+	{
+		VEC4_Set( MI->constants[ i ], 0, 0, 0, 0 );
+	}
+	for( i = 0; i < SS3D_MAX_MI_TEXTURES; ++i )
+		MI->textures[ i ] = NULL;
 	
 	scene_poke_resource( S, &S->meshInstances, sgs_GetObjectStruct( C, -1 ), 1 );
 	return 1;

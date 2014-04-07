@@ -4,4 +4,4 @@ outOpacity = diff.a * 0.5;
 float2 distort = tex2D( Tex1, inTex0.xy ).xy * 2 - 1;
 outDistortion = distort.xy * 0.5 / inViewPos.z;
 outSpecularColor = float3( 0, 0, 0 );
-outAmbientDiffuseLight = float3( 0.5, 0.5, 0.5 );
+outAmbientDiffuseLight = gInstanceData[1].xyz;

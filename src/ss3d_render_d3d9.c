@@ -1261,59 +1261,6 @@ static int rd3d9i_update( SGS_CTX )
 	return 0;
 }
 
-#if 0
-typedef struct _testVtx
-{
-	float x, y, z;
-	float nx, ny, nz;
-	uint32_t col;
-	float tx, ty;
-}
-testVtx;
-
-#define TC0 0.001f
-#define TC1 0.999f
-static testVtx testVertices[] =
-{
-	{ -5, -5, -5, -1, -1, -1, D3DCOLOR_XRGB( 233, 222, 211 ), TC0, TC0 },
-	{ +5, -5, -5, +1, -1, -1, D3DCOLOR_XRGB( 233, 211, 222 ), TC1, TC0 },
-	{ +5, +5, -5, +1, +1, -1, D3DCOLOR_XRGB( 222, 211, 222 ), TC1, TC1 },
-	{ -5, +5, -5, -1, +1, -1, D3DCOLOR_XRGB( 222, 222, 211 ), TC0, TC1 },
-	{ -5, -5, +5, -1, -1, +1, D3DCOLOR_XRGB( 211, 222, 233 ), TC0, TC0 },
-	{ +5, -5, +5, +1, -1, +1, D3DCOLOR_XRGB( 222, 211, 233 ), TC1, TC0 },
-	{ +5, +5, +5, +1, +1, +1, D3DCOLOR_XRGB( 222, 211, 233 ), TC1, TC1 },
-	{ -5, +5, +5, -1, +1, +1, D3DCOLOR_XRGB( 211, 222, 233 ), TC0, TC1 },
-	
-	{ -50, -50, 0, 0, 0, +1, D3DCOLOR_XRGB( 233, 222, 211 ), 0, 0 },
-	{ +50, -50, 0, 0, 0, +1, D3DCOLOR_XRGB( 233, 211, 222 ), 1, 0 },
-	{ +50, +50, 0, 0, 0, +1, D3DCOLOR_XRGB( 222, 211, 222 ), 1, 1 },
-	{ -50, +50, 0, 0, 0, +1, D3DCOLOR_XRGB( 222, 222, 211 ), 0, 1 },
-};
-static uint16_t testIndices[] =
-{
-	// plane
-	8,9,10,
-	10,11,8,
-	// front
-	0, 1, 2,
-	2, 3, 0,
-	// top
-	3, 2, 6,
-	6, 7, 3,
-	// back
-	7, 6, 5,
-	5, 4, 7,
-	// bottom
-	4, 5, 1,
-	1, 0, 4,
-	// left
-	4, 0, 3,
-	3, 7, 4,
-	// right
-	1, 5, 6,
-	6, 2, 1,
-};
-#endif
 
 typedef struct _ssvtx
 {
@@ -1385,6 +1332,11 @@ static int sort_meshinstlight_by_light( const void* p1, const void* p2 )
 	return mil1->L == mil2->L ? 0 : ( mil1->L < mil2->L ? -1 : 1 );
 }
 
+static void mi_apply_constants( SS3D_RD3D9* R, SS3D_MeshInstance* MI )
+{
+	pshc_set_vec4array( R, 100, MI->constants[0], 16 );
+}
+
 static int rd3d9i_render( SGS_CTX )
 {
 	int i, inst_id, pass_id, light_id, part_id, tex_id;
@@ -1413,9 +1365,6 @@ static int rd3d9i_render( SGS_CTX )
 		su_depth = RT->DS;
 	}
 	int w = RTOUT.w, h = RTOUT.h;
-	
-	
-	SS3D_Texture_D3D9* tx_cubemap = get_texture( R, "testdata/cubemap_beach_reflect.dds" );
 	
 	
 	SS3D_Shader_D3D9* sh_post_process = get_shader( R, "testFRpost" );
@@ -1550,6 +1499,8 @@ static int rd3d9i_render( SGS_CTX )
 				if( M->inh.dataFlags & SS3D_MDF_TRANSPARENT )
 					continue;
 				
+				mi_apply_constants( R, MI );
+				
 				SS3D_Mtx_Multiply( m_world_view, MI->matrix, L->viewMatrix );
 				vshc_set_mat4( R, 0, m_world_view );
 				
@@ -1646,6 +1597,8 @@ static int rd3d9i_render( SGS_CTX )
 		23: light counts (point, spot)
 		24-39: PS spot light data
 		56-87: point light data
+		---
+		100-115: instance data
 	*/
 	
 	/* upload unchanged data */
@@ -1816,7 +1769,8 @@ static int rd3d9i_render( SGS_CTX )
 				
 				if( !( pass->flags & SS3D_RPF_LIGHTOVERLAY ) )
 				{
-					use_texture( R, 8, tx_cubemap );
+					for( i = 0; i < SS3D_MAX_MI_TEXTURES; ++i )
+						use_texture( R, 8 + i, MI->textures[i] ? (SS3D_Texture_D3D9*) MI->textures[i]->data : NULL );
 					D3DCALL_( R->device, SetRenderState, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
 				}
 				else
@@ -1824,6 +1778,8 @@ static int rd3d9i_render( SGS_CTX )
 					D3DCALL_( R->device, SetRenderState, D3DRS_ALPHABLENDENABLE, TRUE );
 					D3DCALL_( R->device, SetRenderState, D3DRS_DESTBLEND, D3DBLEND_ONE );
 				}
+				
+				mi_apply_constants( R, MI );
 				
 				VEC4 lightcounts = { pl_count, sl_count, 0, 0 };
 				vshc_set_vec4array( R, 23, lightcounts, 1 );
