@@ -1854,6 +1854,33 @@ static int camerai_worldToScreen( SGS_CTX )
 	return 1;
 }
 
+static int camerai_getCursorRay( SGS_CTX )
+{
+	float x, y;
+	VEC3 pos, tgt, dir;
+	MAT4 viewProjMatrix, inv;
+	
+	CAM_IHDR( getCursorRay );
+	if( !sgs_LoadArgs( C, "ff", &x, &y ) )
+		return 0;
+	
+	VEC3_Set( pos, x * 2 - 1, y * -2 + 1, 0 );
+	VEC3_Set( tgt, x * 2 - 1, y * -2 + 1, 1 );
+	
+	SS3D_Mtx_Multiply( viewProjMatrix, CAM->mView, CAM->mProj );
+	if( !SS3D_Mtx_Invert( inv, viewProjMatrix ) )
+		return sgs_Msg( C, SGS_WARNING, "failed to invert view*projection matrix" );
+	
+	SS3D_Mtx_TransformPos( pos, pos, inv );
+	SS3D_Mtx_TransformPos( tgt, tgt, inv );
+	VEC3_Sub( dir, tgt, pos );
+	VEC3_Normalized( dir, dir );
+	
+	sgs_PushVec3p( C, pos );
+	sgs_PushVec3p( C, dir );
+	return 2;
+}
+
 static int camera_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	CAM_HDR;
@@ -1874,6 +1901,7 @@ static int camera_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "genViewMatrix" ) SGS_RETURN_CFUNC( camerai_genViewMatrix )
 		SGS_CASE( "genProjMatrix" ) SGS_RETURN_CFUNC( camerai_genProjMatrix )
 		SGS_CASE( "worldToScreen" ) SGS_RETURN_CFUNC( camerai_worldToScreen )
+		SGS_CASE( "getCursorRay" ) SGS_RETURN_CFUNC( camerai_getCursorRay )
 	SGS_END_INDEXFUNC;
 }
 

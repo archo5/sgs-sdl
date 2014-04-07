@@ -3,6 +3,7 @@ include "ss3d";
 
 function configure()
 {
+	global gCursorPos = vec2( 0 );
 }
 
 function initialize()
@@ -282,6 +283,15 @@ function update()
 	camera.up *= vec3(1,1,-1);
 	camera.genViewMatrix();
 	
+	// CAMERA RAY TEST
+//	{
+//		(crpos, crdir) = camera.getCursorRay( gCursorPos.x / Window.width, gCursorPos.y / Window.height );
+//		testplane = vec4( 0, 0, 1, 0.5 );
+//		(idst,pdst) = ray_plane_intersect( crpos, crdir, testplane );
+//		if( idst > 0 )
+//			_R.Light.position = crpos + crdir * idst;
+//	}
+	
 	SS3D_UpdateParticleMesh( _R.SS3D, _R.ParticleMesh, camera.viewMatrix, _R.Particles, _R.ParticleSizes, _R.ParticleColors );
 	SS3D_UpdateParticleMesh( _R.SS3D, _R.CloudMesh, camera.viewMatrix, _R.Clouds, _R.CloudSizes, _R.CloudColors );
 	_R.SS3D.render();
@@ -316,4 +326,6 @@ function on_event( e )
 {
 	if( e.type == SDL_QUIT )
 		global sys_exit = true;
+	if( e.type == SDL_MOUSEMOTION )
+		global gCursorPos = vec2( e.x, e.y );
 }
