@@ -2,10 +2,16 @@
 
 #include <d3d9.h>
 
+#define D3DCALL( x, m ) (x)->lpVtbl->m( (x) )
+#define D3DCALL_( x, m, ... ) (x)->lpVtbl->m( (x), __VA_ARGS__ )
+#define SAFE_RELEASE( x ) if( x ){ D3DCALL( x, Release ); x = NULL; }
+
+
 #include <SDL2/SDL_syswm.h>
 
 
 #define SS_TEXTURE_HANDLE_DATA IDirect3DBaseTexture9* base; IDirect3DTexture9* tex2d;
+#define SS_TEXRSURF_HANDLE_DATA IDirect3DSurface9* surf;
 #define SS_VERTEXFORMAT_HANDLE_DATA IDirect3DVertexDeclaration9* vdecl;
 #define SS_RENDERER_OVERRIDE
 
@@ -87,6 +93,7 @@ static void ss_ri_d3d9_set_matrix( SS_Renderer* R, int which, float* data );
 
 static int ss_ri_d3d9_create_texture_argb8( SS_Renderer* R, SS_Texture* T, SS_Image* I, uint32_t flags );
 static int ss_ri_d3d9_create_texture_a8( SS_Renderer* R, SS_Texture* T, uint8_t* data, int width, int height, int pitch );
+static int ss_ri_d3d9_create_texture_rnd( SS_Renderer* R, SS_Texture* T, int width, int height, uint32_t flags );
 static int ss_ri_d3d9_destroy_texture( SS_Renderer* R, SS_Texture* T );
 static int ss_ri_d3d9_apply_texture( SS_Renderer* R, SS_Texture* T );
 
@@ -114,6 +121,7 @@ SS_RenderInterface GRI_D3D9 =
 	
 	ss_ri_d3d9_create_texture_argb8,
 	ss_ri_d3d9_create_texture_a8,
+	ss_ri_d3d9_create_texture_rnd,
 	ss_ri_d3d9_destroy_texture,
 	ss_ri_d3d9_apply_texture,
 	
@@ -130,6 +138,34 @@ SS_RenderInterface GRI_D3D9 =
 	/* last error */
 	"no error",
 };
+
+
+static int _ssr_reset_device( SS_Renderer* R )
+{
+	int i;
+	
+	/* free all renderable textures */
+	for( i = 0; i < R->rsrc_table.size; ++i )
+	{
+		sgs_VarObj* obj = (sgs_VarObj*) R->rsrc_table.vars[ i ].val.data.P;
+		if( obj->iface == SS_Texture_iface )
+		{
+			SS_Texture* T = (SS_Texture*) obj->data;
+			if( T->flags & SS_TEXTURE_RENDER )
+			{
+				SAFE_RELEASE( T->rsh.surf );
+				SAFE_RELEASE( T->handle.tex2d );
+			}
+		}
+	}
+	
+	_ss_reset_device( R->d3ddev, &R->d3dpp );
+	
+	/* recreate all renderable textures */
+	/* TODO */
+	
+	return 1;
+}
 
 
 static void ss_ri_d3d9_init()
@@ -268,7 +304,7 @@ static void ss_ri_d3d9_modify( SS_Renderer* R, int* modlist )
 	{
 		R->d3dpp.BackBufferWidth = w;
 		R->d3dpp.BackBufferHeight = h;
-		_ss_reset_device( R->d3ddev, &R->d3dpp );
+		_ssr_reset_device( R );
 	}
 }
 
@@ -303,7 +339,7 @@ static void ss_ri_d3d9_swap( SS_Renderer* R )
 	{
 		if( IDirect3DDevice9_TestCooperativeLevel( R->d3ddev ) == D3DERR_DEVICENOTRESET )
 		{
-			_ss_reset_device( R->d3ddev, &R->d3dpp );
+			_ssr_reset_device( R );
 		}
 	}
 	IDirect3DDevice9_BeginScene( R->d3ddev );
@@ -465,9 +501,37 @@ static int ss_ri_d3d9_create_texture_a8( SS_Renderer* R, SS_Texture* T, uint8_t*
 	return 1;
 }
 
+static int ss_ri_d3d9_create_texture_rnd( SS_Renderer* R, SS_Texture* T, int width, int height, uint32_t flags )
+{
+	HRESULT hr;
+	IDirect3DTexture9* tex = NULL;
+	
+	hr = IDirect3DDevice9_CreateTexture( R->d3ddev, width,
+		height, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &tex, NULL );
+	if( tex == NULL || FAILED(hr) )
+	{
+		R->iface->last_error = "could not create renderable texture";
+		return 0;
+	}
+	
+	hr = D3DCALL_( tex, GetSurfaceLevel, 0, &T->rsh.surf );
+	if( T->rsh.surf == NULL || FAILED(hr) )
+	{
+		R->iface->last_error = "failed to retrieve render surface";
+		return 0;
+	}
+	T->renderer = R;
+	T->width = width;
+	T->height = height;
+	T->flags = flags | SS_TEXTURE_RENDER;
+	T->handle.tex2d = tex;
+	return 1;
+}
+
 static int ss_ri_d3d9_destroy_texture( SS_Renderer* R, SS_Texture* T )
 {
-	IDirect3DResource9_Release( T->handle.base );
+	SAFE_RELEASE( T->rsh.surf );
+	SAFE_RELEASE( T->handle.base );
 	return 1;
 }
 

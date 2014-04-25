@@ -131,7 +131,7 @@ static int sstex_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isp
 	return SGS_ENOTFND;
 }
 
-static sgs_ObjInterface tex_iface[1] =
+sgs_ObjInterface SS_Texture_iface[1] =
 {{
 	"SS_Texture",
 	sstex_destruct, NULL,
@@ -160,6 +160,15 @@ static sgs_ObjInterface tex_iface[1] =
 		- if function doesn't exist or it simply returns null, texture creation fails
 */
 
+static flag_string_item_t ss_tex_flagitems[] =
+{
+	{ "hrepeat", SS_TEXTURE_HREPEAT },
+	{ "vrepeat", SS_TEXTURE_VREPEAT },
+	{ "nolerp", SS_TEXTURE_NOLERP },
+	{ "mipmaps", SS_TEXTURE_MIPMAPS },
+	FSI_LAST
+};
+
 static int SS_CreateTexture( SGS_CTX )
 {
 	uint32_t flags;
@@ -169,19 +178,10 @@ static int SS_CreateTexture( SGS_CTX )
 	SGSFN( "SS_CreateTexture" );
 	SCRFN_NEEDS_RENDER_CONTEXT;
 	
-	static flag_string_item_t flagitems[] =
-	{
-		{ "hrepeat", SS_TEXTURE_HREPEAT },
-		{ "vrepeat", SS_TEXTURE_VREPEAT },
-		{ "nolerp", SS_TEXTURE_NOLERP },
-		{ "mipmaps", SS_TEXTURE_MIPMAPS },
-		FSI_LAST
-	};
-	
 	if( argc < 1 || argc > 2 )
 		_WARN( "unexpected arguments; function expects 1-2 arguments: (image|string)[, string]" )
 	
-	flags = ss_GetFlagString( C, 1, flagitems );
+	flags = ss_GetFlagString( C, 1, ss_tex_flagitems );
 	
 	if( sgs_ItemType( C, 0 ) == SVT_STRING )
 	{
@@ -218,7 +218,7 @@ static int SS_CreateTexture( SGS_CTX )
 		_WARN( "unexpected arguments; function expects 1-2 arguments: (image|string)[, string]" )
 	
 	{
-		SS_Texture* T = (SS_Texture*) sgs_PushObjectIPA( C, sizeof(SS_Texture), tex_iface );
+		SS_Texture* T = (SS_Texture*) sgs_PushObjectIPA( C, sizeof(SS_Texture), SS_Texture_iface );
 		memset( T, 0, sizeof(*T) );
 		
 		if( !GCurRI->create_texture_argb8( GCurRr, T, ii, flags ) )
@@ -239,10 +239,34 @@ static int SS_CreateTexture( SGS_CTX )
 	return 1;
 }
 
+static int SS_CreateRenderTexture( SGS_CTX )
+{
+	uint32_t flags;
+	sgs_Int w, h;
+	SGSFN( "SS_CreateRenderTexture" );
+	SCRFN_NEEDS_RENDER_CONTEXT;
+	
+	if( !sgs_LoadArgs( C, "ii?s", &w, &h ) )
+		return 0;
+	flags = ss_GetFlagString( C, 1, ss_tex_flagitems );
+	
+	{
+		SS_Texture* T = (SS_Texture*) sgs_PushObjectIPA( C, sizeof(SS_Texture), SS_Texture_iface );
+		memset( T, 0, sizeof(*T) );
+		
+		if( !GCurRI->create_texture_rnd( GCurRr, T, w, h, flags ) )
+			return sgs_Msg( C, SGS_WARNING, "failed to create texture: %s", GCurRI->last_error );
+		
+		GCurRI->poke_resource( GCurRr, sgs_GetObjectStruct( C, -1 ), 1 );
+	}
+	
+	return 1;
+}
+
 
 int ss_ParseTexture( SGS_CTX, int item, SS_Texture** T )
 {
-	if( !sgs_IsObject( C, item, tex_iface ) )
+	if( !sgs_IsObject( C, item, SS_Texture_iface ) )
 		return 0;
 	if( T )
 		*T = (SS_Texture*) sgs_GetObjectData( C, item );
@@ -259,7 +283,7 @@ int ss_ApplyTexture( sgs_Variable* texvar, float* tox, float* toy )
 	if( toy ) *toy = 0;
 	if( texvar && texvar->type != SGS_VT_NULL )
 	{
-		if( texvar->type != SGS_VT_OBJECT || texvar->data.O->iface != tex_iface )
+		if( texvar->type != SGS_VT_OBJECT || texvar->data.O->iface != SS_Texture_iface )
 			return 0;
 		T = (SS_Texture*) texvar->data.O->data;
 		if( T->renderer != GCurRr )
@@ -1032,7 +1056,7 @@ static int SS_DrawPacked( SGS_CTX )
 	SGSFN( "SS_DrawPacked" );
 	
 	if( !( ssz == 6 || ssz == 7 ) ||
-		!( sgs_ItemType( C, 0 ) == SVT_NULL || sgs_IsObject( C, 0, tex_iface ) ) ||
+		!( sgs_ItemType( C, 0 ) == SVT_NULL || sgs_IsObject( C, 0, SS_Texture_iface ) ) ||
 		!sgs_IsObject( C, 1, vertex_format_iface ) ||
 		!sgs_ParseString( C, 2, &data, &datasize ) ||
 		!sgs_ParseInt( C, 3, &start ) ||
@@ -1236,7 +1260,7 @@ static int ss_renderbuf_draw( SGS_CTX )
 		return 0;
 	if( sgs_ItemType( C, 0 ) != SVT_NULL )
 	{
-		if( !sgs_IsObject( C, 0, tex_iface ) )
+		if( !sgs_IsObject( C, 0, SS_Texture_iface ) )
 			return sgs_ArgErrorExt( C, 0, 0, "texture or null", "" );
 	}
 	sgs_PeekStackItem( C, 0, &texvar );
@@ -1679,7 +1703,9 @@ static ss_glyph* ss_font_create_glyph( ss_font* font, SGS_CTX, uint32_t cp )
 	
 	if( glyph->bitmap.width * glyph->bitmap.rows )
 	{
-		int ret = GCurRI->create_texture_a8( GCurRr, &G->tex, glyph->bitmap.buffer, glyph->bitmap.width, glyph->bitmap.rows, glyph->bitmap.pitch );
+		int ret;
+		memset( &G->tex, 0, sizeof(G->tex) );
+		ret = GCurRI->create_texture_a8( GCurRr, &G->tex, glyph->bitmap.buffer, glyph->bitmap.width, glyph->bitmap.rows, glyph->bitmap.pitch );
 		sgs_BreakIf( !ret && "failed to create font texture" );
 		G->hastex = 1;
 	}
@@ -1989,7 +2015,7 @@ static sgs_RegIntConst gl_ints[] =
 
 static sgs_RegFuncConst gl_funcs[] =
 {
-	FN( CreateTexture ),
+	FN( CreateTexture ), FN( CreateRenderTexture ),
 	FN( Draw ),
 	FN( MakeVertexFormat ), FN( DrawPacked ),
 	FN( CreateRenderBuffer ),
@@ -2016,7 +2042,7 @@ int ss_InitGraphics( SGS_CTX )
 	ret = sgs_RegFuncConsts( C, gl_funcs, ARRAY_SIZE( gl_funcs ) );
 	if( ret != SGS_SUCCESS ) return ret;
 	
-	sgs_RegisterType( C, "SS_Texture", tex_iface );
+	sgs_RegisterType( C, "SS_Texture", SS_Texture_iface );
 	
 	return SGS_SUCCESS;
 }

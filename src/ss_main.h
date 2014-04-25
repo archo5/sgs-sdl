@@ -115,6 +115,8 @@ int ss_InitGraphics( SGS_CTX );
 #define SS_TEXTURE_VREPEAT 0x0002
 #define SS_TEXTURE_NOLERP  0x0004
 #define SS_TEXTURE_MIPMAPS 0x0008
+/* --------------------------- */
+#define SS_TEXTURE_RENDER  0x8000
 
 #define SS_PT_POINTS         0
 #define SS_PT_LINES          1
@@ -152,6 +154,10 @@ int ss_InitGraphics( SGS_CTX );
 #define SS_TEXTURE_HANDLE_DATA void* ptr; uint32_t u32;
 #endif
 
+#ifndef SS_TEXRSURF_HANDLE_DATA
+#define SS_TEXRSURF_HANDLE_DATA void* ptr; uint32_t u32;
+#endif
+
 #define SS_RENDERER_DATA \
 	SS_RenderInterface* iface; \
 	SDL_Window* window; \
@@ -169,12 +175,15 @@ typedef struct _SS_Texture
 	SS_Renderer* renderer;
 	
 	union { SS_TEXTURE_HANDLE_DATA } handle;
+	union { SS_TEXRSURF_HANDLE_DATA } rsh;
 	
 	int16_t width;
 	int16_t height;
 	uint16_t flags;
 }
 SS_Texture;
+
+extern sgs_ObjInterface SS_Texture_iface[1];
 
 
 #ifndef SS_VERTEXFORMAT_HANDLE_DATA
@@ -222,6 +231,7 @@ typedef void (*ss_ri_set_matrix) ( SS_Renderer*, int, float* ); /* type, float[1
 
 typedef int (*ss_ri_create_texture_argb8) ( SS_Renderer*, SS_Texture*, SS_Image*, uint32_t );
 typedef int (*ss_ri_create_texture_a8) ( SS_Renderer*, SS_Texture*, uint8_t*, int, int, int ); /* data, width, height, pitch */
+typedef int (*ss_ri_create_texture_rnd) ( SS_Renderer*, SS_Texture*, int, int, uint32_t );
 typedef int (*ss_ri_destroy_texture) ( SS_Renderer*, SS_Texture* );
 typedef int (*ss_ri_apply_texture) ( SS_Renderer*, SS_Texture* );
 
@@ -249,6 +259,7 @@ struct _SS_RenderInterface
 	
 	ss_ri_create_texture_argb8 create_texture_argb8;
 	ss_ri_create_texture_a8 create_texture_a8;
+	ss_ri_create_texture_rnd create_texture_rnd;
 	ss_ri_destroy_texture destroy_texture;
 	ss_ri_apply_texture apply_texture;
 	

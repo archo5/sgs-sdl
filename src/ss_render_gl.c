@@ -39,6 +39,7 @@ static void ss_ri_gl_set_matrix( SS_Renderer* R, int which, float* data );
 
 static int ss_ri_gl_create_texture_argb8( SS_Renderer* R, SS_Texture* T, SS_Image* I, uint32_t flags );
 static int ss_ri_gl_create_texture_a8( SS_Renderer* R, SS_Texture* T, uint8_t* data, int width, int height, int pitch );
+static int ss_ri_gl_create_texture_rnd( SS_Renderer* R, SS_Texture* T, int width, int height, uint32_t flags );
 static int ss_ri_gl_destroy_texture( SS_Renderer* R, SS_Texture* T );
 static int ss_ri_gl_apply_texture( SS_Renderer* R, SS_Texture* T );
 
@@ -66,6 +67,7 @@ SS_RenderInterface GRI_GL =
 	
 	ss_ri_gl_create_texture_argb8,
 	ss_ri_gl_create_texture_a8,
+	ss_ri_gl_create_texture_rnd,
 	ss_ri_gl_destroy_texture,
 	ss_ri_gl_apply_texture,
 	
@@ -424,6 +426,11 @@ static int ss_ri_gl_create_texture_a8( SS_Renderer* R, SS_Texture* T, uint8_t* d
 	T->flags = 0;
 	T->handle.id = tex;
 	return 1;
+}
+
+static int ss_ri_gl_create_texture_rnd( SS_Renderer* R, SS_Texture* T, int width, int height, uint32_t flags )
+{
+	return 0;
 }
 
 static int ss_ri_gl_destroy_texture( SS_Renderer* R, SS_Texture* T )
