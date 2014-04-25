@@ -36,6 +36,7 @@ static void ss_ri_gl_swap( SS_Renderer* R );
 static void ss_ri_gl_clear( SS_Renderer* R, float* col4f );
 static void ss_ri_gl_set_render_state( SS_Renderer* R, int which, int arg0, int arg1, int arg2, int arg3 );
 static void ss_ri_gl_set_matrix( SS_Renderer* R, int which, float* data );
+static void ss_ri_gl_set_rt( SS_Renderer* R, SS_Texture* T );
 
 static int ss_ri_gl_create_texture_argb8( SS_Renderer* R, SS_Texture* T, SS_Image* I, uint32_t flags );
 static int ss_ri_gl_create_texture_a8( SS_Renderer* R, SS_Texture* T, uint8_t* data, int width, int height, int pitch );
@@ -64,6 +65,7 @@ SS_RenderInterface GRI_GL =
 	ss_ri_gl_clear,
 	ss_ri_gl_set_render_state,
 	ss_ri_gl_set_matrix,
+	ss_ri_gl_set_rt,
 	
 	ss_ri_gl_create_texture_argb8,
 	ss_ri_gl_create_texture_a8,
@@ -339,6 +341,10 @@ static void ss_ri_gl_set_matrix( SS_Renderer* R, int which, float* mtx )
 		glMultMatrixf( R->world_matrix );
 	}
 	glMatrixMode( which == SS_RMAT_PROJ ? GL_PROJECTION : GL_MODELVIEW );
+}
+
+static void ss_ri_gl_set_rt( SS_Renderer* R, SS_Texture* T )
+{
 }
 
 

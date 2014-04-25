@@ -47,33 +47,15 @@ static void _ss_reset_states( IDirect3DDevice9* dev, int w, int h )
 	}
 }
 
-static void _ss_reset_device( IDirect3DDevice9* dev, D3DPRESENT_PARAMETERS* pd3dpp )
-{
-	SGS_CTX = ss_GetContext();
-	D3DPRESENT_PARAMETERS npp;
-	SDL_Event event;
-	
-	npp = *pd3dpp;
-	
-	event.type = SDL_VIDEODEVICELOST;
-	ss_CreateSDLEvent( C, &event );
-	sgs_GlobalCall( C, "on_event", 1, 0 );
-	
-	IDirect3DDevice9_Reset( dev, &npp );
-	
-	_ss_reset_states( dev, pd3dpp->BackBufferWidth, pd3dpp->BackBufferHeight );
-	
-	event.type = SDL_VIDEODEVICERESET;
-	ss_CreateSDLEvent( C, &event );
-	sgs_GlobalCall( C, "on_event", 1, 0 );
-}
-
 
 struct _SS_Renderer
 {
 	SS_RENDERER_DATA
 	IDirect3DDevice9* d3ddev;
 	D3DPRESENT_PARAMETERS d3dpp;
+	IDirect3DSurface9* backbuf;
+	IDirect3DSurface9* dssurf;
+	SS_Texture* cur_rtt;
 };
 
 
@@ -90,6 +72,7 @@ static void ss_ri_d3d9_swap( SS_Renderer* R );
 static void ss_ri_d3d9_clear( SS_Renderer* R, float* col4f );
 static void ss_ri_d3d9_set_render_state( SS_Renderer* R, int which, int arg0, int arg1, int arg2, int arg3 );
 static void ss_ri_d3d9_set_matrix( SS_Renderer* R, int which, float* data );
+static void ss_ri_d3d9_set_rt( SS_Renderer* R, SS_Texture* T );
 
 static int ss_ri_d3d9_create_texture_argb8( SS_Renderer* R, SS_Texture* T, SS_Image* I, uint32_t flags );
 static int ss_ri_d3d9_create_texture_a8( SS_Renderer* R, SS_Texture* T, uint8_t* data, int width, int height, int pitch );
@@ -118,6 +101,7 @@ SS_RenderInterface GRI_D3D9 =
 	ss_ri_d3d9_clear,
 	ss_ri_d3d9_set_render_state,
 	ss_ri_d3d9_set_matrix,
+	ss_ri_d3d9_set_rt,
 	
 	ss_ri_d3d9_create_texture_argb8,
 	ss_ri_d3d9_create_texture_a8,
@@ -142,8 +126,17 @@ SS_RenderInterface GRI_D3D9 =
 
 static int _ssr_reset_device( SS_Renderer* R )
 {
+	SGS_CTX = ss_GetContext();
+	D3DPRESENT_PARAMETERS npp;
+	SDL_Event event;
 	int i;
 	
+	event.type = SDL_VIDEODEVICELOST;
+	ss_CreateSDLEvent( C, &event );
+	sgs_GlobalCall( C, "on_event", 1, 0 );
+	
+	SAFE_RELEASE( R->backbuf );
+	SAFE_RELEASE( R->dssurf );
 	/* free all renderable textures */
 	for( i = 0; i < R->rsrc_table.size; ++i )
 	{
@@ -159,10 +152,55 @@ static int _ssr_reset_device( SS_Renderer* R )
 		}
 	}
 	
-	_ss_reset_device( R->d3ddev, &R->d3dpp );
+	/* reset */
+	npp = R->d3dpp;
 	
+	IDirect3DDevice9_Reset( R->d3ddev, &npp );
+	
+	_ss_reset_states( R->d3ddev, R->d3dpp.BackBufferWidth, R->d3dpp.BackBufferHeight );
+	R->cur_rtt = NULL;
+	/* --- */
+	
+	if( FAILED( D3DCALL_( R->d3ddev, GetRenderTarget, 0, &R->backbuf ) ) )
+	{
+		GRI_D3D9.last_error = "failed to retrieve original backbuffer";
+		return 0;
+	}
+	if( FAILED( D3DCALL_( R->d3ddev, GetDepthStencilSurface, &R->dssurf ) ) )
+	{
+		GRI_D3D9.last_error = "failed to retrieve original depth stencil surface";
+		return 0;
+	}
 	/* recreate all renderable textures */
-	/* TODO */
+	for( i = 0; i < R->rsrc_table.size; ++i )
+	{
+		sgs_VarObj* obj = (sgs_VarObj*) R->rsrc_table.vars[ i ].val.data.P;
+		if( obj->iface == SS_Texture_iface )
+		{
+			SS_Texture* T = (SS_Texture*) obj->data;
+			if( T->flags & SS_TEXTURE_RENDER )
+			{
+				HRESULT hr = IDirect3DDevice9_CreateTexture( R->d3ddev, T->width, T->height, 1,
+					D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &T->handle.tex2d, NULL );
+				if( T->handle.tex2d == NULL || FAILED(hr) )
+				{
+					R->iface->last_error = "could not create renderable texture";
+					return 0;
+				}
+				
+				hr = D3DCALL_( T->handle.tex2d, GetSurfaceLevel, 0, &T->rsh.surf );
+				if( T->rsh.surf == NULL || FAILED(hr) )
+				{
+					R->iface->last_error = "failed to retrieve render surface";
+					return 0;
+				}
+			}
+		}
+	}
+	
+	event.type = SDL_VIDEODEVICERESET;
+	ss_CreateSDLEvent( C, &event );
+	sgs_GlobalCall( C, "on_event", 1, 0 );
 	
 	return 1;
 }
@@ -238,6 +276,16 @@ static SS_Renderer* ss_ri_d3d9_create( SDL_Window* window, uint32_t version, uin
 	R->window = window;
 	R->d3ddev = d3ddev;
 	R->d3dpp = d3dpp;
+	if( FAILED( D3DCALL_( R->d3ddev, GetRenderTarget, 0, &R->backbuf ) ) )
+	{
+		GRI_D3D9.last_error = "failed to retrieve original backbuffer";
+		return NULL;
+	}
+	if( FAILED( D3DCALL_( R->d3ddev, GetDepthStencilSurface, &R->dssurf ) ) )
+	{
+		GRI_D3D9.last_error = "failed to retrieve original depth stencil surface";
+		return NULL;
+	}
 	
 	sgs_vht_init( &R->rsrc_table, C, 64, 64 );
 	R->destructing = 0;
@@ -276,6 +324,8 @@ static void ss_ri_d3d9_destroy( SS_Renderer* R )
 		GCurRr = NULL;
 		GCurRI = NULL;
 	}
+	SAFE_RELEASE( R->backbuf );
+	SAFE_RELEASE( R->dssurf );
 	IDirect3DResource9_Release( R->d3ddev );
 	free( R );
 }
@@ -343,13 +393,17 @@ static void ss_ri_d3d9_swap( SS_Renderer* R )
 		}
 	}
 	IDirect3DDevice9_BeginScene( R->d3ddev );
+	ss_ri_d3d9_set_rt( R, NULL );
 }
 
 static void ss_ri_d3d9_clear( SS_Renderer* R, float* col4f )
 {
 	uint32_t cc = (((uint8_t)(col4f[3]*255))<<24) | (((uint8_t)(col4f[0]*255))<<16) |
 		(((uint8_t)(col4f[1]*255))<<8) | (((uint8_t)(col4f[2]*255)));
-	IDirect3DDevice9_Clear( R->d3ddev, 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, cc, 1.0f, 0 );
+	uint32_t flags = D3DCLEAR_TARGET;
+	if( !R->cur_rtt )
+		flags |= D3DCLEAR_ZBUFFER;
+	IDirect3DDevice9_Clear( R->d3ddev, 0, NULL, flags, cc, 1.0f, 0 );
 }
 
 static void ss_ri_d3d9_set_render_state( SS_Renderer* R, int which, int arg0, int arg1, int arg2, int arg3 )
@@ -418,6 +472,15 @@ static void ss_ri_d3d9_set_matrix( SS_Renderer* R, int which, float* mtx )
 		IDirect3DDevice9_SetTransform( R->d3ddev, D3DTS_VIEW, (D3DMATRIX*) mtx );
 	else if( which == SS_RMAT_PROJ )
 		IDirect3DDevice9_SetTransform( R->d3ddev, D3DTS_PROJECTION, (D3DMATRIX*) mtx );
+}
+
+static void ss_ri_d3d9_set_rt( SS_Renderer* R, SS_Texture* T )
+{
+	IDirect3DSurface9* surf = T ? T->rsh.surf : R->backbuf;
+	IDirect3DSurface9* dssurf = T ? NULL : R->dssurf;
+	R->cur_rtt = T;
+	D3DCALL_( R->d3ddev, SetRenderTarget, 0, surf );
+	D3DCALL_( R->d3ddev, SetDepthStencilSurface, dssurf );
 }
 
 
@@ -530,6 +593,8 @@ static int ss_ri_d3d9_create_texture_rnd( SS_Renderer* R, SS_Texture* T, int wid
 
 static int ss_ri_d3d9_destroy_texture( SS_Renderer* R, SS_Texture* T )
 {
+	if( R->cur_rtt == T )
+		ss_ri_d3d9_set_rt( R, NULL );
 	SAFE_RELEASE( T->rsh.surf );
 	SAFE_RELEASE( T->handle.base );
 	return 1;

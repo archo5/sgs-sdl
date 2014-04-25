@@ -33,6 +33,8 @@ function initialize()
 	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
 	println( "renderer initialized at: " $ ftime() );
 	
+	global Surf = SS_CreateRenderTexture( Window.width, Window.height );
+	
 	global Font = SS_CreateFont( "verdana.ttf", 12 );
 	
 	SS_InitDrawFunctions();
@@ -72,8 +74,14 @@ function update()
 	W = Window.width;
 	H = Window.height;
 	
-	SS_Clear( color(0.1,0.1,0.1) );
 	SS_SetCameraUI( 0, W, 0, H );
+	
+	SS_SetRenderTarget( Surf );
+	SS_Clear( color(0.7,0.7,0.7) );
+	
+	SS_SetRenderTarget();
+	
+	SS_Clear( color(0.1,0.1,0.1) );
 	
 	Wslash = W / 2 + 1;
 	Hslash = round( H * 0.6 );
@@ -90,6 +98,8 @@ function update()
 	SS_Draw({ preset = "tile", position = vec2( W * 0.9 - tW - 32, Hslash - tH + 24 ), scale = vec2( tW, tH ), texture = LogoTexture });
 	SS_Draw({ preset = "tile", position = vec2( W * 0.9 - tW - 32, Hslash + tH + 24 ), scale = vec2( tW, -tH ), texture = LogoTexture, color = color(0.5,0.5,0.5,0.5) });
 	
+//	SS_Draw({ preset = "tile", position = vec2( W/2, H/2 - 32 ), scale = vec2( 128, 128 ), texture = Surf });
+	
 	SS_Present();
 
 	sleeptime = 15 - ( ftime() - lasttime ) * 1000;
@@ -100,6 +110,14 @@ function on_event( e )
 {
 	if( e.type == SDL_QUIT )
 		global sys_exit = true;
+	if( e.type == SDL_VIDEODEVICELOST )
+	{
+		global Surf = null;
+	}
+	if( e.type == SDL_VIDEODEVICERESET )
+	{
+		global Surf = SS_CreateRenderTexture( Window.width, Window.height );
+	}
 	PMenu.on_event( e );
 }
 

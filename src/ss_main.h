@@ -228,10 +228,11 @@ typedef void (*ss_ri_swap) ( SS_Renderer* );
 typedef void (*ss_ri_clear) ( SS_Renderer*, float* );
 typedef void (*ss_ri_set_render_state) ( SS_Renderer*, int, int, int, int, int ); /* type, arg0, arg1, arg2, arg3 */
 typedef void (*ss_ri_set_matrix) ( SS_Renderer*, int, float* ); /* type, float[16] */
+typedef void (*ss_ri_set_rt) ( SS_Renderer*, SS_Texture* tex );
 
 typedef int (*ss_ri_create_texture_argb8) ( SS_Renderer*, SS_Texture*, SS_Image*, uint32_t );
 typedef int (*ss_ri_create_texture_a8) ( SS_Renderer*, SS_Texture*, uint8_t*, int, int, int ); /* data, width, height, pitch */
-typedef int (*ss_ri_create_texture_rnd) ( SS_Renderer*, SS_Texture*, int, int, uint32_t );
+typedef int (*ss_ri_create_texture_rnd) ( SS_Renderer*, SS_Texture*, int, int, uint32_t ); /* width, height, flags */
 typedef int (*ss_ri_destroy_texture) ( SS_Renderer*, SS_Texture* );
 typedef int (*ss_ri_apply_texture) ( SS_Renderer*, SS_Texture* );
 
@@ -256,6 +257,7 @@ struct _SS_RenderInterface
 	ss_ri_clear clear;
 	ss_ri_set_render_state set_render_state;
 	ss_ri_set_matrix set_matrix;
+	ss_ri_set_rt set_rt;
 	
 	ss_ri_create_texture_argb8 create_texture_argb8;
 	ss_ri_create_texture_a8 create_texture_a8;

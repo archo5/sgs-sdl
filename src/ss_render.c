@@ -241,14 +241,15 @@ static int SS_CreateTexture( SGS_CTX )
 
 static int SS_CreateRenderTexture( SGS_CTX )
 {
-	uint32_t flags;
+	uint32_t flags = 0;
 	sgs_Int w, h;
 	SGSFN( "SS_CreateRenderTexture" );
 	SCRFN_NEEDS_RENDER_CONTEXT;
 	
-	if( !sgs_LoadArgs( C, "ii?s", &w, &h ) )
+	if( !sgs_LoadArgs( C, "ii|?s", &w, &h ) )
 		return 0;
-	flags = ss_GetFlagString( C, 1, ss_tex_flagitems );
+	if( sgs_StackSize( C ) >= 3 )
+		flags = ss_GetFlagString( C, 2, ss_tex_flagitems );
 	
 	{
 		SS_Texture* T = (SS_Texture*) sgs_PushObjectIPA( C, sizeof(SS_Texture), SS_Texture_iface );
@@ -1932,6 +1933,23 @@ static int SS_SetViewport( SGS_CTX )
 	return 0;
 }
 
+static int SS_SetRenderTarget( SGS_CTX )
+{
+	SS_Texture* T = NULL;
+	SGSFN( "SS_SetRenderTarget" );
+	SCRFN_NEEDS_RENDER_CONTEXT;
+	
+	if( !sgs_LoadArgs( C, "|o", SS_Texture_iface, &T ) )
+		return 0;
+	if( T && !( T->flags & SS_TEXTURE_RENDER ) )
+		_WARN( "texture is not a render target" )
+	if( T && T->renderer != GCurRr )
+		_WARN( "texture doesn't match active renderer" )
+	
+	GCurRI->set_rt( GCurRr, T );
+	return 0;
+}
+
 static int SS_SetDepthTest( SGS_CTX )
 {
 	sgs_Bool set;
@@ -2022,7 +2040,7 @@ static sgs_RegFuncConst gl_funcs[] =
 	FN( CreateFont ), FN( IsFont ),
 	FN( DrawTextLine ), FN( DrawTextLine_TA ), FN( DrawTextLine_BA ), FN( DrawTextLine_BL ), FN( DrawTextLine_VN ), FN( DrawTextLine_VC ),
 	FN( MatrixPush ), FN( MatrixPop ),
-	FN( SetCamera ), FN( SetClipRect ), FN( SetViewport ),
+	FN( SetCamera ), FN( SetClipRect ), FN( SetViewport ), FN( SetRenderTarget ),
 	FN( SetDepthTest ), FN( SetCulling ), FN( SetBlending ),
 };
 
