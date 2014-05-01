@@ -46,6 +46,229 @@ static void ri_free()
 
 
 
+static int SS_SetError( SGS_CTX )
+{
+	char* str = NULL;
+	SGSFN( "SS_SetError" );
+	if( !sgs_LoadArgs( C, "|s", &str ) )
+		return 0;
+	if( str )
+		SDL_SetError( "%s", str );
+	else
+		SDL_ClearError();
+	return 0;
+}
+
+static int SS_GetError( SGS_CTX )
+{
+	SGSFN( "SS_GetError" );
+	sgs_PushString( C, SDL_GetError() );
+	return 1;
+}
+
+
+static int SS_EventState( SGS_CTX )
+{
+	uint32_t type;
+	int8_t state = -1;
+	SGSFN( "SS_EventState" );
+	if( !sgs_LoadArgs( C, "+l|-c", &type, &state ) )
+		return 0;
+	sgs_PushBool( C, SDL_EventState( type, state ) );
+	return 1;
+}
+
+static int SS_GetNumTouchDevices( SGS_CTX )
+{
+	SGSFN( "SS_GetNumTouchDevices" );
+	sgs_PushInt( C, SDL_GetNumTouchDevices() );
+	return 1;
+}
+
+static int SS_GetTouchDevice( SGS_CTX )
+{
+	sgs_Int index;
+	SGSFN( "SS_GetTouchDevice" );
+	if( !sgs_LoadArgs( C, "i", &index ) )
+		return 0;
+	sgs_PushInt( C, SDL_GetTouchDevice( index ) );
+	return 1;
+}
+
+static int SS_GetTouchDevices( SGS_CTX )
+{
+	int i, numdevs;
+	SGSFN( "SS_GetTouchDevices" );
+	numdevs = SDL_GetNumTouchDevices();
+	for( i = 0; i < numdevs; ++i )
+		sgs_PushInt( C, SDL_GetTouchDevice( i ) );
+	sgs_PushArray( C, numdevs );
+	return 1;
+}
+
+static int SS_GetNumTouchFingers( SGS_CTX )
+{
+	sgs_Int touchID;
+	SGSFN( "SS_GetNumTouchFingers" );
+	if( !sgs_LoadArgs( C, "i", &touchID ) )
+		return 0;
+	sgs_PushInt( C, SDL_GetNumTouchFingers( touchID ) );
+	return 1;
+}
+
+static void _SS_PushFinger( SGS_CTX, SDL_Finger* finger )
+{
+	if( !finger )
+	{
+		sgs_PushNull( C );
+		return;
+	}
+	sgs_PushString( C, "id" );
+	sgs_PushInt( C, finger->id );
+	sgs_PushString( C, "x" );
+	sgs_PushReal( C, finger->x );
+	sgs_PushString( C, "y" );
+	sgs_PushReal( C, finger->y );
+	sgs_PushString( C, "pressure" );
+	sgs_PushReal( C, finger->pressure );
+	sgs_PushDict( C, 8 );
+}
+
+static int SS_GetTouchFinger( SGS_CTX )
+{
+	sgs_Int touchID, index;
+	SGSFN( "SS_GetTouchFinger" );
+	if( !sgs_LoadArgs( C, "ii", &touchID, &index ) )
+		return 0;
+	_SS_PushFinger( C, SDL_GetTouchFinger( touchID, index ) );
+	return 1;
+}
+
+static int SS_GetTouchFingers( SGS_CTX )
+{
+	int i, count;
+	sgs_Int touchID;
+	SGSFN( "SS_GetTouchFingers" );
+	if( !sgs_LoadArgs( C, "i", &touchID ) )
+		return 0;
+	count = SDL_GetNumTouchFingers( touchID );
+	for( i = 0; i < count; ++i )
+		_SS_PushFinger( C, SDL_GetTouchFinger( touchID, i ) );
+	sgs_PushArray( C, count );
+	return 1;
+}
+
+static int SS_RecordGesture( SGS_CTX )
+{
+	sgs_Int touchID;
+	SGSFN( "SS_RecordGesture" );
+	if( !sgs_LoadArgs( C, "i", &touchID ) )
+		return 0;
+	sgs_PushInt( C, SDL_RecordGesture( touchID ) );
+	return 1;
+}
+
+static int SS_FlushEvents( SGS_CTX )
+{
+	Uint32 mintype, maxtype;
+	SGSFN( "SS_FlushEvents" );
+	if( !sgs_LoadArgs( C, "+l|l", &mintype, &maxtype ) )
+		return 0;
+	if( sgs_StackSize( C ) >= 2 )
+		SDL_FlushEvents( mintype, maxtype );
+	else
+		SDL_FlushEvent( mintype );
+	return 0;
+}
+
+static int SS_HasEvents( SGS_CTX )
+{
+	Uint32 mintype, maxtype;
+	SGSFN( "SS_HasEvents" );
+	if( !sgs_LoadArgs( C, "+l|l", &mintype, &maxtype ) )
+		return 0;
+	sgs_PushBool( C, sgs_StackSize( C ) >= 2 ? SDL_HasEvents( mintype, maxtype ) : SDL_HasEvent( mintype ) );
+	return 1;
+}
+
+static int SS_PollEvent( SGS_CTX )
+{
+	SDL_Event ev;
+	SGSFN( "SS_PollEvent" );
+	return ( SDL_PollEvent( &ev ) && SGS_SUCCEEDED( ss_CreateSDLEvent( C, &ev ) ) ) ? 1 : 0;
+}
+
+static int SS_WaitEvent( SGS_CTX )
+{
+	int ret;
+	sgs_Int timeout = -1;
+	SDL_Event ev;
+	SGSFN( "SS_WaitEvent" );
+	if( sgs_LoadArgs( C, "|i", &timeout ) )
+		return 0;
+	if( timeout >= 0 )
+		ret = SDL_WaitEventTimeout( &ev, timeout );
+	else
+		ret = SDL_WaitEvent( &ev );
+	return ( ret && SGS_SUCCEEDED( ss_CreateSDLEvent( C, &ev ) ) ) ? 1 : 0;
+}
+
+static int _SS_PeepEvents_PG( SGS_CTX, int get )
+{
+	int i, outevents;
+	Uint32 eventcount, mintype, maxtype;
+	SDL_Event* events;
+	if( !sgs_LoadArgs( C, "+lll", &eventcount, &mintype, &maxtype ) )
+		return 0;
+	if( eventcount > 65535 )
+		_WARN( "too many events requested" )
+	events = sgs_Alloc_n( SDL_Event, eventcount );
+	outevents = SDL_PeepEvents( events, eventcount, get ? SDL_GETEVENT : SDL_PEEKEVENT, mintype, maxtype );
+	if( outevents < 0 )
+	{
+		sgs_PushNull( C );
+		sgs_PushString( C, SDL_GetError() );
+		return 2;
+	}
+	else
+	{
+		for( i = 0; i < outevents; ++i )
+		{
+			if( SGS_FAILED( ss_CreateSDLEvent( C, &events[ i ] ) ) )
+				sgs_PushNull( C );
+		}
+		sgs_PushArray( C, outevents );
+		return 1;
+	}
+}
+
+static int SS_PeekEvents( SGS_CTX )
+{
+	SGSFN( "SS_PeekEvents" );
+	return _SS_PeepEvents_PG( C, 0 );
+}
+
+static int SS_GetEvents( SGS_CTX )
+{
+	SGSFN( "SS_GetEvents" );
+	return _SS_PeepEvents_PG( C, 1 );
+}
+
+static int SS_PumpEvents( SGS_CTX )
+{
+	SGSFN( "SS_PumpEvents" );
+	SDL_PumpEvents();
+	return 0;
+}
+
+static int SS_QuitRequested( SGS_CTX )
+{
+	SGSFN( "SS_QuitRequested" );
+	sgs_PushBool( C, SDL_QuitRequested() );
+	return 1;
+}
+
+
 static int SS_GetPlatformInfo( SGS_CTX )
 {
 	SGSFN( "SS_GetPlatformInfo" );
@@ -617,6 +840,10 @@ static int SS_Window_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int
 		if( !strcmp( str, "height" ) ){ int w, h; SDL_GetWindowSize( W->window, &w, &h ); sgs_PushInt( C, h ); return SGS_SUCCESS; }
 		if( !strcmp( str, "title" ) ){ sgs_PushString( C, SDL_GetWindowTitle( W->window ) ); return SGS_SUCCESS; }
 		
+		if( !strcmp( str, "hasKeyboardFocus" ) ){ sgs_PushBool( C, SDL_GetKeyboardFocus() == W->window ); return SGS_SUCCESS; }
+		if( !strcmp( str, "hasMouseFocus" ) ){ sgs_PushBool( C, SDL_GetMouseFocus() == W->window ); return SGS_SUCCESS; }
+		if( !strcmp( str, "isScreenKeyboardShown" ) ){ sgs_PushBool( C, SDL_IsScreenKeyboardShown( W->window ) ); return SGS_SUCCESS; }
+		
 		/* special properties */
 		if( !strcmp( str, "nativeWindow" ) )
 		{
@@ -799,14 +1026,159 @@ static SS_Window* SS_Window_from_id( Uint32 id )
 
 
 
+static int SS_GetKeyFromName( SGS_CTX )
+{
+	char* str;
+	SGSFN( "SS_GetKeyFromName" );
+	if( !sgs_LoadArgs( C, "s", &str ) )
+		return 0;
+	sgs_PushInt( C, SDL_GetKeyFromName( str ) );
+	return 1;
+}
+
+static int SS_GetScancodeFromName( SGS_CTX )
+{
+	char* str;
+	SGSFN( "SS_GetScancodeFromName" );
+	if( !sgs_LoadArgs( C, "s", &str ) )
+		return 0;
+	sgs_PushInt( C, SDL_GetScancodeFromName( str ) );
+	return 1;
+}
+
+static int SS_GetKeyFromScancode( SGS_CTX )
+{
+	sgs_Int sc;
+	SGSFN( "SS_GetKeyFromScancode" );
+	if( !sgs_LoadArgs( C, "i", &sc ) )
+		return 0;
+	sgs_PushInt( C, SDL_GetKeyFromScancode( sc ) );
+	return 1;
+}
+
+static int SS_GetScancodeFromKey( SGS_CTX )
+{
+	sgs_Int key;
+	SGSFN( "SS_GetScancodeFromKey" );
+	if( !sgs_LoadArgs( C, "i", &key ) )
+		return 0;
+	sgs_PushInt( C, SDL_GetScancodeFromKey( key ) );
+	return 1;
+}
+
+static int SS_GetKeyName( SGS_CTX )
+{
+	sgs_Int key;
+	SGSFN( "SS_GetKeyName" );
+	if( !sgs_LoadArgs( C, "i", &key ) )
+		return 0;
+	sgs_PushString( C, SDL_GetKeyName( key ) );
+	return 1;
+}
+
+static int SS_GetScancodeName( SGS_CTX )
+{
+	sgs_Int key;
+	SGSFN( "SS_GetScancodeName" );
+	if( !sgs_LoadArgs( C, "i", &key ) )
+		return 0;
+	sgs_PushString( C, SDL_GetScancodeName( key ) );
+	return 1;
+}
+
+static int SS_GetKeyboardFocus( SGS_CTX )
+{
+	sgs_VarObj* obj;
+	SDL_Window* win;
+	SGSFN( "SS_GetKeyboardFocus" );
+	win = SDL_GetKeyboardFocus();
+	if( win )
+	{
+		if( ( obj = (sgs_VarObj*) SDL_GetWindowData( win, "sgsobj" ) ) != NULL )
+			sgs_PushObjectPtr( C, obj );
+		else
+			sgs_PushPtr( C, win );
+		return 1;
+	}
+	return 0;
+}
+
+static int SS_GetMouseFocus( SGS_CTX )
+{
+	sgs_VarObj* obj;
+	SDL_Window* win;
+	SGSFN( "SS_GetMouseFocus" );
+	win = SDL_GetMouseFocus();
+	if( win )
+	{
+		if( ( obj = (sgs_VarObj*) SDL_GetWindowData( win, "sgsobj" ) ) != NULL )
+			sgs_PushObjectPtr( C, obj );
+		else
+			sgs_PushPtr( C, win );
+		return 1;
+	}
+	return 0;
+}
+
+static int SS_GetModState( SGS_CTX )
+{
+	SGSFN( "SS_GetModState" );
+	sgs_PushInt( C, SDL_GetModState() );
+	return 1;
+}
+
+static int SS_SetModState( SGS_CTX )
+{
+	sgs_Int state;
+	SGSFN( "SS_SetModState" );
+	if( !sgs_LoadArgs( C, "i", &state ) )
+		return 0;
+	SDL_SetModState( state );
+	return 0;
+}
+
+static int SS_HasScreenKeyboardSupport( SGS_CTX )
+{
+	SGSFN( "SS_HasScreenKeyboardSupport" );
+	sgs_PushBool( C, SDL_HasScreenKeyboardSupport() );
+	return 1;
+}
+
+static int SS_IsTextInputActive( SGS_CTX )
+{
+	SGSFN( "SS_IsTextInputActive" );
+	sgs_PushBool( C, SDL_IsTextInputActive() );
+	return 1;
+}
+
+
 static int SS_ShowCursor( SGS_CTX )
 {
-	int shc;
+	sgs_Bool shc;
 	SGSFN( "SS_ShowCursor" );
-	if( !sgs_ParseBool( C, 0, &shc ) )
-		_WARN( "function expects 1 argument: bool" )
+	if( !sgs_LoadArgs( C, "b", &shc ) )
+		return 0;
 	SDL_ShowCursor( shc ? SDL_ENABLE : SDL_DISABLE );
 	return 0;
+}
+
+static int SS_SetSystemCursor( SGS_CTX )
+{
+	sgs_Int type;
+	SDL_Cursor* cursor;
+	SGSFN( "SS_SetSystemCursor" );
+	if( !sgs_LoadArgs( C, "i", &type ) )
+		return 0;
+	cursor = SDL_CreateSystemCursor( type );
+	if( !cursor )
+	{
+		sgs_PushBool( C, 0 );
+		return 1;
+	}
+	SDL_SetCursor( cursor );
+	SDL_FreeCursor( cursor );
+	sgs_PushBool( C, 1 );
+	return 1;
 }
 
 static int SS_WarpMouse( SGS_CTX )
@@ -841,6 +1213,32 @@ static int SS_GetRelativeMouseState( SGS_CTX )
 	sgs_PushInt( C, btnmask );
 	sgs_PushArray( C, 3 );
 	return 1;
+}
+
+static int SS_GetRelativeMouseMode( SGS_CTX )
+{
+	SGSFN( "SS_GetRelativeMouseMode" );
+	sgs_PushBool( C, SDL_GetRelativeMouseMode() );
+	return 1;
+}
+
+static int SS_SetRelativeMouseMode( SGS_CTX )
+{
+	sgs_Bool mode;
+	SGSFN( "SS_SetRelativeMouseMode" );
+	if( !sgs_LoadArgs( C, "b", &mode ) )
+		return 0;
+	if( SDL_SetRelativeMouseMode( mode ) == 0 )
+	{
+		sgs_PushBool( C, 1 );
+		return 1;
+	}
+	else
+	{
+		sgs_PushBool( C, 0 );
+		sgs_PushString( C, SDL_GetError() );
+		return 2;
+	}
 }
 
 
@@ -920,6 +1318,9 @@ static sgs_RegIntConst sdl_ints[] =
 	/*  EVENTS  */
 	IC( SDL_QUIT ),
 	
+	IC( SDL_FIRSTEVENT ),
+	IC( SDL_LASTEVENT ),
+	
 	IC( SDL_WINDOWEVENT ),
 	IC( SDL_SYSWMEVENT ),
 	
@@ -980,6 +1381,33 @@ static sgs_RegIntConst sdl_ints[] =
 	/* D3D9 - specific */
 	IC( SDL_VIDEODEVICELOST ),
 	IC( SDL_VIDEODEVICERESET ),
+	
+	/* System cursors */
+	IC( SDL_SYSTEM_CURSOR_ARROW ),
+	IC( SDL_SYSTEM_CURSOR_IBEAM ),
+	IC( SDL_SYSTEM_CURSOR_WAIT ),
+	IC( SDL_SYSTEM_CURSOR_CROSSHAIR ),
+	IC( SDL_SYSTEM_CURSOR_WAITARROW ),
+	IC( SDL_SYSTEM_CURSOR_SIZENWSE ),
+	IC( SDL_SYSTEM_CURSOR_SIZENESW ),
+	IC( SDL_SYSTEM_CURSOR_SIZEWE ),
+	IC( SDL_SYSTEM_CURSOR_SIZENS ),
+	IC( SDL_SYSTEM_CURSOR_SIZEALL ),
+	IC( SDL_SYSTEM_CURSOR_NO ),
+	IC( SDL_SYSTEM_CURSOR_HAND ),
+	/* - shorter */
+	ICX( SDL_CURSOR_ARROW, SDL_SYSTEM_CURSOR_ARROW ),
+	ICX( SDL_CURSOR_IBEAM, SDL_SYSTEM_CURSOR_IBEAM ),
+	ICX( SDL_CURSOR_WAIT, SDL_SYSTEM_CURSOR_WAIT ),
+	ICX( SDL_CURSOR_CROSSHAIR, SDL_SYSTEM_CURSOR_CROSSHAIR ),
+	ICX( SDL_CURSOR_WAITARROW, SDL_SYSTEM_CURSOR_WAITARROW ),
+	ICX( SDL_CURSOR_SIZENWSE, SDL_SYSTEM_CURSOR_SIZENWSE ),
+	ICX( SDL_CURSOR_SIZENESW, SDL_SYSTEM_CURSOR_SIZENESW ),
+	ICX( SDL_CURSOR_SIZEWE, SDL_SYSTEM_CURSOR_SIZEWE ),
+	ICX( SDL_CURSOR_SIZENS, SDL_SYSTEM_CURSOR_SIZENS ),
+	ICX( SDL_CURSOR_SIZEALL, SDL_SYSTEM_CURSOR_SIZEALL ),
+	ICX( SDL_CURSOR_NO, SDL_SYSTEM_CURSOR_NO ),
+	ICX( SDL_CURSOR_HAND, SDL_SYSTEM_CURSOR_HAND ),
 	
 	/*  KEYCODES  */
 	IC( SDLK_UNKNOWN ),
@@ -1262,19 +1690,284 @@ static sgs_RegIntConst sdl_ints[] =
 	ICX( SDLK_Y, SDLK_y ),
 	ICX( SDLK_Z, SDLK_z ),
 	
+	/*  SCANCODES  */
+	IC( SDL_SCANCODE_UNKNOWN ),
+	IC( SDL_SCANCODE_A ),
+	IC( SDL_SCANCODE_B ),
+	IC( SDL_SCANCODE_C ),
+	IC( SDL_SCANCODE_D ),
+	IC( SDL_SCANCODE_E ),
+	IC( SDL_SCANCODE_F ),
+	IC( SDL_SCANCODE_G ),
+	IC( SDL_SCANCODE_H ),
+	IC( SDL_SCANCODE_I ),
+	IC( SDL_SCANCODE_J ),
+	IC( SDL_SCANCODE_K ),
+	IC( SDL_SCANCODE_L ),
+	IC( SDL_SCANCODE_M ),
+	IC( SDL_SCANCODE_N ),
+	IC( SDL_SCANCODE_O ),
+	IC( SDL_SCANCODE_P ),
+	IC( SDL_SCANCODE_Q ),
+	IC( SDL_SCANCODE_R ),
+	IC( SDL_SCANCODE_S ),
+	IC( SDL_SCANCODE_T ),
+	IC( SDL_SCANCODE_U ),
+	IC( SDL_SCANCODE_V ),
+	IC( SDL_SCANCODE_W ),
+	IC( SDL_SCANCODE_X ),
+	IC( SDL_SCANCODE_Y ),
+	IC( SDL_SCANCODE_Z ),
+	
+	IC( SDL_SCANCODE_1 ),
+	IC( SDL_SCANCODE_2 ),
+	IC( SDL_SCANCODE_3 ),
+	IC( SDL_SCANCODE_4 ),
+	IC( SDL_SCANCODE_5 ),
+	IC( SDL_SCANCODE_6 ),
+	IC( SDL_SCANCODE_7 ),
+	IC( SDL_SCANCODE_8 ),
+	IC( SDL_SCANCODE_9 ),
+	IC( SDL_SCANCODE_0 ),
+	
+	IC( SDL_SCANCODE_RETURN ),
+	IC( SDL_SCANCODE_ESCAPE ),
+	IC( SDL_SCANCODE_BACKSPACE ),
+	IC( SDL_SCANCODE_TAB ),
+	IC( SDL_SCANCODE_SPACE ),
+	
+	IC( SDL_SCANCODE_MINUS ),
+	IC( SDL_SCANCODE_EQUALS ),
+	IC( SDL_SCANCODE_LEFTBRACKET ),
+	IC( SDL_SCANCODE_RIGHTBRACKET ),
+	IC( SDL_SCANCODE_BACKSLASH ),
+	IC( SDL_SCANCODE_NONUSHASH ),
+	IC( SDL_SCANCODE_SEMICOLON ),
+	IC( SDL_SCANCODE_APOSTROPHE ),
+	IC( SDL_SCANCODE_GRAVE ),
+	IC( SDL_SCANCODE_COMMA ),
+	IC( SDL_SCANCODE_PERIOD ),
+	IC( SDL_SCANCODE_SLASH ),
+	
+	IC( SDL_SCANCODE_CAPSLOCK ),
+	
+	IC( SDL_SCANCODE_F1 ),
+	IC( SDL_SCANCODE_F2 ),
+	IC( SDL_SCANCODE_F3 ),
+	IC( SDL_SCANCODE_F4 ),
+	IC( SDL_SCANCODE_F5 ),
+	IC( SDL_SCANCODE_F6 ),
+	IC( SDL_SCANCODE_F7 ),
+	IC( SDL_SCANCODE_F8 ),
+	IC( SDL_SCANCODE_F9 ),
+	IC( SDL_SCANCODE_F10 ),
+	IC( SDL_SCANCODE_F11 ),
+	IC( SDL_SCANCODE_F12 ),
+	
+	IC( SDL_SCANCODE_PRINTSCREEN ),
+	IC( SDL_SCANCODE_SCROLLLOCK ),
+	IC( SDL_SCANCODE_PAUSE ),
+	IC( SDL_SCANCODE_INSERT ),
+	IC( SDL_SCANCODE_HOME ),
+	IC( SDL_SCANCODE_PAGEUP ),
+	IC( SDL_SCANCODE_DELETE ),
+	IC( SDL_SCANCODE_END ),
+	IC( SDL_SCANCODE_PAGEDOWN ),
+	IC( SDL_SCANCODE_RIGHT ),
+	IC( SDL_SCANCODE_LEFT ),
+	IC( SDL_SCANCODE_DOWN ),
+	IC( SDL_SCANCODE_UP ),
+	
+	IC( SDL_SCANCODE_NUMLOCKCLEAR ),
+	IC( SDL_SCANCODE_KP_DIVIDE ),
+	IC( SDL_SCANCODE_KP_MULTIPLY ),
+	IC( SDL_SCANCODE_KP_MINUS ),
+	IC( SDL_SCANCODE_KP_PLUS ),
+	IC( SDL_SCANCODE_KP_ENTER ),
+	IC( SDL_SCANCODE_KP_1 ),
+	IC( SDL_SCANCODE_KP_2 ),
+	IC( SDL_SCANCODE_KP_3 ),
+	IC( SDL_SCANCODE_KP_4 ),
+	IC( SDL_SCANCODE_KP_5 ),
+	IC( SDL_SCANCODE_KP_6 ),
+	IC( SDL_SCANCODE_KP_7 ),
+	IC( SDL_SCANCODE_KP_8 ),
+	IC( SDL_SCANCODE_KP_9 ),
+	IC( SDL_SCANCODE_KP_0 ),
+	IC( SDL_SCANCODE_KP_PERIOD ),
+	
+	IC( SDL_SCANCODE_NONUSBACKSLASH ),
+	IC( SDL_SCANCODE_APPLICATION ),
+	IC( SDL_SCANCODE_POWER ),
+	IC( SDL_SCANCODE_KP_EQUALS ),
+	IC( SDL_SCANCODE_F13 ),
+	IC( SDL_SCANCODE_F14 ),
+	IC( SDL_SCANCODE_F15 ),
+	IC( SDL_SCANCODE_F16 ),
+	IC( SDL_SCANCODE_F17 ),
+	IC( SDL_SCANCODE_F18 ),
+	IC( SDL_SCANCODE_F19 ),
+	IC( SDL_SCANCODE_F20 ),
+	IC( SDL_SCANCODE_F21 ),
+	IC( SDL_SCANCODE_F22 ),
+	IC( SDL_SCANCODE_F23 ),
+	IC( SDL_SCANCODE_F24 ),
+	IC( SDL_SCANCODE_EXECUTE ),
+	IC( SDL_SCANCODE_HELP ),
+	IC( SDL_SCANCODE_MENU ),
+	IC( SDL_SCANCODE_SELECT ),
+	IC( SDL_SCANCODE_STOP ),
+	IC( SDL_SCANCODE_AGAIN ),
+	IC( SDL_SCANCODE_UNDO ),
+	IC( SDL_SCANCODE_CUT ),
+	IC( SDL_SCANCODE_COPY ),
+	IC( SDL_SCANCODE_PASTE ),
+	IC( SDL_SCANCODE_FIND ),
+	IC( SDL_SCANCODE_MUTE ),
+	IC( SDL_SCANCODE_VOLUMEUP ),
+	IC( SDL_SCANCODE_VOLUMEDOWN ),
+	IC( SDL_SCANCODE_KP_COMMA ),
+	IC( SDL_SCANCODE_KP_EQUALSAS400 ),
+	
+	IC( SDL_SCANCODE_INTERNATIONAL1 ),
+	IC( SDL_SCANCODE_INTERNATIONAL2 ),
+	IC( SDL_SCANCODE_INTERNATIONAL3 ),
+	IC( SDL_SCANCODE_INTERNATIONAL4 ),
+	IC( SDL_SCANCODE_INTERNATIONAL5 ),
+	IC( SDL_SCANCODE_INTERNATIONAL6 ),
+	IC( SDL_SCANCODE_INTERNATIONAL7 ),
+	IC( SDL_SCANCODE_INTERNATIONAL8 ),
+	IC( SDL_SCANCODE_INTERNATIONAL9 ),
+	IC( SDL_SCANCODE_LANG1 ),
+	IC( SDL_SCANCODE_LANG2 ),
+	IC( SDL_SCANCODE_LANG3 ),
+	IC( SDL_SCANCODE_LANG4 ),
+	IC( SDL_SCANCODE_LANG5 ),
+	IC( SDL_SCANCODE_LANG6 ),
+	IC( SDL_SCANCODE_LANG7 ),
+	IC( SDL_SCANCODE_LANG8 ),
+	IC( SDL_SCANCODE_LANG9 ),
+	
+	IC( SDL_SCANCODE_ALTERASE ),
+	IC( SDL_SCANCODE_SYSREQ ),
+	IC( SDL_SCANCODE_CANCEL ),
+	IC( SDL_SCANCODE_CLEAR ),
+	IC( SDL_SCANCODE_PRIOR ),
+	IC( SDL_SCANCODE_RETURN2 ),
+	IC( SDL_SCANCODE_SEPARATOR ),
+	IC( SDL_SCANCODE_OUT ),
+	IC( SDL_SCANCODE_OPER ),
+	IC( SDL_SCANCODE_CLEARAGAIN ),
+	IC( SDL_SCANCODE_CRSEL ),
+	IC( SDL_SCANCODE_EXSEL ),
+	
+	IC( SDL_SCANCODE_KP_00 ),
+	IC( SDL_SCANCODE_KP_000 ),
+	IC( SDL_SCANCODE_THOUSANDSSEPARATOR ),
+	IC( SDL_SCANCODE_DECIMALSEPARATOR ),
+	IC( SDL_SCANCODE_CURRENCYUNIT ),
+	IC( SDL_SCANCODE_CURRENCYSUBUNIT ),
+	IC( SDL_SCANCODE_KP_LEFTPAREN ),
+	IC( SDL_SCANCODE_KP_RIGHTPAREN ),
+	IC( SDL_SCANCODE_KP_LEFTBRACE ),
+	IC( SDL_SCANCODE_KP_RIGHTBRACE ),
+	IC( SDL_SCANCODE_KP_TAB ),
+	IC( SDL_SCANCODE_KP_BACKSPACE ),
+	IC( SDL_SCANCODE_KP_A ),
+	IC( SDL_SCANCODE_KP_B ),
+	IC( SDL_SCANCODE_KP_C ),
+	IC( SDL_SCANCODE_KP_D ),
+	IC( SDL_SCANCODE_KP_E ),
+	IC( SDL_SCANCODE_KP_F ),
+	IC( SDL_SCANCODE_KP_XOR ),
+	IC( SDL_SCANCODE_KP_POWER ),
+	IC( SDL_SCANCODE_KP_PERCENT ),
+	IC( SDL_SCANCODE_KP_LESS ),
+	IC( SDL_SCANCODE_KP_GREATER ),
+	IC( SDL_SCANCODE_KP_AMPERSAND ),
+	IC( SDL_SCANCODE_KP_DBLAMPERSAND ),
+	IC( SDL_SCANCODE_KP_VERTICALBAR ),
+	IC( SDL_SCANCODE_KP_DBLVERTICALBAR ),
+	IC( SDL_SCANCODE_KP_COLON ),
+	IC( SDL_SCANCODE_KP_HASH ),
+	IC( SDL_SCANCODE_KP_SPACE ),
+	IC( SDL_SCANCODE_KP_AT ),
+	IC( SDL_SCANCODE_KP_EXCLAM ),
+	IC( SDL_SCANCODE_KP_MEMSTORE ),
+	IC( SDL_SCANCODE_KP_MEMRECALL ),
+	IC( SDL_SCANCODE_KP_MEMCLEAR ),
+	IC( SDL_SCANCODE_KP_MEMADD ),
+	IC( SDL_SCANCODE_KP_MEMSUBTRACT ),
+	IC( SDL_SCANCODE_KP_MEMMULTIPLY ),
+	IC( SDL_SCANCODE_KP_MEMDIVIDE ),
+	IC( SDL_SCANCODE_KP_PLUSMINUS ),
+	IC( SDL_SCANCODE_KP_CLEAR ),
+	IC( SDL_SCANCODE_KP_CLEARENTRY ),
+	IC( SDL_SCANCODE_KP_BINARY ),
+	IC( SDL_SCANCODE_KP_OCTAL ),
+	IC( SDL_SCANCODE_KP_DECIMAL ),
+	IC( SDL_SCANCODE_KP_HEXADECIMAL ),
+	
+	IC( SDL_SCANCODE_LCTRL ),
+	IC( SDL_SCANCODE_LSHIFT ),
+	IC( SDL_SCANCODE_LALT ),
+	IC( SDL_SCANCODE_LGUI ),
+	IC( SDL_SCANCODE_RCTRL ),
+	IC( SDL_SCANCODE_RSHIFT ),
+	IC( SDL_SCANCODE_RALT ),
+	IC( SDL_SCANCODE_RGUI ),
+	
+	IC( SDL_SCANCODE_MODE ),
+	
+	IC( SDL_SCANCODE_AUDIONEXT ),
+	IC( SDL_SCANCODE_AUDIOPREV ),
+	IC( SDL_SCANCODE_AUDIOSTOP ),
+	IC( SDL_SCANCODE_AUDIOPLAY ),
+	IC( SDL_SCANCODE_AUDIOMUTE ),
+	IC( SDL_SCANCODE_MEDIASELECT ),
+	IC( SDL_SCANCODE_WWW ),
+	IC( SDL_SCANCODE_MAIL ),
+	IC( SDL_SCANCODE_CALCULATOR ),
+	IC( SDL_SCANCODE_COMPUTER ),
+	IC( SDL_SCANCODE_AC_SEARCH ),
+	IC( SDL_SCANCODE_AC_HOME ),
+	IC( SDL_SCANCODE_AC_BACK ),
+	IC( SDL_SCANCODE_AC_FORWARD ),
+	IC( SDL_SCANCODE_AC_STOP ),
+	IC( SDL_SCANCODE_AC_REFRESH ),
+	IC( SDL_SCANCODE_AC_BOOKMARKS ),
+	
+	IC( SDL_SCANCODE_BRIGHTNESSDOWN ),
+	IC( SDL_SCANCODE_BRIGHTNESSUP ),
+	IC( SDL_SCANCODE_DISPLAYSWITCH ),
+	IC( SDL_SCANCODE_KBDILLUMTOGGLE ),
+	IC( SDL_SCANCODE_KBDILLUMDOWN ),
+	IC( SDL_SCANCODE_KBDILLUMUP ),
+	IC( SDL_SCANCODE_EJECT ),
+	IC( SDL_SCANCODE_SLEEP ),
+	
+	IC( SDL_SCANCODE_APP1 ),
+	IC( SDL_SCANCODE_APP2 ),
+	
+	IC( SDL_NUM_SCANCODES ),
+	
 	/*  KEY MODIFIER FLAGS  */
 	IC_SDL( KMOD_NONE ),
 	IC_SDL( KMOD_NUM ),
 	IC_SDL( KMOD_CAPS ),
+	IC_SDL( KMOD_MODE ),
 	IC_SDL( KMOD_LCTRL ),
 	IC_SDL( KMOD_RCTRL ),
 	IC_SDL( KMOD_RSHIFT ),
 	IC_SDL( KMOD_LSHIFT ),
 	IC_SDL( KMOD_RALT ),
 	IC_SDL( KMOD_LALT ),
+	IC_SDL( KMOD_RGUI ),
+	IC_SDL( KMOD_LGUI ),
 	IC_SDL( KMOD_CTRL ),
 	IC_SDL( KMOD_SHIFT ),
 	IC_SDL( KMOD_ALT ),
+	IC_SDL( KMOD_GUI ),
 	
 	/*  BUTTON MASKS & IDS  */
 	IC( SDL_BUTTON_LMASK ),
@@ -1369,6 +2062,17 @@ static int SS_SDL_WINDOWPOS_CENTERED_DISPLAY( SGS_CTX )
 
 static sgs_RegFuncConst sdl_funcs[] =
 {
+	FN( SetError ), FN( GetError ),
+	FN( EventState ),
+	FN( GetNumTouchDevices ), FN( GetTouchDevice ), FN( GetTouchDevices ),
+	FN( GetNumTouchFingers ), FN( GetTouchFinger ), FN( GetTouchFingers ),
+	FN( RecordGesture ),
+	FN( FlushEvents ), FN( HasEvents ),
+	FN( PollEvent ), FN( WaitEvent ),
+	FN( PeekEvents ), FN( GetEvents ),
+	FN( PumpEvents ),
+	FN( QuitRequested ),
+	
 	FN( GetPlatformInfo ),
 	FN( GetPowerInfo ),
 	FN( Sleep ),
@@ -1398,9 +2102,17 @@ static sgs_RegFuncConst sdl_funcs[] =
 	
 	FN( CreateWindow ), FN( GetWindowFromID ),
 	
-	FN( ShowCursor ),
+	FN( GetKeyFromName ), FN( GetScancodeFromName ),
+	FN( GetKeyFromScancode ), FN( GetScancodeFromKey ),
+	FN( GetKeyName ), FN( GetScancodeName ),
+	FN( GetKeyboardFocus ), FN( GetMouseFocus ),
+	FN( GetModState ), FN( SetModState ),
+	FN( HasScreenKeyboardSupport ),
+	FN( IsTextInputActive ),
+	FN( ShowCursor ), FN( SetSystemCursor ),
 	FN( WarpMouse ),
 	FN( GetMouseState ), FN( GetRelativeMouseState ),
+	FN( GetRelativeMouseMode ), FN( SetRelativeMouseMode ),
 	FN( StartTextInput ), FN( StopTextInput ), FN( SetTextInputRect ),
 	
 	FN( SetGLAttrib ),
