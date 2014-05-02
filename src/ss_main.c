@@ -214,7 +214,12 @@ int ss_Initialize( int argc, char* argv[], int debug )
 #endif
 	
 	/* initialize SDL */
-	if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE ) < 0 )
+	if( SDL_Init(
+		SDL_INIT_TIMER | SDL_INIT_VIDEO |
+		SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC |
+		SDL_INIT_GAMECONTROLLER |
+		SDL_INIT_EVENTS | SDL_INIT_NOPARACHUTE
+	) < 0 )
 	{
 		fprintf( stderr, "Couldn't initialize SDL: %s\n", SDL_GetError() );
 		return -5;

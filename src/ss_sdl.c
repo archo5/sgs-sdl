@@ -1270,6 +1270,630 @@ static int SS_SetTextInputRect( SGS_CTX )
 }
 
 
+
+/*  JOYSTICK  */
+
+static sgs_ObjInterface SS_Joystick_iface[1];
+
+#define JS_HDR SDL_Joystick* JS = (SDL_Joystick*) obj->data;
+#define JS_IHDR( funcname ) SDL_Joystick* JS; \
+	if( !SGS_PARSE_METHOD( C, SS_Joystick_iface, JS, SS_Joystick, funcname ) ) return 0;
+
+static int SS_JoystickI_open( SGS_CTX )
+{
+	int32_t index = 0;
+	JS_IHDR( open );
+	if( !sgs_LoadArgs( C, "|l", &index ) )
+		return 0;
+	sgs_Method( C );
+	if( JS )
+	{
+		SDL_JoystickClose( JS );
+		sgs_SetObjectData( C, 0, NULL );
+	}
+	JS = SDL_JoystickOpen( index );
+	if( JS )
+	{
+		sgs_SetObjectData( C, 0, JS );
+		sgs_PushBool( C, 1 );
+		return 1;
+	}
+	else
+	{
+		sgs_PushBool( C, 0 );
+		sgs_PushString( C, SDL_GetError() );
+		return 2;
+	}
+}
+
+static int SS_JoystickI_close( SGS_CTX )
+{
+	JS_IHDR( close );
+	sgs_Method( C );
+	if( JS )
+	{
+		SDL_JoystickClose( JS );
+		sgs_SetObjectData( C, 0, NULL );
+	}
+	return 0;
+}
+
+static int SS_JoystickI_getAxis( SGS_CTX )
+{
+	int32_t which;
+	JS_IHDR( getAxis );
+	if( !sgs_LoadArgs( C, "l", &which ) )
+		return 0;
+	sgs_PushInt( C, SDL_JoystickGetAxis( JS, which ) );
+	return 1;
+}
+
+static int SS_JoystickI_getBall( SGS_CTX )
+{
+	int dx, dy;
+	int32_t which;
+	JS_IHDR( getBall );
+	if( !sgs_LoadArgs( C, "l", &which ) )
+		return 0;
+	if( 0 == SDL_JoystickGetBall( JS, which, &dx, &dy ) )
+	{
+		sgs_PushInt( C, dx );
+		sgs_PushInt( C, dy );
+		return 2;
+	}
+	return 0;
+}
+
+static int SS_JoystickI_getButton( SGS_CTX )
+{
+	int32_t which;
+	JS_IHDR( getButton );
+	if( !sgs_LoadArgs( C, "l", &which ) )
+		return 0;
+	sgs_PushInt( C, SDL_JoystickGetButton( JS, which ) );
+	return 1;
+}
+
+static int SS_JoystickI_getHat( SGS_CTX )
+{
+	int32_t which;
+	JS_IHDR( getHat );
+	if( !sgs_LoadArgs( C, "l", &which ) )
+		return 0;
+	sgs_PushInt( C, SDL_JoystickGetHat( JS, which ) );
+	return 1;
+}
+
+static int SS_Joystick_destruct( SGS_CTX, sgs_VarObj* obj )
+{
+	JS_HDR;
+	if( JS )
+		SDL_JoystickClose( JS );
+	return 0;
+}
+
+static int SS_Joystick_getindex( SGS_ARGS_GETINDEXFUNC )
+{
+	JS_HDR;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "open" ) SGS_RETURN_CFUNC( SS_JoystickI_open );
+		SGS_CASE( "close" ) SGS_RETURN_CFUNC( SS_JoystickI_close );
+		SGS_CASE( "getAxis" ) SGS_RETURN_CFUNC( SS_JoystickI_getAxis );
+		SGS_CASE( "getBall" ) SGS_RETURN_CFUNC( SS_JoystickI_getBall );
+		SGS_CASE( "getButton" ) SGS_RETURN_CFUNC( SS_JoystickI_getButton );
+		SGS_CASE( "getHat" ) SGS_RETURN_CFUNC( SS_JoystickI_getHat );
+		
+		SGS_CASE( "attached" ) SGS_RETURN_BOOL( SDL_JoystickGetAttached( JS ) );
+		SGS_CASE( "instanceID" ) SGS_RETURN_INT( SDL_JoystickInstanceID( JS ) );
+		SGS_CASE( "guid" )
+		{
+			static const Uint8 nullguid[16] = {0};
+			SDL_JoystickGUID guid = SDL_JoystickGetGUID( JS );
+			if( 0 == memcmp( &guid, nullguid, 16 ) )
+				sgs_PushNull( C );
+			else
+			{
+				char bfr[ 33 ];
+				SDL_JoystickGetGUIDString( guid, bfr, 33 );
+				sgs_PushStringBuf( C, bfr, 32 );
+			}
+			return SGS_SUCCESS;
+		}
+		SGS_CASE( "name" )
+		{
+			const char* nm = SDL_JoystickName( JS );
+			if( nm )
+				sgs_PushString( C, nm );
+			else
+				sgs_PushNull( C );
+			return SGS_SUCCESS;
+		}
+		SGS_CASE( "numAxes" ) SGS_RETURN_INT( SDL_JoystickNumAxes( JS ) );
+		SGS_CASE( "numBalls" ) SGS_RETURN_INT( SDL_JoystickNumBalls( JS ) );
+		SGS_CASE( "numButtons" ) SGS_RETURN_INT( SDL_JoystickNumButtons( JS ) );
+		SGS_CASE( "numHats" ) SGS_RETURN_INT( SDL_JoystickNumHats( JS ) );
+	SGS_END_INDEXFUNC;
+}
+
+static sgs_ObjInterface SS_Joystick_iface[1] =
+{{
+	"SS_Joystick",
+	SS_Joystick_destruct, NULL,
+	SS_Joystick_getindex, NULL,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL
+}};
+
+static int SS_GetJoystick( SGS_CTX )
+{
+	SDL_Joystick* JS;
+	int32_t which = -1;
+	SGSFN( "SS_GetJoystick" );
+	if( !sgs_LoadArgs( C, "|l", &which ) )
+		return 0;
+	
+	sgs_SetStackSize( C, 0 );
+	sgs_PushObject( C, NULL, SS_Joystick_iface );
+	if( sgs_StackSize( C ) >= 1 )
+	{
+		JS = SDL_JoystickOpen( which );
+		if( JS )
+		{
+			sgs_SetObjectData( C, 0, JS );
+			sgs_PushBool( C, 1 );
+			return 2;
+		}
+		else
+		{
+			sgs_PushBool( C, 0 );
+			sgs_PushString( C, SDL_GetError() );
+			return 3;
+		}
+	}
+	else
+		return 1;
+}
+
+static int SS_NumJoysticks( SGS_CTX )
+{
+	SGSFN( "SS_NumJoysticks" );
+	sgs_PushInt( C, SDL_NumJoysticks() );
+	return 1;
+}
+
+static int SS_GetJoystickName( SGS_CTX )
+{
+	const char* name;
+	int32_t which;
+	SGSFN( "SS_GetJoystickName" );
+	if( !sgs_LoadArgs( C, "l", &which ) )
+		return 0;
+	name = SDL_JoystickNameForIndex( which );
+	if( name )
+	{
+		sgs_PushString( C, name );
+		return 1;
+	}
+	return 0;
+}
+
+static int SS_GetJoystickNames( SGS_CTX )
+{
+	int i, count;
+	SGSFN( "SS_GetJoystickNames" );
+	count = SDL_NumJoysticks();
+	for( i = 0; i < count; ++i )
+	{
+		const char* name = SDL_JoystickNameForIndex( i );
+		if( name )
+			sgs_PushString( C, name );
+		else
+			sgs_PushNull( C );
+	}
+	sgs_PushArray( C, count );
+	return 1;
+}
+
+static int SS_JoystickUpdate( SGS_CTX )
+{
+	SGSFN( "SS_JoystickUpdate" );
+	SDL_JoystickUpdate();
+	return 0;
+}
+
+static int SS_JoystickEventState( SGS_CTX )
+{
+	int32_t state, outstate;
+	SGSFN( "SS_JoystickEventState" );
+	if( !sgs_LoadArgs( C, "l", &state ) )
+		return 0;
+	outstate = SDL_JoystickEventState( state );
+	if( outstate >= 0 )
+	{
+		sgs_PushBool( C, outstate );
+		return 1;
+	}
+	else
+	{
+		sgs_PushNull( C );
+		sgs_PushString( C, SDL_GetError() );
+		return 2;
+	}
+}
+
+
+
+/*  GAME CONROLLER  */
+
+static sgs_ObjInterface SS_GameController_iface[1];
+
+#define GC_HDR SDL_GameController* GC = (SDL_GameController*) obj->data;
+#define GC_IHDR( funcname ) SDL_GameController* GC; \
+	if( !SGS_PARSE_METHOD( C, SS_GameController_iface, GC, SS_GameController, funcname ) ) return 0;
+
+static int SS_GameControllerI_open( SGS_CTX )
+{
+	int32_t index = 0;
+	GC_IHDR( open );
+	if( !sgs_LoadArgs( C, "|l", &index ) )
+		return 0;
+	sgs_Method( C );
+	if( GC )
+	{
+		SDL_GameControllerClose( GC );
+		sgs_SetObjectData( C, 0, NULL );
+	}
+	GC = SDL_GameControllerOpen( index );
+	if( GC )
+	{
+		sgs_SetObjectData( C, 0, GC );
+		sgs_PushBool( C, 1 );
+		return 1;
+	}
+	else
+	{
+		sgs_PushBool( C, 0 );
+		sgs_PushString( C, SDL_GetError() );
+		return 2;
+	}
+}
+
+static int SS_GameControllerI_close( SGS_CTX )
+{
+	GC_IHDR( close );
+	sgs_Method( C );
+	if( GC )
+	{
+		SDL_GameControllerClose( GC );
+		sgs_SetObjectData( C, 0, NULL );
+	}
+	return 0;
+}
+
+static int SS_GameControllerI_getAxis( SGS_CTX )
+{
+	int32_t which;
+	GC_IHDR( getAxis );
+	if( !sgs_LoadArgs( C, "l", &which ) )
+		return 0;
+	sgs_PushInt( C, SDL_GameControllerGetAxis( GC, which ) );
+	return 1;
+}
+
+static int SS_GameControllerI_getButton( SGS_CTX )
+{
+	int32_t which;
+	GC_IHDR( getButton );
+	if( !sgs_LoadArgs( C, "l", &which ) )
+		return 0;
+	sgs_PushInt( C, SDL_GameControllerGetButton( GC, which ) );
+	return 1;
+}
+
+static int _SS_PushGCBind( SGS_CTX, SDL_GameControllerButtonBind* bind )
+{
+	sgs_SizeVal ssz = sgs_StackSize( C );
+	sgs_PushString( C, "bindType" );
+	sgs_PushInt( C, bind->bindType );
+	switch( bind->bindType )
+	{
+	case SDL_CONTROLLER_BINDTYPE_NONE: break;
+	case SDL_CONTROLLER_BINDTYPE_BUTTON:
+		sgs_PushString( C, "button" );
+		sgs_PushInt( C, bind->value.button );
+		break;
+	case SDL_CONTROLLER_BINDTYPE_AXIS:
+		sgs_PushString( C, "axis" );
+		sgs_PushInt( C, bind->value.axis );
+		break;
+	case SDL_CONTROLLER_BINDTYPE_HAT:
+		sgs_PushString( C, "hat" );
+		sgs_PushInt( C, bind->value.hat.hat );
+		sgs_PushString( C, "hat_mask" );
+		sgs_PushInt( C, bind->value.hat.hat_mask );
+		break;
+	}
+	sgs_PushDict( C, sgs_StackSize( C ) - ssz );
+	return 1;
+}
+
+static int SS_GameControllerI_getBindForAxis( SGS_CTX )
+{
+	int32_t which;
+	SDL_GameControllerButtonBind bind;
+	GC_IHDR( getButton );
+	if( !sgs_LoadArgs( C, "l", &which ) )
+		return 0;
+	bind = SDL_GameControllerGetBindForAxis( GC, which );
+	return _SS_PushGCBind( C, &bind );
+}
+
+static int SS_GameControllerI_getBindForButton( SGS_CTX )
+{
+	int32_t which;
+	SDL_GameControllerButtonBind bind;
+	GC_IHDR( getButton );
+	if( !sgs_LoadArgs( C, "l", &which ) )
+		return 0;
+	bind = SDL_GameControllerGetBindForButton( GC, which );
+	return _SS_PushGCBind( C, &bind );
+}
+
+static int SS_GameController_destruct( SGS_CTX, sgs_VarObj* obj )
+{
+	GC_HDR;
+	if( GC )
+		SDL_GameControllerClose( GC );
+	return 0;
+}
+
+static int SS_GameController_getindex( SGS_ARGS_GETINDEXFUNC )
+{
+	GC_HDR;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "open" ) SGS_RETURN_CFUNC( SS_GameControllerI_open );
+		SGS_CASE( "close" ) SGS_RETURN_CFUNC( SS_GameControllerI_close );
+		SGS_CASE( "getAxis" ) SGS_RETURN_CFUNC( SS_GameControllerI_getAxis );
+		SGS_CASE( "getButton" ) SGS_RETURN_CFUNC( SS_GameControllerI_getButton );
+		SGS_CASE( "getBindForAxis" ) SGS_RETURN_CFUNC( SS_GameControllerI_getBindForAxis );
+		SGS_CASE( "getBindForButton" ) SGS_RETURN_CFUNC( SS_GameControllerI_getBindForButton );
+		
+		SGS_CASE( "attached" ) SGS_RETURN_BOOL( SDL_GameControllerGetAttached( GC ) );
+		SGS_CASE( "joystick" ) { sgs_PushObject( C, SDL_GameControllerGetJoystick( GC ), SS_Joystick_iface ); return SGS_SUCCESS; }
+		SGS_CASE( "name" )
+		{
+			const char* nm = SDL_GameControllerName( GC );
+			if( nm )
+				sgs_PushString( C, nm );
+			else
+				sgs_PushNull( C );
+			return SGS_SUCCESS;
+		}
+	SGS_END_INDEXFUNC;
+}
+
+static sgs_ObjInterface SS_GameController_iface[1] =
+{{
+	"SS_GameController",
+	SS_GameController_destruct, NULL,
+	SS_GameController_getindex, NULL,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL
+}};
+
+static int SS_GetGameController( SGS_CTX )
+{
+	SDL_GameController* GC;
+	int32_t which = -1;
+	SGSFN( "SS_GetGameController" );
+	if( !sgs_LoadArgs( C, "|l", &which ) )
+		return 0;
+	
+	sgs_SetStackSize( C, 0 );
+	sgs_PushObject( C, NULL, SS_GameController_iface );
+	if( sgs_StackSize( C ) >= 1 )
+	{
+		GC = SDL_GameControllerOpen( which );
+		if( GC )
+		{
+			sgs_SetObjectData( C, 0, GC );
+			sgs_PushBool( C, 1 );
+			return 2;
+		}
+		else
+		{
+			sgs_PushBool( C, 0 );
+			sgs_PushString( C, SDL_GetError() );
+			return 3;
+		}
+	}
+	else
+		return 1;
+}
+
+static int SS_GameControllerAddMapping( SGS_CTX )
+{
+	int ret;
+	char* mapping;
+	SGSFN( "SS_GameControllerAddMapping" );
+	if( !sgs_LoadArgs( C, "s", &mapping ) )
+		return 0;
+	ret = SDL_GameControllerAddMapping( mapping );
+	if( ret >= 0 )
+	{
+		sgs_PushBool( C, ret );
+		return 1;
+	}
+	else
+	{
+		sgs_PushNull( C );
+		sgs_PushString( C, SDL_GetError() );
+		return 2;
+	}
+}
+
+static int SS_GameControllerAddMappingsFromFile( SGS_CTX )
+{
+	int ret;
+	char* mapping;
+	SGSFN( "SS_GameControllerAddMappingsFromFile" );
+	if( !sgs_LoadArgs( C, "s", &mapping ) )
+		return 0;
+	ret = SDL_GameControllerAddMappingsFromFile( mapping );
+	if( ret >= 0 )
+	{
+		sgs_PushBool( C, ret );
+		return 1;
+	}
+	else
+	{
+		sgs_PushNull( C );
+		sgs_PushString( C, SDL_GetError() );
+		return 2;
+	}
+}
+
+static int SS_GameControllerMappingForGUID( SGS_CTX )
+{
+	char* guid32, *mapping;
+	sgs_SizeVal guid32len;
+	SDL_JoystickGUID guid;
+	SGSFN( "SS_GameControllerMappingForGUID" );
+	if( !sgs_LoadArgs( C, "m", &guid32, &guid32len ) )
+		return 0;
+	if( guid32len != 32 )
+		_WARN( "GUID is not 32 characters long" )
+	guid = SDL_JoystickGetGUIDFromString( guid32 );
+	mapping = SDL_GameControllerMappingForGUID( guid );
+	if( mapping )
+	{
+		sgs_PushString( C, mapping );
+		return 1;
+	}
+	else
+	{
+		sgs_PushNull( C );
+		sgs_PushString( C, SDL_GetError() );
+		return 2;
+	}
+}
+
+static int SS_GetGameControllerName( SGS_CTX )
+{
+	const char* name;
+	int32_t which;
+	SGSFN( "SS_GetGameControllerName" );
+	if( !sgs_LoadArgs( C, "l", &which ) )
+		return 0;
+	name = SDL_GameControllerNameForIndex( which );
+	if( name )
+	{
+		sgs_PushString( C, name );
+		return 1;
+	}
+	return 0;
+}
+
+static int SS_GetGameControllerNames( SGS_CTX )
+{
+	int i, count, rcnt = 0;
+	SGSFN( "SS_GetGameControllerNames" );
+	count = SDL_NumJoysticks();
+	for( i = 0; i < count; ++i )
+	{
+		if( SDL_IsGameController( i ) )
+		{
+			const char* name = SDL_GameControllerNameForIndex( i );
+			if( name )
+				sgs_PushString( C, name );
+			else
+				sgs_PushNull( C );
+			rcnt++;
+		}
+	}
+	sgs_PushArray( C, rcnt );
+	return 1;
+}
+
+static int SS_GameControllerGetAxisFromString( SGS_CTX )
+{
+	char* name;
+	SGSFN( "SS_GameControllerGetAxisFromString" );
+	if( !sgs_LoadArgs( C, "s", &name ) )
+		return 0;
+	sgs_PushInt( C, SDL_GameControllerGetAxisFromString( name ) );
+	return 1;
+}
+
+static int SS_GameControllerGetButtonFromString( SGS_CTX )
+{
+	char* name;
+	SGSFN( "SS_GameControllerGetButtonFromString" );
+	if( !sgs_LoadArgs( C, "s", &name ) )
+		return 0;
+	sgs_PushInt( C, SDL_GameControllerGetButtonFromString( name ) );
+	return 1;
+}
+
+static int SS_GameControllerGetStringForAxis( SGS_CTX )
+{
+	sgs_Int num;
+	SGSFN( "SS_GameControllerGetStringForAxis" );
+	if( !sgs_LoadArgs( C, "i", &num ) )
+		return 0;
+	sgs_PushString( C, SDL_GameControllerGetStringForAxis( num ) );
+	return 1;
+}
+
+static int SS_GameControllerGetStringForButton( SGS_CTX )
+{
+	sgs_Int num;
+	SGSFN( "SS_GameControllerGetStringForButton" );
+	if( !sgs_LoadArgs( C, "i", &num ) )
+		return 0;
+	sgs_PushString( C, SDL_GameControllerGetStringForButton( num ) );
+	return 1;
+}
+
+static int SS_GameControllerUpdate( SGS_CTX )
+{
+	SGSFN( "SS_GameControllerUpdate" );
+	SDL_GameControllerUpdate();
+	return 0;
+}
+
+static int SS_GameControllerEventState( SGS_CTX )
+{
+	int32_t state, outstate;
+	SGSFN( "SS_GameControllerEventState" );
+	if( !sgs_LoadArgs( C, "l", &state ) )
+		return 0;
+	outstate = SDL_GameControllerEventState( state );
+	if( outstate >= 0 )
+	{
+		sgs_PushBool( C, outstate );
+		return 1;
+	}
+	else
+	{
+		sgs_PushNull( C );
+		sgs_PushString( C, SDL_GetError() );
+		return 2;
+	}
+}
+
+static int SS_IsGameController( SGS_CTX )
+{
+	int32_t state;
+	SGSFN( "SS_IsGameController" );
+	if( !sgs_LoadArgs( C, "l", &state ) )
+		return 0;
+	sgs_PushBool( C, SDL_IsGameController( state ) );
+	return 1;
+}
+
+
+
 static int SS_SetGLAttrib( SGS_CTX )
 {
 	sgs_Integer attr, val;
@@ -1984,6 +2608,31 @@ static sgs_RegIntConst sdl_ints[] =
 	
 	IC( SDL_TOUCH_MOUSEID ),
 	
+	/*  CONTROLLER  */
+	IC( SDL_CONTROLLER_BINDTYPE_NONE ),
+	IC( SDL_CONTROLLER_BINDTYPE_BUTTON ),
+	IC( SDL_CONTROLLER_BINDTYPE_AXIS ),
+	IC( SDL_CONTROLLER_BINDTYPE_HAT ),
+	
+	IC( SDL_CONTROLLER_AXIS_INVALID ),
+	IC( SDL_CONTROLLER_AXIS_LEFTX ),
+	IC( SDL_CONTROLLER_AXIS_LEFTY ),
+	IC( SDL_CONTROLLER_AXIS_RIGHTX ),
+	IC( SDL_CONTROLLER_AXIS_RIGHTY ),
+	IC( SDL_CONTROLLER_AXIS_TRIGGERLEFT ),
+	IC( SDL_CONTROLLER_AXIS_TRIGGERRIGHT ),
+	IC( SDL_CONTROLLER_AXIS_MAX ),
+	
+	IC( SDL_HAT_CENTERED ),
+	IC( SDL_HAT_UP ),
+	IC( SDL_HAT_RIGHT ),
+	IC( SDL_HAT_DOWN ),
+	IC( SDL_HAT_LEFT ),
+	IC( SDL_HAT_RIGHTUP ),
+	IC( SDL_HAT_RIGHTDOWN ),
+	IC( SDL_HAT_LEFTUP ),
+	IC( SDL_HAT_LEFTDOWN ),
+	
 	/*  WINDOW/RENDERER FLAGS & ATTRIBUTES  */
 	IC( SDL_WINDOWPOS_UNDEFINED ),
 	IC( SDL_WINDOWPOS_CENTERED ),
@@ -2114,6 +2763,22 @@ static sgs_RegFuncConst sdl_funcs[] =
 	FN( GetMouseState ), FN( GetRelativeMouseState ),
 	FN( GetRelativeMouseMode ), FN( SetRelativeMouseMode ),
 	FN( StartTextInput ), FN( StopTextInput ), FN( SetTextInputRect ),
+	
+	FN( GetJoystick ), FN( NumJoysticks ),
+	FN( GetJoystickName ), FN( GetJoystickNames ),
+	FN( JoystickUpdate ),
+	FN( JoystickEventState ),
+	
+	FN( GetGameController ),
+	FN( GameControllerAddMapping ),
+	FN( GameControllerAddMappingsFromFile ),
+	FN( GameControllerMappingForGUID ),
+	FN( GetGameControllerName ), FN( GetGameControllerNames ),
+	FN( GameControllerGetAxisFromString ), FN( GameControllerGetButtonFromString ),
+	FN( GameControllerGetStringForAxis ), FN( GameControllerGetStringForButton ),
+	FN( GameControllerUpdate ),
+	FN( GameControllerEventState ),
+	FN( IsGameController ),
 	
 	FN( SetGLAttrib ),
 	FN( Clear ), FN( Present ),
