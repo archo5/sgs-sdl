@@ -1,4 +1,15 @@
 
+function min( a, b ){ return if( a < b, a, b ); }
+function max( a, b ){ return if( a > b, a, b ); }
+function clamp( v, vmin, vmax ){ return if( v < vmin, vmin, if( v > vmax, vmax, v ) ); }
+function lerp( a, b, t ){ return a * (1.0-t) + b * t; }
+function sign( x ){ return if( x == 0, 0, if( x < 0, -1, 1 ) ); }
+function normalize_angle( x ){ x = x % ( M_PI * 2 ); return if( x < 0, x + M_PI*2, x ); }
+function saturate( x ){ return if( x < 0, 0, if( x > 1, 1, x ) ); }
+function smoothstep( x ){ return x * x * ( 3 - 2 * x ); }
+function smoothlerp_oneway( t, a, b ){ if( b == a ) return 1.0; return smoothstep( saturate( ( t - a ) / ( b - a ) ) ); }
+function smoothlerp_range( t, a, b, c, d ){ return smoothlerp_oneway( t, a, b ) * smoothlerp_oneway( t, d, c ); }
+
 //
 // PRIMITIVE RENDERING
 //
@@ -382,7 +393,7 @@ function SS_CalcTextLayout( text_ucp, font, width, height )
 			curline = 0;
 			curword = 0;
 			numwords = 1;
-			if( ( lines.size + 1 ) * lineheight > height )
+			if( ( lines.size / 3 + 1 ) * lineheight > height )
 				break;
 			pcpos = null;
 			i++;
@@ -424,7 +435,7 @@ function SS_CalcTextLayout( text_ucp, font, width, height )
 			curline = 0;
 			curword = 0;
 			numwords = 1;
-			if( ( lines.size + 1 ) * lineheight > height )
+			if( ( lines.size / 3 + 1 ) * lineheight > height )
 				break;
 			pcpos = null;
 			while( i < text_ucp.size && text_ucp[ i ] == SP )
@@ -474,7 +485,7 @@ function SS_DrawTextRect( text, font, color, placement, left, right, top, bottom
 	
 	lines = SS_CalcTextLayout( text_ucp, font, width, height );
 	
-	vspace = height - lines.size * lineheight;
+	vspace = height - lines.size / 3 * lineheight;
 	y = top;
 	if( placement & DT_VCENTER ) y += vspace / 2;
 	else if( placement & DT_BOTTOM ) y += vspace;
