@@ -450,12 +450,12 @@ static int ss_ParseDisplayMode( SGS_CTX, sgs_StkIdx item, SDL_DisplayMode** dm )
 	return 0;
 }
 */
-static int ss_acf_DisplayMode( SGS_CTX, int item, sgs_VAList* args, int flags )
+static int ss_acf_DisplayMode( SGS_CTX, int item, va_list* args, int flags )
 {
 	if( sgs_IsObject( C, item, ss_displaymode_iface ) )
 	{
 		if( flags & SGS_LOADARG_WRITE )
-			*va_arg( args->args, SDL_DisplayMode** ) = (SDL_DisplayMode*) sgs_GetObjectData( C, item );
+			*va_arg( *args, SDL_DisplayMode** ) = (SDL_DisplayMode*) sgs_GetObjectData( C, item );
 		return 1;
 	}
 	return 0;

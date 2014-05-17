@@ -1288,7 +1288,7 @@ static int meshinst_getindex( SGS_ARGS_GETINDEXFUNC )
 	SGS_BEGIN_INDEXFUNC
 		SGS_CASE( "mesh" )    SGS_RETURN_OBJECT( MI->mesh )
 		SGS_CASE( "matrix" )  SGS_RETURN_MAT4( *MI->matrix )
-		SGS_CASE( "color" )   SGS_RETURN_COLOR( MI->color )
+		SGS_CASE( "color" )   SGS_RETURN_COLORP( MI->color )
 		SGS_CASE( "enabled" ) SGS_RETURN_BOOL( MI->enabled )
 		
 		SGS_CASE( "setConstF" ) SGS_RETURN_CFUNC( meshinsti_setConstF )
