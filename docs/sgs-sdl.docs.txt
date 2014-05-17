@@ -1,0 +1,13 @@
+SGS-SDL: SGScript / SDL2 graphics framework
+
+
+# Description [info]
+
+This is a graphics framework that acts as a SGScript virtual machine, providing additional bindings for creating windows to render accelerated 2D graphics and a tiny bit of 3D graphics.
+
+
+# SGScript API [info]
+
+
+# C API [info]
+

@@ -1,0 +1,8 @@
+
+global argv = [ null, "sgs-sdl.docs" ];
+include "../sgscript/docs/docgen.sgs";
+
+global WEB = true;
+println( "--- SGScript documentation generator for the website ---" );
+main();
+

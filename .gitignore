@@ -18,3 +18,4 @@ ipch
 !*.sgs
 !*.png
 bin/testdata/
+/docs/out/*

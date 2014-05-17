@@ -1,0 +1,5 @@
+
+global WEB = true;
+global argv = [ null, "sgs-sdl.docs" ];
+include "../sgscript/docs/docgen.sgs";
+
