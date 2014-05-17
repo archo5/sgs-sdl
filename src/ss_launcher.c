@@ -14,7 +14,11 @@
 #  define SS_ARG_DEBUG 0
 int CALLBACK WinMain( HINSTANCE hinst, HINSTANCE hprevinst, LPSTR cmdline, int ncmdshow )
 #else
-#  define SS_ARG_DEBUG 1
+#  if defined SS_RELEASE
+#    define SS_ARG_DEBUG 0
+#  else
+#    define SS_ARG_DEBUG 1
+#  endif
 int main( int argc, char* argv[] )
 #endif
 {

@@ -10,6 +10,7 @@ ifdef SystemRoot
 	RM = del /Q
 	CP = copy
 	FixPath = $(subst /,\,$1)
+	WinOnly = $1
 	LIBFLAGS = 
 	PLATFLAGS = -lkernel32 -lOpenGL32 -ld3d9 -lmingw32 -lfreetype-6 -lsgsxgmath
 	LINKPATHS = -Lsdl-win/lib -Lfreeimage -Lfreetype
@@ -28,6 +29,7 @@ else
 	RM = rm -f
 	CP = cp
 	FixPath = $1
+	WinOnly =
 	LIBFLAGS = -Wl,-rpath,'$$ORIGIN' -Wl,-z,origin -Wl,-rpath-link,bin
 	PLATFLAGS = -lGL -lfreetype -lm -Wl,-rpath,'$$ORIGIN' -Wl,-z,origin -l:sgsxgmath.so
 	LINKPATHS = 
@@ -87,7 +89,7 @@ ss3d: $(OUTDIR)/$(LIBPFX)ss3d$(LIBEXT)
 
 $(OUTDIR)/sgs-sdl-release$(BINEXT): $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) src/ss_launcher.c
 	$(LINUXHACKPRE)
-	gcc -o $@ src/ss_launcher.c -mwindows $(COMPATHS) $(LIBFLAGS) -Isgscript/src -Isgscript/ext $(C2FLAGS) -DSS_RELEASE -Lbin -lsgs-sdl -s
+	gcc -o $@ src/ss_launcher.c $(call WinOnly,-mwindows) $(COMPATHS) $(LIBFLAGS) -Isgscript/src -Isgscript/ext $(C2FLAGS) -DSS_RELEASE -Lbin -lsgs-sdl -s
 	$(LINUXHACKPOST)
 $(OUTDIR)/sgs-sdl-debug$(BINEXT): $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) src/ss_launcher.c
 	$(LINUXHACKPRE)
