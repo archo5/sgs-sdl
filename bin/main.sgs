@@ -33,9 +33,9 @@ function initialize()
 	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
 	println( "renderer initialized at: " $ ftime() );
 	
-	global Surf = SS_CreateRenderTexture( Window.width, Window.height );
+//	global Surf = SS_CreateRenderTexture( Window.width, Window.height );
 	
-	global Font = SS_CreateFont( "verdana.ttf", 12 );
+	global Font = @SS_CreateFont( "verdana.ttf", 12 ) || SS_CreateFont( "Verdana.ttf", 12 );
 	
 	SS_InitDrawFunctions();
 	println( "drawing functions initialized at: " $ ftime() );
@@ -76,7 +76,7 @@ function update()
 	
 	SS_SetCameraUI( 0, W, 0, H );
 	
-	SS_SetRenderTarget( Surf );
+//	SS_SetRenderTarget( Surf );
 	SS_Clear( color(0.7,0.7,0.7) );
 	
 	SS_SetRenderTarget();

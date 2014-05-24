@@ -2,7 +2,14 @@
 
 #define GL_GLEXT_PROTOTYPES
 // #include "SDL2/SDL_opengl.h"
-#include <GL/gl.h>
+#if defined(__APPLE__) && (__MACH__)
+#  include <OpenGL/gl.h>
+#  undef __glext_h_
+#  undef GL_GLEXT_VERSION
+#  undef GL_VERSION_1_2
+#else
+#  include <GL/gl.h>
+#endif
 #include "glext.h"
 
 
