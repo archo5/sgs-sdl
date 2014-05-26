@@ -21,6 +21,23 @@
 #include "ss_main.h"
 
 
+static void* mglGetProcAddress( const char* procnames )
+{
+	while( *procnames )
+	{
+		void* proc = SDL_GL_GetProcAddress( procnames );
+		if( proc )
+			return proc;
+		while( *procnames )
+			procnames++;
+		procnames++;
+	}
+	return NULL;
+}
+
+#define SSGL_FBO_SUPPORT 0x0001
+
+
 struct _SS_Renderer
 {
 	SS_RENDERER_DATA
@@ -40,6 +57,7 @@ struct _SS_Renderer
 	float world_matrix[16];
 	float view_matrix[16];
 	SS_Texture* cur_rtt;
+	int flags;
 };
 
 
@@ -145,17 +163,23 @@ static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t version, uint3
 	R->window = window;
 	R->ctx = ctx;
 	R->glBlendEquation = (PFNGLBLENDEQUATIONPROC) SDL_GL_GetProcAddress( "glBlendEquation" );
-	R->glGenRenderbuffers = (PFNGLGENRENDERBUFFERSPROC) SDL_GL_GetProcAddress( "glGenRenderbuffers" );
-	R->glBindRenderbuffer = (PFNGLBINDRENDERBUFFERPROC) SDL_GL_GetProcAddress( "glBindRenderbuffer" );
-	R->glRenderbufferStorage = (PFNGLRENDERBUFFERSTORAGEPROC) SDL_GL_GetProcAddress( "glRenderbufferStorage" );
-	R->glDeleteRenderbuffers = (PFNGLDELETERENDERBUFFERSPROC) SDL_GL_GetProcAddress( "glDeleteRenderbuffers" );
-	R->glGenFramebuffers = (PFNGLGENFRAMEBUFFERSPROC) SDL_GL_GetProcAddress( "glGenFramebuffers" );
-	R->glBindFramebuffer = (PFNGLBINDFRAMEBUFFERPROC) SDL_GL_GetProcAddress( "glBindFramebuffer" );
-	R->glDeleteFramebuffers = (PFNGLDELETEFRAMEBUFFERSPROC) SDL_GL_GetProcAddress( "glDeleteFramebuffers" );
-	R->glFramebufferTexture = (PFNGLFRAMEBUFFERTEXTUREPROC) SDL_GL_GetProcAddress( "glFramebufferTexture" );
-	R->glFramebufferRenderbuffer = (PFNGLFRAMEBUFFERRENDERBUFFERPROC) SDL_GL_GetProcAddress( "glFramebufferRenderbuffer" );
-	R->glCheckFramebufferStatus = (PFNGLCHECKFRAMEBUFFERSTATUSPROC) SDL_GL_GetProcAddress( "glCheckFramebufferStatus" );
+	R->glGenRenderbuffers = (PFNGLGENRENDERBUFFERSPROC) mglGetProcAddress( "glGenRenderbuffersEXT\0glGenRenderbuffers\0" );
+	R->glBindRenderbuffer = (PFNGLBINDRENDERBUFFERPROC) mglGetProcAddress( "glBindRenderbufferEXT\0glBindRenderbuffer\0" );
+	R->glRenderbufferStorage = (PFNGLRENDERBUFFERSTORAGEPROC) mglGetProcAddress( "glRenderbufferStorageEXT\0glRenderbufferStorage\0" );
+	R->glDeleteRenderbuffers = (PFNGLDELETERENDERBUFFERSPROC) mglGetProcAddress( "glDeleteRenderbuffersEXT\0glDeleteRenderbuffers\0" );
+	R->glGenFramebuffers = (PFNGLGENFRAMEBUFFERSPROC) mglGetProcAddress( "glGenFramebuffersEXT\0glGenFramebuffers\0" );
+	R->glBindFramebuffer = (PFNGLBINDFRAMEBUFFERPROC) mglGetProcAddress( "glBindFramebufferEXT\0glBindFramebuffer\0" );
+	R->glDeleteFramebuffers = (PFNGLDELETEFRAMEBUFFERSPROC) mglGetProcAddress( "glDeleteFramebuffersEXT\0glDeleteFramebuffers\0" );
+	R->glFramebufferTexture = (PFNGLFRAMEBUFFERTEXTUREPROC) mglGetProcAddress( "glFramebufferTextureEXT\0glFramebufferTexture\0" );
+	R->glFramebufferRenderbuffer = (PFNGLFRAMEBUFFERRENDERBUFFERPROC) mglGetProcAddress( "glFramebufferRenderbufferEXT\0glFramebufferRenderbuffer\0" );
+	R->glCheckFramebufferStatus = (PFNGLCHECKFRAMEBUFFERSTATUSPROC) mglGetProcAddress( "glCheckFramebufferStatusEXT\0glCheckFramebufferStatus\0" );
 	R->height = h;
+	
+	R->flags = 0;
+	if( R->glGenRenderbuffers && R->glBindRenderbuffer && R->glRenderbufferStorage && R->glDeleteRenderbuffers &&
+		R->glGenFramebuffers && R->glBindFramebuffer && R->glDeleteFramebuffers && R->glFramebufferTexture &&
+		R->glFramebufferRenderbuffer && R->glCheckFramebufferStatus )
+		R->flags |= SSGL_FBO_SUPPORT;
 	
 	for( y = 0; y < 4; ++y )
 	{
@@ -376,6 +400,8 @@ static void ss_ri_gl_set_matrix( SS_Renderer* R, int which, float* mtx )
 
 static void ss_ri_gl_set_rt( SS_Renderer* R, SS_Texture* T )
 {
+	if( !( R->flags & SSGL_FBO_SUPPORT ) )
+		return;
 	R->cur_rtt = T;
 	R->glBindFramebuffer( GL_FRAMEBUFFER, T ? T->rsh.id : 0 );
 }
@@ -474,6 +500,12 @@ static int ss_ri_gl_create_texture_a8( SS_Renderer* R, SS_Texture* T, uint8_t* d
 static int ss_ri_gl_create_texture_rnd( SS_Renderer* R, SS_Texture* T, int width, int height, uint32_t flags )
 {
 	GLuint fb = 0, tex = 0, ds_rb = 0;
+	
+	if( !( R->flags & SSGL_FBO_SUPPORT ) )
+	{
+		GRI_GL.last_error = "renderable textures are not supported";
+		return 0;
+	}
 	
 	glGenTextures( 1, &tex );
 	glBindTexture( GL_TEXTURE_2D, tex );
