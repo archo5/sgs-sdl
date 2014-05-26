@@ -158,6 +158,10 @@ int ss_InitGraphics( SGS_CTX );
 #define SS_TEXRSURF_HANDLE_DATA void* ptr; uint32_t u32;
 #endif
 
+#ifndef SS_TEXDSURF_HANDLE_DATA
+#define SS_TEXDSURF_HANDLE_DATA void* ptr; uint32_t u32;
+#endif
+
 #define SS_RENDERER_DATA \
 	SS_RenderInterface* iface; \
 	SDL_Window* window; \
@@ -176,6 +180,7 @@ typedef struct _SS_Texture
 	
 	union { SS_TEXTURE_HANDLE_DATA } handle;
 	union { SS_TEXRSURF_HANDLE_DATA } rsh;
+	union { SS_TEXDSURF_HANDLE_DATA } dsh;
 	
 	int16_t width;
 	int16_t height;

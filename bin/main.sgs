@@ -25,15 +25,21 @@ function configure()
 
 function initialize()
 {
+	force_opengl = false;
+	
 	println( "SGS-SDL Framework Test suite" );
 	println( "initialization started at: " $ ftime() );
 	
-	global Window = SS_CreateWindow( "SGS-SDL Framework Test suite", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, initialWidth, initialHeight, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGLMAYBE );
+	global Window = SS_CreateWindow( "SGS-SDL Framework Test suite",
+		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+		initialWidth, initialHeight, SDL_WINDOW_RESIZABLE |
+		if( force_opengl, SDL_WINDOW_OPENGL, SDL_WINDOW_OPENGLMAYBE ) );
 	println( "window created at: " $ ftime() );
-	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
+	Window.initRenderer( if( force_opengl, SS_RENDERER_OPENGL, SS_RENDERER_DONTCARE ),
+		SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
 	println( "renderer initialized at: " $ ftime() );
 	
-//	global Surf = SS_CreateRenderTexture( Window.width, Window.height );
+	global Surf = SS_CreateRenderTexture( Window.width, Window.height );
 	
 	global Font = @SS_CreateFont( "verdana.ttf", 12 ) || SS_CreateFont( "Verdana.ttf", 12 );
 	
@@ -76,7 +82,7 @@ function update()
 	
 	SS_SetCameraUI( 0, W, 0, H );
 	
-//	SS_SetRenderTarget( Surf );
+	SS_SetRenderTarget( Surf );
 	SS_Clear( color(0.7,0.7,0.7) );
 	
 	SS_SetRenderTarget();

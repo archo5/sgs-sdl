@@ -14,6 +14,8 @@
 
 
 #define SS_TEXTURE_HANDLE_DATA void* __dummy; GLuint id;
+#define SS_TEXRSURF_HANDLE_DATA void* __dummy; GLuint id;
+#define SS_TEXDSURF_HANDLE_DATA void* __dummy; GLuint id;
 #define SS_RENDERER_OVERRIDE
 
 #include "ss_main.h"
@@ -24,9 +26,20 @@ struct _SS_Renderer
 	SS_RENDERER_DATA
 	SDL_GLContext* ctx;
 	PFNGLBLENDEQUATIONPROC glBlendEquation;
+	PFNGLGENRENDERBUFFERSPROC glGenRenderbuffers;
+	PFNGLBINDRENDERBUFFERPROC glBindRenderbuffer;
+	PFNGLRENDERBUFFERSTORAGEPROC glRenderbufferStorage;
+	PFNGLDELETERENDERBUFFERSPROC glDeleteRenderbuffers;
+	PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers;
+	PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer;
+	PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers;
+	PFNGLFRAMEBUFFERTEXTUREPROC glFramebufferTexture;
+	PFNGLFRAMEBUFFERRENDERBUFFERPROC glFramebufferRenderbuffer;
+	PFNGLCHECKFRAMEBUFFERSTATUSPROC glCheckFramebufferStatus;
 	int height;
 	float world_matrix[16];
 	float view_matrix[16];
+	SS_Texture* cur_rtt;
 };
 
 
@@ -132,6 +145,16 @@ static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t version, uint3
 	R->window = window;
 	R->ctx = ctx;
 	R->glBlendEquation = (PFNGLBLENDEQUATIONPROC) SDL_GL_GetProcAddress( "glBlendEquation" );
+	R->glGenRenderbuffers = (PFNGLGENRENDERBUFFERSPROC) SDL_GL_GetProcAddress( "glGenRenderbuffers" );
+	R->glBindRenderbuffer = (PFNGLBINDRENDERBUFFERPROC) SDL_GL_GetProcAddress( "glBindRenderbuffer" );
+	R->glRenderbufferStorage = (PFNGLRENDERBUFFERSTORAGEPROC) SDL_GL_GetProcAddress( "glRenderbufferStorage" );
+	R->glDeleteRenderbuffers = (PFNGLDELETERENDERBUFFERSPROC) SDL_GL_GetProcAddress( "glDeleteRenderbuffers" );
+	R->glGenFramebuffers = (PFNGLGENFRAMEBUFFERSPROC) SDL_GL_GetProcAddress( "glGenFramebuffers" );
+	R->glBindFramebuffer = (PFNGLBINDFRAMEBUFFERPROC) SDL_GL_GetProcAddress( "glBindFramebuffer" );
+	R->glDeleteFramebuffers = (PFNGLDELETEFRAMEBUFFERSPROC) SDL_GL_GetProcAddress( "glDeleteFramebuffers" );
+	R->glFramebufferTexture = (PFNGLFRAMEBUFFERTEXTUREPROC) SDL_GL_GetProcAddress( "glFramebufferTexture" );
+	R->glFramebufferRenderbuffer = (PFNGLFRAMEBUFFERRENDERBUFFERPROC) SDL_GL_GetProcAddress( "glFramebufferRenderbuffer" );
+	R->glCheckFramebufferStatus = (PFNGLCHECKFRAMEBUFFERSTATUSPROC) SDL_GL_GetProcAddress( "glCheckFramebufferStatus" );
 	R->height = h;
 	
 	for( y = 0; y < 4; ++y )
@@ -150,6 +173,7 @@ static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t version, uint3
 	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity();
 	glOrtho( 0, w, h, 0, 1, 1000 );
+	R->cur_rtt = NULL;
 	
 	glEnable( GL_BLEND );
 	glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
@@ -352,6 +376,8 @@ static void ss_ri_gl_set_matrix( SS_Renderer* R, int which, float* mtx )
 
 static void ss_ri_gl_set_rt( SS_Renderer* R, SS_Texture* T )
 {
+	R->cur_rtt = T;
+	R->glBindFramebuffer( GL_FRAMEBUFFER, T ? T->rsh.id : 0 );
 }
 
 
@@ -401,6 +427,8 @@ static int ss_ri_gl_create_texture_argb8( SS_Renderer* R, SS_Texture* T, SS_Imag
 	T->height = I->height;
 	T->flags = flags;
 	T->handle.id = id;
+	T->rsh.id = 0;
+	T->dsh.id = 0;
 	return 1;
 }
 
@@ -438,16 +466,70 @@ static int ss_ri_gl_create_texture_a8( SS_Renderer* R, SS_Texture* T, uint8_t* d
 	T->height = height;
 	T->flags = 0;
 	T->handle.id = tex;
+	T->rsh.id = 0;
+	T->dsh.id = 0;
 	return 1;
 }
 
 static int ss_ri_gl_create_texture_rnd( SS_Renderer* R, SS_Texture* T, int width, int height, uint32_t flags )
 {
-	return 0;
+	GLuint fb = 0, tex = 0, ds_rb = 0;
+	
+	glGenTextures( 1, &tex );
+	glBindTexture( GL_TEXTURE_2D, tex );
+	
+	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL );
+	
+	if( flags & SS_TEXTURE_HREPEAT ) glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
+	if( flags & SS_TEXTURE_VREPEAT ) glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, flags & SS_TEXTURE_NOLERP ? GL_NEAREST : GL_LINEAR );
+	{
+		GLuint minf = flags & SS_TEXTURE_MIPMAPS ?
+			( flags & SS_TEXTURE_NOLERP ? GL_NEAREST_MIPMAP_NEAREST : GL_LINEAR_MIPMAP_LINEAR ) :
+			( flags & SS_TEXTURE_NOLERP ? GL_NEAREST : GL_LINEAR );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minf );
+	}
+	
+	R->glGenRenderbuffers( 1, &ds_rb );
+	R->glBindRenderbuffer( GL_RENDERBUFFER, ds_rb );
+	R->glRenderbufferStorage( GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height );
+	R->glBindRenderbuffer( GL_RENDERBUFFER, 0 );
+	
+	R->glGenFramebuffers( 1, &fb );
+	R->glBindFramebuffer( GL_FRAMEBUFFER, fb );
+	R->glFramebufferTexture( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, tex, 0 );
+	R->glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, ds_rb );
+	
+	GLenum e = R->glCheckFramebufferStatus( GL_FRAMEBUFFER );
+	if( e != GL_FRAMEBUFFER_COMPLETE )
+	{
+		GRI_GL.last_error = "failed to validate framebuffer (incompatible format / driver issue)";
+		return 0;
+	}
+	
+	R->glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+	T->renderer = R;
+	T->width = width;
+	T->height = height;
+	T->flags = flags | SS_TEXTURE_RENDER;
+	T->handle.id = tex;
+	T->rsh.id = fb;
+	T->dsh.id = ds_rb;
+	return 1;
 }
 
 static int ss_ri_gl_destroy_texture( SS_Renderer* R, SS_Texture* T )
 {
+	if( R->cur_rtt == T )
+		ss_ri_gl_set_rt( R, NULL );
+	if( T->rsh.id )
+	{
+		R->glDeleteFramebuffers( 1, &T->rsh.id );
+	}
+	if( T->dsh.id )
+	{
+		R->glDeleteRenderbuffers( 1, &T->dsh.id );
+	}
 	glDeleteTextures( 1, &T->handle.id );
 	return 1;
 }
