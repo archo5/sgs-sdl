@@ -107,6 +107,13 @@ int ss_InitGraphics( SGS_CTX );
 #define SS_RS_CULLING      6
 #define SS_RS_ZENABLE      7
 
+#define SS_POSMODE_NONE    0
+#define SS_POSMODE_STRETCH 1
+#define SS_POSMODE_CROP    2
+#define SS_POSMODE_FIT     3
+#define SS_POSMODE_FITRND  4
+#define SS_POSMODE_CENTER  5
+
 #define SS_RMAT_WORLD 0
 #define SS_RMAT_VIEW  1
 #define SS_RMAT_PROJ  2
@@ -227,6 +234,7 @@ typedef SS_Renderer* (*ss_ri_create) ( SDL_Window*, uint32_t, uint32_t ); /* ver
 typedef void (*ss_ri_destroy) ( SS_Renderer* );
 typedef void* (*ss_ri_get_pointer) ( SS_Renderer*, int );
 typedef void (*ss_ri_modify) ( SS_Renderer*, int* );
+typedef void (*ss_ri_set_buffer_scale) ( SS_Renderer*, int, int, int, int ); /* enable, width, height, scalemode */
 typedef void (*ss_ri_set_current) ( SS_Renderer* );
 typedef void (*ss_ri_poke_resource) ( SS_Renderer*, sgs_VarObj*, int ); /* !=0 => add, otherwise remove */
 typedef void (*ss_ri_swap) ( SS_Renderer* );
@@ -256,6 +264,7 @@ struct _SS_RenderInterface
 	ss_ri_destroy destroy;
 	ss_ri_get_pointer get_pointer;
 	ss_ri_modify modify;
+	ss_ri_set_buffer_scale set_buffer_scale;
 	ss_ri_set_current set_current;
 	ss_ri_poke_resource poke_resource;
 	ss_ri_swap swap;
@@ -312,6 +321,7 @@ typedef struct _SS_Window
 	SDL_Window* window;
 	SS_RenderInterface* riface;
 	SS_Renderer* renderer;
+	int bbwidth, bbheight, bbscale;
 }
 SS_Window;
 

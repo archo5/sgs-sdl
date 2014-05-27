@@ -748,6 +748,28 @@ static int SS_WindowI_makeCurrent( SGS_CTX )
 	return 1;
 }
 
+static int SS_WindowI_setBufferScale( SGS_CTX )
+{
+	int32_t w = -1, h = -1, sc = SS_POSMODE_FIT;
+	WND_IHDR( setBufferScale );
+	if( !sgs_LoadArgs( C, "|lll", &w, &h, &sc ) )
+		return 0;
+	
+	W->bbwidth = w;
+	W->bbheight = h;
+	W->bbscale = sc;
+	
+	if( W->riface )
+	{
+		SS_TmpCtx ctx = ss_TmpMakeCurrent( W->riface, W->renderer );
+		W->riface->set_buffer_scale( W->renderer, w >= 1 && h >= 1, w, h, sc );
+		ss_TmpRestoreCurrent( &ctx );
+	}
+	
+	sgs_PushBool( C, 1 );
+	return 1;
+}
+
 
 static int SS_Window_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isprop )
 {
@@ -771,6 +793,7 @@ static int SS_Window_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int
 		if( !strcmp( str, "warpMouse" ) ){ sgs_PushCFunction( C, SS_WindowI_warpMouse ); return SGS_SUCCESS; }
 		if( !strcmp( str, "initRenderer" ) ){ sgs_PushCFunction( C, SS_WindowI_initRenderer ); return SGS_SUCCESS; }
 		if( !strcmp( str, "makeCurrent" ) ){ sgs_PushCFunction( C, SS_WindowI_makeCurrent ); return SGS_SUCCESS; }
+		if( !strcmp( str, "setBufferScale" ) ){ sgs_PushCFunction( C, SS_WindowI_setBufferScale ); return SGS_SUCCESS; }
 		
 		/* data properties */
 		if( !strcmp( str, "brightness" ) ){ sgs_PushReal( C, SDL_GetWindowBrightness( W->window ) ); return SGS_SUCCESS; }
@@ -838,6 +861,8 @@ static int SS_Window_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int
 		}
 		if( !strcmp( str, "width" ) ){ int w, h; SDL_GetWindowSize( W->window, &w, &h ); sgs_PushInt( C, w ); return SGS_SUCCESS; }
 		if( !strcmp( str, "height" ) ){ int w, h; SDL_GetWindowSize( W->window, &w, &h ); sgs_PushInt( C, h ); return SGS_SUCCESS; }
+		if( !strcmp( str, "bbWidth" ) ){ int w, h; SDL_GetWindowSize( W->window, &w, &h ); sgs_PushInt( C, W->bbwidth > 0 ? W->bbwidth : w ); return SGS_SUCCESS; }
+		if( !strcmp( str, "bbHeight" ) ){ int w, h; SDL_GetWindowSize( W->window, &w, &h ); sgs_PushInt( C, W->bbheight > 0 ? W->bbheight : h ); return SGS_SUCCESS; }
 		if( !strcmp( str, "title" ) ){ sgs_PushString( C, SDL_GetWindowTitle( W->window ) ); return SGS_SUCCESS; }
 		
 		if( !strcmp( str, "hasKeyboardFocus" ) ){ sgs_PushBool( C, SDL_GetKeyboardFocus() == W->window ); return SGS_SUCCESS; }
@@ -985,6 +1010,9 @@ static int SS_CreateWindow( SGS_CTX )
 	W->window = SDL_CreateWindow( str, x, y, w, h, f );
 	W->renderer = NULL;
 	W->riface = NULL;
+	W->bbwidth = 0;
+	W->bbheight = 0;
+	W->bbscale = 0;
 	if( !W->window )
 		return sgs_Msg( C, SGS_WARNING, "failed to create a window" );
 	SDL_SetWindowData( W->window, "sgsobj", sgs_GetObjectStruct( C, -1 ) );

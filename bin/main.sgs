@@ -25,7 +25,7 @@ function configure()
 
 function initialize()
 {
-	force_opengl = false;
+	force_opengl = true;
 	
 	println( "SGS-SDL Framework Test suite" );
 	println( "initialization started at: " $ ftime() );
@@ -38,6 +38,8 @@ function initialize()
 	Window.initRenderer( if( force_opengl, SS_RENDERER_OPENGL, SS_RENDERER_DONTCARE ),
 		SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
 	println( "renderer initialized at: " $ ftime() );
+	
+//	Window.setBufferScale( 300, 250, 3 );
 	
 	global Surf = SS_CreateRenderTexture( Window.width, Window.height );
 	
@@ -77,8 +79,8 @@ function update()
 	if( delta > 1.0/15.0 )
 		delta = 1.0/15.0;
 	
-	W = Window.width;
-	H = Window.height;
+	W = Window.bbWidth;
+	H = Window.bbHeight;
 	
 	SS_SetCameraUI( 0, W, 0, H );
 	

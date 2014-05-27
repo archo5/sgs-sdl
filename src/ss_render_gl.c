@@ -53,11 +53,13 @@ struct _SS_Renderer
 	PFNGLFRAMEBUFFERTEXTUREPROC glFramebufferTexture;
 	PFNGLFRAMEBUFFERRENDERBUFFERPROC glFramebufferRenderbuffer;
 	PFNGLCHECKFRAMEBUFFERSTATUSPROC glCheckFramebufferStatus;
+	int width;
 	int height;
 	float world_matrix[16];
 	float view_matrix[16];
 	SS_Texture* cur_rtt;
 	int flags;
+	int bbwidth, bbheight, bbscale;
 };
 
 
@@ -68,6 +70,7 @@ static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t version, uint3
 static void ss_ri_gl_destroy( SS_Renderer* R );
 static void* ss_ri_gl_get_pointer( SS_Renderer* R, int which );
 static void ss_ri_gl_modify( SS_Renderer* R, int* modlist );
+static void ss_ri_gl_set_buffer_scale( SS_Renderer* R, int enable, int width, int height, int scalemode );
 static void ss_ri_gl_set_current( SS_Renderer* R );
 static void ss_ri_gl_poke_resource( SS_Renderer* R, sgs_VarObj* obj, int add );
 static void ss_ri_gl_swap( SS_Renderer* R );
@@ -97,6 +100,7 @@ SS_RenderInterface GRI_GL =
 	ss_ri_gl_destroy,
 	ss_ri_gl_get_pointer,
 	ss_ri_gl_modify,
+	ss_ri_gl_set_buffer_scale,
 	ss_ri_gl_set_current,
 	ss_ri_gl_poke_resource,
 	ss_ri_gl_swap,
@@ -173,6 +177,8 @@ static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t version, uint3
 	R->glFramebufferTexture = (PFNGLFRAMEBUFFERTEXTUREPROC) mglGetProcAddress( "glFramebufferTextureEXT\0glFramebufferTexture\0" );
 	R->glFramebufferRenderbuffer = (PFNGLFRAMEBUFFERRENDERBUFFERPROC) mglGetProcAddress( "glFramebufferRenderbufferEXT\0glFramebufferRenderbuffer\0" );
 	R->glCheckFramebufferStatus = (PFNGLCHECKFRAMEBUFFERSTATUSPROC) mglGetProcAddress( "glCheckFramebufferStatusEXT\0glCheckFramebufferStatus\0" );
+	
+	R->width = w;
 	R->height = h;
 	
 	R->flags = 0;
@@ -180,6 +186,10 @@ static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t version, uint3
 		R->glGenFramebuffers && R->glBindFramebuffer && R->glDeleteFramebuffers && R->glFramebufferTexture &&
 		R->glFramebufferRenderbuffer && R->glCheckFramebufferStatus )
 		R->flags |= SSGL_FBO_SUPPORT;
+	
+	R->bbwidth = 0;
+	R->bbheight = 0;
+	R->bbscale = 0;
 	
 	for( y = 0; y < 4; ++y )
 	{
@@ -268,14 +278,26 @@ static void ss_ri_gl_modify( SS_Renderer* R, int* modlist )
 	
 	while( *modlist )
 	{
-		if( *modlist == SS_RMOD_WIDTH ){ resize = 1; w = modlist[1]; }
+		if( *modlist == SS_RMOD_WIDTH ){ resize = 1; w = modlist[1]; R->width = w; }
 		else if( *modlist == SS_RMOD_HEIGHT ){ resize = 1; h = modlist[1]; R->height = h; }
 		
 		modlist += 2;
 	}
 	
 	if( resize )
-		glViewport( 0, 0, w, h );
+	{
+		if( R->bbscale != SS_POSMODE_NONE )
+			glViewport( 0, 0, sgs_MIN( R->bbwidth, w ), sgs_MIN( R->bbheight, h ) );
+		else
+			glViewport( 0, 0, w, h );
+	}
+}
+
+static void ss_ri_gl_set_buffer_scale( SS_Renderer* R, int enable, int width, int height, int scalemode )
+{
+	R->bbwidth = enable ? width : 0;
+	R->bbheight = enable ? height : 0;
+	R->bbscale = enable ? scalemode : 0;
 }
 
 static void ss_ri_gl_set_current( SS_Renderer* R )
@@ -304,7 +326,52 @@ static void ss_ri_gl_poke_resource( SS_Renderer* R, sgs_VarObj* obj, int add )
 
 static void ss_ri_gl_swap( SS_Renderer* R )
 {
+	if( R->bbscale != SS_POSMODE_NONE )
+	{
+		GLuint texID;
+		
+		int w = sgs_MIN( R->bbwidth, R->width );
+		int h = sgs_MIN( R->bbheight, R->height );
+		void* data = malloc( w * h * 4 );
+		if( data )
+		{
+			glReadPixels( 0, 0, w, h, GL_BGRA, GL_UNSIGNED_BYTE, data );
+			
+			glClearColor( 0, 0, 0, 0 );
+			glClear( GL_COLOR_BUFFER_BIT );
+			glViewport( 0, 0, R->width, R->height );
+			
+			glMatrixMode( GL_MODELVIEW );
+			glLoadIdentity();
+			glMatrixMode( GL_PROJECTION );
+			glLoadIdentity();
+			glOrtho( 0, 1, 1, 0, -1, 1 );
+			
+			glGenTextures (1, &texID);
+			glBindTexture (GL_TEXTURE_2D, texID);
+			glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, data);
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+			glBegin (GL_QUADS);
+			glTexCoord2f (0, 1);
+			glVertex2f (0, 0);
+			glTexCoord2f (1, 1);
+			glVertex2f (1, 0);
+			glTexCoord2f (1, 0);
+			glVertex2f (1, 1);
+			glTexCoord2f (0, 0);
+			glVertex2f (0, 1);
+			glEnd();
+			glDeleteTextures(1,&texID);
+			
+			free( data );
+		}
+	}
 	SDL_GL_SwapWindow( R->window );
+	if( R->bbscale != SS_POSMODE_NONE )
+		glViewport( 0, 0, sgs_MIN( R->bbwidth, R->width ), sgs_MIN( R->bbheight, R->height ) );
+	else
+		glViewport( 0, 0, R->width, R->height );
 }
 
 static void ss_ri_gl_clear( SS_Renderer* R, float* col4f )
@@ -404,6 +471,13 @@ static void ss_ri_gl_set_rt( SS_Renderer* R, SS_Texture* T )
 		return;
 	R->cur_rtt = T;
 	R->glBindFramebuffer( GL_FRAMEBUFFER, T ? T->rsh.id : 0 );
+	if( !T )
+	{
+		if( R->bbscale != SS_POSMODE_NONE )
+			glViewport( 0, 0, sgs_MIN( R->bbwidth, R->width ), sgs_MIN( R->bbheight, R->height ) );
+		else
+			glViewport( 0, 0, R->width, R->height );
+	}
 }
 
 

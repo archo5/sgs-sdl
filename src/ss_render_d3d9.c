@@ -66,6 +66,7 @@ static SS_Renderer* ss_ri_d3d9_create( SDL_Window* window, uint32_t version, uin
 static void ss_ri_d3d9_destroy( SS_Renderer* R );
 static void* ss_ri_d3d9_get_pointer( SS_Renderer* R, int which );
 static void ss_ri_d3d9_modify( SS_Renderer* R, int* modlist );
+static void ss_ri_d3d9_set_buffer_scale( SS_Renderer* R, int enable, int width, int height, int scalemode );
 static void ss_ri_d3d9_set_current( SS_Renderer* R );
 static void ss_ri_d3d9_poke_resource( SS_Renderer* R, sgs_VarObj* obj, int add );
 static void ss_ri_d3d9_swap( SS_Renderer* R );
@@ -95,6 +96,7 @@ SS_RenderInterface GRI_D3D9 =
 	ss_ri_d3d9_destroy,
 	ss_ri_d3d9_get_pointer,
 	ss_ri_d3d9_modify,
+	ss_ri_d3d9_set_buffer_scale,
 	ss_ri_d3d9_set_current,
 	ss_ri_d3d9_poke_resource,
 	ss_ri_d3d9_swap,
@@ -356,6 +358,11 @@ static void ss_ri_d3d9_modify( SS_Renderer* R, int* modlist )
 		R->d3dpp.BackBufferHeight = h;
 		_ssr_reset_device( R );
 	}
+}
+
+static void ss_ri_d3d9_set_buffer_scale( SS_Renderer* R, int enable, int width, int height, int scalemode )
+{
+	/* TODO */
 }
 
 static void ss_ri_d3d9_set_current( SS_Renderer* R )
