@@ -56,7 +56,27 @@ struct _SS_Renderer
 	IDirect3DSurface9* backbuf;
 	IDirect3DSurface9* dssurf;
 	SS_Texture* cur_rtt;
+	int width;
+	int height;
+	int bbwidth, bbheight, bbscale;
 };
+
+
+static void ss_ri_d3d9__resetviewport( SS_Renderer* R )
+{
+	D3DVIEWPORT9 vp = { 0, 0, -1, -1, 0.0, 1.0 };
+	if( R->bbscale != SS_POSMODE_NONE )
+	{
+		vp.Width = sgs_MIN( R->bbwidth, R->width );
+		vp.Height = sgs_MIN( R->bbheight, R->height );
+	}
+	else
+	{
+		vp.Width = R->width;
+		vp.Height = R->height;
+	}
+	IDirect3DDevice9_SetViewport( R->d3ddev, &vp );
+}
 
 
 static void ss_ri_d3d9_init();
@@ -289,6 +309,13 @@ static SS_Renderer* ss_ri_d3d9_create( SDL_Window* window, uint32_t version, uin
 		return NULL;
 	}
 	
+	R->width = w;
+	R->height = h;
+
+	R->bbwidth = 0;
+	R->bbheight = 0;
+	R->bbscale = 0;
+	
 	sgs_vht_init( &R->rsrc_table, C, 64, 64 );
 	R->destructing = 0;
 	
@@ -346,8 +373,8 @@ static void ss_ri_d3d9_modify( SS_Renderer* R, int* modlist )
 	
 	while( *modlist )
 	{
-		if( *modlist == SS_RMOD_WIDTH ){ resize = 1; w = modlist[1]; }
-		else if( *modlist == SS_RMOD_HEIGHT ){ resize = 1; h = modlist[1]; }
+		if( *modlist == SS_RMOD_WIDTH ){ resize = 1; w = modlist[1]; R->width = w; }
+		else if( *modlist == SS_RMOD_HEIGHT ){ resize = 1; h = modlist[1]; R->height = h; }
 		
 		modlist += 2;
 	}
@@ -357,12 +384,15 @@ static void ss_ri_d3d9_modify( SS_Renderer* R, int* modlist )
 		R->d3dpp.BackBufferWidth = w;
 		R->d3dpp.BackBufferHeight = h;
 		_ssr_reset_device( R );
+		ss_ri_d3d9__resetviewport( R );
 	}
 }
 
 static void ss_ri_d3d9_set_buffer_scale( SS_Renderer* R, int enable, int width, int height, int scalemode )
 {
-	/* TODO */
+	R->bbwidth = enable ? width : 0;
+	R->bbheight = enable ? height : 0;
+	R->bbscale = enable ? scalemode : 0;
 }
 
 static void ss_ri_d3d9_set_current( SS_Renderer* R )
@@ -391,7 +421,70 @@ static void ss_ri_d3d9_poke_resource( SS_Renderer* R, sgs_VarObj* obj, int add )
 
 static void ss_ri_d3d9_swap( SS_Renderer* R )
 {
+	ss_ri_d3d9_set_rt( R, NULL );
 	IDirect3DDevice9_EndScene( R->d3ddev );
+	
+	if( R->bbscale != SS_POSMODE_NONE )
+	{
+		int w = sgs_MIN( R->bbwidth, R->width );
+		int h = sgs_MIN( R->bbheight, R->height );
+		
+		IDirect3DSurface9 *plain = NULL, *target = NULL;
+		if( !FAILED( IDirect3DDevice9_CreateOffscreenPlainSurface( R->d3ddev, R->width, R->height, D3DFMT_X8R8G8B8, D3DPOOL_SYSTEMMEM, &plain, NULL ) ) && plain &&
+			!FAILED( IDirect3DDevice9_CreateRenderTarget( R->d3ddev, w, h, D3DFMT_X8R8G8B8, D3DMULTISAMPLE_NONE, 0, 0, &target, NULL ) ) && target )
+		{
+			RECT srcrect = { 0, 0, w, h };
+			if( !FAILED( IDirect3DDevice9_GetRenderTargetData( R->d3ddev, R->backbuf, plain ) ) &&
+				!FAILED( IDirect3DDevice9_UpdateSurface( R->d3ddev, plain, &srcrect, target, NULL ) ) )
+			{
+				/* width factors */
+				float wf = 1, hf = 1, xoff, yoff;
+				float aspect = ( (float) w / (float) h ) / ( (float) R->width / (float) R->height );
+				switch( R->bbscale )
+				{
+				case SS_POSMODE_CROP:
+					if( aspect > 1 )
+						wf = aspect;
+					else
+						hf = 1 / aspect;
+					break;
+				case SS_POSMODE_FIT:
+					if( aspect > 1 )
+						hf = 1 / aspect;
+					else
+						wf = aspect;
+					break;
+				case SS_POSMODE_FITRND:
+					{
+						int wc = (int) floor( (float) R->width / (float) w );
+						int hc = (int) floor( (float) R->height / (float) h );
+						int cnt = sgs_MAX( 1, sgs_MIN( wc, hc ) );
+						wf = (float) w * cnt / (float) R->width;
+						hf = (float) h * cnt / (float) R->height;
+					}
+					break;
+				case SS_POSMODE_CENTER:
+					wf = (float) w / (float) R->width;
+					hf = (float) h / (float) R->height;
+					break;
+				default:
+					break;
+				}
+				xoff = ( 1 - wf ) / 2;
+				yoff = ( 1 - hf ) / 2;
+				
+				{
+					RECT dstrect = { xoff * R->width, yoff * R->height, (xoff+wf) * R->width, (yoff+hf) * R->height };
+					IDirect3DDevice9_Clear( R->d3ddev, 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, 0, 1.0f, 0 );
+					IDirect3DDevice9_StretchRect( R->d3ddev, target, &srcrect, R->backbuf, &dstrect, D3DTEXF_NONE );
+				}
+			}
+		}
+		
+		SAFE_RELEASE( plain );
+		SAFE_RELEASE( target );
+	}
+	
 	if( IDirect3DDevice9_Present( R->d3ddev, NULL, NULL, NULL, NULL ) == D3DERR_DEVICELOST )
 	{
 		if( IDirect3DDevice9_TestCooperativeLevel( R->d3ddev ) == D3DERR_DEVICENOTRESET )
@@ -400,7 +493,6 @@ static void ss_ri_d3d9_swap( SS_Renderer* R )
 		}
 	}
 	IDirect3DDevice9_BeginScene( R->d3ddev );
-	ss_ri_d3d9_set_rt( R, NULL );
 }
 
 static void ss_ri_d3d9_clear( SS_Renderer* R, float* col4f )
@@ -488,6 +580,8 @@ static void ss_ri_d3d9_set_rt( SS_Renderer* R, SS_Texture* T )
 	R->cur_rtt = T;
 	D3DCALL_( R->d3ddev, SetRenderTarget, 0, surf );
 	D3DCALL_( R->d3ddev, SetDepthStencilSurface, dssurf );
+	if( !T )
+		ss_ri_d3d9__resetviewport( R );
 }
 
 

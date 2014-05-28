@@ -63,6 +63,15 @@ struct _SS_Renderer
 };
 
 
+static void ss_ri_gl__resetviewport( SS_Renderer* R )
+{
+	if( R->bbscale != SS_POSMODE_NONE )
+		glViewport( 0, 0, sgs_MIN( R->bbwidth, R->width ), sgs_MIN( R->bbheight, R->height ) );
+	else
+		glViewport( 0, 0, R->width, R->height );
+}
+
+
 static void ss_ri_gl_init();
 static void ss_ri_gl_free();
 static int ss_ri_gl_available();
@@ -285,12 +294,7 @@ static void ss_ri_gl_modify( SS_Renderer* R, int* modlist )
 	}
 	
 	if( resize )
-	{
-		if( R->bbscale != SS_POSMODE_NONE )
-			glViewport( 0, 0, sgs_MIN( R->bbwidth, w ), sgs_MIN( R->bbheight, h ) );
-		else
-			glViewport( 0, 0, w, h );
-	}
+		ss_ri_gl__resetviewport( R );
 }
 
 static void ss_ri_gl_set_buffer_scale( SS_Renderer* R, int enable, int width, int height, int scalemode )
@@ -388,6 +392,8 @@ static void ss_ri_gl_swap( SS_Renderer* R )
 			glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, data );
 			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
 			glBegin( GL_QUADS );
 			glTexCoord2f( 0, 1 );
 			glVertex2f( xoff, yoff );
@@ -404,10 +410,7 @@ static void ss_ri_gl_swap( SS_Renderer* R )
 		}
 	}
 	SDL_GL_SwapWindow( R->window );
-	if( R->bbscale != SS_POSMODE_NONE )
-		glViewport( 0, 0, sgs_MIN( R->bbwidth, R->width ), sgs_MIN( R->bbheight, R->height ) );
-	else
-		glViewport( 0, 0, R->width, R->height );
+	ss_ri_gl__resetviewport( R );
 }
 
 static void ss_ri_gl_clear( SS_Renderer* R, float* col4f )
@@ -508,12 +511,7 @@ static void ss_ri_gl_set_rt( SS_Renderer* R, SS_Texture* T )
 	R->cur_rtt = T;
 	R->glBindFramebuffer( GL_FRAMEBUFFER, T ? T->rsh.id : 0 );
 	if( !T )
-	{
-		if( R->bbscale != SS_POSMODE_NONE )
-			glViewport( 0, 0, sgs_MIN( R->bbwidth, R->width ), sgs_MIN( R->bbheight, R->height ) );
-		else
-			glViewport( 0, 0, R->width, R->height );
-	}
+		ss_ri_gl__resetviewport( R );
 }
 
 
