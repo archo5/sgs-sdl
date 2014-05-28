@@ -335,6 +335,42 @@ static void ss_ri_gl_swap( SS_Renderer* R )
 		void* data = malloc( w * h * 4 );
 		if( data )
 		{
+			/* width factors */
+			float wf = 1, hf = 1, xoff, yoff;
+			float aspect = ( (float) w / (float) h ) / ( (float) R->width / (float) R->height );
+			switch( R->bbscale )
+			{
+			case SS_POSMODE_CROP:
+				if( aspect > 1 )
+					wf = aspect;
+				else
+					hf = 1 / aspect;
+				break;
+			case SS_POSMODE_FIT:
+				if( aspect > 1 )
+					hf = 1 / aspect;
+				else
+					wf = aspect;
+				break;
+			case SS_POSMODE_FITRND:
+				{
+					int wc = (int) floor( (float) R->width / (float) w );
+					int hc = (int) floor( (float) R->height / (float) h );
+					int cnt = sgs_MAX( 1, sgs_MIN( wc, hc ) );
+					wf = (float) w * cnt / (float) R->width;
+					hf = (float) h * cnt / (float) R->height;
+				}
+				break;
+			case SS_POSMODE_CENTER:
+				wf = (float) w / (float) R->width;
+				hf = (float) h / (float) R->height;
+				break;
+			default:
+				break;
+			}
+			xoff = ( 1 - wf ) / 2;
+			yoff = ( 1 - hf ) / 2;
+			
 			glReadPixels( 0, 0, w, h, GL_BGRA, GL_UNSIGNED_BYTE, data );
 			
 			glClearColor( 0, 0, 0, 0 );
@@ -347,22 +383,22 @@ static void ss_ri_gl_swap( SS_Renderer* R )
 			glLoadIdentity();
 			glOrtho( 0, 1, 1, 0, -1, 1 );
 			
-			glGenTextures (1, &texID);
-			glBindTexture (GL_TEXTURE_2D, texID);
-			glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, data);
+			glGenTextures( 1, &texID );
+			glBindTexture( GL_TEXTURE_2D, texID );
+			glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, data );
 			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-			glBegin (GL_QUADS);
-			glTexCoord2f (0, 1);
-			glVertex2f (0, 0);
-			glTexCoord2f (1, 1);
-			glVertex2f (1, 0);
-			glTexCoord2f (1, 0);
-			glVertex2f (1, 1);
-			glTexCoord2f (0, 0);
-			glVertex2f (0, 1);
+			glBegin( GL_QUADS );
+			glTexCoord2f( 0, 1 );
+			glVertex2f( xoff, yoff );
+			glTexCoord2f( 1, 1 );
+			glVertex2f( 1 - xoff, yoff );
+			glTexCoord2f( 1, 0 );
+			glVertex2f( 1 - xoff, 1 - yoff );
+			glTexCoord2f( 0, 0 );
+			glVertex2f( xoff, 1 - yoff );
 			glEnd();
-			glDeleteTextures(1,&texID);
+			glDeleteTextures( 1, &texID );
 			
 			free( data );
 		}

@@ -39,7 +39,7 @@ function initialize()
 		SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
 	println( "renderer initialized at: " $ ftime() );
 	
-//	Window.setBufferScale( 300, 250, 3 );
+//	Window.setBufferScale( 300, 250, SS_POSMODE_FITRND );
 	
 	global Surf = SS_CreateRenderTexture( Window.width, Window.height );
 	
