@@ -191,7 +191,7 @@ function SS_GetCameraUIMatrix( x1, x2, y1, y2 )
 		2.0/w, 0, 0, 0,
 		0, -2.0/h, 0, 0,
 		0, 0, 1, 0,
-		-1-x1/w, 1+y1/w, 0, 1
+		-1-x1/w*2.0, 1+y1/w*2.0, 0, 1
 	);
 }
 function SS_SetCameraUI( x1, x2, y1, y2 )
