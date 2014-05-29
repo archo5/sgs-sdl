@@ -2838,9 +2838,63 @@ void ss_FreeGraphics( SGS_CTX )
 }
 
 
+static void ss_calc_cursor_pos( int* rcp_x, int* rcp_y, int x, int y, Uint32 wid )
+{
+	SS_Window* W = SS_Window_from_id( wid );
+	if( W && W->bbwidth > 0 && W->bbheight > 0 )
+	{
+		int width = 0, height = 0, w, h;
+		SDL_GetWindowSize( W->window, &width, &height );
+		w = sgs_MIN( W->bbwidth, width );
+		h = sgs_MIN( W->bbheight, height );
+		
+		float wf = 1, hf = 1, xoff, yoff;
+		float aspect = ( (float) w / (float) h ) / ( (float) width / (float) height );
+		switch( W->bbscale )
+		{
+		case SS_POSMODE_CROP:
+			if( aspect > 1 )
+				wf = aspect;
+			else
+				hf = 1 / aspect;
+			break;
+		case SS_POSMODE_FIT:
+			if( aspect > 1 )
+				hf = 1 / aspect;
+			else
+				wf = aspect;
+			break;
+		case SS_POSMODE_FITRND:
+			{
+				int wc = (int) floor( (float) width / (float) w );
+				int hc = (int) floor( (float) height / (float) h );
+				int cnt = sgs_MAX( 1, sgs_MIN( wc, hc ) );
+				wf = (float) w * cnt / (float) width;
+				hf = (float) h * cnt / (float) height;
+			}
+			break;
+		case SS_POSMODE_CENTER:
+			wf = (float) w / (float) width;
+			hf = (float) h / (float) height;
+			break;
+		default:
+			break;
+		}
+		xoff = ( 1 - wf ) / 2;
+		yoff = ( 1 - hf ) / 2;
+		
+		x -= xoff * width;
+		y -= yoff * height;
+		x = (float) x * (float) w / ( wf * (float) width );
+		y = (float) y * (float) h / ( hf * (float) height );
+	}
+	*rcp_x = x;
+	*rcp_y = y;
+}
+
 int ss_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 {
-	int osz, ret;
+	int osz, ret, rcp_x, rcp_y;
 	
 	osz = sgs_StackSize( C );
 	
@@ -2979,6 +3033,7 @@ int ss_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 		
 	case SDL_MOUSEBUTTONDOWN:
 	case SDL_MOUSEBUTTONUP:
+		ss_calc_cursor_pos( &rcp_x, &rcp_y, event->button.x, event->button.y, event->button.windowID );
 		sgs_PushString( C, "windowID" );
 		sgs_PushInt( C, event->button.windowID );
 		sgs_PushString( C, "which" );
@@ -2990,12 +3045,17 @@ int ss_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 		sgs_PushString( C, "clicks" );
 		sgs_PushInt( C, event->button.clicks );
 		sgs_PushString( C, "x" );
-		sgs_PushInt( C, event->button.x );
+		sgs_PushInt( C, rcp_x );
 		sgs_PushString( C, "y" );
+		sgs_PushInt( C, rcp_y );
+		sgs_PushString( C, "wx" );
+		sgs_PushInt( C, event->button.x );
+		sgs_PushString( C, "wy" );
 		sgs_PushInt( C, event->button.y );
 		break;
 		
 	case SDL_MOUSEMOTION:
+		ss_calc_cursor_pos( &rcp_x, &rcp_y, event->motion.x, event->motion.y, event->button.windowID );
 		sgs_PushString( C, "windowID" );
 		sgs_PushInt( C, event->motion.windowID );
 		sgs_PushString( C, "which" );
@@ -3013,8 +3073,12 @@ int ss_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 		sgs_PushString( C, "x2button" );
 		sgs_PushBool( C, event->motion.state & SDL_BUTTON_X2MASK );
 		sgs_PushString( C, "x" );
-		sgs_PushInt( C, event->motion.x );
+		sgs_PushInt( C, rcp_x );
 		sgs_PushString( C, "y" );
+		sgs_PushInt( C, rcp_y );
+		sgs_PushString( C, "wx" );
+		sgs_PushInt( C, event->motion.x );
+		sgs_PushString( C, "wy" );
 		sgs_PushInt( C, event->motion.y );
 		sgs_PushString( C, "xrel" );
 		sgs_PushInt( C, event->motion.xrel );
