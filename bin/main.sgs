@@ -25,7 +25,7 @@ function configure()
 
 function initialize()
 {
-	force_opengl = true;
+	force_opengl = false;
 	
 	println( "SGS-SDL Framework Test suite" );
 	println( "initialization started at: " $ ftime() );
@@ -39,7 +39,8 @@ function initialize()
 		SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
 	println( "renderer initialized at: " $ ftime() );
 	
-//	Window.setBufferScale( 300, 250, SS_POSMODE_FITRND );
+	Window.setMinSize( 300, 200 );
+//	Window.setBufferScale( 600, 500, SS_POSMODE_FITRND );
 	
 	global Surf = SS_CreateRenderTexture( Window.width, Window.height );
 	
@@ -59,11 +60,15 @@ function initialize()
 			options.push({ id = item, text = string_part( item, 0, -4 ), action = fn });
 		}
 	}
+	for( i = 0; i < 32; ++i )
+;//		options.push({ id = i+1000, text = randf() * 1234, action = function(){} });
 	global PMenu = PlaylistMenu.create
 	(options,
 	{
 		x = 32,
 		y = 32,
+		width = ( initialWidth - 64 ) * 4/7,
+		height = initialHeight - 64,
 	});
 	
 	global LogoTexture = SS_CreateTexture( "logo-red.png" );
@@ -127,6 +132,8 @@ function on_event( e )
 		global Surf = SS_CreateRenderTexture( Window.width, Window.height );
 	}
 	PMenu.on_event( e );
+	if( e.type == SDL_WINDOWEVENT && e.event == SDL_WINDOWEVENT_SIZE_CHANGED )
+		PMenu.resize( ( e.data1 - 64 ) * 4/7, e.data2 - 64 );
 }
 
 function cleanup()

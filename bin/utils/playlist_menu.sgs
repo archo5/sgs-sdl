@@ -41,39 +41,65 @@ function PlaylistMenu.create( options, params )
 		mouseon = false,
 		clicked = false,
 		ontime = 0,
+		scroll = 0,
+		scrollraw = 0,
+		_scrfrom = 0,
+		_scrto = 0,
+		_scrtime = 0,
 	};
 	data = get_merged( params, data );
 	if( !isset( data, "x" ) ) data.x = 100;
-	if( !isset( data, "y" ) ) data.y = 400;
+	if( !isset( data, "y" ) ) data.y = 100;
 	if( !isset( data, "scale" ) ) data.scale = 1;
-	if( !isset( data, "height" ) ) data.height = 14;
+	if( !isset( data, "font" ) ) data.font = "verdana.ttf";
+	if( !isset( data, "fontsize" ) ) data.fontsize = 14;
 	if( !isset( data, "padding" ) ) data.padding = 6;
 	if( !isset( data, "vspace" ) ) data.vspace = 4;
 	if( !isset( data, "width" ) ) data.width = 400;
+	if( !isset( data, "height" ) ) data.height = 400;
+	if( !isset( data, "scrollbarsize" ) ) data.scrollbarsize = 32;
 	
 	data.x *= data.scale; // scale these to preserve in-screen placement
 	data.y *= data.scale; // --
-	data.height *= data.scale;
+	data.fontsize *= data.scale;
 	data.vspace *= data.scale;
 	data.width *= data.scale;
-	data.font = SS_CreateFont( "verdana.ttf", data.height );
+	data.height *= data.scale;
+	data.font = SS_CreateFont( data.font, data.fontsize );
+	
+	totalheight = -data.vspace;
+	fht = data.fontsize + data.padding * 2 + data.vspace;
+	foreach( opt : options )
+	{
+		if( opt.visible )
+			totalheight += fht;
+	}
+	data.totalheight = totalheight;
 	
 	return class( data, PlaylistMenu );
 }
 
+function PlaylistMenu.resize( w, h )
+{
+	this.width = w * this.scale;
+	this.height = h * this.scale;
+	this.mousewheel( 0 );
+}
+
 function PlaylistMenu.mousemove( x, y )
 {
-	cy = this.y;
+	cy = this.y - this.scroll;
 	pmo = this.mouseon;
 	this.mouseon = false;
-	if( x >= this.x && x < this.x + this.width )
+	if( x >= this.x && x < this.x + this.width &&
+		y >= this.y && y < this.y + this.height )
 	{
 		foreach( oid, option : this.options )
 		{
 			if( !option.visible )
 				continue;
 			
-			fht = this.height + this.padding * 2;
+			fht = this.fontsize + this.padding * 2;
 			
 			if( y >= cy && y < cy + fht )
 			{
@@ -105,6 +131,15 @@ function PlaylistMenu.mouseclick( down )
 			this.do_action( this.clicked );
 		this.clicked = false;
 	}
+}
+
+function PlaylistMenu.mousewheel( delta )
+{
+	this.scrollraw = clamp( this.scrollraw - delta * 32 * this.scale, 0, max( 0, this.totalheight - this.height ) );
+	this._scrfrom = this.scroll;
+	this._scrto = this.scrollraw;
+	this._scrtime = 0;
+	this.mousemove( this.x - 1, 0 );
 }
 
 function PlaylistMenu._clamp_mouseon()
@@ -153,6 +188,8 @@ function PlaylistMenu.on_event( e )
 		this.mousemove( e.x, e.y );
 	else if( e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP )
 		this.mouseclick( e.type == SDL_MOUSEBUTTONDOWN );
+	else if( e.type == SDL_MOUSEWHEEL )
+		this.mousewheel( e.y );
 	else if( e.type == SDL_KEYDOWN )
 	{
 		if( e.keycode == SDLK_UP )
@@ -166,33 +203,43 @@ function PlaylistMenu.on_event( e )
 
 function PlaylistMenu.draw( delta )
 {
+	this._scrtime += delta;
+	this.scroll = lerp( this._scrfrom, this._scrto, 1 - pow( 1 - clamp( this._scrtime * 2, 0, 1 ), 2 ) );
+	
 	this.ontime += delta;
-	cy = this.y;
-	foreach( oid, option : this.options )
+	cy = this.y - this.scroll;
+	if( SS_SetClipRect( this.x, this.y, this.x + this.width, this.y + this.height ) )
 	{
-		if( !option.visible )
-			continue;
-		
-		fht = this.height + this.padding * 2;
-		
-		ix = this.x;
-		if( this.mouseon === oid )
-			ix += if( this.ontime > 0.1, 0.1, this.ontime ) * 64;
-		
-		cfc = if(this.mouseon === oid,0.3-if(this.clicked === oid,0.2,0),0);
-		SS_DrawColor2VRect_WH( ix, cy, this.width + this.padding * 2, fht,
-			0.0 + cfc, 0.0 + cfc, 0.0 + cfc, 0.0 + cfc * 0.5,
-			0.0 + cfc * 0.5, 0.05 + cfc * 0.5, 0.1 + cfc * 0.5, 0.1 );
-		
-		if( this.mouseon === oid )
+		foreach( oid, option : this.options )
 		{
-			SS_SetBlending( SS_BLENDOP_ADD, SS_BLEND_SRCALPHA, SS_BLEND_ONE );
-			SS_DrawColorRect_WH( ix, cy, this.width + this.padding * 2, fht, 1, 1, 1, pow( 1/(1+this.ontime), 16 ) * 0.1 );
-			SS_SetBlending( SS_BLENDOP_ADD, SS_BLEND_SRCALPHA, SS_BLEND_INVSRCALPHA );
+			if( !option.visible )
+				continue;
+			
+			fht = this.fontsize + this.padding * 2;
+			
+			ix = this.x;
+			if( this.mouseon === oid )
+				ix += if( this.ontime > 0.1, 0.1, this.ontime ) * 64;
+			
+			cymid = cy + fht * 0.5;
+			ta = clamp( ( cymid - this.y ) / clamp( this.scroll / 8, 1, 32 ), 0, 1 )
+				*clamp( ( this.y + this.height - cymid ) / clamp( ( this.totalheight - this.height - this.scroll ) / 8, 1, 32 ), 0, 1 );
+			cfc = if(this.mouseon === oid,0.3-if(this.clicked === oid,0.2,0),0);
+			SS_DrawColor2VRect_WH( ix, cy, this.width, fht,
+				0.0 + cfc, 0.0 + cfc, 0.0 + cfc, 0.0 + cfc * 0.5 * ta,
+				0.0 + cfc * 0.5, 0.05 + cfc * 0.5, 0.1 + cfc * 0.5, 0.1 * ta );
+			
+			if( this.mouseon === oid )
+			{
+				SS_SetBlending( SS_BLENDOP_ADD, SS_BLEND_SRCALPHA, SS_BLEND_ONE );
+				SS_DrawColorRect_WH( ix, cy, this.width, fht, 1, 1, 1, pow( 1/(1+this.ontime), 16 ) * 0.1 );
+				SS_SetBlending( SS_BLENDOP_ADD, SS_BLEND_SRCALPHA, SS_BLEND_INVSRCALPHA );
+			}
+			
+			SS_DrawTextLine_VC( option.text, this.font, ix + this.padding, cy + this.padding+1 + this.fontsize / 2, color(0,0,0,0.3*ta) );
+			SS_DrawTextLine_VC( option.text, this.font, ix + this.padding, cy + this.padding + this.fontsize / 2, color(1,1,1,ta) );
+			cy += fht + this.vspace;
 		}
-		
-		SS_DrawTextLine_VC( option.text, this.font, ix + this.padding, cy + this.padding+1 + this.height / 2, color(0,0,0,0.3) );
-		SS_DrawTextLine_VC( option.text, this.font, ix + this.padding, cy + this.padding + this.height / 2, color(1,1,1) );
-		cy += fht + this.vspace;
+		SS_SetClipRect( null );
 	}
 }

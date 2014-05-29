@@ -1902,8 +1902,8 @@ static int SS_SetClipRect( SGS_CTX )
 	}
 	else if( sgs_StackSize( C ) == 4 &&
 		sgs_ParseInt( C, 0, &x1 ) &&
-		sgs_ParseInt( C, 1, &x2 ) &&
-		sgs_ParseInt( C, 2, &y1 ) &&
+		sgs_ParseInt( C, 1, &y1 ) &&
+		sgs_ParseInt( C, 2, &x2 ) &&
 		sgs_ParseInt( C, 3, &y2 ) )
 	{
 		if( x2 < x1 || y2 < y1 )

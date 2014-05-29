@@ -2885,8 +2885,8 @@ static void ss_calc_cursor_pos( int* rcp_x, int* rcp_y, int x, int y, Uint32 wid
 		
 		x -= xoff * width;
 		y -= yoff * height;
-		x = (float) x * (float) w / ( wf * (float) width );
-		y = (float) y * (float) h / ( hf * (float) height );
+		x = (float) x * (float) W->bbwidth / ( wf * (float) width );
+		y = (float) y * (float) W->bbheight / ( hf * (float) height );
 	}
 	*rcp_x = x;
 	*rcp_y = y;
