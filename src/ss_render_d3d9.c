@@ -474,9 +474,11 @@ static void ss_ri_d3d9_swap( SS_Renderer* R )
 				yoff = ( 1 - hf ) / 2;
 				
 				{
+					D3DVIEWPORT9 fullvp = { 0, 0, R->width, R->height, -1, 1 };
 					RECT dstrect = { xoff * R->width, yoff * R->height, (xoff+wf) * R->width, (yoff+hf) * R->height };
+					IDirect3DDevice9_SetViewport( R->d3ddev, &fullvp );
 					IDirect3DDevice9_Clear( R->d3ddev, 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, 0, 1.0f, 0 );
-					IDirect3DDevice9_StretchRect( R->d3ddev, target, &srcrect, R->backbuf, &dstrect, D3DTEXF_NONE );
+					IDirect3DDevice9_StretchRect( R->d3ddev, target, &srcrect, R->backbuf, &dstrect, D3DTEXF_POINT );
 				}
 			}
 		}
@@ -493,6 +495,7 @@ static void ss_ri_d3d9_swap( SS_Renderer* R )
 		}
 	}
 	IDirect3DDevice9_BeginScene( R->d3ddev );
+	ss_ri_d3d9_set_rt( R, NULL );
 }
 
 static void ss_ri_d3d9_clear( SS_Renderer* R, float* col4f )

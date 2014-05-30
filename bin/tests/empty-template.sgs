@@ -20,3 +20,7 @@ function on_event( e )
 	if( e.type == SDL_QUIT )
 		global sys_exit = true;
 }
+
+function cleanup()
+{
+}

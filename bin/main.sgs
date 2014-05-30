@@ -104,14 +104,14 @@ function update()
 	SS_DrawColor2VRect( 0, Hslash - topMaxSize, W, Hslash, 0.8, 0.8, 0.8, 1, 0.5, 0.5, 0.5, 1 );
 	SS_DrawColor2VRect( 0, Hslash, W, Hslash + btmMaxSize, 0.4, 0.4, 0.4, 1, 0.2, 0.2, 0.2, 1 );
 	
-	PMenu.draw( delta );
-	
 	tW = LogoTexture.width;
 	tH = LogoTexture.height;
 	SS_Draw({ preset = "tile", position = vec2( W * 0.9 - tW - 32, Hslash - tH + 24 ), scale = vec2( tW, tH ), texture = LogoTexture });
 	SS_Draw({ preset = "tile", position = vec2( W * 0.9 - tW - 32, Hslash + tH + 24 ), scale = vec2( tW, -tH ), texture = LogoTexture, color = color(0.5,0.5,0.5,0.5) });
 	
 //	SS_Draw({ preset = "tile", position = vec2( W/2, H/2 - 32 ), scale = vec2( 128, 128 ), texture = Surf });
+	
+	PMenu.draw( delta );
 	
 	SS_Present();
 
