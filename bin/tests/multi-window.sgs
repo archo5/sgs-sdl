@@ -7,12 +7,12 @@ function initialize()
 {
 	global Window1 = SS_CreateWindow( "Direct3D Window (hopefully)", 32, 32, 128, 128, SDL_WINDOW_OPENGLMAYBE );
 	Window1.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
-	global Win1Tex = SS_CreateTexture( "crosshair.png" );
+	global Win1Tex = SS_CreateTexture( "images/crosshair.png" );
 	println( Win1Tex );
 	
 	global Window2 = SS_CreateWindow( "OpenGL Window", 192, 32, 128, 128, SDL_WINDOW_OPENGL );
 	Window2.initRenderer( SS_RENDERER_OPENGL, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
-	global Win2Tex = SS_CreateTexture( "crosshair.png" );
+	global Win2Tex = SS_CreateTexture( "images/crosshair.png" );
 	println( Win2Tex );
 }
 

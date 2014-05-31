@@ -72,7 +72,7 @@ function initialize()
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 576,
 		SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGLMAYBE );
 	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
-	global Font = SS_CreateFont( "verdana.ttf", 9 );
+	global Font = SS_CreateFont( "fonts/cousine-regular.ttf", 10 );
 	global Events = [];
 	init_tracking();
 	init_joysticks();

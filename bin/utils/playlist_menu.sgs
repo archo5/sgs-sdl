@@ -51,13 +51,14 @@ function PlaylistMenu.create( options, params )
 	if( !isset( data, "x" ) ) data.x = 100;
 	if( !isset( data, "y" ) ) data.y = 100;
 	if( !isset( data, "scale" ) ) data.scale = 1;
-	if( !isset( data, "font" ) ) data.font = "verdana.ttf";
+	if( !isset( data, "font" ) ) data.font = "fonts/lato-regular.ttf";
 	if( !isset( data, "fontsize" ) ) data.fontsize = 14;
 	if( !isset( data, "padding" ) ) data.padding = 6;
-	if( !isset( data, "vspace" ) ) data.vspace = 4;
+	if( !isset( data, "vspace" ) ) data.vspace = 0;
 	if( !isset( data, "width" ) ) data.width = 400;
 	if( !isset( data, "height" ) ) data.height = 400;
 	if( !isset( data, "scrollbarsize" ) ) data.scrollbarsize = 32;
+	if( !isset( data, "border" ) ) data.border = 2;
 	
 	data.x *= data.scale; // scale these to preserve in-screen placement
 	data.y *= data.scale; // --
@@ -88,11 +89,17 @@ function PlaylistMenu.resize( w, h )
 
 function PlaylistMenu.mousemove( x, y )
 {
-	cy = this.y - this.scroll;
+	B = this.border;
+	X = this.x + B;
+	Y = this.y + B;
+	W = this.width - B * 2;
+	H = this.height - B * 2;
+	
+	cy = Y - this.scroll;
 	pmo = this.mouseon;
 	this.mouseon = false;
-	if( x >= this.x && x < this.x + this.width &&
-		y >= this.y && y < this.y + this.height )
+	if( x >= X && x < X + W &&
+		y >= Y && y < Y + H )
 	{
 		foreach( oid, option : this.options )
 		{
@@ -135,11 +142,13 @@ function PlaylistMenu.mouseclick( down )
 
 function PlaylistMenu.mousewheel( delta )
 {
+	osr = this.scrollraw;
 	this.scrollraw = clamp( this.scrollraw - delta * 32 * this.scale, 0, max( 0, this.totalheight - this.height ) );
 	this._scrfrom = this.scroll;
 	this._scrto = this.scrollraw;
 	this._scrtime = 0;
-	this.mousemove( this.x - 1, 0 );
+	if( this.scrollraw != osr )
+		this.mousemove( this.x - 1, 0 );
 }
 
 function PlaylistMenu._clamp_mouseon()
@@ -186,7 +195,7 @@ function PlaylistMenu.on_event( e )
 {
 	if( e.type == SDL_MOUSEMOTION )
 		this.mousemove( e.x, e.y );
-	else if( e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP )
+	else if( ( e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP ) && e.button == 1 )
 		this.mouseclick( e.type == SDL_MOUSEBUTTONDOWN );
 	else if( e.type == SDL_MOUSEWHEEL )
 		this.mousewheel( e.y );
@@ -203,42 +212,66 @@ function PlaylistMenu.on_event( e )
 
 function PlaylistMenu.draw( delta )
 {
+	B = this.border;
+	X = this.x + B;
+	Y = this.y + B;
+	W = this.width - B * 2;
+	H = this.height - B * 2;
+	
 	this._scrtime += delta;
 	this.scroll = lerp( this._scrfrom, this._scrto, 1 - pow( 1 - clamp( this._scrtime * 2, 0, 1 ), 2 ) );
 	
 	this.ontime += delta;
-	cy = this.y - this.scroll;
-	if( SS_SetClipRect( this.x, this.y, this.x + this.width, this.y + this.height ) )
+	cy = Y - this.scroll;
+	if( SS_SetClipRect( this.x, this.y, this.x + this.width + 1, this.y + this.height + 1 ) )
 	{
-		foreach( oid, option : this.options )
+		SS_DrawColorRect_WH( this.x + B, this.y + B, this.width - B*2, this.height - B*2, 0.4, 0.4, 0.4, 0.1 );
+		if( B )
 		{
-			if( !option.visible )
-				continue;
-			
-			fht = this.fontsize + this.padding * 2;
-			
-			ix = this.x;
-			if( this.mouseon === oid )
-				ix += if( this.ontime > 0.1, 0.1, this.ontime ) * 64;
-			
-			cymid = cy + fht * 0.5;
-			ta = clamp( ( cymid - this.y ) / clamp( this.scroll / 8, 1, 32 ), 0, 1 )
-				*clamp( ( this.y + this.height - cymid ) / clamp( ( this.totalheight - this.height - this.scroll ) / 8, 1, 32 ), 0, 1 );
-			cfc = if(this.mouseon === oid,0.3-if(this.clicked === oid,0.2,0),0);
-			SS_DrawColor2VRect_WH( ix, cy, this.width, fht,
-				0.0 + cfc, 0.0 + cfc, 0.0 + cfc, 0.0 + cfc * 0.5 * ta,
-				0.0 + cfc * 0.5, 0.05 + cfc * 0.5, 0.1 + cfc * 0.5, 0.1 * ta );
-			
-			if( this.mouseon === oid )
+			Bbr = 0.6;
+			Bal = 0.1;
+			SS_DrawColorRect_WH( this.x, this.y, this.width, B, Bbr, Bbr, Bbr, Bal );
+			SS_DrawColorRect_WH( this.x, this.y + this.height - B, this.width, B, Bbr, Bbr, Bbr, Bal );
+			SS_DrawColorRect_WH( this.x, this.y + B, B, this.height - B * 2, Bbr, Bbr, Bbr, Bal );
+			SS_DrawColorRect_WH( this.x + this.width - B, this.y + B, B, this.height - B * 2, Bbr, Bbr, Bbr, Bal );
+		}
+		if( SS_SetClipRect( X, Y, X + W + 1, Y + H + 1 ) )
+		{
+			foreach( oid, option : this.options )
 			{
-				SS_SetBlending( SS_BLENDOP_ADD, SS_BLEND_SRCALPHA, SS_BLEND_ONE );
-				SS_DrawColorRect_WH( ix, cy, this.width, fht, 1, 1, 1, pow( 1/(1+this.ontime), 16 ) * 0.1 );
-				SS_SetBlending( SS_BLENDOP_ADD, SS_BLEND_SRCALPHA, SS_BLEND_INVSRCALPHA );
+				if( !option.visible )
+					continue;
+				
+				fht = this.fontsize + this.padding * 2;
+				
+				ix = X;
+				
+				cymid = cy + fht * 0.5;
+				ta = clamp( ( cymid - Y ) / clamp( this.scroll / 8, 1, 32 ), 0, 1 )
+					*clamp( ( Y + H - cymid ) / clamp( ( this.totalheight - H - this.scroll ) / 8, 1, 32 ), 0, 1 );
+				cfc = if(this.mouseon === oid,0.3-if(this.clicked === oid,0.2,0),0);
+				SS_DrawColor2VRect_WH( ix, cy, this.width, fht,
+					0.0 + cfc, 0.0 + cfc, 0.0 + cfc, 0.0 + cfc * 0.5 * ta,
+					0.0 + cfc * 0.5, 0.05 + cfc * 0.5, 0.1 + cfc * 0.5, 0.1 * ta );
+				
+				if( this.mouseon === oid )
+				{
+					SS_SetBlending( SS_BLENDOP_ADD, SS_BLEND_SRCALPHA, SS_BLEND_ONE );
+					SS_DrawColorRect_WH( ix, cy, this.width, fht, 1, 1, 1, pow( 1/(1+this.ontime), 16 ) * 0.1 );
+					SS_SetBlending( SS_BLENDOP_ADD, SS_BLEND_SRCALPHA, SS_BLEND_INVSRCALPHA );
+				}
+				
+				if( this.mouseon === oid )
+				{
+					ix += if( this.ontime > 0.1, 0.1, this.ontime ) * 64;
+					textcolor = color(1,0.75,0.5,ta);
+				}
+				else
+					textcolor = color(1,1,1,ta);
+				SS_DrawTextLine_VC( option.text, this.font, ix + this.padding, cy + this.padding+1 + this.fontsize / 2, color(0,0,0,0.3*ta) );
+				SS_DrawTextLine_VC( option.text, this.font, ix + this.padding, cy + this.padding + this.fontsize / 2, textcolor );
+				cy += fht + this.vspace;
 			}
-			
-			SS_DrawTextLine_VC( option.text, this.font, ix + this.padding, cy + this.padding+1 + this.fontsize / 2, color(0,0,0,0.3*ta) );
-			SS_DrawTextLine_VC( option.text, this.font, ix + this.padding, cy + this.padding + this.fontsize / 2, color(1,1,1,ta) );
-			cy += fht + this.vspace;
 		}
 		SS_SetClipRect( null );
 	}

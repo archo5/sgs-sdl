@@ -119,7 +119,7 @@ function UIControl.create( override )
 {
 	var data = clone( UIControlDefaults );
 	data.children = []; // this one doesn't get cloned otherwise
-	data.font = SS_CreateFont( "verdana.ttf", 12 );
+	data.font = SS_CreateFont( "fonts/lato-regular.ttf", 12 );
 	foreach( k, v : override )
 		data[ k ] = v;
 	return class( data, UIControl );

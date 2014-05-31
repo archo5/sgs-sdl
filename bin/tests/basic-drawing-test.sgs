@@ -106,7 +106,7 @@ function initialize()
 	) );
 	global MIT = SS_CreateTexture( MI, "nolerp" );
 
-	global TM = Tilemap.create( SS_CreateTexture( "ntset.png", "nolerp" ), 32, 32 );
+	global TM = Tilemap.create( SS_CreateTexture( "images/ntset.png", "nolerp" ), 32, 32 );
 	floor = _G.floor;
 	randf = _G.randf;
 	for( y = 0; y < 64; ++y )
@@ -121,13 +121,13 @@ function initialize()
 	global HG2 = Histogram.create(200);
 	
 	println();
-	global image = SS_CreateTexture( "crosshair.png", "mipmaps" );
+	global image = SS_CreateTexture( "images/crosshair.png", "mipmaps" );
 	println( image );
 	printvar( _R.textures );
 	println();
 	
-	global Font = SS_CreateFont( "verdana.ttf", 12 );
-	global BigFont = SS_CreateFont( "verdana.ttf", 72 );
+	global Font = SS_CreateFont( "fonts/lato-regular.ttf", 12 );
+	global BigFont = SS_CreateFont( "fonts/fugaz-one-regular.ttf", 72 );
 	
 	global g_RB = SS_CreateRenderBuffer().reserve( 512 );
 	

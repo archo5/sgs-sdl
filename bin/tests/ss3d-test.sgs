@@ -12,7 +12,7 @@ function initialize()
 	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
 	SS_InitDrawFunctions();
 	
-	global Font = SS_CreateFont( "verdana.ttf", 12 );
+	global Font = SS_CreateFont( "fonts/lato-regular.ttf", 12 );
 	
 	_R.SS3D = SS3D_CreateRenderer( Window.renderingAPI, 0/* Window.rendererVersion */, Window.rendererPtr );
 	println( "SS3D: " $ _R.SS3D );

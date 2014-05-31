@@ -44,7 +44,7 @@ function initialize()
 	
 	global Surf = SS_CreateRenderTexture( Window.width, Window.height );
 	
-	global Font = @SS_CreateFont( "verdana.ttf", 12 ) || SS_CreateFont( "Verdana.ttf", 12 );
+	global Font = SS_CreateFont( "fonts/lato-regular.ttf", 12 );
 	
 	SS_InitDrawFunctions();
 	println( "drawing functions initialized at: " $ ftime() );
@@ -69,9 +69,11 @@ function initialize()
 		y = 32,
 		width = ( initialWidth - 64 ) * 4/7,
 		height = initialHeight - 64,
+		font = "fonts/armata-regular.ttf",
 	});
 	
-	global LogoTexture = SS_CreateTexture( "logo-red.png" );
+	global LogoTexture = SS_CreateTexture( "images/logo-red.png" );
+	global SunLineTexture = SS_CreateTexture( "images/sun-line.png" );
 	println( "initialization ended at: " $ ftime() );
 }
 
@@ -101,8 +103,21 @@ function update()
 	topMaxSize = max( Wslash, Hslash );
 	btmMaxSize = max( Wslash, H - Hslash );
 	
-	SS_DrawColor2VRect( 0, Hslash - topMaxSize, W, Hslash, 0.8, 0.8, 0.8, 1, 0.5, 0.5, 0.5, 1 );
-	SS_DrawColor2VRect( 0, Hslash, W, Hslash + btmMaxSize, 0.4, 0.4, 0.4, 1, 0.2, 0.2, 0.2, 1 );
+	C1 = color( 38/255, 85/255, 160/255, 1 ); // color( 0.8, 1 );
+	C2 = color( 140/255, 173/255, 206/255, 1 ); // color( 0.5, 1 );
+	C1m = C1 * color(0.2,1);
+	C2m = C2 * color(0.8,1);
+	
+	SS_DrawColor2VRect( 0, Hslash - topMaxSize, W, Hslash, C1.r, C1.g, C1.b, C1.a, C2.r, C2.g, C2.b, C2.a );
+	SS_DrawColor2VRect( 0, Hslash, W, Hslash + btmMaxSize, C2m.r, C2m.g, C2m.b, C2m.a, C1m.r, C1m.g, C1m.b, C1m.a );
+	
+	sunMaxSize = btmMaxSize * 0.5;
+	sunBtmMaxSize = btmMaxSize * 0.3;
+	sunColor = color( 0.9, 0.5, 0.1, 1 );
+	SS_SetBlending( SS_BLENDOP_ADD, SS_BLEND_SRCALPHA, SS_BLEND_ONE );
+	SS_Draw({ preset = "tile", position = vec2(0,Hslash - sunMaxSize), scale = vec2(W,sunMaxSize), texture = SunLineTexture, color = sunColor });
+	SS_Draw({ preset = "tile", position = vec2(0,Hslash + sunBtmMaxSize), scale = vec2(W,-sunBtmMaxSize), texture = SunLineTexture, color = sunColor * color(0.8,1) });
+	SS_SetBlending( SS_BLENDOP_ADD, SS_BLEND_SRCALPHA, SS_BLEND_INVSRCALPHA );
 	
 	tW = LogoTexture.width;
 	tH = LogoTexture.height;

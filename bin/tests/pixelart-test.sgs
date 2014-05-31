@@ -10,7 +10,7 @@ function initialize()
 	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
 	Window.setBufferScale( 128, 128, SS_POSMODE_FIT );
 	
-	global Texture = SS_CreateTexture( "ntset.png" );
+	global Texture = SS_CreateTexture( "images/ntset.png" );
 }
 
 function update()
