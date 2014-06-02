@@ -1204,7 +1204,6 @@ static int SS_SetSystemCursor( SGS_CTX )
 		return 1;
 	}
 	SDL_SetCursor( cursor );
-	SDL_FreeCursor( cursor );
 	sgs_PushBool( C, 1 );
 	return 1;
 }

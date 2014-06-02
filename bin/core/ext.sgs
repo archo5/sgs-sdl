@@ -359,97 +359,111 @@ global
 	DT_BOTTOM  = 0b01000000;
 
 
-function SS_CalcTextLayout( text_ucp, font, width, height )
+SS_CalcTextLayout_LineArray = [].reserve(3*32);
+function SS_CalcTextLayout( text, font, width, height ) use( SS_CalcTextLayout_LineArray )
 {
-	lines = [].reserve(6); // TODO optimize to static instance
+	lines = SS_CalcTextLayout_LineArray.clear();
 	lineheight = font.size;
 	
-	SP = string_charcode( " " );
-	NL = string_charcode( "\n" );
+	SP = 0x20; // SPACE
+	NL = 0x0A; // LINE FEED
 	
-	from = 0;
-	eol = 0;
-	curline = 0;
-	curword = 0;
-	numwords = 1;
-	pcpos = null;
-	for( i = 0; i < text_ucp.size; ++i )
+	line_start = 0;
+	end_of_last_word = 0;
+	cur_line_width = 0;
+	cur_word_width = 0;
+	num_words = 1;
+	
+	prev_chr_pos = null;
+	prev_chr_val = null;
+	
+	IT = string_utf8_iterator( text );
+	if( !iter_advance( IT ) )
+		return lines;
+	for(;;)
 	{
-		c = text_ucp[ i ];
-		prevchar = null;
-		if( pcpos != null )
-			prevchar = text_ucp[ pcpos ];
-		cw = font.getAdvance( prevchar, text_ucp[ i ] );
+		(chr_pos, chr_val) = iter_getdata( IT, true );
 		
-		if( c == NL )
+		char_width = font.getAdvance( prev_chr_val, chr_val );
+		
+		if( chr_val == NL )
 		{
-			curline += curword;
-			if( prevchar == SP )
-				numwords--;
+			cur_line_width += cur_word_width;
+			if( prev_chr_val == SP )
+				num_words--;
 			
-		//	lines.push({ from = from, to = i, width = curline, numwords = numwords });
-			lines.push( from, i, curline );
+		//	lines.push({ from = line_start, to = chr_pos, width = cur_line_width, numwords = num_words });
+			lines.push( line_start, chr_pos, cur_line_width );
 			
-			curline = 0;
-			curword = 0;
-			numwords = 1;
+			cur_line_width = 0;
+			cur_word_width = 0;
+			num_words = 1;
 			if( ( lines.size / 3 + 1 ) * lineheight > height )
 				break;
-			pcpos = null;
-			i++;
-			while( i < text_ucp.size && text_ucp[ i ] == SP )
-				i++;
-			from = i--;
+			
+			// goto next line after all subsequent spaces
+			prev_chr_pos = null;
+			prev_chr_val = null;
+			while( iter_advance( IT ) && iter_getdata( IT ) == SP );
+			line_start = iter_getdata( IT, true, false );
 			continue;
 		}
-		if( c == SP )
+		if( chr_val == SP )
 		{
-			curline += curword;
-			if( prevchar !== null && prevchar != SP )
-				numwords++;
-			eol = i;
-			curword = 0;
+			cur_line_width += cur_word_width;
+			if( prev_chr_val !== null && prev_chr_val != SP )
+				num_words++;
+			end_of_last_word = chr_pos;
+			cur_word_width = 0;
 		}
-		if( curline + curword + cw < width )
+		
+		if( cur_line_width + cur_word_width + char_width < width )
 		{
 			// still within line
-			curword += cw;
-			pcpos = i;
-			continue;
+			cur_word_width += char_width;
+			prev_chr_pos = chr_pos;
+			prev_chr_val = chr_val;
+			if( !iter_advance( IT ) )
+				break;
 		}
 		else
 		{
 			// over the limit
-			if( curline )
+			if( cur_line_width )
 			{
 				// if not first word, commit line and restart the word
-				curword = 0;
-				numwords--;
-				i = eol;
+				cur_word_width = 0;
+				num_words--;
+				chr_pos = end_of_last_word;
+				
+				// EMULATED SEEKING: TODO FIX
+				IT = string_utf8_iterator( text );
+				while( iter_advance( IT ) && iter_getdata( IT, true, false ) < end_of_last_word );
 			}
-			curline += curword;
+			cur_line_width += cur_word_width;
 			
-		//	lines.push({ from = from, to = i, width = curline, numwords = numwords });
-			lines.push( from, i, curline );
+		//	lines.push({ from = line_start, to = i, width = cur_line_width, numwords = num_words });
+			lines.push( line_start, chr_pos, cur_line_width );
 			
-			curline = 0;
-			curword = 0;
-			numwords = 1;
+			cur_line_width = 0;
+			cur_word_width = 0;
+			num_words = 1;
 			if( ( lines.size / 3 + 1 ) * lineheight > height )
 				break;
-			pcpos = null;
-			while( i < text_ucp.size && text_ucp[ i ] == SP )
-				i++;
-			from = i--;
-			continue;
+			
+			// goto next line after all subsequent spaces
+			prev_chr_pos = null;
+			prev_chr_val = null;
+			while( iter_advance( IT ) && iter_getdata( IT ) == SP );
+			line_start = iter_getdata( IT, true, false );
 		}
 	}
 	
-	curline += curword;
-	if( curline )
+	cur_line_width += cur_word_width;
+	if( cur_line_width )
 	{
-	//	lines.push({ from = from, to = text_ucp.size, width = curline, numwords = numwords });
-		lines.push( from, text_ucp.size, curline );
+	//	lines.push({ from = line_start, to = text_ucp.size, width = cur_line_width, numwords = num_words });
+		lines.push( line_start, text.length, cur_line_width );
 	}
 	
 	return lines;
@@ -459,19 +473,14 @@ function SS_DrawTextRect( text, font, color, placement, left, right, top, bottom
 {
 	// validation
 	if( !SS_IsFont( font ) )
-	{
-		WARNING( "draw_text(): invalid value for 'font'" );
-		return false;
-	}
+		return WARNING( "invalid value for 'font'" );
+	
 	hfc = !!( placement & DT_LEFT ) + !!( placement & DT_CENTER )
 		+ !!( placement & DT_RIGHT ) + !!( placement & DT_JUSTIFY );
 	vfc = !!( placement & DT_TOP ) + !!( placement & DT_VCENTER )
 		+ !!( placement & DT_BOTTOM );
 	if( hfc != 1 || vfc != 1 )
-	{
-		WARNING( "draw_text(): invalid placement flag combo" );
-		return false;
-	}
+		return WARNING( "invalid placement flag combo" );
 	
 	// sizing
 	width = right - left;
@@ -481,9 +490,7 @@ function SS_DrawTextRect( text, font, color, placement, left, right, top, bottom
 	if( height < lineheight )
 		return true;
 	
-	text_ucp = string_utf8_decode( text );
-	
-	lines = SS_CalcTextLayout( text_ucp, font, width, height );
+	lines = SS_CalcTextLayout( text, font, width, height );
 	
 	vspace = height - lines.size / 3 * lineheight;
 	y = top;
@@ -498,11 +505,9 @@ function SS_DrawTextRect( text, font, color, placement, left, right, top, bottom
 		if( placement & DT_CENTER ) x += hspace / 2;
 		else if( placement & DT_RIGHT ) x += hspace;
 		
-		ucppart = text_ucp.part( lines[clo], lines[clo+1] - lines[clo] );
-	//	ucppart = text_ucp.part( line.from, line.to - line.from );
-		utf8part = string_utf8_encode( ucppart );
+		textpart = string_part( text, lines[clo], lines[clo+1] - lines[clo] );
 		
-		SS_DrawTextLine_VN( utf8part, font, x, y, color );
+		SS_DrawTextLine_VN( textpart, font, x, y, color );
 		y += lineheight;
 	}
 }
