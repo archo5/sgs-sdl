@@ -145,7 +145,7 @@ sgs_ObjInterface SS_Texture_iface[1] =
 	- creates a texture
 	>> usage examples
 	create_texture( 'blurp.png', 'hrepeat,vrepeat,nolerp,mipmaps' );
-	craete_texture( some_image, 'bilerp' ); // image object
+	create_texture( some_image, 'bilerp' ); // image object
 	create_texture( 'wall.png' ); // clamped & filtered texture
 	>> flags
 	- hrepeat - horizontal (X) repeating
@@ -274,14 +274,12 @@ int ss_ParseTexture( SGS_CTX, int item, SS_Texture** T )
 	return 1;
 }
 
-int ss_ApplyTexture( sgs_Variable* texvar, float* tox, float* toy )
+int ss_ApplyTexture( sgs_Variable* texvar )
 {
 	SS_Texture* T = NULL;
 	
 	sgs_BreakIf( !GCurRI || !GCurRr );
 	
-	if( tox ) *tox = 0;
-	if( toy ) *toy = 0;
 	if( texvar && texvar->type != SGS_VT_NULL )
 	{
 		if( texvar->type != SGS_VT_OBJECT || texvar->data.O->iface != SS_Texture_iface )
@@ -289,11 +287,6 @@ int ss_ApplyTexture( sgs_Variable* texvar, float* tox, float* toy )
 		T = (SS_Texture*) texvar->data.O->data;
 		if( T->renderer != GCurRr )
 			return 0;
-		if( GCurRI->flags & SS_RI_HALFPIXELOFFSET && !( T->flags & SS_TEXTURE_NOLERP ) )
-		{
-			if( tox ) *tox = 0.5f / T->width;
-			if( toy ) *toy = 0.5f / T->height;
-		}
 	}
 	return GCurRI->apply_texture( GCurRr, T );
 }
@@ -823,7 +816,7 @@ static int SS_Draw( SGS_CTX )
 	sgs_SizeVal Bsize;
 	SS_BasicVertex tmp = { { 0, 0, 0 }, 0xffffffff, { 0, 0 }, {0,0} };
 	
-	float *tf, *tfend, *cc, *ccend, *vp, *vpstart, *vpend, *vt, *vtstart, *vtend, *vc, *vcstart, *vcend, tox = 0, toy = 0;
+	float *tf, *tfend, *cc, *ccend, *vp, *vpstart, *vpend, *vt, *vtstart, *vtend, *vc, *vcstart, *vcend;
 	int mode = SS_PT_TRIANGLES, ret = 1;
 	
 	floatbuf vert = NFB, vcol = NFB, vtex = NFB, xform = NFB, icol = NFB;
@@ -850,7 +843,7 @@ static int SS_Draw( SGS_CTX )
 	if( !_draw_load_inst( C, &xform, &icol ) )
 		goto cleanup;
 	
-	if( !ss_ApplyTexture( mi[0].var, &tox, &toy ) )
+	if( !ss_ApplyTexture( mi[0].var ) )
 		sgs_Msg( C, SGS_WARNING, "could not use texture" );
 	
 	Bsize = vert.size / 2 * sizeof(tmp);
@@ -885,8 +878,8 @@ static int SS_Draw( SGS_CTX )
 		{
 			if( vt < vtend )
 			{
-				tmp.tex[0] = vt[0] + tox;
-				tmp.tex[1] = vt[1] + toy;
+				tmp.tex[0] = vt[0];
+				tmp.tex[1] = vt[1];
 				vt += 2;
 			}
 			if( vc < vcend )
@@ -1082,7 +1075,7 @@ static int SS_DrawPacked( SGS_CTX )
 	}
 	
 	sgs_PeekStackItem( C, 0, &texvar );
-	if( !ss_ApplyTexture( &texvar, NULL, NULL ) )
+	if( !ss_ApplyTexture( &texvar ) )
 		sgs_Msg( C, SGS_WARNING, "could not use texture" );
 	
 	if( F->renderer != GCurRr )
@@ -1136,6 +1129,25 @@ static int ss_renderbuf_reserve( SGS_CTX )
 		return 0;
 	
 	membuf_reserve( &rb->B, C, numbytes );
+	
+	SGS_RETURN_THIS( C );
+}
+
+/* .copy( RB from, int start = 0[, int count ]) */
+static int ss_renderbuf_copy( SGS_CTX )
+{
+	sgs_SizeVal from = 0, numbytes = -1;
+	ss_renderbuf* other = NULL;
+	
+	RB_IHDR( copy );
+	if( !sgs_LoadArgs( C, "o|ll", renderbuf_iface, &other, &from, &numbytes ) )
+		return 0;
+	
+	if( numbytes < 0 )
+		numbytes = other->B.size - from;
+	if( from < 0 || numbytes + from > other->B.size )
+		_WARN( "copy region out of bounds" );
+	membuf_appbuf( &rb->B, C, other->B.ptr + from, numbytes );
 	
 	SGS_RETURN_THIS( C );
 }
@@ -1229,6 +1241,42 @@ static int ss_renderbuf_cf2b( SGS_CTX )
 	SGS_RETURN_THIS( C );
 }
 
+/* .c4b( real[, real[, real[, real ]]]) - clamped RGBA float color to bytes (R/B swapped for D3D9 automatically) */
+static int ss_renderbuf_c4b( SGS_CTX )
+{
+	int argc, i;
+	uint8_t b[4];
+	
+	RB_IHDR( c4b );
+	SCRFN_NEEDS_RENDER_CONTEXT;
+	argc = sgs_StackSize( C );
+	if( argc < 1 || argc > 4 )
+		_WARN( "expected 1-4 real values" )
+	
+	for( i = 0; i < argc; ++i )
+	{
+		float f = sgs_ToReal( C, i );
+		if( f < 0 ) f = 0;
+		if( f > 1 ) f = 1;
+		b[ i ] = f * 255;
+	}
+	
+	if( argc == 1 ){ b[1] = b[2] = b[3] = b[0]; }
+	else if( argc == 2 ){ b[3] = b[1]; b[1] = b[2] = b[0]; }
+	else if( argc == 3 ){ b[3] = 255; }
+	
+	if( GCurRI->flags & SS_RI_COLOR_BGRA )
+	{
+		uint8_t tmp = b[0];
+		b[0] = b[2];
+		b[2] = tmp;
+	}
+	
+	membuf_appbuf( &rb->B, C, b, sizeof(b) );
+	
+	SGS_RETURN_THIS( C );
+}
+
 /* .pad( int ) - padding */
 static int ss_renderbuf_pad( SGS_CTX )
 {
@@ -1239,9 +1287,107 @@ static int ss_renderbuf_pad( SGS_CTX )
 		return 0;
 	
 	if( rb->B.size + numbytes < 0 )
-		return sgs_Msg( C, SGS_WARNING, "padding so big that it's negative (overflow)" );
+		_WARN( "padding so big that it's negative (overflow)" );
 	
 	membuf_resize( &rb->B, C, rb->B.size + numbytes );
+	
+	SGS_RETURN_THIS( C );
+}
+
+/* .interlace( int endbytes, int stride, int offset = 0[, int count = (size - endbytes)/stride ]) */
+static int ss_renderbuf_interlace( SGS_CTX )
+{
+	sgs_SizeVal i, endbytes, stride, offset = 0, count = -1, origsize, newsize, datasize, bof, bsz;
+	
+	RB_IHDR( interlace );
+	if( !sgs_LoadArgs( C, "ll|ll", &endbytes, &stride, &offset, &count ) )
+		return 0;
+	
+	if( endbytes <= 0 || endbytes > rb->B.size )
+		_WARN( "end byte count must be greater than 0 and less than or equal to current byte count" )
+	if( offset < 0 || offset >= rb->B.size - endbytes )
+		_WARN( "offset out of bounds" )
+	if( stride < endbytes )
+		_WARN( "stride cannot be smaller than number of bytes to be interlacted" )
+	if( count < 0 )
+	{
+		if( stride == 0 )
+			_WARN( "cannot autodetect count with stride = 0" )
+		count = ( rb->B.size - endbytes ) / stride;
+	}
+	
+	/* resize buffer to fit new size */
+	origsize = rb->B.size;
+	datasize = origsize - endbytes;
+	newsize = origsize + endbytes * ( count - 1 );
+	if( newsize < 0 ) /* overflow */
+		_WARN( "operation causes overflow" )
+	membuf_resize( &rb->B, C, newsize );
+	
+	if( count > 0 )
+	{
+		/* move to-be-interlaced fragment to first position */
+		char buf[ 128 ];
+		for( bof = 0; bof < endbytes; bof += 128 )
+		{
+			bsz = endbytes - bof;
+			if( bsz > 128 )
+				bsz = 128;
+			memcpy( buf, rb->B.ptr + datasize + bof, bsz ); /* copy TBI fragment to buffer */
+			memmove( rb->B.ptr + offset + bof + bsz, rb->B.ptr + offset + bof, datasize - offset ); /* push middle data */
+			memcpy( rb->B.ptr + offset + bof, buf, bsz ); /* copy TBI fragment back to new pos. */
+		}
+		
+		if( count > 1 )
+		{
+			/* create holes */
+			/* buffer contents: [BEFORE=offset][TBI 0=endbytes][MISC=stride*count][MISC=datasize-offset-stride*count][FREE=endbytes*(count-1)] */
+			/* after 'holing':  [BEFORE=offset][TBI 0=endbytes]([MISC=stride][HOLE=endbytes]){count-1}[MISC=datasize-offset-stride*(count-1)] */
+			/* end bit will differ in size */
+			sgs_SizeVal endhole = datasize - offset - stride * ( count - 1 );
+			if( endhole )
+				memmove( rb->B.ptr + offset + ( stride + endbytes ) * ( count - 1 ), rb->B.ptr + offset + endbytes + stride * ( count - 1 ), endhole );
+			for( i = count - 2; i >= 1; --i )
+				memmove( rb->B.ptr + offset + endbytes + ( stride + endbytes ) * i, rb->B.ptr + offset + endbytes + stride * i, stride );
+			
+			/* duplicate TBI at first position */
+			for( i = 1; i < count; ++i )
+				memcpy( rb->B.ptr + offset + ( stride + endbytes ) * i, rb->B.ptr + offset, endbytes );
+		}
+	}
+	
+	SGS_RETURN_THIS( C );
+}
+
+/* .quadsToTris( int vertexSize ) */
+static int ss_renderbuf_quadsToTris( SGS_CTX )
+{
+	sgs_SizeVal vertexSize, count, i;
+	
+	RB_IHDR( quadsToTris );
+	if( !sgs_LoadArgs( C, "l", &vertexSize ) )
+		return 0;
+	
+	if( vertexSize <= 0 )
+		_WARN( "vertex size must be positive" )
+	if( rb->B.size % ( vertexSize * 4 ) != 0 )
+		_WARN( "renderbuffer size must be a multiple of specified vertex size x4" )
+	
+	count = rb->B.size / vertexSize / 4;
+	membuf_resize( &rb->B, C, count * 6 * vertexSize );
+	for( i = count - 1; i >= 0; --i )
+	{
+		char* oldverts = rb->B.ptr + vertexSize * 4 * i;
+		char* newverts = rb->B.ptr + vertexSize * 6 * i;
+		// old v0 to new v5
+		memcpy( newverts + vertexSize * 5, oldverts, vertexSize );
+		// old v3 to new v4
+		memcpy( newverts + vertexSize * 4, oldverts + vertexSize * 3, vertexSize );
+		// old v2 to new v3
+		memcpy( newverts + vertexSize * 3, oldverts + vertexSize * 2, vertexSize );
+		// old v[0,2] to new v[0,2]
+		memmove( newverts, oldverts, vertexSize * 3 );
+	}
 	
 	SGS_RETURN_THIS( C );
 }
@@ -1270,7 +1416,7 @@ static int ss_renderbuf_draw( SGS_CTX )
 	if( F->size * (start+count) > rb->B.size )
 		_WARN( "not enough data to draw with given start/count values" )
 	
-	if( !ss_ApplyTexture( &texvar, NULL, NULL ) )
+	if( !ss_ApplyTexture( &texvar ) )
 		return sgs_Msg( C, SGS_WARNING, "could not use texture" );
 	
 	if( F->renderer != GCurRr )
@@ -1282,32 +1428,34 @@ static int ss_renderbuf_draw( SGS_CTX )
 }
 
 
-#define RBHDR ss_renderbuf* rb = (ss_renderbuf*) data->data
+#define RBHDR ss_renderbuf* rb = (ss_renderbuf*) obj->data
 
-static int ss_renderbuf_destruct( SGS_CTX, sgs_VarObj* data )
+static int ss_renderbuf_destruct( SGS_CTX, sgs_VarObj* obj )
 {
 	RBHDR;
 	membuf_destroy( &rb->B, C );
 	return SGS_SUCCESS;
 }
 
-static int ss_renderbuf_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isprop )
+static int ss_renderbuf_getindex( SGS_ARGS_GETINDEXFUNC )
 {
-	char* str;
-	UNUSED( isprop );
-	if( sgs_ParseStringP( C, key, &str, NULL ) )
-	{
-		if( !strcmp( str, "begin" ) ){ sgs_PushCFunction( C, ss_renderbuf_begin ); return SGS_SUCCESS; }
-		if( !strcmp( str, "reserve" ) ){ sgs_PushCFunction( C, ss_renderbuf_reserve ); return SGS_SUCCESS; }
-		if( !strcmp( str, "f" ) ){ sgs_PushCFunction( C, ss_renderbuf_f ); return SGS_SUCCESS; }
-		if( !strcmp( str, "b" ) ){ sgs_PushCFunction( C, ss_renderbuf_b ); return SGS_SUCCESS; }
-		if( !strcmp( str, "dw" ) ){ sgs_PushCFunction( C, ss_renderbuf_dw ); return SGS_SUCCESS; }
-		if( !strcmp( str, "cf2b" ) ){ sgs_PushCFunction( C, ss_renderbuf_cf2b ); return SGS_SUCCESS; }
-		if( !strcmp( str, "pad" ) ){ sgs_PushCFunction( C, ss_renderbuf_pad ); return SGS_SUCCESS; }
-		if( !strcmp( str, "draw" ) ){ sgs_PushCFunction( C, ss_renderbuf_draw ); return SGS_SUCCESS; }
-		return SGS_ENOTFND;
-	}
-	return SGS_EINVAL;
+	RBHDR;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "begin" )   SGS_RETURN_CFUNC( ss_renderbuf_begin )
+		SGS_CASE( "reserve" ) SGS_RETURN_CFUNC( ss_renderbuf_reserve )
+		SGS_CASE( "copy" )    SGS_RETURN_CFUNC( ss_renderbuf_copy )
+		SGS_CASE( "f" )       SGS_RETURN_CFUNC( ss_renderbuf_f )
+		SGS_CASE( "b" )       SGS_RETURN_CFUNC( ss_renderbuf_b )
+		SGS_CASE( "dw" )      SGS_RETURN_CFUNC( ss_renderbuf_dw )
+		SGS_CASE( "cf2b" )    SGS_RETURN_CFUNC( ss_renderbuf_cf2b )
+		SGS_CASE( "c4b" )     SGS_RETURN_CFUNC( ss_renderbuf_c4b )
+		SGS_CASE( "pad" )     SGS_RETURN_CFUNC( ss_renderbuf_pad )
+		SGS_CASE( "interlace" ) SGS_RETURN_CFUNC( ss_renderbuf_interlace )
+		SGS_CASE( "quadsToTris" ) SGS_RETURN_CFUNC( ss_renderbuf_quadsToTris )
+		SGS_CASE( "draw" )    SGS_RETURN_CFUNC( ss_renderbuf_draw )
+		
+		SGS_CASE( "size" )    SGS_RETURN_INT( rb->B.size )
+	SGS_END_INDEXFUNC;
 }
 
 static sgs_ObjInterface renderbuf_iface[1] =
@@ -1334,7 +1482,7 @@ static int SS_CreateRenderBuffer( SGS_CTX )
 /*	-------------------  */
 
 
-static inline void Matrix4x4MultiplyBy4x4( float src1[4][4], float src2[4][4], float dest[4][4] )
+void SS_Mat4Multiply( float src1[4][4], float src2[4][4], float dest[4][4] )
 {
 	dest[0][0] = src1[0][0] * src2[0][0] + src1[0][1] * src2[1][0] + src1[0][2] * src2[2][0] + src1[0][3] * src2[3][0]; 
 	dest[0][1] = src1[0][0] * src2[0][1] + src1[0][1] * src2[1][1] + src1[0][2] * src2[2][1] + src1[0][3] * src2[3][1]; 
@@ -1376,7 +1524,7 @@ static int SS_MatrixPush( SGS_CTX )
 	if( set )
 		memcpy( omtx, mtx, sizeof(float)*16 );
 	else
-		Matrix4x4MultiplyBy4x4( (float (*)[4]) mtx, (float (*)[4]) mtxin, (float (*)[4]) omtx );
+		SS_Mat4Multiply( (float (*)[4]) mtx, (float (*)[4]) mtxin, (float (*)[4]) omtx );
 	
 	GCurRI->set_matrix( GCurRr, SS_RMAT_WORLD, omtx );
 	
@@ -1409,7 +1557,7 @@ static int SS_SetCamera( SGS_CTX )
 {
 	float mtx[ 16 ] = {0};
 	float mtx2[ 16 ] = {0};
-	int ssz = sgs_StackSize( C );
+	int i, ssz = sgs_StackSize( C );
 	
 	SGSFN( "SS_SetCamera" );
 	SCRFN_NEEDS_RENDER_CONTEXT;
@@ -1419,8 +1567,14 @@ static int SS_SetCamera( SGS_CTX )
 		( ssz >= 2 && _parse_floatvec( C, 1, mtx2, 16 ) ) )
 		_WARN( "expected an array of 16 'real' values" )
 	
+	if( ssz < 2 )
+	{
+		memcpy( mtx2, mtx, sizeof(mtx) );
+		for( i = 0; i < 16; ++i )
+			mtx[i] = i / 4 == i % 4 ? 1 : 0;
+	}
+	
 	GCurRI->set_matrix( GCurRr, SS_RMAT_VIEW, mtx );
-	if( ssz < 2 ){ mtx2[0] = 1; mtx2[5] = 1; mtx2[10] = 1; mtx2[15] = 1; }
 	GCurRI->set_matrix( GCurRr, SS_RMAT_PROJ, mtx2 );
 	
 	return 0;
@@ -1776,7 +1930,6 @@ static void ss_int_drawtext_line( ss_font* font, SGS_CTX, char* str,
 		
 		if( G->hastex )
 		{
-			float tox, toy;
 			int W, H, mx, my;
 			
 			W = G->tex.width;
@@ -1786,24 +1939,14 @@ static void ss_int_drawtext_line( ss_font* font, SGS_CTX, char* str,
 			my = y + font->size - G->bmoffy;
 			
 			GCurRI->apply_texture( GCurRr, &G->tex );
-			if( GCurRI->flags & SS_RI_HALFPIXELOFFSET )
-			{
-				tox = 0.5f / W;
-				toy = 0.5f / H;
-			}
-			else
-			{
-				tox = 0;
-				toy = 0;
-			}
 			
 			{
 				SS_BasicVertex vdata[4] =
 				{
-					{ { mx, my, 0 },     color_u32, { tox, toy }, {0,0} },
-					{ { mx, my+H, 0 },   color_u32, { tox, 1+toy }, {0,0} },
-					{ { mx+W, my+H, 0 }, color_u32, { 1+tox, 1+toy }, {0,0} },
-					{ { mx+W, my, 0 },   color_u32, { 1+tox, toy }, {0,0} }
+					{ { mx, my, 0 },     color_u32, { 0, 0 }, {0,0} },
+					{ { mx, my+H, 0 },   color_u32, { 0, 1 }, {0,0} },
+					{ { mx+W, my+H, 0 }, color_u32, { 1, 1 }, {0,0} },
+					{ { mx+W, my, 0 },   color_u32, { 1, 0 }, {0,0} }
 				};
 				GCurRI->draw_basic_vertices( GCurRr, vdata, 4, SS_PT_TRIANGLE_FAN );
 			}

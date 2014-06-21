@@ -212,6 +212,9 @@ function update()
 	SS_DrawTexRect( PX, PY+DY, PX+SZ, PY+DY+SZ, g_edtex_nl );
 	SS_Draw({ preset = "tile", texture = g_edtex_nl, position = vec2(PX+DX,PY+DY), scale = vec2(SZ,SZ) });
 	
+	SS_DrawTexColorRect( PX, PY+DY*2, PX+SZ, PY+DY*2+SZ, g_edtex, 0.1, 0.3, 1, 1 );
+	SS_DrawColorPolyOutlined( [ vec2(300,300), vec2(330,330), vec2(300,360) ], 0.9, 0.3, 0, 1, 0.3, 0.9, 0, 1 );
+	
 	SS_DrawTexRect( 32, 32, 64, 64, MIT );
 	
 	SS_DrawColorCircle( 128, 64, 32, 7, 0.7, 0.5, 0.3, 1 );
@@ -240,6 +243,8 @@ function update()
 		SS_DrawTextLine_VN( string_replace( fn, "SS_DrawTextLine", "DTL" ), Font, x, y + 1 + BigFont.size, color(0.4, 0.8, 0.6) );
 		x += adv;
 	}
+	
+	SS_DrawButton( g_edtex, color(1), 40, 340, 80, 380, 4 );
 	
 	ftm = ( ftime() - lasttime ) * 1000.0;
 	HG.push( ftm );

@@ -24,24 +24,23 @@ function SS_InitDrawFunctions()
 
 function SS_DrawColorRect( x1, y1, x2, y2, r, g, b, a )
 {
-	if( sys_rctx_flip_colors ){ tmp = r; r = b; b = tmp; }
 	g_RB.begin()
-		.f( x1, y1 ).cf2b( r, g, b, a )
-		.f( x2, y1 ).cf2b( r, g, b, a )
-		.f( x2, y2 ).cf2b( r, g, b, a )
-		.f( x1, y2 ).cf2b( r, g, b, a )
+		.f( x1, y1 )
+		.f( x2, y1 )
+		.f( x2, y2 )
+		.f( x1, y2 )
+		.c4b( r, g, b, a ).interlace( 4, 8, 8 )
 		.draw( null, g_VD_P2CC4, 0, 4, SS_PT_TRIANGLE_FAN );
 }
 function SS_DrawColorRect_WH( x, y, w, h, r, g, b, a ){ SS_DrawColorRect( x, y, x+w, y+h, r, g, b, a ); }
 
 function SS_DrawColor2VRect( x1, y1, x2, y2, r1, g1, b1, a1, r2, g2, b2, a2 )
 {
-	if( sys_rctx_flip_colors ){ tmp = r1; r1 = b1; b1 = tmp; tmp = r2; r2 = b2; b2 = tmp; }
 	g_RB.begin()
-		.f( x1, y1 ).cf2b( r1, g1, b1, a1 )
-		.f( x2, y1 ).cf2b( r1, g1, b1, a1 )
-		.f( x2, y2 ).cf2b( r2, g2, b2, a2 )
-		.f( x1, y2 ).cf2b( r2, g2, b2, a2 )
+		.f( x1, y1 ).c4b( r1, g1, b1, a1 )
+		.f( x2, y1 ).c4b( r1, g1, b1, a1 )
+		.f( x2, y2 ).c4b( r2, g2, b2, a2 )
+		.f( x1, y2 ).c4b( r2, g2, b2, a2 )
 		.draw( null, g_VD_P2CC4, 0, 4, SS_PT_TRIANGLE_FAN );
 }
 function SS_DrawColor2VRect_WH( x, y, w, h, r1, g1, b1, a1, r2, g2, b2, a2 ){ SS_DrawColor2VRect( x, y, x+w, y+h, r1, g1, b1, a1, r2, g2, b2, a2 ); }
@@ -80,12 +79,12 @@ function SS_DrawTexBox_Rotated( x, y, w, h, angle, tex )
 
 function SS_DrawTexColorRect( x1, y1, x2, y2, tex, r, g, b, a )
 {
-	if( sys_rctx_flip_colors ){ tmp = r; r = b; b = tmp; }
 	g_RB.begin()
-		.f( x1, y1, 0, 0 ).cf2b( r, g, b, a )
-		.f( x2, y1, 1, 0 ).cf2b( r, g, b, a )
-		.f( x2, y2, 1, 1 ).cf2b( r, g, b, a )
-		.f( x1, y2, 0, 1 ).cf2b( r, g, b, a )
+		.f( x1, y1, 0, 0 )
+		.f( x2, y1, 1, 0 )
+		.f( x2, y2, 1, 1 )
+		.f( x1, y2, 0, 1 )
+		.c4b( r, g, b, a ).interlace( 4, 16, 16 )
 		.draw( tex, g_VD_P2T2CC4, 0, 4, SS_PT_TRIANGLE_FAN );
 }
 function SS_DrawTexColorRect_WH( x, y, w, h, tex, r, g, b, a ){ SS_DrawTexColorRect( x, y, x+w, y+h, tex, r, g, b, a ); }
@@ -103,13 +102,12 @@ function SS_DrawTexColorBox_Rotated( x, y, w, h, angle, tex, r, g, b, a )
 	ext2x = ( -c -s ) * w;
 	ext2y = ( c - s ) * h;
 	
-	if( sys_rctx_flip_colors ){ tmp = r; r = b; b = tmp; }
-	
 	g_RB.begin()
-		.f( x - ext1x, y - ext1y, 0, 1 ).cf2b( r, g, b, a ) // pos - ext1
-		.f( x - ext2x, y - ext2y, 1, 1 ).cf2b( r, g, b, a ) // pos - ext2
-		.f( x + ext1x, y + ext1y, 1, 0 ).cf2b( r, g, b, a ) // pos + ext1
-		.f( x + ext2x, y + ext2y, 0, 0 ).cf2b( r, g, b, a ) // pos + ext2
+		.f( x - ext1x, y - ext1y, 0, 1 ) // pos - ext1
+		.f( x - ext2x, y - ext2y, 1, 1 ) // pos - ext2
+		.f( x + ext1x, y + ext1y, 1, 0 ) // pos + ext1
+		.f( x + ext2x, y + ext2y, 0, 0 ) // pos + ext2
+		.c4b( r, g, b, a ).interlace( 4, 8, 8 )
 		.draw( tex, g_VD_P2T2CC4, 0, 4, SS_PT_TRIANGLE_FAN );
 }
 
@@ -118,28 +116,26 @@ function SS_DrawColorPolyOutlined( vertices, r, g, b, a, or, og, ob, oa )
 	if( vertices.size < 3 )
 		return;
 	
-	if( sys_rctx_flip_colors ){ tmp = r; r = b; b = tmp; }
-	if( sys_rctx_flip_colors ){ tmp = or; or = ob; ob = tmp; }
-	
 	g_RB.begin();
 	foreach( v : vertices )
-		g_RB.f( v.x, v.y ).cf2b( r, g, b, a );
+		g_RB.f( v.x, v.y );
+	g_RB.c4b( r, g, b, a ).interlace( 4, 8, 8 );
 	g_RB.draw( null, g_VD_P2CC4, 0, vertices.size, SS_PT_TRIANGLE_FAN );
 	
 	g_RB.begin();
 	foreach( v : vertices )
-		g_RB.f( v.x, v.y ).cf2b( or, og, ob, oa );
+		g_RB.f( v.x, v.y );
 	v = vertices.first;
-	g_RB.f( v.x, v.y ).cf2b( or, og, ob, oa );
+	g_RB.f( v.x, v.y );
+	g_RB.c4b( or, og, ob, oa ).interlace( 4, 8, 8 );
 	g_RB.draw( null, g_VD_P2CC4, 0, vertices.size + 1, SS_PT_LINE_STRIP );
 }
 
 function SS_DrawColorLine( x1, y1, x2, y2, r, g, b, a )
 {
-	if( sys_rctx_flip_colors ){ tmp = r; r = b; b = tmp; }
 	g_RB.begin()
-		.f( x1, y1 ).cf2b( r, g, b, a )
-		.f( x2, y2 ).cf2b( r, g, b, a )
+		.f( x1, y1 ).c4b( r, g, b, a )
+		.f( x2, y2 ).c4b( r, g, b, a )
 		.draw( null, g_VD_P2CC4, 0, 2, SS_PT_LINES );
 }
 
@@ -150,19 +146,89 @@ function SS_DrawColorCircle( x, y, radius, numsides, r, g, b, a )
 	if( numsides < 3 )
 		return;
 	
-	if( sys_rctx_flip_colors ){ tmp = r; r = b; b = tmp; }
 	g_RB.begin();
 	
 	ang = M_PI;
 	ad = M_PI * 2 / numsides;
-	for( i = 0; i <= numsides; ++i )
+	for( i = 0; i < numsides; ++i )
 	{
-		g_RB.f( sin( ang ) * radius + x, cos( ang ) * radius + y ).cf2b( r, g, b, a );
+		g_RB.f( sin( ang ) * radius + x, cos( ang ) * radius + y );
 		ang += ad;
 	}
-	g_RB.draw( null, g_VD_P2CC4, 0, numsides + 1, SS_PT_TRIANGLE_FAN );
+	
+	g_RB.c4b( r, g, b, a ).interlace( 4, 8, 8 );
+	g_RB.draw( null, g_VD_P2CC4, 0, numsides, SS_PT_TRIANGLE_FAN );
 }
 
+function SS_DrawButton( tex, color, x0, y0, x1, y1, off, texoff )
+{
+	off ||= 8;
+	texoff ||= off;
+	
+	xA = x0 + off;
+	xB = x1 - off;
+	yA = y0 + off;
+	yB = y1 - off;
+	
+	tox = texoff / tex.width;
+	toy = texoff / tex.height;
+	itx = 1 - tox;
+	ity = 1 - toy;
+	
+	g_RB.begin();
+	
+	g_RB.f( x0, y0, 0, 0,  xA, y0, tox, 0,  xA, yA, tox, toy,  x0, yA, 0, toy )
+		.f( xA, y0, tox, 0,  xB, y0, itx, 0,  xB, yA, itx, toy,  xA, yA, tox, toy )
+		.f( xB, y0, itx, 0,  x1, y0, 1, 0,  x1, yA, 1, toy,  xB, yA, itx, toy );
+	g_RB.f( x0, yA, 0, toy,  xA, yA, tox, toy,  xA, yB, tox, ity,  x0, yB, 0, ity )
+		.f( xA, yA, tox, toy,  xB, yA, itx, toy,  xB, yB, itx, ity,  xA, yB, tox, ity )
+		.f( xB, yA, itx, toy,  x1, yA, 1, toy,  x1, yB, 1, ity,  xB, yB, itx, ity );
+	g_RB.f( x0, yB, 0, ity,  xA, yB, tox, ity,  xA, y1, tox, 1,  x0, y1, 0, 1 )
+		.f( xA, yB, tox, ity,  xB, yB, itx, ity,  xB, y1, itx, 1,  xA, y1, tox, 1 )
+		.f( xB, yB, itx, ity,  x1, yB, 1, ity,  x1, y1, 1, 1,  xB, y1, itx, 1 );
+	
+	g_RB.c4b( color.r, color.g, color.b, color.a ).interlace( 4, 16, 16 );
+	g_RB.quadsToTris( 20 );
+	g_RB.draw( tex, g_VD_P2T2CC4, 0, 54, SS_PT_TRIANGLES );
+}
+
+function SS_DrawFitted( tex, left, right, top, bottom, xq, yq )
+{
+	xq = 1;
+	yq = 1;
+
+	iw = tex.width;
+	ih = tex.height;
+	rw = right - left;
+	rh = bottom - top;
+
+	if( iw > rw || ih > rh )
+	{
+		ia = iw / ih;
+		ra = rw / rh;
+		if( ia > ra ) // width-limited
+		{
+			ih *= rw / iw;
+			iw = rw;
+		}
+		else // height-limited
+		{
+			iw *= rh / ih;
+			ih = rh;
+		}
+	}
+	SS_Draw({
+		preset = "tile", texture = tex,
+		position = [ ( rw - iw ) * xq + left, ( rh - ih ) * yq + top ],
+		scale = [ iw, ih ],
+	});
+}
+
+
+
+//
+// MATRICES
+//
 
 function SS_GetCamera2DMatrix( x, y, size, aspect, angle )
 {
@@ -262,87 +328,6 @@ function SS_GetCamera3D( pos, dir, up, angle, aspect, znear, zfar )
 	];
 }
 
-function SS_DrawFitted( tex, left, right, top, bottom, placement )
-{
-	xq = 1;
-	yq = 1;
-	if( placement & DT_LEFT ) xq = 0;
-	if( placement & DT_RIGHT ) xq = 2;
-	if( placement & DT_TOP ) yq = 0;
-	if( placement & DT_BOTTOM ) yq = 2;
-
-	iw = tex.width;
-	ih = tex.height;
-	rw = right - left;
-	rh = bottom - top;
-
-	if( iw > rw || ih > rh )
-	{
-		ia = iw / ih;
-		ra = rw / rh;
-		if( ia > ra ) // width-limited
-		{
-			ih *= rw / iw;
-			iw = rw;
-		}
-		else // height-limited
-		{
-			iw *= rh / ih;
-			ih = rh;
-		}
-	}
-	SS_Draw({
-		preset = "tile", texture = tex,
-		position = [ ( rw - iw ) / 2 * xq + left, ( rh - ih ) / 2 * yq + top ],
-		scale = [ iw, ih ],
-	});
-}
-
-function SS_DrawButton( tex, left, right, top, bottom, off, texoff )
-{
-	off ||= 8;
-	texoff ||= off;
-
-	tox = texoff / tex.width;
-	toy = texoff / tex.height;
-	x1 = left + off;
-	x2 = right - off;
-	y1 = top + off;
-	y2 = bottom - off;
-
-	V =
-	[
-		[left, top], [x1, top], [x1, y1], [left, y1],
-		[x1, top], [x2, top], [x2, y1], [x1, y1],
-		[x2, top], [right, top], [right, y1], [x2, y1],
-
-		[left, y1], [x1, y1], [x1, y2], [left, y2],
-		[x1, y1], [x2, y1], [x2, y2], [x1, y2],
-		[x2, y1], [right, y1], [right, y2], [x2, y2],
-
-		[left, y2], [x1, y2], [x1, bottom], [left, bottom],
-		[x1, y2], [x2, y2], [x2, bottom], [x1, bottom],
-		[x2, y2], [right, y2], [right, bottom], [x2, bottom],
-	];
-
-	T =
-	[
-		[0, 0], [tox, 0], [tox, toy], [0, toy],
-		[tox, 0], [1-tox, 0], [1-tox, toy], [tox, toy],
-		[1-tox, 0], [1, 0], [1, toy], [1-tox, toy],
-
-		[0, toy], [tox, toy], [tox, 1-toy], [0, 1-toy],
-		[tox, toy], [1-tox, toy], [1-tox, 1-toy], [tox, 1-toy],
-		[1-tox, toy], [1, toy], [1, 1-toy], [1-tox, 1-toy],
-
-		[0, 1-toy], [tox, 1-toy], [tox, 1], [0, 1],
-		[tox, 1-toy], [1-tox, 1-toy], [1-tox, 1], [tox, 1],
-		[1-tox, 1-toy], [1, 1-toy], [1, 1], [1-tox, 1],
-	];
-
-	SS_Draw({ texture = tex, mode = SS_PT_QUADS, vertices = V, vtexcoords = T, position=[0,0] });
-}
-
 
 
 //
@@ -404,7 +389,9 @@ function SS_CalcTextLayout( text, font, width, height ) use( SS_CalcTextLayout_L
 			// goto next line after all subsequent spaces
 			prev_chr_pos = null;
 			prev_chr_val = null;
-			while( iter_advance( IT ) && iter_getdata( IT ) == SP );
+			while( ( lastadv = iter_advance( IT ) ) && iter_getdata( IT ) == SP );
+			if( !lastadv )
+				break;
 			line_start = iter_getdata( IT, true, false );
 			continue;
 		}
@@ -436,9 +423,7 @@ function SS_CalcTextLayout( text, font, width, height ) use( SS_CalcTextLayout_L
 				num_words--;
 				chr_pos = end_of_last_word;
 				
-				// EMULATED SEEKING: TODO FIX
-				IT = string_utf8_iterator( text );
-				while( iter_advance( IT ) && iter_getdata( IT, true, false ) < end_of_last_word );
+				IT.offset = end_of_last_word;
 			}
 			cur_line_width += cur_word_width;
 			
@@ -454,7 +439,9 @@ function SS_CalcTextLayout( text, font, width, height ) use( SS_CalcTextLayout_L
 			// goto next line after all subsequent spaces
 			prev_chr_pos = null;
 			prev_chr_val = null;
-			while( iter_advance( IT ) && iter_getdata( IT ) == SP );
+			while( ( lastadv = iter_advance( IT ) ) && iter_getdata( IT ) == SP );
+			if( !lastadv )
+				break;
 			line_start = iter_getdata( IT, true, false );
 		}
 	}

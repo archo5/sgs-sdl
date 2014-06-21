@@ -573,7 +573,20 @@ static void ss_ri_d3d9_set_matrix( SS_Renderer* R, int which, float* mtx )
 	else if( which == SS_RMAT_VIEW )
 		IDirect3DDevice9_SetTransform( R->d3ddev, D3DTS_VIEW, (D3DMATRIX*) mtx );
 	else if( which == SS_RMAT_PROJ )
-		IDirect3DDevice9_SetTransform( R->d3ddev, D3DTS_PROJECTION, (D3DMATRIX*) mtx );
+	{
+		/* this solves the d3d9 texel->pixel mapping issue */
+		float w = R->bbwidth ? R->bbwidth : R->width;
+		float h = R->bbheight ? R->bbheight : R->height;
+		float mox[ 16 ];
+		if( w || h )
+		{
+			float mfx[ 16 ] = { 1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 0,  w ? -1.0f / w : 0, h ? 1.0f / h : 0, 0, 1 };
+			SS_Mat4Multiply( (float(*)[4])mtx, (float(*)[4])mfx, (float(*)[4])mox );
+		}
+		else
+			memcpy( mox, mtx, sizeof(mox) );
+		IDirect3DDevice9_SetTransform( R->d3ddev, D3DTS_PROJECTION, (D3DMATRIX*) mox );
+	}
 }
 
 static void ss_ri_d3d9_set_rt( SS_Renderer* R, SS_Texture* T )

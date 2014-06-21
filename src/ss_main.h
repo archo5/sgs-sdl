@@ -83,6 +83,8 @@ void ss_FreeGraphics( SGS_CTX );
 /* SGScript - Graphics */
 int ss_InitGraphics( SGS_CTX );
 
+void SS_Mat4Multiply( float src1[4][4], float src2[4][4], float dest[4][4] );
+
 
 /*  RENDERING INTERFACE  */
 #define SS_RI_HALFPIXELOFFSET 0x0001
