@@ -133,8 +133,7 @@ void SS_Mat4Multiply( float src1[4][4], float src2[4][4], float dest[4][4] );
 #define SS_PT_TRIANGLES      3
 #define SS_PT_TRIANGLE_FAN   4
 #define SS_PT_TRIANGLE_STRIP 5
-#define SS_PT_QUADS          6
-#define SS_PT__COUNT         7
+#define SS_PT__COUNT         6
 
 #define SS_RSET_FLOAT 1
 #define SS_RSET_BYTE  2

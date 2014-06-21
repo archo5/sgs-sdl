@@ -817,7 +817,6 @@ static int getprimitivecount( int mode, uint32_t vcount )
 	case SS_PT_TRIANGLES: return vcount / 3;
 	case SS_PT_TRIANGLE_FAN: return vcount - 2;
 	case SS_PT_TRIANGLE_STRIP: return vcount - 2;
-	case SS_PT_QUADS: return vcount / 4;
 	}
 	return 0;
 }
@@ -832,21 +831,9 @@ static int ss_ri_d3d9_draw_basic_vertices( SS_Renderer* R, void* data, uint32_t 
 	mode = primtypes[ ptype ];
 	
 	IDirect3DDevice9_SetFVF( R->d3ddev, D3DFVF_XYZ | D3DFVF_TEX1 | D3DFVF_DIFFUSE );
-	if( ptype == SS_PT_QUADS )
-	{
-		int i, cnt = count - 3;
-		for( i = 0; i < cnt; i += 4 )
-		{
-			IDirect3DDevice9_DrawPrimitiveUP( R->d3ddev, D3DPT_TRIANGLEFAN,
-				2, Bptr + sizeof(SS_BasicVertex) * i, sizeof(SS_BasicVertex) );
-		}
-	}
-	else
-	{
-		IDirect3DDevice9_DrawPrimitiveUP( R->d3ddev, mode,
-			getprimitivecount( ptype, count ),
-			Bptr, sizeof(SS_BasicVertex) );
-	}
+	IDirect3DDevice9_DrawPrimitiveUP( R->d3ddev, mode,
+		getprimitivecount( ptype, count ),
+		Bptr, sizeof(SS_BasicVertex) );
 	
 	return 1;
 }
@@ -868,21 +855,9 @@ static int ss_ri_d3d9_draw_ext( SS_Renderer* R, SS_VertexFormat* F, void* vdata,
 			BVptr, F->size );
 	else
 	{
-		if( ptype == SS_PT_QUADS )
-		{
-			int i, cnt = count - 3;
-			for( i = 0; i < cnt; i += 4 )
-			{
-				IDirect3DDevice9_DrawPrimitiveUP( R->d3ddev, D3DPT_TRIANGLEFAN,
-					2, BVptr + F->size * i, F->size );
-			}
-		}
-		else
-		{
-			IDirect3DDevice9_DrawPrimitiveUP( R->d3ddev, mode,
-				getprimitivecount( ptype, count ),
-				BVptr, F->size );
-		}
+		IDirect3DDevice9_DrawPrimitiveUP( R->d3ddev, mode,
+			getprimitivecount( ptype, count ),
+			BVptr, F->size );
 	}
 	IDirect3DDevice9_SetVertexDeclaration( R->d3ddev, NULL );
 	

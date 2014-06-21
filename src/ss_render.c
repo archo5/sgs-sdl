@@ -506,7 +506,7 @@ static int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vco
 		
 		if( !strcmp( str, "box" ) )
 		{
-			*outmode = SS_PT_QUADS;
+			*outmode = SS_PT_TRIANGLE_FAN;
 			vert->cnt = 4;
 			vert->size = 8;
 			vert->data_static = boxbuf;
@@ -519,7 +519,7 @@ static int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vco
 		}
 		if( !strcmp( str, "tile" ) )
 		{
-			*outmode = SS_PT_QUADS;
+			*outmode = SS_PT_TRIANGLE_FAN;
 			vert->cnt = 4;
 			vert->size = 8;
 			vert->data_static = boxbuf + 8;
@@ -2152,7 +2152,6 @@ static sgs_RegIntConst gl_ints[] =
 	IC( SS_PT_TRIANGLES ),
 	IC( SS_PT_TRIANGLE_FAN ),
 	IC( SS_PT_TRIANGLE_STRIP ),
-	IC( SS_PT_QUADS ),
 	
 	/* blending */
 	IC( SS_BLENDOP_ADD ),
