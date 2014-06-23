@@ -97,18 +97,38 @@ function SS_DrawTexColorBox_Rotated( x, y, w, h, angle, tex, r, g, b, a )
 	c = cos( angle );
 	s = sin( angle );
 	
-	ext1x = ( c - s ) * w;
-	ext1y = ( c + s ) * h;
-	ext2x = ( -c -s ) * w;
-	ext2y = ( c - s ) * h;
+	// down vector = s;-c
+	// right vector = c;s
+	// ext1 = down + right
+	// ext2 = down - right
+	ext1x = +s*h +c*w;
+	ext1y = -c*h +s*w;
+	ext2x = +s*h -c*w;
+	ext2y = -c*h -s*w;
 	
-	g_RB.begin()
-		.f( x - ext1x, y - ext1y, 0, 1 ) // pos - ext1
-		.f( x - ext2x, y - ext2y, 1, 1 ) // pos - ext2
-		.f( x + ext1x, y + ext1y, 1, 0 ) // pos + ext1
-		.f( x + ext2x, y + ext2y, 0, 0 ) // pos + ext2
-		.c4b( r, g, b, a ).interlace( 4, 8, 8 )
-		.draw( tex, g_VD_P2T2CC4, 0, 4, SS_PT_TRIANGLE_FAN );
+	rb = g_RB;
+	rb.begin();
+	if( tex )
+	{
+		rb.f(
+			x - ext1x, y - ext1y, 0, 0, // pos - ext1
+			x - ext2x, y - ext2y, 1, 0, // pos - ext2
+			x + ext1x, y + ext1y, 1, 1, // pos + ext1
+			x + ext2x, y + ext2y, 0, 1  // pos + ext2
+		);
+		rb.c4b( r, g, b, a ).interlace( 4, 16, 16 );
+	}
+	else
+	{
+		rb.f(
+			x - ext1x, y - ext1y, // pos - ext1
+			x - ext2x, y - ext2y, // pos - ext2
+			x + ext1x, y + ext1y, // pos + ext1
+			x + ext2x, y + ext2y  // pos + ext2
+		);
+		rb.c4b( r, g, b, a ).interlace( 4, 8, 8 );
+	}
+	rb.draw( tex, if( tex, g_VD_P2T2CC4, g_VD_P2CC4 ), 0, 4, SS_PT_TRIANGLE_FAN );
 }
 
 function SS_DrawColorPolyOutlined( vertices, r, g, b, a, or, og, ob, oa )
@@ -192,16 +212,16 @@ function SS_DrawButton( tex, color, x0, y0, x1, y1, off, texoff )
 	g_RB.draw( tex, g_VD_P2T2CC4, 0, 54, SS_PT_TRIANGLES );
 }
 
-function SS_DrawFitted( tex, left, right, top, bottom, xq, yq )
+function SS_DrawFitted( tex, left, top, right, bottom, xq, yq )
 {
-	xq = 1;
-	yq = 1;
-
+	xq = 0.5;
+	yq = 0.5;
+	
 	iw = tex.width;
 	ih = tex.height;
 	rw = right - left;
 	rh = bottom - top;
-
+	
 	if( iw > rw || ih > rh )
 	{
 		ia = iw / ih;
@@ -217,11 +237,7 @@ function SS_DrawFitted( tex, left, right, top, bottom, xq, yq )
 			ih = rh;
 		}
 	}
-	SS_Draw({
-		preset = "tile", texture = tex,
-		position = [ ( rw - iw ) * xq + left, ( rh - ih ) * yq + top ],
-		scale = [ iw, ih ],
-	});
+	SS_DrawTexRect_WH( ( rw - iw ) * xq + left, ( rh - ih ) * yq + top, iw, ih, tex );
 }
 
 
