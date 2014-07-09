@@ -1152,6 +1152,24 @@ static int ss_renderbuf_copy( SGS_CTX )
 	SGS_RETURN_THIS( C );
 }
 
+/* .erase( int start = 0[, int count ]) */
+static int ss_renderbuf_erase( SGS_CTX )
+{
+	sgs_SizeVal from = 0, numbytes = -1;
+	
+	RB_IHDR( erase );
+	if( !sgs_LoadArgs( C, "|ll", renderbuf_iface, &from, &numbytes ) )
+		return 0;
+	
+	if( numbytes < 0 )
+		numbytes = rb->B.size - from;
+	if( from < 0 || numbytes + from > rb->B.size )
+		_WARN( "erase region out of bounds" );
+	membuf_erase( &rb->B, from, from + numbytes - 1 );
+	
+	SGS_RETURN_THIS( C );
+}
+
 /* .f( real{1,64} ) - floats */
 static int ss_renderbuf_f( SGS_CTX )
 {
@@ -1444,6 +1462,7 @@ static int ss_renderbuf_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "begin" )   SGS_RETURN_CFUNC( ss_renderbuf_begin )
 		SGS_CASE( "reserve" ) SGS_RETURN_CFUNC( ss_renderbuf_reserve )
 		SGS_CASE( "copy" )    SGS_RETURN_CFUNC( ss_renderbuf_copy )
+		SGS_CASE( "erase" )   SGS_RETURN_CFUNC( ss_renderbuf_erase )
 		SGS_CASE( "f" )       SGS_RETURN_CFUNC( ss_renderbuf_f )
 		SGS_CASE( "b" )       SGS_RETURN_CFUNC( ss_renderbuf_b )
 		SGS_CASE( "dw" )      SGS_RETURN_CFUNC( ss_renderbuf_dw )
