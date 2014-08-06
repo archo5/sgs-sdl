@@ -46,7 +46,6 @@ uint32_t ss_GlobalFlagString( SGS_CTX, const char* name, flag_string_item_t* ite
 int ss_UnpackDict( SGS_CTX, int pos, dict_unpack_item_t* items )
 {
 	int ret = 0;
-	sgs_String32 S;
 	
 	if( sgs_ItemType( C, pos ) != SGS_VT_OBJECT )
 		return ret;
@@ -54,7 +53,7 @@ int ss_UnpackDict( SGS_CTX, int pos, dict_unpack_item_t* items )
 	while( items->name )
 	{
 		sgs_SizeVal sz = sgs_StackSize( C );
-		sgs_PushString32( C, &S, items->name );
+		sgs_PushString( C, items->name );
 		
 		assert( items->var != NULL );
 		if( sgs_PushIndexII( C, pos, -1, 0 ) || !sgs_GetStackItem( C, -1, items->var ) )
@@ -64,7 +63,6 @@ int ss_UnpackDict( SGS_CTX, int pos, dict_unpack_item_t* items )
 		
 		items++;
 		sgs_SetStackSize( C, sz );
-		sgs_CheckString32( &S );
 	}
 	return ret;
 }

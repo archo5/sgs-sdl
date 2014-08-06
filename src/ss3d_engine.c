@@ -10,7 +10,6 @@
 
 
 /* todo merge: */
-#define SGS_RETURN_PTR( value ) { sgs_PushPtr( C, value ); return SGS_SUCCESS; }
 #define SGS_PARSE_PTR( out ) { void* V; if( sgs_ParsePtrP( C, val, &V ) ){ out = V; return SGS_SUCCESS; } return SGS_EINVAL; }
 
 
@@ -427,7 +426,7 @@ static int SS3D_MeshGen_Particles( SGS_CTX )
 	viewmatrix[3][3] = 1;
 	SS3D_Mtx_Transpose( viewmatrix );
 	
-	sgs_PushStringBuf( C, NULL, position_count * 4 * sizeof(*vdata) );
+	sgs_PushStringAlloc( C, position_count * 4 * sizeof(*vdata) );
 	vdata = (particleVtx*) sgs_GetStringPtr( C, -1 );
 	
 	for( i = 0; i < position_count; ++i )
@@ -469,8 +468,9 @@ static int SS3D_MeshGen_Particles( SGS_CTX )
 		VEC4_Copy( vdata->color, color );
 		vdata++;
 	}
+	sgs_FinalizeStringAlloc( C, -1 );
 	
-	sgs_PushStringBuf( C, NULL, position_count * 6 * sizeof(*idata) );
+	sgs_PushStringAlloc( C, position_count * 6 * sizeof(*idata) );
 	idata = (uint16_t*) sgs_GetStringPtr( C, -1 );
 	
 	for( i = 0; i < position_count; ++i )
@@ -484,6 +484,7 @@ static int SS3D_MeshGen_Particles( SGS_CTX )
 		idata[5] = bv;
 		idata += 6;
 	}
+	sgs_FinalizeStringAlloc( C, -1 );
 	
 	sgs_PushInt( C, position_count * 4 );
 	sgs_PushInt( C, position_count * 6 );
@@ -521,7 +522,7 @@ static int SS3D_MeshGen_Terrain( SGS_CTX )
 	if( width * height > heightlist->size )
 		return sgs_Msg( C, SGS_WARNING, "not enough data for specified terrain size" );
 	
-	sgs_PushStringBuf( C, NULL, width * height * sizeof(*vdata) );
+	sgs_PushStringAlloc( C, width * height * sizeof(*vdata) );
 	pv = vdata = (terrainVtx*) sgs_GetStringPtr( C, -1 );
 	for( y = 0; y < height; ++y )
 	{
@@ -564,8 +565,9 @@ static int SS3D_MeshGen_Terrain( SGS_CTX )
 			VEC3_Normalized( vdata[ x + width * y ].normal, nrm );
 		}
 	}
+	sgs_FinalizeStringAlloc( C, -1 );
 	
-	sgs_PushStringBuf( C, NULL, ( width - 1 ) * ( height - 1 ) * 6 * sizeof(*idata) );
+	sgs_PushStringAlloc( C, ( width - 1 ) * ( height - 1 ) * 6 * sizeof(*idata) );
 	idata = (uint32_t*) sgs_GetStringPtr( C, -1 );
 	for( y = 0; y < height - 1; ++y )
 	{
@@ -580,6 +582,7 @@ static int SS3D_MeshGen_Terrain( SGS_CTX )
 			idata += 6;
 		}
 	}
+	sgs_FinalizeStringAlloc( C, -1 );
 	
 	sgs_PushInt( C, width * height );
 	sgs_PushInt( C, ( width - 1 ) * ( height - 1 ) * 6 );

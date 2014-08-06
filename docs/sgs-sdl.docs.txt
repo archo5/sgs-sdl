@@ -9,5 +9,901 @@ This is a graphics framework that acts as a SGScript virtual machine, providing 
 # SGScript API [info]
 
 
+# >>>
+
+
+# Image handling [info]
+
+=== Objects and their methods:
+
+- @SS_Image
+-- @resize<SS_Image.resize>
+-- @clear<SS_Image.clear>
+-- @getData<SS_Image.getData>
+-- @setData<SS_Image.setData>
+
+=== Functions:
+
+- @SS_CreateImage
+- @SS_LoadImage
+
+=== Interfaces:
+
+- @"ss_load_image_*" - image loading interface
+
+
+# Rendering [info]
+
+=== Objects and their methods:
+
+- @SS_Texture
+- @SS_VertexFormat
+- @SS_RenderBuffer
+-- @begin<SS_RenderBuffer.begin>
+-- @reserve<SS_RenderBuffer.reserve>
+-- @copy<SS_RenderBuffer.copy>
+-- @erase<SS_RenderBuffer.erase>
+-- @f<SS_RenderBuffer.f>
+-- @b<SS_RenderBuffer.b>
+-- @dw<SS_RenderBuffer.dw>
+-- @cf2b<SS_RenderBuffer.cf2b>
+-- @c4b<SS_RenderBuffer.c4b>
+-- @pad<SS_RenderBuffer.pad>
+-- @interlace<SS_RenderBuffer.interlace>
+-- @quadsToTris<SS_RenderBuffer.quadsToTris>
+-- @draw<SS_RenderBuffer.draw>
+- @SS_Font
+-- @getAdvance<SS_Font.getAdvance>
+-- @getTextLength<SS_Font.getTextLength>
+
+=== Functions:
+
+- @SS_CreateTexture
+- @SS_CreateRenderTexture
+- @SS_Draw
+- @SS_MakeVertexFormat
+- @SS_DrawPacked
+- @SS_CreateRenderBuffer
+- @SS_CreateFont
+- @SS_IsFont
+- @SS_DrawTextLine*
+- @SS_MatrixPush
+- @SS_MatrixPop
+- @SS_SetCamera
+- @SS_SetClipRect
+- @SS_SetViewport
+- @SS_SetRenderTarget
+- @SS_SetDepthTest
+- @SS_SetCulling
+- @SS_SetBlending
+- @SS_SetGLAttrib
+- @SS_Clear
+- @SS_Present
+
+=== Interfaces:
+
+- @ss_font_search_paths - font search path array
+
+=== Constants:
+
+- @"SS_PT_*" - primitive types
+- @"SS_BLENDOP_*" - blending operations (add/subtract/..)
+- @"SS_BLEND_*" - blending factors (zero/one/srcalpha/invsrccolor/..)
+- @"SDL_GL_*" - OpenGL renderer attributes
+
+
+# Windows, events and display modes [info]
+
+=== Objects and their methods:
+
+- @SS_DisplayMode
+- @SS_Window
+-- @show<SS_Window.show>
+-- @hide<SS_Window.hide>
+-- @minimize<SS_Window.minimize>
+-- @maximize<SS_Window.maximize>
+-- @restore<SS_Window.restore>
+-- @raise<SS_Window.raise>
+-- @setPosition<SS_Window.setPosition>
+-- @setSize<SS_Window.setSize>
+-- @setMaxSize<SS_Window.setMaxSize>
+-- @setMinSize<SS_Window.setMinSize>
+-- @warpMouse<SS_Window.warpMouse>
+-- @initRenderer<SS_Window.initRenderer>
+-- @makeCurrent<SS_Window.makeCurrent>
+-- @setBufferScale<SS_Window.setBufferScale>
+- @SS_Joystick
+-- @open<SS_Joystick.open>
+-- @close<SS_Joystick.close>
+-- @getAxis<SS_Joystick.getAxis>
+-- @getBall<SS_Joystick.getBall>
+-- @getButton<SS_Joystick.getButton>
+-- @getHat<SS_Joystick.getHat>
+- @SS_GameController
+-- @open<SS_GameController.open>
+-- @close<SS_GameController.close>
+-- @getAxis<SS_GameController.getAxis>
+-- @getButton<SS_GameController.getButton>
+-- @getBindForAxis<SS_GameController.getBindForAxis>
+-- @getBindForButton<SS_GameController.getBindForButton>
+
+
+=== Functions:
+
+- @SS_SetError
+- @SS_GetError
+- @SS_EventState
+- @SS_GetNumTouchDevices
+- @SS_GetTouchDevice
+- @SS_GetTouchDevices
+- @SS_GetNumTouchFingers
+- @SS_GetTouchFinger
+- @SS_GetTouchFingers
+- @SS_RecordGesture
+- @SS_FlushEvents
+- @SS_HasEvents
+- @SS_PollEvent
+- @SS_WaitEvent
+- @SS_PeekEvents
+- @SS_GetEvents
+- @SS_PumpEvents
+- @SS_QuitRequested
+- @SS_HasClipboardText
+- @SS_GetClipboardText
+- @SS_SetClipboardText
+- @SS_GetVideoDrivers
+- @SS_DisplayMode
+- @SS_GetNumDisplays
+- @SS_GetDisplayName
+- @SS_GetNumDisplayModes
+- @SS_GetDisplayMode
+- @SS_GetDisplayModes
+- @SS_GetDisplayBounds
+- @SS_GetClosestDisplayMode
+- @SS_GetCurrentDisplayMode
+- @SS_GetDesktopDisplayMode
+- @SS_CreateWindow
+- @SS_GetWindowFromID
+- @SS_GetKeyFromName
+- @SS_GetScancodeFromName
+- @SS_GetKeyFromScancode
+- @SS_GetScancodeFromKey
+- @SS_GetKeyName
+- @SS_GetScancodeName
+- @SS_GetKeyboardFocus
+- @SS_GetMouseFocus
+- @SS_GetModState
+- @SS_SetModState
+- @SS_HasScreenKeyboardSupport
+- @SS_IsTextInputActive
+- @SS_ShowCursor
+- @SS_SetSystemCursor
+- @SS_WarpMouse
+- @SS_GetMouseState
+- @SS_GetRelativeMouseState
+- @SS_GetRelativeMouseMode
+- @SS_SetRelativeMouseMode
+- @SS_StartTextInput
+- @SS_StopTextInput
+- @SS_SetTextInputRect
+- @SS_GetJoystick
+- @SS_NumJoysticks
+- @SS_GetJoystickName
+- @SS_GetJoystickNames
+- @SS_JoystickUpdate
+- @SS_JoystickEventState
+- @SS_GetGameController
+- @SS_GameControllerAddMapping
+- @SS_GameControllerAddMappingsFromFile
+- @SS_GameControllerMappingForGUID
+- @SS_GetGameControllerName
+- @SS_GetGameControllerNames
+- @SS_GameControllerGetAxisFromString
+- @SS_GameControllerGetButtonFromString
+- @SS_GameControllerGetStringForAxis
+- @SS_GameControllerGetStringForButton
+- @SS_GameControllerUpdate
+- @SS_GameControllerEventState
+- @SS_IsGameController
+- @SDL_WINDOWPOS_UNDEFINED_DISPLAY
+- @SDL_WINDOWPOS_CENTERED_DISPLAY
+
+=== Constants:
+
+- @SDL event types
+- @SDL_CURSOR_*, SDL_SYSTEM_CURSOR_* - system cursor types
+- @SDLK_* - key types
+- @SDL_SCANCODE_* - keyboard scan code types
+- @KMOD_* - keyboard modifier flags
+- @SDL_BUTTON_* - mouse button constants
+- @SDL_TOUCH_MOUSEID - ???
+- @SDL_CONTROLLER_BINDTYPE_* - controller binding types
+- @SDL_CONTROLLER_AXIS_* - controller axis types
+- @SDL_HAT_* - controller hat positions
+- @SDL_WINDOWPOS_* - special window positioning values
+- @SDL_WINDOW_* - window creation flags
+- @SDL_RENDERER_* - renderer creation flags
+- @SDL_MESSAGEBOX_* - message box types
+- @SDL_POWERSTATE_* - power states
+- @SS_RENDERER_* - renderer types & flags
+- @SS_POSMODE_* - output rectangle positioning modes for detached output rectangle mode
+
+
+# Utility functions [info]
+
+- @SS_GetPlatformInfo
+- @SS_GetPowerInfo
+- @SS_Sleep
+- @SS_EnableScreenSaver
+- @SS_DisableScreenSaver
+- @SS_IsScreenSaverEnabled
+
+
+# ALL SGScript functions (A-Z) [info]
+
+~!~ render = list_pages_asc
+~!~ filter_type = function,functions,function alias,function aliases
+
+
+# ALL SGScript objects (A-Z) [info]
+
+~!~ render = list_pages_asc
+~!~ filter_type = object
+
+
+
+# SS_Image [object]
+
+A 32-bit RGBA (R8G8B8A8) 2D image object.
+
+- methods:
+-- @resize<SS_Image.resize>
+-- @clear<SS_Image.clear>
+-- @getData<SS_Image.getData>
+-- @setData<SS_Image.setData>
+- read-only properties:
+-- [int] width
+-- [int] height
+- other features:
+-- tostring = "Image (<width> x <height>)"
+-- cloning
+-- GC-safe
+
+
+# SS_Image.resize [method]
+
+== var SS_Image.resize( int width, int height )
+=== resizes the image to the specified `width` and `height`, returns `true` on success
+
+- each dimension must have the new size in the [1;4096] range
+
+
+# SS_Image.clear [method]
+
+== SS_Image.clear( int r, int g, int b[, int a ])
+=== set all pixels of the image to the specified color
+
+- color values must be in the 0-255 range, otherwise they will be clamped to that range
+
+
+# SS_Image.getData [method]
+
+== string SS_Image.getData()
+=== retrieve the color data of the image as a string
+
+
+# SS_Image.setData [method]
+
+== int SS_Image.setData( string data )
+=== set the color data of the image from a string
+
+- returns 0 if there was not enough data to write all bytes
+- returns 1 if the amount of bytes was exactly right (width * height * 4) to fill the array
+- returns 2 if there were too many bytes and the last ones were discarded
+
+
+# SS_CreateImage [function]
+
+== SS_Image SS_CreateImage( int width[, int height ])
+=== create an empty image of the specified size
+
+- if `height` is not specified, it is assumed to be equal to `width`
+- each dimension must have the size in the [1;4096] range
+
+
+# SS_LoadImage [function]
+
+== SS_Image? SS_LoadImage( string path )
+=== load an image from a file
+
+- if it was not possible to read the image, `null` is returned and function emits a warning
+
+
+# ss_load_image_* [functions]
+
+== SS_Image? ss_load_image_png( string path )
+== SS_Image? ss_load_image_jpg( string path )
+== SS_Image? ss_load_image_jpeg( string path )
+== SS_Image? ss_load_image_dds( string path )
+=== tries to load an image with the specified extension from the specified `path`
+
+- this is the backend of @SS_LoadImage
+- if it was not possible to read the image, `null` is returned and function emits a warning
+- support for more extensions can be added in the same manner - creating a ss_load_image_<ext> callable global
+
+
+
+# SS_Texture [object]
+
+A renderer-specific texture container.
+
+- read-only properties:
+-- [int] width
+-- [int] height
+-- [bool] is_hrepeat - is the texture repeated horizontally on out-of-range U(Direct3D)/S(OpenGL) texture coords?
+-- [bool] is_vrepeat - is the texture repeated vertically on out-of-range V(Direct3D)/T(OpenGL) texture coords?
+-- [bool] is_nolerp - is the texture not linearly interpolated?
+-- [bool] is_mipmaps - does the texture have mipmaps?
+- other features:
+-- tostring = "Texture (<width> x <height>, type <flags>)"
+-- GC-safe
+
+
+# SS_VertexFormat [object]
+
+A renderer-specific vertex format container.
+
+- features:
+-- tostring = "SS_VertexFormat" or "SS_VertexFormat (unloaded)"
+-- GC-safe
+
+
+# SS_RenderBuffer [object]
+
+A basic byte buffer with methods to generate vertex data.
+
+- methods:
+-- @begin<SS_RenderBuffer.begin>
+-- @reserve<SS_RenderBuffer.reserve>
+-- @copy<SS_RenderBuffer.copy>
+-- @erase<SS_RenderBuffer.erase>
+-- @f<SS_RenderBuffer.f>
+-- @b<SS_RenderBuffer.b>
+-- @dw<SS_RenderBuffer.dw>
+-- @cf2b<SS_RenderBuffer.cf2b>
+-- @c4b<SS_RenderBuffer.c4b>
+-- @pad<SS_RenderBuffer.pad>
+-- @interlace<SS_RenderBuffer.interlace>
+-- @quadsToTris<SS_RenderBuffer.quadsToTris>
+-- @draw<SS_RenderBuffer.draw>
+- read-only properties:
+-- [int] size - size in bytes of the buffer
+-- [int] capacity - capacity in bytes of the buffer (allocated but non necessarily used memory)
+- other features:
+-- GC-safe
+
+
+# SS_RenderBuffer.begin [method]
+
+== self SS_RenderBuffer.begin()
+=== clears the byte buffer
+
+
+# SS_RenderBuffer.reserve [method]
+
+== self SS_RenderBuffer.reserve( int count )
+=== increase the capacity to `count` bytes
+
+- if `count` is less than current capacity, nothing happens
+
+
+# SS_RenderBuffer.copy [method]
+
+== self SS_RenderBuffer.copy( SS_RenderBuffer other, int start = 0[, int count ])
+=== copies contents of another buffer into current one
+
+- if `count` is not specified, it is the remaining number of bytes after `start`
+- the copy region cannot be out of bounds
+
+
+# SS_RenderBuffer.erase [method]
+
+== self SS_RenderBuffer.erase( int start = 0[, int count ])
+=== removes the specified region from the buffer
+
+- if `count` is not specified, it is the remaining number of bytes after `start`
+- the region to be erased cannot be out of bounds
+
+
+# SS_RenderBuffer.f [method]
+
+== self SS_RenderBuffer.f( real {1,64} )
+=== appends the specified real values, converted to a 32-bit floating point number
+
+- no validation of input arguments is performed, for each non-numerically-compatible* argument anything can be appended to the buffer
+
+* numerically compatible - can be converted to a real value
+
+
+# SS_RenderBuffer.b [method]
+
+== self SS_RenderBuffer.b( int {1,64} )
+=== appends the specified integer values, converted to a 8-bit unsigned integer number (byte/uint8_t)
+
+- no validation of input arguments is performed, for each non-numerically-compatible* argument anything can be appended to the buffer
+
+* numerically compatible - can be converted to an integer value
+
+
+# SS_RenderBuffer.dw [method]
+
+== self SS_RenderBuffer.dw( int {1,64} )
+=== appends the specified integer values, converted to a 32-bit unsigned integer number (double word/uint32_t)
+
+- no validation of input arguments is performed, for each non-numerically-compatible* argument anything can be appended to the buffer
+
+* numerically compatible - can be converted to an integer value
+
+
+# SS_RenderBuffer.cf2b [method]
+
+== self SS_RenderBuffer.f( real {1,64} )
+=== 'clamped float to byte', appends the specified real values, clamped to [0.0;1.0], multiplied by 255 and converted to a 8-bit unsigned integer number (byte/uint8_t)
+
+- no validation of input arguments is performed, for each non-numerically-compatible* argument anything can be appended to the buffer
+
+* numerically compatible - can be converted to a real value
+
+
+# SS_RenderBuffer.c4b [method]
+
+== self SS_RenderBuffer.c4b( real i[, real j[, real k[, real l ]]])
+=== appends the specified real values, expanded to 4 values, clamped to [0.0;1.0], multiplied by 255 and converted to a 8-bit unsigned integer number (byte/uint8_t)
+
+! This function requires an active rendering context to work.
+
+- Expansion:
+-- 1 value: R = i, G = i, B = i, A = i
+-- 2 values: R = i, G = i, B = i, A = j
+-- 3 values: R = i, G = j, B = k, A = 1
+-- 4 values: R = i, G = j, B = k, A = l
+- R / B values are swapped automatically if a BGRA-compatible renderer is active (Direct3D9)
+
+
+# SS_RenderBuffer.pad [method]
+
+== self SS_RenderBuffer.pad( int count )
+=== append `count` bytes of random data that is not going to be used by the vertex format
+
+! do not rely on having any specific values in the buffer, they may be random -- use @"SS_RenderBuffer.b" to get specific bytes
+
+
+# SS_RenderBuffer.interlace [method]
+
+== self SS_RenderBuffer.interlace( int endbytes, int stride, int offset = 0[, int count = (size - endbytes)/stride ])
+=== interlace (periodically insert) last `endbytes` bytes into the rest of the buffer
+
+- `endbytes`: number of bytes to remove from the end and interlace into the new buffer
+- `stride`: distance between each insertion position
+- `offset`: first insertion position
+- `count`: number of times the insertion should be performed
+
+
+# SS_RenderBuffer.quadsToTris [method]
+
+== self SS_RenderBuffer.quadsToTris( int vertex_size )
+=== duplicate quad vertices to get triangle vertices
+
+- buffer size is increased by 150% - for each 4 vertices, 2 vertices are copied
+- Mapping table (N = new, O = old):
+-- N[0] = O[0]
+-- N[1] = O[1]
+-- N[2] = O[2]
+-- N[3] = O[2]
+-- N[4] = O[3]
+-- N[5] = O[0]
+
+
+# SS_RenderBuffer.draw [method]
+
+== self SS_RenderBuffer.draw( SS_Texture|null texture, SS_VertexFormat format, int start, int count, int type )
+=== draw the buffer data
+
+! This function requires an active rendering context to work.
+
+- `start`: first vertex to draw
+- `count`: number of vertices to draw
+- `type`: one of the @"SS_PT_*" primitive type constants
+- vertex size is specified by the vertex format
+
+
+# SS_Font [object]
+
+A renderer-specific one-size version of a font.
+
+- methods:
+-- @getAdvance<SS_Font.getAdvance>
+-- @getTextLength<SS_Font.getTextLength>
+- read-only properties:
+-- [int] size - font size, specified on creation
+-- [int] x_ppem - horizontal (X) pixels per `em` (size of `em` square)
+-- [int] y_ppem - vertical (Y) pixels per `em` (size of `em` square)
+-- [int] ascender - ascender height in pixels
+-- [int] descender - descender height in pixels
+-- [int] height - real font height in pixels
+-- [int] max_advance - max. distance between glyphs
+- other features:
+-- GC-safe
+
+
+# SS_Font.getAdvance [method]
+
+== int SS_Font.getAdvance( int|null c0, int c1 )
+=== calculates the horizontal advance distance (end-to-end) between character `c0`/any character and character `c1`
+
+If `c0` is not `null` and font has kerning data for both glyphs, kerning is taken into account, otherwise function returns the horizontal length of `c1`.
+
+
+# SS_Font.getTextLength [method]
+
+== int SS_Font.getTextLength( string utf8text )
+=== calculates the horizontal single-line length of the specified UTF8 text string
+
+
+
+# SS_CreateTexture [function]
+
+== SS_Texture? SS_CreateTexture( SS_Image|string source[, string flags ])
+=== loads a texture from an image or a path
+
+! This function requires an active rendering context to work.
+
+- if a string value is passed for the first argument, function inherits the behavior of @SS_LoadImage
+
+
+# SS_CreateRenderTexture [function]
+
+== SS_Texture? SS_CreateRenderTexture( int width, int height[, string flags ])
+=== creates a renderable texture (to be used with @SS_SetRenderTarget)
+
+! This function requires an active rendering context to work.
+
+- generally the function is supposed to work with all resolutions from 1x1 to screen width/height, if render target textures are supported at all
+
+
+# SS_Draw [function]
+
+== bool SS_Draw( dict )
+=== draw the specified data from the dictionary
+
+! This function requires an active rendering context to work.
+
+- This function uses geometry properties to generate meshes and instancing properties to transform/duplicate them
+- For geometry properties, either preset or mode + vertices must be set to render something.
+- Position values are leading the array numbers. If `vertices` are specified, `vcolors` and `vtexcoords` are expected to be of the same size (or will use a modulus-based index to fit).
+-- Same goes for `position`/`positions` and other instancing properties.
+
+- Geometry properties:
+-- preset: one of...
+--- "box": a square with vertex positions -0.5;0.5 and texcoords 0;1
+--- "tile": a square with vertex positions 0;1 and texcoords 0;1
+-- mode: one of @"SS_PT_*" primitive type constants for vertex data
+-- vertices: array of vertex positions
+-- vcolors: array of vertex colors
+-- vtexcoords: array of vertex texture coordinates
+- Instancing properties:
+-- position: vec2 object
+-- positions: array of vec2 objects
+-- angle: real value in radians
+-- angles: array of angles (real)
+-- scale: vec2 object
+-- scales: array of scale values (vec2 object)
+-- color: color object
+-- colors: array of color values (color object)
+
+
+# SS_MakeVertexFormat [function]
+
+== SS_VertexFormat SS_MakeVertexFormat( string format )
+=== make the GPU vertex format object from a format description string
+
+! This function requires an active rendering context to work.
+
+- the format is a list of character triplets, in each triplet:
+-- first character - channel / usage semantic
+--- `p` for position
+--- `t` for texture coordinates
+--- `c` for color
+--- `n` for normals
+-- second character - data type
+--- `f` for 32-bit floating point value
+--- `b` for 8-bit byte value
+-- third character - item count - `1`, `2`, `3` or `4`
+
+Restrictions:
+
+- color components with byte data type must have exactly 4 bytes
+- normal components must have exactly 3 data items
+
+Common character sets:
+
+- `pf2` - 2-component (X,Y) float position value
+- `pf3` - 3-component (X,Y,Z) float position value
+- `cb4` - 4-component (RGBA) byte color value
+- `tf2` - 2-component (U,V - Direct3D / S,T - OpenGL) texture coordinate value
+
+
+# SS_DrawPacked [function]
+
+== void SS_DrawPacked( SS_Texture|null texture, SS_VertexFormat format, string vertex_data, int start, int count, int primitive_type[, string index_data ])
+=== render the specified vertex/index data + format + texture
+
+! This function requires an active rendering context to work.
+
+- `start`: first vertex to draw
+- `count`: number of vertices to draw
+- `primitive_type`: one of the @"SS_PT_*" primitive type constants
+- vertex size is specified by the vertex format
+
+
+# SS_CreateRenderBuffer [function]
+
+== SS_RenderBuffer SS_CreateRenderBuffer()
+=== returns a new render buffer
+
+
+# SS_CreateFont [function]
+
+== SS_Font? SS_CreateFont( string path, int size )
+=== creates a font object from the specified file, in the right size
+
+! This function requires an active rendering context to work.
+
+- search for fonts is performed in all paths from the @ss_font_search_paths array
+
+
+# SS_IsFont [function]
+
+== bool SS_IsFont( var )
+=== returns whether the given variable is a font (@SS_Font) object
+
+
+# SS_DrawTextLine* [functions]
+
+== bool SS_DrawTextLine( string text, SS_Font font, int x, int y, color c )
+== bool SS_DrawTextLine_TA( string text, SS_Font font, int x, int y, color c )
+== bool SS_DrawTextLine_BA( string text, SS_Font font, int x, int y, color c )
+== bool SS_DrawTextLine_BL( string text, SS_Font font, int x, int y, color c )
+== bool SS_DrawTextLine_VN( string text, SS_Font font, int x, int y, color c )
+== bool SS_DrawTextLine_VC( string text, SS_Font font, int x, int y, color c )
+=== draw a line of text in the specified color and font, from the specified starting point
+
+! This function requires an active rendering context to work.
+
+! function emits a warning if rendering is attempted with an unloaded font (renderer destroyed)
+
+- prefix specifies the relative vertical position of letters:
+-- no prefix: same as _VN
+-- _TA: vertically normalized between Y and Y + font.size / 2
+-- _BA: Y + font.size = baseline
+-- _BL: Y = baseline
+-- _VN: vertically normalized between Y and Y + font.size
+-- _VC: Y = vertically centered
+
+
+# SS_MatrixPush [function]
+
+== bool? SS_MatrixPush( matrix m, bool set = false )
+=== push a world matrix on the stack, setting it as-is or after multiplying it with the previous one
+
+! This function requires an active rendering context to work.
+
+- size of stack is 8 matrices
+- the stack has no matrices on it in the beginning
+- if stack size is exceeded, function returns `null`, on success it returns `true`
+
+
+# SS_MatrixPop [function]
+
+== bool SS_MatrixPop()
+=== pop a matrix off the stack
+
+! This function requires an active rendering context to work.
+
+- if stack is empty, function returns `null`, on success it returns `true`
+
+
+# SS_SetCamera [function]
+
+== void SS_SetCamera([ matrix view,] matrix projection )
+=== set the view/projection matrices
+
+! This function requires an active rendering context to work.
+
+- if only one matrix is specified, it is the projection matrix
+- there is not much difference between both, they're all multiplied together in the end
+
+
+# SS_SetClipRect [function]
+
+== bool SS_SetClipRect( null )
+== bool SS_SetClipRect( int x1, int y1, int x2, int y2 )
+=== set or remove the screen-space aligned clipping rectangle
+
+! This function requires an active rendering context to work.
+
+
+# SS_SetViewport [function]
+
+== void SS_SetViewport( int x1, int y1, int x2, int y2 )
+=== set the viewport (projection-to-screen transform rectangle) for the current renderer
+
+! This function requires an active rendering context to work.
+
+
+# SS_SetRenderTarget [function]
+
+== void SS_SetRenderTarget([ SS_Texture|null texture ])
+=== set or remove the current render target texture 
+
+! This function requires an active rendering context to work.
+
+! Renderer of the texture must match the currently set renderer.
+
+- texture must be created by @SS_CreateRenderTexture
+
+
+# SS_SetDepthTest [function]
+
+== void SS_SetDepthTest( bool enable )
+=== enable or disable the depth test (Z-buffer-based occlusion culling)
+
+! This function requires an active rendering context to work.
+
+
+# SS_SetCulling [function]
+
+== void SS_SetCulling( int dir )
+=== set direction of culling, 0 to disable, > 0 for counter-clockwise, < 0 for clockwise culling
+
+! This function requires an active rendering context to work.
+
+- counter-clockwise culling means - cull (remove) faces with vertices that are counter-clockwise to the screen
+- clockwise culling means - cull (remove) faces with vertices that are clockwise to the screen
+
+
+# SS_SetBlending [function]
+
+== void SS_SetBlending( int op, int src, int dest )
+=== set the blending parameters (operation - `op`, source factor - `src`, destination factor - `dest`)
+
+! This function requires an active rendering context to work.
+
+- `op` should be one of the @"SS_BLENDOP_*" blending operation constants
+- `src` and `dest` should be one of the @"SS_BLEND_*" blending factor constants
+
+
+# SS_SetGLAttrib [function]
+
+== bool SS_SetGLAttrib( int attrib, int value )
+=== sets the specified attribute to the required value, returns if successful
+
+- This function must be called before @"renderer initialization"<SS_Window.initRenderer> to be effective.
+
+
+# SS_Clear [function]
+
+== void SS_Clear( color c )
+=== clear the rendered image with the specified color
+
+! This function requires an active rendering context to work.
+
+
+# SS_Present [function]
+
+== void SS_Present()
+=== present the rendered image to the screen
+
+- if VSync is enabled, this function will wait until it is allowed to present the image and only then do it
+
+
+
+# ss_font_search_paths [interface]
+
+== global array[string] ss_font_search_paths
+=== contains all directories in which to look for a font
+
+- it is by default initialized with common OS-specific paths, as well as the current directory
+- paths are searched in the order they are specified in the array
+
+
+
+# SS_PT_* [constants]
+
+=== primitive type constants
+
+These constants specify how to convert vertices into primitives.
+
+- SS_PT_POINTS - point list (each vertex is a point)
+- SS_PT_LINES - line list (each 2 vertices make a line)
+- SS_PT_LINE_STRIP - line strip (all successive vertices both end the previous line and start a new one)
+- SS_PT_TRIANGLES - triangle list (each 3 vertices make a triangle)
+- SS_PT_TRIANGLE_FAN - triangle fan (starting from 2nd vertex, vertices form a line strip where each line connected with 1st vertex make a triangle)
+- SS_PT_TRIANGLE_STRIP - triangle strip (starting from 3rd vertex, each successive vertex forms a triangle with the previous two, every 2nd triangle is flipped)
+
+
+# SS_BLENDOP_* [constants]
+
+=== blending operations (add/subtract/..)
+
+These constants specify the operation to perform doing blending.
+
+Blending equation is in the form "SRC * Fac[src] <BLENDOP> DEST * Fac[dest]" where BLENDOP is the operation, SRC/DEST are the source/destination values and Fac are the @factors<SS_BLEND_*> for the values. The normal range for these values is assumed to be [0,1].
+
+- SS_BLENDOP_ADD - additive blending, (SRC * Fac[src]  +  DEST * Fac[dest])
+- SS_BLENDOP_SUBTRACT - subtractive blending, (SRC * Fac[src]  -  DEST * Fac[dest])
+- SS_BLENDOP_REVERSE_SUBTRACT - reverse subtractive blending, (DEST * Fac[dest]  -  SRC * Fac[src])
+- SS_BLENDOP_MIN - smallest value blending, (MIN( SRC * Fac[src], DEST * Fac[dest] ))
+- SS_BLENDOP_MAX - largest value blending, (MAX( SRC * Fac[src], DEST * Fac[dest] ))
+
+
+# SS_BLEND_* [constants]
+
+=== blending factors (zero/one/srcalpha/invsrccolor/..)
+
+For more info on blending, see @"SS_BLENDOP_*".
+Values are multiplied by the following factors:
+
+- SS_BLEND_ZERO: 0
+- SS_BLEND_ONE: 1
+- SS_BLEND_SRCCOLOR: the respective component from the full source color value
+- SS_BLEND_INVSRCCOLOR: ... 1 - source color
+- SS_BLEND_SRCALPHA: source alpha
+- SS_BLEND_INVSRCALPHA: 1 - source alpha
+- SS_BLEND_DESTCOLOR: the respective component from the full destination color value
+- SS_BLEND_INVDESTCOLOR: ... 1 - destination color
+- SS_BLEND_DESTALPHA: destination alpha
+- SS_BLEND_INVDESTALPHA: 1 - destination alpha
+- SS_BLEND_SRCALPHASAT: source alpha, clamped to [0,1]
+
+
+# SDL_GL_* [constants]
+
+=== OpenGL renderer attributes for @SS_SetGLAttrib
+
+Constants:
+
+- SDL_GL_RED_SIZE
+- SDL_GL_GREEN_SIZE
+- SDL_GL_BLUE_SIZE
+- SDL_GL_ALPHA_SIZE
+- SDL_GL_BUFFER_SIZE
+- SDL_GL_DOUBLEBUFFER
+- SDL_GL_DEPTH_SIZE
+- SDL_GL_STENCIL_SIZE
+- SDL_GL_ACCUM_RED_SIZE
+- SDL_GL_ACCUM_GREEN_SIZE
+- SDL_GL_ACCUM_BLUE_SIZE
+- SDL_GL_ACCUM_ALPHA_SIZE
+- SDL_GL_STEREO
+- SDL_GL_MULTISAMPLEBUFFERS
+- SDL_GL_MULTISAMPLESAMPLES
+- SDL_GL_ACCELERATED_VISUAL
+- SDL_GL_CONTEXT_MAJOR_VERSION
+- SDL_GL_CONTEXT_MINOR_VERSION
+- SDL_GL_CONTEXT_FLAGS
+- SDL_GL_CONTEXT_PROFILE_MASK
+- SDL_GL_SHARE_WITH_CURRENT_CONTEXT
+- SDL_GL_FRAMEBUFFER_SRGB_CAPABLE
+
+More info at @"http://wiki.libsdl.org/SDL_GL_SetAttribute".
+
+
+
+# <<<
+
+
 # C API [info]
+
+TODO
 

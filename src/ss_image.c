@@ -2,7 +2,6 @@
 #include <math.h>
 #include <ctype.h>
 
-#define SGS_INTERNAL
 
 #include "ss_main.h"
 
@@ -166,7 +165,7 @@ static int ss_image_convert( SGS_CTX, sgs_VarObj* data, int type )
 		IMGHDR;
 		return _make_image( C, img->width, img->height, img->data );
 	}
-	else if( type == SVT_STRING )
+	else if( type == SGS_VT_STRING )
 	{
 		char buf[ 32 ];
 		IMGHDR;
@@ -340,7 +339,7 @@ int ss_InitImage( SGS_CTX )
 
 int ss_IsImageVar( sgs_Variable* var )
 {
-	return var->type == SVT_OBJECT && var->data.O->iface == image_iface;
+	return var->type == SGS_VT_OBJECT && var->data.O->iface == image_iface;
 }
 
 int ss_ParseImage( SGS_CTX, int pos, SS_Image** out )

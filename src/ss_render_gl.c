@@ -66,7 +66,7 @@ struct _SS_Renderer
 static void ss_ri_gl__resetviewport( SS_Renderer* R )
 {
 	if( R->bbscale != SS_POSMODE_NONE )
-		glViewport( 0, 0, sgs_MIN( R->bbwidth, R->width ), sgs_MIN( R->bbheight, R->height ) );
+		glViewport( 0, 0, SGS_MIN( R->bbwidth, R->width ), SGS_MIN( R->bbheight, R->height ) );
 	else
 		glViewport( 0, 0, R->width, R->height );
 }
@@ -334,8 +334,8 @@ static void ss_ri_gl_swap( SS_Renderer* R )
 	{
 		GLuint texID;
 		
-		int w = sgs_MIN( R->bbwidth, R->width );
-		int h = sgs_MIN( R->bbheight, R->height );
+		int w = SGS_MIN( R->bbwidth, R->width );
+		int h = SGS_MIN( R->bbheight, R->height );
 		void* data = malloc( w * h * 4 );
 		if( data )
 		{
@@ -360,7 +360,7 @@ static void ss_ri_gl_swap( SS_Renderer* R )
 				{
 					int wc = (int) floor( (float) R->width / (float) w );
 					int hc = (int) floor( (float) R->height / (float) h );
-					int cnt = sgs_MAX( 1, sgs_MIN( wc, hc ) );
+					int cnt = SGS_MAX( 1, SGS_MIN( wc, hc ) );
 					wf = (float) w * cnt / (float) R->width;
 					hf = (float) h * cnt / (float) R->height;
 				}

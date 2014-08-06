@@ -67,8 +67,8 @@ static void ss_ri_d3d9__resetviewport( SS_Renderer* R )
 	D3DVIEWPORT9 vp = { 0, 0, -1, -1, 0.0, 1.0 };
 	if( R->bbscale != SS_POSMODE_NONE )
 	{
-		vp.Width = sgs_MIN( R->bbwidth, R->width );
-		vp.Height = sgs_MIN( R->bbheight, R->height );
+		vp.Width = SGS_MIN( R->bbwidth, R->width );
+		vp.Height = SGS_MIN( R->bbheight, R->height );
 	}
 	else
 	{
@@ -426,8 +426,8 @@ static void ss_ri_d3d9_swap( SS_Renderer* R )
 	
 	if( R->bbscale != SS_POSMODE_NONE )
 	{
-		int w = sgs_MIN( R->bbwidth, R->width );
-		int h = sgs_MIN( R->bbheight, R->height );
+		int w = SGS_MIN( R->bbwidth, R->width );
+		int h = SGS_MIN( R->bbheight, R->height );
 		
 		IDirect3DSurface9 *plain = NULL, *target = NULL;
 		if( !FAILED( IDirect3DDevice9_CreateOffscreenPlainSurface( R->d3ddev, R->width, R->height, D3DFMT_X8R8G8B8, D3DPOOL_SYSTEMMEM, &plain, NULL ) ) && plain &&
@@ -458,7 +458,7 @@ static void ss_ri_d3d9_swap( SS_Renderer* R )
 					{
 						int wc = (int) floor( (float) R->width / (float) w );
 						int hc = (int) floor( (float) R->height / (float) h );
-						int cnt = sgs_MAX( 1, sgs_MIN( wc, hc ) );
+						int cnt = SGS_MAX( 1, SGS_MIN( wc, hc ) );
 						wf = (float) w * cnt / (float) R->width;
 						hf = (float) h * cnt / (float) R->height;
 					}

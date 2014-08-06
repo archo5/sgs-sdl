@@ -2844,8 +2844,8 @@ static void ss_calc_cursor_pos( int* rcp_x, int* rcp_y, int x, int y, Uint32 wid
 	{
 		int width = 0, height = 0, w, h;
 		SDL_GetWindowSize( W->window, &width, &height );
-		w = sgs_MIN( W->bbwidth, width );
-		h = sgs_MIN( W->bbheight, height );
+		w = SGS_MIN( W->bbwidth, width );
+		h = SGS_MIN( W->bbheight, height );
 		
 		float wf = 1, hf = 1, xoff, yoff;
 		float aspect = ( (float) w / (float) h ) / ( (float) width / (float) height );
@@ -2867,7 +2867,7 @@ static void ss_calc_cursor_pos( int* rcp_x, int* rcp_y, int x, int y, Uint32 wid
 			{
 				int wc = (int) floor( (float) width / (float) w );
 				int hc = (int) floor( (float) height / (float) h );
-				int cnt = sgs_MAX( 1, sgs_MIN( wc, hc ) );
+				int cnt = SGS_MAX( 1, SGS_MIN( wc, hc ) );
 				wf = (float) w * cnt / (float) width;
 				hf = (float) h * cnt / (float) height;
 			}

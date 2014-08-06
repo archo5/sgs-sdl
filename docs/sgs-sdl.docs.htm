@@ -7,13 +7,524 @@
 	</head><body>
 	<h1>SGS-SDL: SGScript / SDL2 graphics framework</h1><div><h2>Table of Contents</h2><ul><li><a href='#Description'>Description</a>
 </li><li><a href='#SGScript-API'>SGScript API</a>
-</li><li><a href='#C-API'>C API</a>
+<ul><li><a href='#Image-handling'>Image handling</a>
+</li><li><a href='#Rendering'>Rendering</a>
+</li><li><a href='#Windows-events-and-display-modes'>Windows, events and display modes</a>
+</li><li><a href='#Utility-functions'>Utility functions</a>
+</li><li><a href='#ALL-SGScript-functions-A-Z'>ALL SGScript functions (A-Z)</a>
+</li><li><a href='#ALL-SGScript-objects-A-Z'>ALL SGScript objects (A-Z)</a>
+</li></ul><li><a href='#C-API'>C API</a>
 </li></ul></div><div>
 <div class='item'><a name='Description'></a><hr><h2>Description</h2><p>
 This is a graphics framework that acts as a SGScript virtual machine, providing additional bindings for creating windows to render accelerated 2D graphics and a tiny bit of 3D graphics.
 </p></div>
 <div class='item'><a name='SGScript-API'></a><hr><h2>SGScript API</h2></div>
-<div class='item'><a name='C-API'></a><hr><h2>C API</h2></div>
+<div class='item'><a name='Image-handling'></a><hr><h2>Image handling</h2><h4>Objects and their methods:</h4><ul><li><a href="#SS-Image-object">SS_Image</a>
+<ul><li><a href="#SS-Image-resize-method">resize</a>
+</li><li><a href="#SS-Image-clear-method">clear</a>
+</li><li><a href="#SS-Image-getData-method">getData</a>
+</li><li><a href="#SS-Image-setData-method">setData</a></li></ul></li></ul><h4>Functions:</h4><ul><li><a href="#SS-CreateImage-function">SS_CreateImage</a>
+</li><li><a href="#SS-LoadImage-function">SS_LoadImage</a></li></ul><h4>Interfaces:</h4><ul><li><a href="#ss-load-image-functions">ss_load_image_*</a> - image loading interface</li></ul></div>
+<div class='item'><a name='Rendering'></a><hr><h2>Rendering</h2><h4>Objects and their methods:</h4><ul><li><a href="#SS-Texture-object">SS_Texture</a>
+</li><li><a href="#SS-VertexFormat-object">SS_VertexFormat</a>
+</li><li><a href="#SS-RenderBuffer-object">SS_RenderBuffer</a>
+<ul><li><a href="#SS-RenderBuffer-begin-method">begin</a>
+</li><li><a href="#SS-RenderBuffer-reserve-method">reserve</a>
+</li><li><a href="#SS-RenderBuffer-copy-method">copy</a>
+</li><li><a href="#SS-RenderBuffer-erase-method">erase</a>
+</li><li><a href="#SS-RenderBuffer-f-method">f</a>
+</li><li><a href="#SS-RenderBuffer-b-method">b</a>
+</li><li><a href="#SS-RenderBuffer-dw-method">dw</a>
+</li><li><a href="#SS-RenderBuffer-cf2b-method">cf2b</a>
+</li><li><a href="#SS-RenderBuffer-c4b-method">c4b</a>
+</li><li><a href="#SS-RenderBuffer-pad-method">pad</a>
+</li><li><a href="#SS-RenderBuffer-interlace-method">interlace</a>
+</li><li><a href="#SS-RenderBuffer-quadsToTris-method">quadsToTris</a>
+</li><li><a href="#SS-RenderBuffer-draw-method">draw</a>
+</li></ul><li><a href="#SS-Font-object">SS_Font</a>
+<ul><li><a href="#SS-Font-getAdvance-method">getAdvance</a>
+</li><li><a href="#SS-Font-getTextLength-method">getTextLength</a></li></ul></li></ul><h4>Functions:</h4><ul><li><a href="#SS-CreateTexture-function">SS_CreateTexture</a>
+</li><li><a href="#SS-CreateRenderTexture-function">SS_CreateRenderTexture</a>
+</li><li><a href="#SS-Draw-function">SS_Draw</a>
+</li><li><a href="#SS-MakeVertexFormat-function">SS_MakeVertexFormat</a>
+</li><li><a href="#SS-DrawPacked-function">SS_DrawPacked</a>
+</li><li><a href="#SS-CreateRenderBuffer-function">SS_CreateRenderBuffer</a>
+</li><li><a href="#SS-CreateFont-function">SS_CreateFont</a>
+</li><li><a href="#SS-IsFont-function">SS_IsFont</a>
+</li><li><a href="#SS-DrawTextLine-functions">SS_DrawTextLine*</a>
+</li><li><a href="#SS-MatrixPush-function">SS_MatrixPush</a>
+</li><li><a href="#SS-MatrixPop-function">SS_MatrixPop</a>
+</li><li><a href="#SS-SetCamera-function">SS_SetCamera</a>
+</li><li><a href="#SS-SetClipRect-function">SS_SetClipRect</a>
+</li><li><a href="#SS-SetViewport-function">SS_SetViewport</a>
+</li><li><a href="#SS-SetRenderTarget-function">SS_SetRenderTarget</a>
+</li><li><a href="#SS-SetDepthTest-function">SS_SetDepthTest</a>
+</li><li><a href="#SS-SetCulling-function">SS_SetCulling</a>
+</li><li><a href="#SS-SetBlending-function">SS_SetBlending</a>
+</li><li><a href="#SS-SetGLAttrib-function">SS_SetGLAttrib</a>
+</li><li><a href="#SS-Clear-function">SS_Clear</a>
+</li><li><a href="#SS-Present-function">SS_Present</a></li></ul><h4>Interfaces:</h4><ul><li><a href="#ss-font-search-paths-interface">ss_font_search_paths</a> - font search path array</li></ul><h4>Constants:</h4><ul><li><a href="#SS-PT-constants">SS_PT_*</a> - primitive types
+</li><li><a href="#SS-BLENDOP-constants">SS_BLENDOP_*</a> - blending operations (add/subtract/..)
+</li><li><a href="#SS-BLEND-constants">SS_BLEND_*</a> - blending factors (zero/one/srcalpha/invsrccolor/..)
+</li><li><a href="#SDL-GL-constants">SDL_GL_*</a> - OpenGL renderer attributes</li></ul></div>
+<div class='item'><a name='Windows-events-and-display-modes'></a><hr><h2>Windows, events and display modes</h2><h4>Objects and their methods:</h4><ul><li><a href="#SS-DisplayMode">SS_DisplayMode</a>
+</li><li><a href="#SS-Window">SS_Window</a>
+<ul><li><a href="#SS-Window-show">show</a>
+</li><li><a href="#SS-Window-hide">hide</a>
+</li><li><a href="#SS-Window-minimize">minimize</a>
+</li><li><a href="#SS-Window-maximize">maximize</a>
+</li><li><a href="#SS-Window-restore">restore</a>
+</li><li><a href="#SS-Window-raise">raise</a>
+</li><li><a href="#SS-Window-setPosition">setPosition</a>
+</li><li><a href="#SS-Window-setSize">setSize</a>
+</li><li><a href="#SS-Window-setMaxSize">setMaxSize</a>
+</li><li><a href="#SS-Window-setMinSize">setMinSize</a>
+</li><li><a href="#SS-Window-warpMouse">warpMouse</a>
+</li><li><a href="#SS-Window-initRenderer">initRenderer</a>
+</li><li><a href="#SS-Window-makeCurrent">makeCurrent</a>
+</li><li><a href="#SS-Window-setBufferScale">setBufferScale</a>
+</li></ul><li><a href="#SS-Joystick">SS_Joystick</a>
+<ul><li><a href="#SS-Joystick-open">open</a>
+</li><li><a href="#SS-Joystick-close">close</a>
+</li><li><a href="#SS-Joystick-getAxis">getAxis</a>
+</li><li><a href="#SS-Joystick-getBall">getBall</a>
+</li><li><a href="#SS-Joystick-getButton">getButton</a>
+</li><li><a href="#SS-Joystick-getHat">getHat</a>
+</li></ul><li><a href="#SS-GameController">SS_GameController</a>
+<ul><li><a href="#SS-GameController-open">open</a>
+</li><li><a href="#SS-GameController-close">close</a>
+</li><li><a href="#SS-GameController-getAxis">getAxis</a>
+</li><li><a href="#SS-GameController-getButton">getButton</a>
+</li><li><a href="#SS-GameController-getBindForAxis">getBindForAxis</a>
+</li><li><a href="#SS-GameController-getBindForButton">getBindForButton</a></li></ul></li></ul><h4>Functions:</h4><ul><li><a href="#SS-SetError">SS_SetError</a>
+</li><li><a href="#SS-GetError">SS_GetError</a>
+</li><li><a href="#SS-EventState">SS_EventState</a>
+</li><li><a href="#SS-GetNumTouchDevices">SS_GetNumTouchDevices</a>
+</li><li><a href="#SS-GetTouchDevice">SS_GetTouchDevice</a>
+</li><li><a href="#SS-GetTouchDevices">SS_GetTouchDevices</a>
+</li><li><a href="#SS-GetNumTouchFingers">SS_GetNumTouchFingers</a>
+</li><li><a href="#SS-GetTouchFinger">SS_GetTouchFinger</a>
+</li><li><a href="#SS-GetTouchFingers">SS_GetTouchFingers</a>
+</li><li><a href="#SS-RecordGesture">SS_RecordGesture</a>
+</li><li><a href="#SS-FlushEvents">SS_FlushEvents</a>
+</li><li><a href="#SS-HasEvents">SS_HasEvents</a>
+</li><li><a href="#SS-PollEvent">SS_PollEvent</a>
+</li><li><a href="#SS-WaitEvent">SS_WaitEvent</a>
+</li><li><a href="#SS-PeekEvents">SS_PeekEvents</a>
+</li><li><a href="#SS-GetEvents">SS_GetEvents</a>
+</li><li><a href="#SS-PumpEvents">SS_PumpEvents</a>
+</li><li><a href="#SS-QuitRequested">SS_QuitRequested</a>
+</li><li><a href="#SS-HasClipboardText">SS_HasClipboardText</a>
+</li><li><a href="#SS-GetClipboardText">SS_GetClipboardText</a>
+</li><li><a href="#SS-SetClipboardText">SS_SetClipboardText</a>
+</li><li><a href="#SS-GetVideoDrivers">SS_GetVideoDrivers</a>
+</li><li><a href="#SS-DisplayMode">SS_DisplayMode</a>
+</li><li><a href="#SS-GetNumDisplays">SS_GetNumDisplays</a>
+</li><li><a href="#SS-GetDisplayName">SS_GetDisplayName</a>
+</li><li><a href="#SS-GetNumDisplayModes">SS_GetNumDisplayModes</a>
+</li><li><a href="#SS-GetDisplayMode">SS_GetDisplayMode</a>
+</li><li><a href="#SS-GetDisplayModes">SS_GetDisplayModes</a>
+</li><li><a href="#SS-GetDisplayBounds">SS_GetDisplayBounds</a>
+</li><li><a href="#SS-GetClosestDisplayMode">SS_GetClosestDisplayMode</a>
+</li><li><a href="#SS-GetCurrentDisplayMode">SS_GetCurrentDisplayMode</a>
+</li><li><a href="#SS-GetDesktopDisplayMode">SS_GetDesktopDisplayMode</a>
+</li><li><a href="#SS-CreateWindow">SS_CreateWindow</a>
+</li><li><a href="#SS-GetWindowFromID">SS_GetWindowFromID</a>
+</li><li><a href="#SS-GetKeyFromName">SS_GetKeyFromName</a>
+</li><li><a href="#SS-GetScancodeFromName">SS_GetScancodeFromName</a>
+</li><li><a href="#SS-GetKeyFromScancode">SS_GetKeyFromScancode</a>
+</li><li><a href="#SS-GetScancodeFromKey">SS_GetScancodeFromKey</a>
+</li><li><a href="#SS-GetKeyName">SS_GetKeyName</a>
+</li><li><a href="#SS-GetScancodeName">SS_GetScancodeName</a>
+</li><li><a href="#SS-GetKeyboardFocus">SS_GetKeyboardFocus</a>
+</li><li><a href="#SS-GetMouseFocus">SS_GetMouseFocus</a>
+</li><li><a href="#SS-GetModState">SS_GetModState</a>
+</li><li><a href="#SS-SetModState">SS_SetModState</a>
+</li><li><a href="#SS-HasScreenKeyboardSupport">SS_HasScreenKeyboardSupport</a>
+</li><li><a href="#SS-IsTextInputActive">SS_IsTextInputActive</a>
+</li><li><a href="#SS-ShowCursor">SS_ShowCursor</a>
+</li><li><a href="#SS-SetSystemCursor">SS_SetSystemCursor</a>
+</li><li><a href="#SS-WarpMouse">SS_WarpMouse</a>
+</li><li><a href="#SS-GetMouseState">SS_GetMouseState</a>
+</li><li><a href="#SS-GetRelativeMouseState">SS_GetRelativeMouseState</a>
+</li><li><a href="#SS-GetRelativeMouseMode">SS_GetRelativeMouseMode</a>
+</li><li><a href="#SS-SetRelativeMouseMode">SS_SetRelativeMouseMode</a>
+</li><li><a href="#SS-StartTextInput">SS_StartTextInput</a>
+</li><li><a href="#SS-StopTextInput">SS_StopTextInput</a>
+</li><li><a href="#SS-SetTextInputRect">SS_SetTextInputRect</a>
+</li><li><a href="#SS-GetJoystick">SS_GetJoystick</a>
+</li><li><a href="#SS-NumJoysticks">SS_NumJoysticks</a>
+</li><li><a href="#SS-GetJoystickName">SS_GetJoystickName</a>
+</li><li><a href="#SS-GetJoystickNames">SS_GetJoystickNames</a>
+</li><li><a href="#SS-JoystickUpdate">SS_JoystickUpdate</a>
+</li><li><a href="#SS-JoystickEventState">SS_JoystickEventState</a>
+</li><li><a href="#SS-GetGameController">SS_GetGameController</a>
+</li><li><a href="#SS-GameControllerAddMapping">SS_GameControllerAddMapping</a>
+</li><li><a href="#SS-GameControllerAddMappingsFromFile">SS_GameControllerAddMappingsFromFile</a>
+</li><li><a href="#SS-GameControllerMappingForGUID">SS_GameControllerMappingForGUID</a>
+</li><li><a href="#SS-GetGameControllerName">SS_GetGameControllerName</a>
+</li><li><a href="#SS-GetGameControllerNames">SS_GetGameControllerNames</a>
+</li><li><a href="#SS-GameControllerGetAxisFromString">SS_GameControllerGetAxisFromString</a>
+</li><li><a href="#SS-GameControllerGetButtonFromString">SS_GameControllerGetButtonFromString</a>
+</li><li><a href="#SS-GameControllerGetStringForAxis">SS_GameControllerGetStringForAxis</a>
+</li><li><a href="#SS-GameControllerGetStringForButton">SS_GameControllerGetStringForButton</a>
+</li><li><a href="#SS-GameControllerUpdate">SS_GameControllerUpdate</a>
+</li><li><a href="#SS-GameControllerEventState">SS_GameControllerEventState</a>
+</li><li><a href="#SS-IsGameController">SS_IsGameController</a>
+</li><li><a href="#SDL-WINDOWPOS-UNDEFINED-DISPLAY">SDL_WINDOWPOS_UNDEFINED_DISPLAY</a>
+</li><li><a href="#SDL-WINDOWPOS-CENTERED-DISPLAY">SDL_WINDOWPOS_CENTERED_DISPLAY</a></li></ul><h4>Constants:</h4><ul><li><a href="#SDL-GL-constants">SDL</a> event types
+</li><li><a href="#SDL-CURSOR">SDL_CURSOR_*</a>, SDL_SYSTEM_CURSOR_* - system cursor types
+</li><li><a href="#SDLK">SDLK_*</a> - key types
+</li><li><a href="#SDL-SCANCODE">SDL_SCANCODE_*</a> - keyboard scan code types
+</li><li><a href="#KMOD">KMOD_*</a> - keyboard modifier flags
+</li><li><a href="#SDL-BUTTON">SDL_BUTTON_*</a> - mouse button constants
+</li><li><a href="#SDL-TOUCH-MOUSEID">SDL_TOUCH_MOUSEID</a> - ???
+</li><li><a href="#SDL-CONTROLLER-BINDTYPE">SDL_CONTROLLER_BINDTYPE_*</a> - controller binding types
+</li><li><a href="#SDL-CONTROLLER-AXIS">SDL_CONTROLLER_AXIS_*</a> - controller axis types
+</li><li><a href="#SDL-HAT">SDL_HAT_*</a> - controller hat positions
+</li><li><a href="#SDL-WINDOWPOS">SDL_WINDOWPOS_*</a> - special window positioning values
+</li><li><a href="#SDL-WINDOW">SDL_WINDOW_*</a> - window creation flags
+</li><li><a href="#SDL-RENDERER">SDL_RENDERER_*</a> - renderer creation flags
+</li><li><a href="#SDL-MESSAGEBOX">SDL_MESSAGEBOX_*</a> - message box types
+</li><li><a href="#SDL-POWERSTATE">SDL_POWERSTATE_*</a> - power states
+</li><li><a href="#SS-RENDERER">SS_RENDERER_*</a> - renderer types &amp; flags
+</li><li><a href="#SS-POSMODE">SS_POSMODE_*</a> - output rectangle positioning modes for detached output rectangle mode</li></ul></div>
+<div class='item'><a name='Utility-functions'></a><hr><h2>Utility functions</h2><ul><li><a href="#SS-GetPlatformInfo">SS_GetPlatformInfo</a>
+</li><li><a href="#SS-GetPowerInfo">SS_GetPowerInfo</a>
+</li><li><a href="#SS-Sleep">SS_Sleep</a>
+</li><li><a href="#SS-EnableScreenSaver">SS_EnableScreenSaver</a>
+</li><li><a href="#SS-DisableScreenSaver">SS_DisableScreenSaver</a>
+</li><li><a href="#SS-IsScreenSaverEnabled">SS_IsScreenSaverEnabled</a></li></ul></div>
+<div class='item'><a name='ALL-SGScript-functions-A-Z'></a><hr><h2>ALL SGScript functions (A-Z)</h2><ul><li><a href="#SS-Clear-function">SS_Clear [function]</a>
+</li><li><a href="#SS-CreateFont-function">SS_CreateFont [function]</a>
+</li><li><a href="#SS-CreateImage-function">SS_CreateImage [function]</a>
+</li><li><a href="#SS-CreateRenderBuffer-function">SS_CreateRenderBuffer [function]</a>
+</li><li><a href="#SS-CreateRenderTexture-function">SS_CreateRenderTexture [function]</a>
+</li><li><a href="#SS-CreateTexture-function">SS_CreateTexture [function]</a>
+</li><li><a href="#SS-Draw-function">SS_Draw [function]</a>
+</li><li><a href="#SS-DrawPacked-function">SS_DrawPacked [function]</a>
+</li><li><a href="#SS-DrawTextLine-functions">SS_DrawTextLine* [functions]</a>
+</li><li><a href="#SS-IsFont-function">SS_IsFont [function]</a>
+</li><li><a href="#SS-LoadImage-function">SS_LoadImage [function]</a>
+</li><li><a href="#SS-MakeVertexFormat-function">SS_MakeVertexFormat [function]</a>
+</li><li><a href="#SS-MatrixPop-function">SS_MatrixPop [function]</a>
+</li><li><a href="#SS-MatrixPush-function">SS_MatrixPush [function]</a>
+</li><li><a href="#SS-Present-function">SS_Present [function]</a>
+</li><li><a href="#SS-SetBlending-function">SS_SetBlending [function]</a>
+</li><li><a href="#SS-SetCamera-function">SS_SetCamera [function]</a>
+</li><li><a href="#SS-SetClipRect-function">SS_SetClipRect [function]</a>
+</li><li><a href="#SS-SetCulling-function">SS_SetCulling [function]</a>
+</li><li><a href="#SS-SetDepthTest-function">SS_SetDepthTest [function]</a>
+</li><li><a href="#SS-SetGLAttrib-function">SS_SetGLAttrib [function]</a>
+</li><li><a href="#SS-SetRenderTarget-function">SS_SetRenderTarget [function]</a>
+</li><li><a href="#SS-SetViewport-function">SS_SetViewport [function]</a>
+</li><li><a href="#ss-load-image-functions">ss_load_image_* [functions]</a></li></ul></div>
+<div class='item'><a name='ALL-SGScript-objects-A-Z'></a><hr><h2>ALL SGScript objects (A-Z)</h2><ul><li><a href="#SS-Font-object">SS_Font [object]</a>
+</li><li><a href="#SS-Image-object">SS_Image [object]</a>
+</li><li><a href="#SS-RenderBuffer-object">SS_RenderBuffer [object]</a>
+</li><li><a href="#SS-Texture-object">SS_Texture [object]</a>
+</li><li><a href="#SS-VertexFormat-object">SS_VertexFormat [object]</a></li></ul></div>
+<div class='item'><a name='SS-Image-object'></a><hr><h2>SS_Image [object]</h2><p>
+A 32-bit RGBA (R8G8B8A8) 2D image object.
+</p><ul><li>methods:
+<ul><li><a href="#SS-Image-resize-method">resize</a>
+</li><li><a href="#SS-Image-clear-method">clear</a>
+</li><li><a href="#SS-Image-getData-method">getData</a>
+</li><li><a href="#SS-Image-setData-method">setData</a>
+</li></ul><li>read-only properties:
+<ul><li>[int] width
+</li><li>[int] height
+</li></ul><li>other features:
+<ul><li>tostring = &quot;Image (&lt;width&gt; x &lt;height&gt;)&quot;
+</li><li>cloning
+</li><li>GC-safe</li></ul></li></ul></div>
+<div class='item'><a name='SS-Image-resize-method'></a><hr><h2>SS_Image.resize [method]</h2><h3>var SS_Image.resize( int width, int height )</h3><h4>resizes the image to the specified <code>width</code> and <code>height</code>, returns <code>true</code> on success</h4><ul><li>each dimension must have the new size in the [1;4096] range</li></ul></div>
+<div class='item'><a name='SS-Image-clear-method'></a><hr><h2>SS_Image.clear [method]</h2><h3>SS_Image.clear( int r, int g, int b[, int a ])</h3><h4>set all pixels of the image to the specified color</h4><ul><li>color values must be in the 0-255 range, otherwise they will be clamped to that range</li></ul></div>
+<div class='item'><a name='SS-Image-getData-method'></a><hr><h2>SS_Image.getData [method]</h2><h3>string SS_Image.getData()</h3><h4>retrieve the color data of the image as a string</h4></div>
+<div class='item'><a name='SS-Image-setData-method'></a><hr><h2>SS_Image.setData [method]</h2><h3>int SS_Image.setData( string data )</h3><h4>set the color data of the image from a string</h4><ul><li>returns 0 if there was not enough data to write all bytes
+</li><li>returns 1 if the amount of bytes was exactly right (width <i> height </i> 4) to fill the array
+</li><li>returns 2 if there were too many bytes and the last ones were discarded</li></ul></div>
+<div class='item'><a name='SS-CreateImage-function'></a><hr><h2>SS_CreateImage [function]</h2><h3>SS_Image SS_CreateImage( int width[, int height ])</h3><h4>create an empty image of the specified size</h4><ul><li>if <code>height</code> is not specified, it is assumed to be equal to <code>width</code>
+</li><li>each dimension must have the size in the [1;4096] range</li></ul></div>
+<div class='item'><a name='SS-LoadImage-function'></a><hr><h2>SS_LoadImage [function]</h2><h3>SS_Image? SS_LoadImage( string path )</h3><h4>load an image from a file</h4><ul><li>if it was not possible to read the image, <code>null</code> is returned and function emits a warning</li></ul></div>
+<div class='item'><a name='ss-load-image-functions'></a><hr><h2>ss_load_image_* [functions]</h2><h3>SS_Image? ss_load_image_png( string path )</h3><h3>SS_Image? ss_load_image_jpg( string path )</h3><h3>SS_Image? ss_load_image_jpeg( string path )</h3><h3>SS_Image? ss_load_image_dds( string path )</h3><h4>tries to load an image with the specified extension from the specified <code>path</code></h4><ul><li>this is the backend of <a href="#SS-LoadImage-function">SS_LoadImage</a>
+</li><li>if it was not possible to read the image, <code>null</code> is returned and function emits a warning
+</li><li>support for more extensions can be added in the same manner - creating a ss_load_image_&lt;ext&gt; callable global</li></ul></div>
+<div class='item'><a name='SS-Texture-object'></a><hr><h2>SS_Texture [object]</h2><p>
+A renderer-specific texture container.
+</p><ul><li>read-only properties:
+<ul><li>[int] width
+</li><li>[int] height
+</li><li>[bool] is_hrepeat - is the texture repeated horizontally on out-of-range U(Direct3D)/S(OpenGL) texture coords?
+</li><li>[bool] is_vrepeat - is the texture repeated vertically on out-of-range V(Direct3D)/T(OpenGL) texture coords?
+</li><li>[bool] is_nolerp - is the texture not linearly interpolated?
+</li><li>[bool] is_mipmaps - does the texture have mipmaps?
+</li></ul><li>other features:
+<ul><li>tostring = &quot;Texture (&lt;width&gt; x &lt;height&gt;, type &lt;flags&gt;)&quot;
+</li><li>GC-safe</li></ul></li></ul></div>
+<div class='item'><a name='SS-VertexFormat-object'></a><hr><h2>SS_VertexFormat [object]</h2><p>
+A renderer-specific vertex format container.
+</p><ul><li>features:
+<ul><li>tostring = &quot;SS_VertexFormat&quot; or &quot;SS_VertexFormat (unloaded)&quot;
+</li><li>GC-safe</li></ul></li></ul></div>
+<div class='item'><a name='SS-RenderBuffer-object'></a><hr><h2>SS_RenderBuffer [object]</h2><p>
+A basic byte buffer with methods to generate vertex data.
+</p><ul><li>methods:
+<ul><li><a href="#SS-RenderBuffer-begin-method">begin</a>
+</li><li><a href="#SS-RenderBuffer-reserve-method">reserve</a>
+</li><li><a href="#SS-RenderBuffer-copy-method">copy</a>
+</li><li><a href="#SS-RenderBuffer-erase-method">erase</a>
+</li><li><a href="#SS-RenderBuffer-f-method">f</a>
+</li><li><a href="#SS-RenderBuffer-b-method">b</a>
+</li><li><a href="#SS-RenderBuffer-dw-method">dw</a>
+</li><li><a href="#SS-RenderBuffer-cf2b-method">cf2b</a>
+</li><li><a href="#SS-RenderBuffer-c4b-method">c4b</a>
+</li><li><a href="#SS-RenderBuffer-pad-method">pad</a>
+</li><li><a href="#SS-RenderBuffer-interlace-method">interlace</a>
+</li><li><a href="#SS-RenderBuffer-quadsToTris-method">quadsToTris</a>
+</li><li><a href="#SS-RenderBuffer-draw-method">draw</a>
+</li></ul><li>read-only properties:
+<ul><li>[int] size - size in bytes of the buffer
+</li><li>[int] capacity - capacity in bytes of the buffer (allocated but non necessarily used memory)
+</li></ul><li>other features:
+<ul><li>GC-safe</li></ul></li></ul></div>
+<div class='item'><a name='SS-RenderBuffer-begin-method'></a><hr><h2>SS_RenderBuffer.begin [method]</h2><h3>self SS_RenderBuffer.begin()</h3><h4>clears the byte buffer</h4></div>
+<div class='item'><a name='SS-RenderBuffer-reserve-method'></a><hr><h2>SS_RenderBuffer.reserve [method]</h2><h3>self SS_RenderBuffer.reserve( int count )</h3><h4>increase the capacity to <code>count</code> bytes</h4><ul><li>if <code>count</code> is less than current capacity, nothing happens</li></ul></div>
+<div class='item'><a name='SS-RenderBuffer-copy-method'></a><hr><h2>SS_RenderBuffer.copy [method]</h2><h3>self SS_RenderBuffer.copy( SS_RenderBuffer other, int start = 0[, int count ])</h3><h4>copies contents of another buffer into current one</h4><ul><li>if <code>count</code> is not specified, it is the remaining number of bytes after <code>start</code>
+</li><li>the copy region cannot be out of bounds</li></ul></div>
+<div class='item'><a name='SS-RenderBuffer-erase-method'></a><hr><h2>SS_RenderBuffer.erase [method]</h2><h3>self SS_RenderBuffer.erase( int start = 0[, int count ])</h3><h4>removes the specified region from the buffer</h4><ul><li>if <code>count</code> is not specified, it is the remaining number of bytes after <code>start</code>
+</li><li>the region to be erased cannot be out of bounds</li></ul></div>
+<div class='item'><a name='SS-RenderBuffer-f-method'></a><hr><h2>SS_RenderBuffer.f [method]</h2><h3>self SS_RenderBuffer.f( real {1,64} )</h3><h4>appends the specified real values, converted to a 32-bit floating point number</h4><ul><li>no validation of input arguments is performed, for each non-numerically-compatible* argument anything can be appended to the buffer</li></ul><p>
+* numerically compatible - can be converted to a real value
+</p></div>
+<div class='item'><a name='SS-RenderBuffer-b-method'></a><hr><h2>SS_RenderBuffer.b [method]</h2><h3>self SS_RenderBuffer.b( int {1,64} )</h3><h4>appends the specified integer values, converted to a 8-bit unsigned integer number (byte/uint8_t)</h4><ul><li>no validation of input arguments is performed, for each non-numerically-compatible* argument anything can be appended to the buffer</li></ul><p>
+* numerically compatible - can be converted to an integer value
+</p></div>
+<div class='item'><a name='SS-RenderBuffer-dw-method'></a><hr><h2>SS_RenderBuffer.dw [method]</h2><h3>self SS_RenderBuffer.dw( int {1,64} )</h3><h4>appends the specified integer values, converted to a 32-bit unsigned integer number (double word/uint32_t)</h4><ul><li>no validation of input arguments is performed, for each non-numerically-compatible* argument anything can be appended to the buffer</li></ul><p>
+* numerically compatible - can be converted to an integer value
+</p></div>
+<div class='item'><a name='SS-RenderBuffer-cf2b-method'></a><hr><h2>SS_RenderBuffer.cf2b [method]</h2><h3>self SS_RenderBuffer.f( real {1,64} )</h3><h4>&#39;clamped float to byte&#39;, appends the specified real values, clamped to [0.0;1.0], multiplied by 255 and converted to a 8-bit unsigned integer number (byte/uint8_t)</h4><ul><li>no validation of input arguments is performed, for each non-numerically-compatible* argument anything can be appended to the buffer</li></ul><p>
+* numerically compatible - can be converted to a real value
+</p></div>
+<div class='item'><a name='SS-RenderBuffer-c4b-method'></a><hr><h2>SS_RenderBuffer.c4b [method]</h2><h3>self SS_RenderBuffer.c4b( real i[, real j[, real k[, real l ]]])</h3><h4>appends the specified real values, expanded to 4 values, clamped to [0.0;1.0], multiplied by 255 and converted to a 8-bit unsigned integer number (byte/uint8_t)</h4><p>
+<em class='notice-bgr'>This function requires an active rendering context to work.</em>
+</p><ul><li>Expansion:
+<ul><li>1 value: R = i, G = i, B = i, A = i
+</li><li>2 values: R = i, G = i, B = i, A = j
+</li><li>3 values: R = i, G = j, B = k, A = 1
+</li><li>4 values: R = i, G = j, B = k, A = l
+</li></ul><li>R / B values are swapped automatically if a BGRA-compatible renderer is active (Direct3D9)</li></ul></div>
+<div class='item'><a name='SS-RenderBuffer-pad-method'></a><hr><h2>SS_RenderBuffer.pad [method]</h2><h3>self SS_RenderBuffer.pad( int count )</h3><h4>append <code>count</code> bytes of random data that is not going to be used by the vertex format</h4><p>
+<em class='notice-bgr'>do not rely on having any specific values in the buffer, they may be random -- use <a href="#SS-RenderBuffer-b-method">SS_RenderBuffer.b</a> to get specific bytes</em>
+</p></div>
+<div class='item'><a name='SS-RenderBuffer-interlace-method'></a><hr><h2>SS_RenderBuffer.interlace [method]</h2><h3>self SS_RenderBuffer.interlace( int endbytes, int stride, int offset = 0[, int count = (size - endbytes)/stride ])</h3><h4>interlace (periodically insert) last <code>endbytes</code> bytes into the rest of the buffer</h4><ul><li><code>endbytes</code>: number of bytes to remove from the end and interlace into the new buffer
+</li><li><code>stride</code>: distance between each insertion position
+</li><li><code>offset</code>: first insertion position
+</li><li><code>count</code>: number of times the insertion should be performed</li></ul></div>
+<div class='item'><a name='SS-RenderBuffer-quadsToTris-method'></a><hr><h2>SS_RenderBuffer.quadsToTris [method]</h2><h3>self SS_RenderBuffer.quadsToTris( int vertex_size )</h3><h4>duplicate quad vertices to get triangle vertices</h4><ul><li>buffer size is increased by 150% - for each 4 vertices, 2 vertices are copied
+</li><li>Mapping table (N = new, O = old):
+<ul><li>N[0] = O[0]
+</li><li>N[1] = O[1]
+</li><li>N[2] = O[2]
+</li><li>N[3] = O[2]
+</li><li>N[4] = O[3]
+</li><li>N[5] = O[0]</li></ul></li></ul></div>
+<div class='item'><a name='SS-RenderBuffer-draw-method'></a><hr><h2>SS_RenderBuffer.draw [method]</h2><h3>self SS_RenderBuffer.draw( SS_Texture|null texture, SS_VertexFormat format, int start, int count, int type )</h3><h4>draw the buffer data</h4><p>
+<em class='notice-bgr'>This function requires an active rendering context to work.</em>
+</p><ul><li><code>start</code>: first vertex to draw
+</li><li><code>count</code>: number of vertices to draw
+</li><li><code>type</code>: one of the <a href="#SS-PT-constants">SS_PT_*</a> primitive type constants
+</li><li>vertex size is specified by the vertex format</li></ul></div>
+<div class='item'><a name='SS-Font-object'></a><hr><h2>SS_Font [object]</h2><p>
+A renderer-specific one-size version of a font.
+</p><ul><li>methods:
+<ul><li><a href="#SS-Font-getAdvance-method">getAdvance</a>
+</li><li><a href="#SS-Font-getTextLength-method">getTextLength</a>
+</li></ul><li>read-only properties:
+<ul><li>[int] size - font size, specified on creation
+</li><li>[int] x_ppem - horizontal (X) pixels per <code>em</code> (size of <code>em</code> square)
+</li><li>[int] y_ppem - vertical (Y) pixels per <code>em</code> (size of <code>em</code> square)
+</li><li>[int] ascender - ascender height in pixels
+</li><li>[int] descender - descender height in pixels
+</li><li>[int] height - real font height in pixels
+</li><li>[int] max_advance - max. distance between glyphs
+</li></ul><li>other features:
+<ul><li>GC-safe</li></ul></li></ul></div>
+<div class='item'><a name='SS-Font-getAdvance-method'></a><hr><h2>SS_Font.getAdvance [method]</h2><h3>int SS_Font.getAdvance( int|null c0, int c1 )</h3><h4>calculates the horizontal advance distance (end-to-end) between character <code>c0</code>/any character and character <code>c1</code></h4><p>
+If <code>c0</code> is not <code>null</code> and font has kerning data for both glyphs, kerning is taken into account, otherwise function returns the horizontal length of <code>c1</code>.
+</p></div>
+<div class='item'><a name='SS-Font-getTextLength-method'></a><hr><h2>SS_Font.getTextLength [method]</h2><h3>int SS_Font.getTextLength( string utf8text )</h3><h4>calculates the horizontal single-line length of the specified UTF8 text string</h4></div>
+<div class='item'><a name='SS-CreateTexture-function'></a><hr><h2>SS_CreateTexture [function]</h2><h3>SS_Texture? SS_CreateTexture( SS_Image|string source[, string flags ])</h3><h4>loads a texture from an image or a path</h4><p>
+<em class='notice-bgr'>This function requires an active rendering context to work.</em>
+</p><ul><li>if a string value is passed for the first argument, function inherits the behavior of <a href="#SS-LoadImage-function">SS_LoadImage</a></li></ul></div>
+<div class='item'><a name='SS-CreateRenderTexture-function'></a><hr><h2>SS_CreateRenderTexture [function]</h2><h3>SS_Texture? SS_CreateRenderTexture( int width, int height[, string flags ])</h3><h4>creates a renderable texture (to be used with <a href="#SS-SetRenderTarget-function">SS_SetRenderTarget)</a></h4><p>
+<em class='notice-bgr'>This function requires an active rendering context to work.</em>
+</p><ul><li>generally the function is supposed to work with all resolutions from 1x1 to screen width/height, if render target textures are supported at all</li></ul></div>
+<div class='item'><a name='SS-Draw-function'></a><hr><h2>SS_Draw [function]</h2><h3>bool SS_Draw( dict )</h3><h4>draw the specified data from the dictionary</h4><p>
+<em class='notice-bgr'>This function requires an active rendering context to work.</em>
+</p><ul><li>This function uses geometry properties to generate meshes and instancing properties to transform/duplicate them
+</li><li>For geometry properties, either preset or mode + vertices must be set to render something.
+</li><li>Position values are leading the array numbers. If <code>vertices</code> are specified, <code>vcolors</code> and <code>vtexcoords</code> are expected to be of the same size (or will use a modulus-based index to fit).
+<ul><li>Same goes for <code>position</code>/<code>positions</code> and other instancing properties.</li></ul></li></ul><ul><li>Geometry properties:
+<ul><li>preset: one of...
+<ul><li>&quot;box&quot;: a square with vertex positions -0.5;0.5 and texcoords 0;1
+</li><li>&quot;tile&quot;: a square with vertex positions 0;1 and texcoords 0;1
+</li></ul><li>mode: one of <a href="#SS-PT-constants">SS_PT_*</a> primitive type constants for vertex data
+</li><li>vertices: array of vertex positions
+</li><li>vcolors: array of vertex colors
+</li><li>vtexcoords: array of vertex texture coordinates
+</li></ul><li>Instancing properties:
+<ul><li>position: vec2 object
+</li><li>positions: array of vec2 objects
+</li><li>angle: real value in radians
+</li><li>angles: array of angles (real)
+</li><li>scale: vec2 object
+</li><li>scales: array of scale values (vec2 object)
+</li><li>color: color object
+</li><li>colors: array of color values (color object)</li></ul></li></ul></div>
+<div class='item'><a name='SS-MakeVertexFormat-function'></a><hr><h2>SS_MakeVertexFormat [function]</h2><h3>SS_VertexFormat SS_MakeVertexFormat( string format )</h3><h4>make the GPU vertex format object from a format description string</h4><p>
+<em class='notice-bgr'>This function requires an active rendering context to work.</em>
+</p><ul><li>the format is a list of character triplets, in each triplet:
+<ul><li>first character - channel / usage semantic
+<ul><li><code>p</code> for position
+</li><li><code>t</code> for texture coordinates
+</li><li><code>c</code> for color
+</li><li><code>n</code> for normals
+</li></ul><li>second character - data type
+<ul><li><code>f</code> for 32-bit floating point value
+</li><li><code>b</code> for 8-bit byte value
+</li></ul><li>third character - item count - <code>1</code>, <code>2</code>, <code>3</code> or <code>4</code></li></ul></li></ul><p>
+Restrictions:
+</p><ul><li>color components with byte data type must have exactly 4 bytes
+</li><li>normal components must have exactly 3 data items</li></ul><p>
+Common character sets:
+</p><ul><li><code>pf2</code> - 2-component (X,Y) float position value
+</li><li><code>pf3</code> - 3-component (X,Y,Z) float position value
+</li><li><code>cb4</code> - 4-component (RGBA) byte color value
+</li><li><code>tf2</code> - 2-component (U,V - Direct3D / S,T - OpenGL) texture coordinate value</li></ul></div>
+<div class='item'><a name='SS-DrawPacked-function'></a><hr><h2>SS_DrawPacked [function]</h2><h3>void SS_DrawPacked( SS_Texture|null texture, SS_VertexFormat format, string vertex_data, int start, int count, int primitive_type[, string index_data ])</h3><h4>render the specified vertex/index data + format + texture</h4><p>
+<em class='notice-bgr'>This function requires an active rendering context to work.</em>
+</p><ul><li><code>start</code>: first vertex to draw
+</li><li><code>count</code>: number of vertices to draw
+</li><li><code>primitive_type</code>: one of the <a href="#SS-PT-constants">SS_PT_*</a> primitive type constants
+</li><li>vertex size is specified by the vertex format</li></ul></div>
+<div class='item'><a name='SS-CreateRenderBuffer-function'></a><hr><h2>SS_CreateRenderBuffer [function]</h2><h3>SS_RenderBuffer SS_CreateRenderBuffer()</h3><h4>returns a new render buffer</h4></div>
+<div class='item'><a name='SS-CreateFont-function'></a><hr><h2>SS_CreateFont [function]</h2><h3>SS_Font? SS_CreateFont( string path, int size )</h3><h4>creates a font object from the specified file, in the right size</h4><p>
+<em class='notice-bgr'>This function requires an active rendering context to work.</em>
+</p><ul><li>search for fonts is performed in all paths from the <a href="#ss-font-search-paths-interface">ss_font_search_paths</a> array</li></ul></div>
+<div class='item'><a name='SS-IsFont-function'></a><hr><h2>SS_IsFont [function]</h2><h3>bool SS_IsFont( var )</h3><h4>returns whether the given variable is a font (<a href="#SS-Font-object">SS_Font)</a> object</h4></div>
+<div class='item'><a name='SS-DrawTextLine-functions'></a><hr><h2>SS_DrawTextLine* [functions]</h2><h3>bool SS_DrawTextLine( string text, SS_Font font, int x, int y, color c )</h3><h3>bool SS_DrawTextLine_TA( string text, SS_Font font, int x, int y, color c )</h3><h3>bool SS_DrawTextLine_BA( string text, SS_Font font, int x, int y, color c )</h3><h3>bool SS_DrawTextLine_BL( string text, SS_Font font, int x, int y, color c )</h3><h3>bool SS_DrawTextLine_VN( string text, SS_Font font, int x, int y, color c )</h3><h3>bool SS_DrawTextLine_VC( string text, SS_Font font, int x, int y, color c )</h3><h4>draw a line of text in the specified color and font, from the specified starting point</h4><p>
+<em class='notice-bgr'>This function requires an active rendering context to work.</em>
+</p><p>
+<em class='notice-bgr'>function emits a warning if rendering is attempted with an unloaded font (renderer destroyed)</em>
+</p><ul><li>prefix specifies the relative vertical position of letters:
+<ul><li>no prefix: same as _VN
+</li><li>_TA: vertically normalized between Y and Y + font.size / 2
+</li><li>_BA: Y + font.size = baseline
+</li><li>_BL: Y = baseline
+</li><li>_VN: vertically normalized between Y and Y + font.size
+</li><li>_VC: Y = vertically centered</li></ul></li></ul></div>
+<div class='item'><a name='SS-MatrixPush-function'></a><hr><h2>SS_MatrixPush [function]</h2><h3>bool? SS_MatrixPush( matrix m, bool set = false )</h3><h4>push a world matrix on the stack, setting it as-is or after multiplying it with the previous one</h4><p>
+<em class='notice-bgr'>This function requires an active rendering context to work.</em>
+</p><ul><li>size of stack is 8 matrices
+</li><li>the stack has no matrices on it in the beginning
+</li><li>if stack size is exceeded, function returns <code>null</code>, on success it returns <code>true</code></li></ul></div>
+<div class='item'><a name='SS-MatrixPop-function'></a><hr><h2>SS_MatrixPop [function]</h2><h3>bool SS_MatrixPop()</h3><h4>pop a matrix off the stack</h4><p>
+<em class='notice-bgr'>This function requires an active rendering context to work.</em>
+</p><ul><li>if stack is empty, function returns <code>null</code>, on success it returns <code>true</code></li></ul></div>
+<div class='item'><a name='SS-SetCamera-function'></a><hr><h2>SS_SetCamera [function]</h2><h3>void SS_SetCamera([ matrix view,] matrix projection )</h3><h4>set the view/projection matrices</h4><p>
+<em class='notice-bgr'>This function requires an active rendering context to work.</em>
+</p><ul><li>if only one matrix is specified, it is the projection matrix
+</li><li>there is not much difference between both, they&#39;re all multiplied together in the end</li></ul></div>
+<div class='item'><a name='SS-SetClipRect-function'></a><hr><h2>SS_SetClipRect [function]</h2><h3>bool SS_SetClipRect( null )</h3><h3>bool SS_SetClipRect( int x1, int y1, int x2, int y2 )</h3><h4>set or remove the screen-space aligned clipping rectangle</h4><p>
+<em class='notice-bgr'>This function requires an active rendering context to work.</em>
+</p></div>
+<div class='item'><a name='SS-SetViewport-function'></a><hr><h2>SS_SetViewport [function]</h2><h3>void SS_SetViewport( int x1, int y1, int x2, int y2 )</h3><h4>set the viewport (projection-to-screen transform rectangle) for the current renderer</h4><p>
+<em class='notice-bgr'>This function requires an active rendering context to work.</em>
+</p></div>
+<div class='item'><a name='SS-SetRenderTarget-function'></a><hr><h2>SS_SetRenderTarget [function]</h2><h3>void SS_SetRenderTarget([ SS_Texture|null texture ])</h3><h4>set or remove the current render target texture</h4><p>
+<em class='notice-bgr'>This function requires an active rendering context to work.</em>
+</p><p>
+<em class='notice-bgr'>Renderer of the texture must match the currently set renderer.</em>
+</p><ul><li>texture must be created by <a href="#SS-CreateRenderTexture-function">SS_CreateRenderTexture</a></li></ul></div>
+<div class='item'><a name='SS-SetDepthTest-function'></a><hr><h2>SS_SetDepthTest [function]</h2><h3>void SS_SetDepthTest( bool enable )</h3><h4>enable or disable the depth test (Z-buffer-based occlusion culling)</h4><p>
+<em class='notice-bgr'>This function requires an active rendering context to work.</em>
+</p></div>
+<div class='item'><a name='SS-SetCulling-function'></a><hr><h2>SS_SetCulling [function]</h2><h3>void SS_SetCulling( int dir )</h3><h4>set direction of culling, 0 to disable, &gt; 0 for counter-clockwise, &lt; 0 for clockwise culling</h4><p>
+<em class='notice-bgr'>This function requires an active rendering context to work.</em>
+</p><ul><li>counter-clockwise culling means - cull (remove) faces with vertices that are counter-clockwise to the screen
+</li><li>clockwise culling means - cull (remove) faces with vertices that are clockwise to the screen</li></ul></div>
+<div class='item'><a name='SS-SetBlending-function'></a><hr><h2>SS_SetBlending [function]</h2><h3>void SS_SetBlending( int op, int src, int dest )</h3><h4>set the blending parameters (operation - <code>op</code>, source factor - <code>src</code>, destination factor - <code>dest</code>)</h4><p>
+<em class='notice-bgr'>This function requires an active rendering context to work.</em>
+</p><ul><li><code>op</code> should be one of the <a href="#SS-BLENDOP-constants">SS_BLENDOP_*</a> blending operation constants
+</li><li><code>src</code> and <code>dest</code> should be one of the <a href="#SS-BLEND-constants">SS_BLEND_*</a> blending factor constants</li></ul></div>
+<div class='item'><a name='SS-SetGLAttrib-function'></a><hr><h2>SS_SetGLAttrib [function]</h2><h3>bool SS_SetGLAttrib( int attrib, int value )</h3><h4>sets the specified attribute to the required value, returns if successful</h4><ul><li>This function must be called before <a href="#SS-Window-initRenderer">renderer initialization</a> to be effective.</li></ul></div>
+<div class='item'><a name='SS-Clear-function'></a><hr><h2>SS_Clear [function]</h2><h3>void SS_Clear( color c )</h3><h4>clear the rendered image with the specified color</h4><p>
+<em class='notice-bgr'>This function requires an active rendering context to work.</em>
+</p></div>
+<div class='item'><a name='SS-Present-function'></a><hr><h2>SS_Present [function]</h2><h3>void SS_Present()</h3><h4>present the rendered image to the screen</h4><ul><li>if VSync is enabled, this function will wait until it is allowed to present the image and only then do it</li></ul></div>
+<div class='item'><a name='ss-font-search-paths-interface'></a><hr><h2>ss_font_search_paths [interface]</h2><h3>global array[string] ss_font_search_paths</h3><h4>contains all directories in which to look for a font</h4><ul><li>it is by default initialized with common OS-specific paths, as well as the current directory
+</li><li>paths are searched in the order they are specified in the array</li></ul></div>
+<div class='item'><a name='SS-PT-constants'></a><hr><h2>SS_PT_* [constants]</h2><h4>primitive type constants</h4><p>
+These constants specify how to convert vertices into primitives.
+</p><ul><li>SS_PT_POINTS - point list (each vertex is a point)
+</li><li>SS_PT_LINES - line list (each 2 vertices make a line)
+</li><li>SS_PT_LINE_STRIP - line strip (all successive vertices both end the previous line and start a new one)
+</li><li>SS_PT_TRIANGLES - triangle list (each 3 vertices make a triangle)
+</li><li>SS_PT_TRIANGLE_FAN - triangle fan (starting from 2nd vertex, vertices form a line strip where each line connected with 1st vertex make a triangle)
+</li><li>SS_PT_TRIANGLE_STRIP - triangle strip (starting from 3rd vertex, each successive vertex forms a triangle with the previous two, every 2nd triangle is flipped)</li></ul></div>
+<div class='item'><a name='SS-BLENDOP-constants'></a><hr><h2>SS_BLENDOP_* [constants]</h2><h4>blending operations (add/subtract/..)</h4><p>
+These constants specify the operation to perform doing blending.
+</p><p>
+Blending equation is in the form &quot;SRC <i> Fac[src] &lt;BLENDOP&gt; DEST </i> Fac[dest]&quot; where BLENDOP is the operation, SRC/DEST are the source/destination values and Fac are the <a href="#SS-BLEND-constants">factors</a> for the values. The normal range for these values is assumed to be [0,1].
+</p><ul><li>SS_BLENDOP_ADD - additive blending, (SRC <i> Fac[src]  +  DEST </i> Fac[dest])
+</li><li>SS_BLENDOP_SUBTRACT - subtractive blending, (SRC <i> Fac[src]  -  DEST </i> Fac[dest])
+</li><li>SS_BLENDOP_REVERSE_SUBTRACT - reverse subtractive blending, (DEST <i> Fac[dest]  -  SRC </i> Fac[src])
+</li><li>SS_BLENDOP_MIN - smallest value blending, (MIN( SRC <i> Fac[src], DEST </i> Fac[dest] ))
+</li><li>SS_BLENDOP_MAX - largest value blending, (MAX( SRC <i> Fac[src], DEST </i> Fac[dest] ))</li></ul></div>
+<div class='item'><a name='SS-BLEND-constants'></a><hr><h2>SS_BLEND_* [constants]</h2><h4>blending factors (zero/one/srcalpha/invsrccolor/..)</h4><p>
+For more info on blending, see <a href="#SS-BLENDOP-constants">SS_BLENDOP_*</a>.
+Values are multiplied by the following factors:
+</p><ul><li>SS_BLEND_ZERO: 0
+</li><li>SS_BLEND_ONE: 1
+</li><li>SS_BLEND_SRCCOLOR: the respective component from the full source color value
+</li><li>SS_BLEND_INVSRCCOLOR: ... 1 - source color
+</li><li>SS_BLEND_SRCALPHA: source alpha
+</li><li>SS_BLEND_INVSRCALPHA: 1 - source alpha
+</li><li>SS_BLEND_DESTCOLOR: the respective component from the full destination color value
+</li><li>SS_BLEND_INVDESTCOLOR: ... 1 - destination color
+</li><li>SS_BLEND_DESTALPHA: destination alpha
+</li><li>SS_BLEND_INVDESTALPHA: 1 - destination alpha
+</li><li>SS_BLEND_SRCALPHASAT: source alpha, clamped to [0,1]</li></ul></div>
+<div class='item'><a name='SDL-GL-constants'></a><hr><h2>SDL_GL_* [constants]</h2><h4>OpenGL renderer attributes for <a href="#SS-SetGLAttrib-function">SS_SetGLAttrib</a></h4><p>
+Constants:
+</p><ul><li>SDL_GL_RED_SIZE
+</li><li>SDL_GL_GREEN_SIZE
+</li><li>SDL_GL_BLUE_SIZE
+</li><li>SDL_GL_ALPHA_SIZE
+</li><li>SDL_GL_BUFFER_SIZE
+</li><li>SDL_GL_DOUBLEBUFFER
+</li><li>SDL_GL_DEPTH_SIZE
+</li><li>SDL_GL_STENCIL_SIZE
+</li><li>SDL_GL_ACCUM_RED_SIZE
+</li><li>SDL_GL_ACCUM_GREEN_SIZE
+</li><li>SDL_GL_ACCUM_BLUE_SIZE
+</li><li>SDL_GL_ACCUM_ALPHA_SIZE
+</li><li>SDL_GL_STEREO
+</li><li>SDL_GL_MULTISAMPLEBUFFERS
+</li><li>SDL_GL_MULTISAMPLESAMPLES
+</li><li>SDL_GL_ACCELERATED_VISUAL
+</li><li>SDL_GL_CONTEXT_MAJOR_VERSION
+</li><li>SDL_GL_CONTEXT_MINOR_VERSION
+</li><li>SDL_GL_CONTEXT_FLAGS
+</li><li>SDL_GL_CONTEXT_PROFILE_MASK
+</li><li>SDL_GL_SHARE_WITH_CURRENT_CONTEXT
+</li><li>SDL_GL_FRAMEBUFFER_SRGB_CAPABLE</li></ul><p>
+More info at <a href="http://wiki.libsdl.org/SDL_GL_SetAttribute" target="_blank">http://wiki.libsdl.org/SDL_GL_SetAttribute</a>.
+</p></div>
+<div class='item'><a name='C-API'></a><hr><h2>C API</h2><p>
+TODO
+</p></div>
 </div>
 	</body></html>
 	
