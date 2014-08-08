@@ -82,6 +82,7 @@ This is a graphics framework that acts as a SGScript virtual machine, providing 
 
 === Interfaces:
 
+- @_R - global renderer-specific dictionary
 - @ss_font_search_paths - font search path array
 
 === Constants:
@@ -808,6 +809,18 @@ Common character sets:
 
 
 
+# _R [interface]
+
+== global dict? _R
+=== contains texture and font caches and allows to store renderer-specific data
+
+- the variable is only available while a renderer is active (set as current)
+- usage:
+-- `textures` is the name of texture cache dictionary
+-- `fonts` is the name of font cache dictionary
+-- any names are free to use, even the default ones, since nothing in the system depends on them being there
+
+
 # ss_font_search_paths [interface]
 
 == global array[string] ss_font_search_paths
@@ -897,6 +910,139 @@ Constants:
 - SDL_GL_FRAMEBUFFER_SRGB_CAPABLE
 
 More info at @"http://wiki.libsdl.org/SDL_GL_SetAttribute".
+
+
+
+# SS_DisplayMode [object]
+
+A display mode data container. Exactly the same as @SDL_DisplayMode<http://wiki.libsdl.org/SDL_DisplayMode>.
+
+- properties:
+-- [int] format - display color format identifier
+-- [int] w - X resolution
+-- [int] h - Y resolution
+-- [int] refresh_rate - display refresh rate, in Hz
+-- [ptr] driverdata - pointer to driver-specific data
+- other features:
+-- full content dump
+-- tostring = full content dump "SDL_DisplayMode(format=%u, w=%d, h=%d, refresh_rate=%d, driverdata=%p)"
+-- cloning
+-- GC-safe
+
+
+# SS_Window [object]
+
+- methods:
+-- @show<SS_Window.show>
+-- @hide<SS_Window.hide>
+-- @minimize<SS_Window.minimize>
+-- @maximize<SS_Window.maximize>
+-- @restore<SS_Window.restore>
+-- @raise<SS_Window.raise>
+-- @setPosition<SS_Window.setPosition>
+-- @setSize<SS_Window.setSize>
+-- @setMaxSize<SS_Window.setMaxSize>
+-- @setMinSize<SS_Window.setMinSize>
+-- @warpMouse<SS_Window.warpMouse>
+-- @initRenderer<SS_Window.initRenderer>
+-- @makeCurrent<SS_Window.makeCurrent>
+-- @setBufferScale<SS_Window.setBufferScale>
+- read/write properties:
+-- [bool] borderless - whether window has no border around it
+-- [real] brightness - brightness value for the window
+-- [int] fullscreen - fullscreen state (see @"SDL_WINDOW_*")
+-- [bool] grab - whether window has grabbed all input
+-- [string] title - window caption
+- read-only properties:
+-- [int] displayIndex - number in a list of SDL displays
+-- [SS_DisplayMode] displayMode - @SS_DisplayMode data about the display the window is currently on
+-- [int] flags - window state flags (see @"SDL_WINDOW_*")
+-- [int] id - unique window ID
+-- [vec2] maxSize - upper window size limit 
+-- [real] maxWidth - upper horizontal window size limit
+-- [real] maxHeight - upper vertical window size limit
+-- [vec2] minSize - lower window size limit
+-- [real] minWidth - lower horizontal window size limit
+-- [real] minHeight - lower vertical window size limit
+-- [int] pixelFormat - the window surface pixel format
+-- [vec2] position - window position vector
+-- [int] x - horizontal window position
+-- [int] y - vertical window position
+-- [vec2] size - window size vector
+-- [int] width - window width
+-- [int] height - window height
+-- [int] bbWidth - window back buffer width (prefer this for camera sizes, aspect ratio calculations etc.)
+-- [int] bbHeight - window back buffer height (..)
+-- [bool] hasKeyboardFocus - whether keyboard input will send events to this window
+-- [bool] hasMouseFocus - whether mouse input will send events to this window
+-- [bool] isScreenKeyboardShown - whether the screen keyboard is shown by this window
+-- [ptr] nativeWindow - the platform-specific window pointer
+-- [string] renderingAPI - the rendering API used, if the rendered is initialized
+-- [ptr] rendererPtr - the API-specific low-level pointer to some API handle (NULL for OpenGL, IDirect3DDevice9* for Direct3D9)
+- other features:
+-- GC-safe
+
+
+# SS_Window.show [method]
+
+== self SS_Window.show()
+=== makes the window visible
+
+
+# SS_Window.hide [method]
+
+== self SS_Window.hide()
+=== hides the window
+
+
+# SS_Window.minimize [method]
+
+== self SS_Window.minimize()
+=== minimizes the window (reduces it to a taskbar icon)
+
+
+# SS_Window.maximize [method]
+
+== self SS_Window.maximize()
+=== makes the window maximized (occupying all of the allowed screen space)
+
+
+# SS_Window.restore [method]
+
+== self SS_Window.restore()
+=== restores a window to non-maximized, non-iconic (minimized) state
+
+
+# SS_Window.raise [method]
+
+== self SS_Window.raise()
+=== puts the window above all other windows of the same layer (topmost windows have a different layer)
+
+
+# SS_Window.setPosition [method]
+# SS_Window.setSize [method]
+# SS_Window.setMaxSize [method]
+# SS_Window.setMinSize [method]
+# SS_Window.warpMouse [method]
+# SS_Window.initRenderer [method]
+# SS_Window.makeCurrent [method]
+# SS_Window.setBufferScale [method]
+
+
+# SS_Joystick [object]
+# SS_Joystick.open [method]
+# SS_Joystick.close [method]
+# SS_Joystick.getAxis [method]
+# SS_Joystick.getBall [method]
+# SS_Joystick.getButton [method]
+# SS_Joystick.getHat [method]
+# SS_GameController [object]
+# SS_GameController.open [method]
+# SS_GameController.close [method]
+# SS_GameController.getAxis [method]
+# SS_GameController.getButton [method]
+# SS_GameController.getBindForAxis [method]
+# SS_GameController.getBindForButton [method]
 
 
 

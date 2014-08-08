@@ -415,11 +415,18 @@ static int ss_displaymode_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
 	return SGS_SUCCESS;
 }
 
+static void ss_PushDisplayMode( SGS_CTX, SDL_DisplayMode* dm );
 static int ss_displaymode_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
 	if( type == SGS_VT_STRING )
 	{
 		return ss_displaymode_dump( C, data, 1 );
+	}
+	else if( type == SGS_CONVOP_CLONE )
+	{
+		DM_HDR;
+		ss_PushDisplayMode( C, DM );
+		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
 }
@@ -796,6 +803,7 @@ static int SS_Window_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int
 		if( !strcmp( str, "setBufferScale" ) ){ sgs_PushCFunction( C, SS_WindowI_setBufferScale ); return SGS_SUCCESS; }
 		
 		/* data properties */
+		if( !strcmp( str, "borderless" ) ){ sgs_PushBool( C, ( SDL_GetWindowFlags( W->window ) & SDL_WINDOW_BORDERLESS ) != 0 ); return SGS_SUCCESS; }
 		if( !strcmp( str, "brightness" ) ){ sgs_PushReal( C, SDL_GetWindowBrightness( W->window ) ); return SGS_SUCCESS; }
 		if( !strcmp( str, "displayIndex" ) ){ sgs_PushInt( C, SDL_GetWindowDisplayIndex( W->window ) ); return SGS_SUCCESS; }
 		if( !strcmp( str, "displayMode" ) )
@@ -814,6 +822,7 @@ static int SS_Window_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int
 			return SGS_SUCCESS;
 		}
 		if( !strcmp( str, "flags" ) ){ sgs_PushInt( C, SDL_GetWindowFlags( W->window ) ); return SGS_SUCCESS; }
+		if( !strcmp( str, "fullscreen" ) ){ sgs_PushInt( C, ( SDL_GetWindowFlags( W->window ) & SDL_WINDOW_FULLSCREEN ) != 0 ); return SGS_SUCCESS; }
 		if( !strcmp( str, "grab" ) ){ sgs_PushBool( C, SDL_GetWindowGrab( W->window ) ); return SGS_SUCCESS; }
 		if( !strcmp( str, "id" ) ){ sgs_PushInt( C, SDL_GetWindowID( W->window ) ); return SGS_SUCCESS; }
 		if( !strcmp( str, "maxSize" ) )
@@ -864,6 +873,7 @@ static int SS_Window_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int
 		if( !strcmp( str, "bbWidth" ) ){ int w, h; SDL_GetWindowSize( W->window, &w, &h ); sgs_PushInt( C, W->bbwidth > 0 ? W->bbwidth : w ); return SGS_SUCCESS; }
 		if( !strcmp( str, "bbHeight" ) ){ int w, h; SDL_GetWindowSize( W->window, &w, &h ); sgs_PushInt( C, W->bbheight > 0 ? W->bbheight : h ); return SGS_SUCCESS; }
 		if( !strcmp( str, "title" ) ){ sgs_PushString( C, SDL_GetWindowTitle( W->window ) ); return SGS_SUCCESS; }
+		if( !strcmp( str, "visible" ) ){ sgs_PushBool( C, ( SDL_GetWindowFlags( W->window ) & SDL_WINDOW_SHOWN ) != 0 ); return SGS_SUCCESS; }
 		
 		if( !strcmp( str, "hasKeyboardFocus" ) ){ sgs_PushBool( C, SDL_GetKeyboardFocus() == W->window ); return SGS_SUCCESS; }
 		if( !strcmp( str, "hasMouseFocus" ) ){ sgs_PushBool( C, SDL_GetMouseFocus() == W->window ); return SGS_SUCCESS; }
@@ -892,8 +902,8 @@ static int SS_Window_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int
 #endif
 			return SGS_SUCCESS;
 		}
-		if( !strcmp( str, "renderingAPI" ) ){ sgs_PushString( C, W->riface->API ); return SGS_SUCCESS; }
-		if( !strcmp( str, "rendererPtr" ) ){ sgs_PushPtr( C, W->riface->get_pointer( W->renderer, 0 ) ); return SGS_SUCCESS; }
+		if( !strcmp( str, "renderingAPI" ) ){ if( W->riface ) sgs_PushString( C, W->riface->API ); else sgs_PushNull( C ); return SGS_SUCCESS; }
+		if( !strcmp( str, "rendererPtr" ) ){ if( W->riface ) sgs_PushPtr( C, W->riface->get_pointer( W->renderer, 0 ) ); else sgs_PushNull( C ); return SGS_SUCCESS; }
 	}
 	
 	return SGS_ENOTFND;
@@ -907,12 +917,12 @@ static int SS_Window_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs
 	
 	if( sgs_ParseStringP( C, key, &str, NULL ) )
 	{
-		if( !strcmp( str, "bordered" ) )
+		if( !strcmp( str, "borderless" ) )
 		{
 			sgs_Bool V;
 			if( sgs_ParseBoolP( C, val, &V ) )
 			{
-				SDL_SetWindowBordered( W->window, V );
+				SDL_SetWindowBordered( W->window, !V );
 				return SGS_SUCCESS;
 			}
 			return SGS_EINVAL;

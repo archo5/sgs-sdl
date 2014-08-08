@@ -63,40 +63,41 @@ This is a graphics framework that acts as a SGScript virtual machine, providing 
 </li><li><a href="#SS-SetBlending-function">SS_SetBlending</a>
 </li><li><a href="#SS-SetGLAttrib-function">SS_SetGLAttrib</a>
 </li><li><a href="#SS-Clear-function">SS_Clear</a>
-</li><li><a href="#SS-Present-function">SS_Present</a></li></ul><h4>Interfaces:</h4><ul><li><a href="#ss-font-search-paths-interface">ss_font_search_paths</a> - font search path array</li></ul><h4>Constants:</h4><ul><li><a href="#SS-PT-constants">SS_PT_*</a> - primitive types
+</li><li><a href="#SS-Present-function">SS_Present</a></li></ul><h4>Interfaces:</h4><ul><li><a href="#Rendering">_R</a> - global renderer-specific dictionary
+</li><li><a href="#ss-font-search-paths-interface">ss_font_search_paths</a> - font search path array</li></ul><h4>Constants:</h4><ul><li><a href="#SS-PT-constants">SS_PT_*</a> - primitive types
 </li><li><a href="#SS-BLENDOP-constants">SS_BLENDOP_*</a> - blending operations (add/subtract/..)
 </li><li><a href="#SS-BLEND-constants">SS_BLEND_*</a> - blending factors (zero/one/srcalpha/invsrccolor/..)
 </li><li><a href="#SDL-GL-constants">SDL_GL_*</a> - OpenGL renderer attributes</li></ul></div>
-<div class='item'><a name='Windows-events-and-display-modes'></a><hr><h2>Windows, events and display modes</h2><h4>Objects and their methods:</h4><ul><li><a href="#SS-DisplayMode">SS_DisplayMode</a>
-</li><li><a href="#SS-Window">SS_Window</a>
-<ul><li><a href="#SS-Window-show">show</a>
-</li><li><a href="#SS-Window-hide">hide</a>
-</li><li><a href="#SS-Window-minimize">minimize</a>
-</li><li><a href="#SS-Window-maximize">maximize</a>
-</li><li><a href="#SS-Window-restore">restore</a>
-</li><li><a href="#SS-Window-raise">raise</a>
-</li><li><a href="#SS-Window-setPosition">setPosition</a>
-</li><li><a href="#SS-Window-setSize">setSize</a>
-</li><li><a href="#SS-Window-setMaxSize">setMaxSize</a>
-</li><li><a href="#SS-Window-setMinSize">setMinSize</a>
-</li><li><a href="#SS-Window-warpMouse">warpMouse</a>
-</li><li><a href="#SS-Window-initRenderer">initRenderer</a>
-</li><li><a href="#SS-Window-makeCurrent">makeCurrent</a>
-</li><li><a href="#SS-Window-setBufferScale">setBufferScale</a>
-</li></ul><li><a href="#SS-Joystick">SS_Joystick</a>
-<ul><li><a href="#SS-Joystick-open">open</a>
-</li><li><a href="#SS-Joystick-close">close</a>
-</li><li><a href="#SS-Joystick-getAxis">getAxis</a>
-</li><li><a href="#SS-Joystick-getBall">getBall</a>
-</li><li><a href="#SS-Joystick-getButton">getButton</a>
-</li><li><a href="#SS-Joystick-getHat">getHat</a>
-</li></ul><li><a href="#SS-GameController">SS_GameController</a>
-<ul><li><a href="#SS-GameController-open">open</a>
-</li><li><a href="#SS-GameController-close">close</a>
-</li><li><a href="#SS-GameController-getAxis">getAxis</a>
-</li><li><a href="#SS-GameController-getButton">getButton</a>
-</li><li><a href="#SS-GameController-getBindForAxis">getBindForAxis</a>
-</li><li><a href="#SS-GameController-getBindForButton">getBindForButton</a></li></ul></li></ul><h4>Functions:</h4><ul><li><a href="#SS-SetError">SS_SetError</a>
+<div class='item'><a name='Windows-events-and-display-modes'></a><hr><h2>Windows, events and display modes</h2><h4>Objects and their methods:</h4><ul><li><a href="#SS-DisplayMode-object">SS_DisplayMode</a>
+</li><li><a href="#SS-Window-object">SS_Window</a>
+<ul><li><a href="#SS-Window-show-method">show</a>
+</li><li><a href="#SS-Window-hide-method">hide</a>
+</li><li><a href="#SS-Window-minimize-method">minimize</a>
+</li><li><a href="#SS-Window-maximize-method">maximize</a>
+</li><li><a href="#SS-Window-restore-method">restore</a>
+</li><li><a href="#SS-Window-raise-method">raise</a>
+</li><li><a href="#SS-Window-setPosition-method">setPosition</a>
+</li><li><a href="#SS-Window-setSize-method">setSize</a>
+</li><li><a href="#SS-Window-setMaxSize-method">setMaxSize</a>
+</li><li><a href="#SS-Window-setMinSize-method">setMinSize</a>
+</li><li><a href="#SS-Window-warpMouse-method">warpMouse</a>
+</li><li><a href="#SS-Window-initRenderer-method">initRenderer</a>
+</li><li><a href="#SS-Window-makeCurrent-method">makeCurrent</a>
+</li><li><a href="#SS-Window-setBufferScale-method">setBufferScale</a>
+</li></ul><li><a href="#SS-Joystick-object">SS_Joystick</a>
+<ul><li><a href="#SS-Joystick-open-method">open</a>
+</li><li><a href="#SS-Joystick-close-method">close</a>
+</li><li><a href="#SS-Joystick-getAxis-method">getAxis</a>
+</li><li><a href="#SS-Joystick-getBall-method">getBall</a>
+</li><li><a href="#SS-Joystick-getButton-method">getButton</a>
+</li><li><a href="#SS-Joystick-getHat-method">getHat</a>
+</li></ul><li><a href="#SS-GameController-object">SS_GameController</a>
+<ul><li><a href="#SS-GameController-open-method">open</a>
+</li><li><a href="#SS-GameController-close-method">close</a>
+</li><li><a href="#SS-GameController-getAxis-method">getAxis</a>
+</li><li><a href="#SS-GameController-getButton-method">getButton</a>
+</li><li><a href="#SS-GameController-getBindForAxis-method">getBindForAxis</a>
+</li><li><a href="#SS-GameController-getBindForButton-method">getBindForButton</a></li></ul></li></ul><h4>Functions:</h4><ul><li><a href="#SS-SetError">SS_SetError</a>
 </li><li><a href="#SS-GetError">SS_GetError</a>
 </li><li><a href="#SS-EventState">SS_EventState</a>
 </li><li><a href="#SS-GetNumTouchDevices">SS_GetNumTouchDevices</a>
@@ -118,7 +119,7 @@ This is a graphics framework that acts as a SGScript virtual machine, providing 
 </li><li><a href="#SS-GetClipboardText">SS_GetClipboardText</a>
 </li><li><a href="#SS-SetClipboardText">SS_SetClipboardText</a>
 </li><li><a href="#SS-GetVideoDrivers">SS_GetVideoDrivers</a>
-</li><li><a href="#SS-DisplayMode">SS_DisplayMode</a>
+</li><li><a href="#SS-DisplayMode-object">SS_DisplayMode</a>
 </li><li><a href="#SS-GetNumDisplays">SS_GetNumDisplays</a>
 </li><li><a href="#SS-GetDisplayName">SS_GetDisplayName</a>
 </li><li><a href="#SS-GetNumDisplayModes">SS_GetNumDisplayModes</a>
@@ -219,11 +220,15 @@ This is a graphics framework that acts as a SGScript virtual machine, providing 
 </li><li><a href="#SS-SetRenderTarget-function">SS_SetRenderTarget [function]</a>
 </li><li><a href="#SS-SetViewport-function">SS_SetViewport [function]</a>
 </li><li><a href="#ss-load-image-functions">ss_load_image_* [functions]</a></li></ul></div>
-<div class='item'><a name='ALL-SGScript-objects-A-Z'></a><hr><h2>ALL SGScript objects (A-Z)</h2><ul><li><a href="#SS-Font-object">SS_Font [object]</a>
+<div class='item'><a name='ALL-SGScript-objects-A-Z'></a><hr><h2>ALL SGScript objects (A-Z)</h2><ul><li><a href="#SS-DisplayMode-object">SS_DisplayMode [object]</a>
+</li><li><a href="#SS-Font-object">SS_Font [object]</a>
+</li><li><a href="#SS-GameController-object">SS_GameController [object]</a>
 </li><li><a href="#SS-Image-object">SS_Image [object]</a>
+</li><li><a href="#SS-Joystick-object">SS_Joystick [object]</a>
 </li><li><a href="#SS-RenderBuffer-object">SS_RenderBuffer [object]</a>
 </li><li><a href="#SS-Texture-object">SS_Texture [object]</a>
-</li><li><a href="#SS-VertexFormat-object">SS_VertexFormat [object]</a></li></ul></div>
+</li><li><a href="#SS-VertexFormat-object">SS_VertexFormat [object]</a>
+</li><li><a href="#SS-Window-object">SS_Window [object]</a></li></ul></div>
 <div class='item'><a name='SS-Image-object'></a><hr><h2>SS_Image [object]</h2><p>
 A 32-bit RGBA (R8G8B8A8) 2D image object.
 </p><ul><li>methods:
@@ -458,11 +463,16 @@ Common character sets:
 <em class='notice-bgr'>This function requires an active rendering context to work.</em>
 </p><ul><li><code>op</code> should be one of the <a href="#SS-BLENDOP-constants">SS_BLENDOP_*</a> blending operation constants
 </li><li><code>src</code> and <code>dest</code> should be one of the <a href="#SS-BLEND-constants">SS_BLEND_*</a> blending factor constants</li></ul></div>
-<div class='item'><a name='SS-SetGLAttrib-function'></a><hr><h2>SS_SetGLAttrib [function]</h2><h3>bool SS_SetGLAttrib( int attrib, int value )</h3><h4>sets the specified attribute to the required value, returns if successful</h4><ul><li>This function must be called before <a href="#SS-Window-initRenderer">renderer initialization</a> to be effective.</li></ul></div>
+<div class='item'><a name='SS-SetGLAttrib-function'></a><hr><h2>SS_SetGLAttrib [function]</h2><h3>bool SS_SetGLAttrib( int attrib, int value )</h3><h4>sets the specified attribute to the required value, returns if successful</h4><ul><li>This function must be called before <a href="#SS-Window-initRenderer-method">renderer initialization</a> to be effective.</li></ul></div>
 <div class='item'><a name='SS-Clear-function'></a><hr><h2>SS_Clear [function]</h2><h3>void SS_Clear( color c )</h3><h4>clear the rendered image with the specified color</h4><p>
 <em class='notice-bgr'>This function requires an active rendering context to work.</em>
 </p></div>
 <div class='item'><a name='SS-Present-function'></a><hr><h2>SS_Present [function]</h2><h3>void SS_Present()</h3><h4>present the rendered image to the screen</h4><ul><li>if VSync is enabled, this function will wait until it is allowed to present the image and only then do it</li></ul></div>
+<div class='item'><a name='R-interface'></a><hr><h2>_R [interface]</h2><h3>global dict? _R</h3><h4>contains texture and font caches and allows to store renderer-specific data</h4><ul><li>the variable is only available while a renderer is active (set as current)
+</li><li>usage:
+<ul><li><code>textures</code> is the name of texture cache dictionary
+</li><li><code>fonts</code> is the name of font cache dictionary
+</li><li>any names are free to use, even the default ones, since nothing in the system depends on them being there</li></ul></li></ul></div>
 <div class='item'><a name='ss-font-search-paths-interface'></a><hr><h2>ss_font_search_paths [interface]</h2><h3>global array[string] ss_font_search_paths</h3><h4>contains all directories in which to look for a font</h4><ul><li>it is by default initialized with common OS-specific paths, as well as the current directory
 </li><li>paths are searched in the order they are specified in the array</li></ul></div>
 <div class='item'><a name='SS-PT-constants'></a><hr><h2>SS_PT_* [constants]</h2><h4>primitive type constants</h4><p>
@@ -522,6 +532,96 @@ Constants:
 </li><li>SDL_GL_FRAMEBUFFER_SRGB_CAPABLE</li></ul><p>
 More info at <a href="http://wiki.libsdl.org/SDL_GL_SetAttribute" target="_blank">http://wiki.libsdl.org/SDL_GL_SetAttribute</a>.
 </p></div>
+<div class='item'><a name='SS-DisplayMode-object'></a><hr><h2>SS_DisplayMode [object]</h2><p>
+A display mode data container. Exactly the same as <a href="http://wiki.libsdl.org/SDL_DisplayMode" target="_blank">SDL_DisplayMode</a>.
+</p><ul><li>properties:
+<ul><li>[int] format - display color format identifier
+</li><li>[int] w - X resolution
+</li><li>[int] h - Y resolution
+</li><li>[int] refresh_rate - display refresh rate, in Hz
+</li><li>[ptr] driverdata - pointer to driver-specific data
+</li></ul><li>other features:
+<ul><li>full content dump
+</li><li>tostring = full content dump &quot;SDL_DisplayMode(format=%u, w=%d, h=%d, refresh_rate=%d, driverdata=%p)&quot;
+</li><li>cloning
+</li><li>GC-safe</li></ul></li></ul></div>
+<div class='item'><a name='SS-Window-object'></a><hr><h2>SS_Window [object]</h2><ul><li>methods:
+<ul><li><a href="#SS-Window-show-method">show</a>
+</li><li><a href="#SS-Window-hide-method">hide</a>
+</li><li><a href="#SS-Window-minimize-method">minimize</a>
+</li><li><a href="#SS-Window-maximize-method">maximize</a>
+</li><li><a href="#SS-Window-restore-method">restore</a>
+</li><li><a href="#SS-Window-raise-method">raise</a>
+</li><li><a href="#SS-Window-setPosition-method">setPosition</a>
+</li><li><a href="#SS-Window-setSize-method">setSize</a>
+</li><li><a href="#SS-Window-setMaxSize-method">setMaxSize</a>
+</li><li><a href="#SS-Window-setMinSize-method">setMinSize</a>
+</li><li><a href="#SS-Window-warpMouse-method">warpMouse</a>
+</li><li><a href="#SS-Window-initRenderer-method">initRenderer</a>
+</li><li><a href="#SS-Window-makeCurrent-method">makeCurrent</a>
+</li><li><a href="#SS-Window-setBufferScale-method">setBufferScale</a>
+</li></ul><li>read/write properties:
+<ul><li>[bool] borderless - whether window has no border around it
+</li><li>[real] brightness - brightness value for the window
+</li><li>[int] fullscreen - fullscreen state (see <a href="#SDL-WINDOW">SDL_WINDOW_*</a>)
+</li><li>[bool] grab - whether window has grabbed all input
+</li><li>[string] title - window caption
+</li></ul><li>read-only properties:
+<ul><li>[int] displayIndex - number in a list of SDL displays
+</li><li>[SS_DisplayMode] displayMode - <a href="#SS-DisplayMode-object">SS_DisplayMode</a> data about the display the window is currently on
+</li><li>[int] flags - window state flags (see <a href="#SDL-WINDOW">SDL_WINDOW_*</a>)
+</li><li>[int] id - unique window ID
+</li><li>[vec2] maxSize - upper window size limit 
+</li><li>[real] maxWidth - upper horizontal window size limit
+</li><li>[real] maxHeight - upper vertical window size limit
+</li><li>[vec2] minSize - lower window size limit
+</li><li>[real] minWidth - lower horizontal window size limit
+</li><li>[real] minHeight - lower vertical window size limit
+</li><li>[int] pixelFormat - the window surface pixel format
+</li><li>[vec2] position - window position vector
+</li><li>[int] x - horizontal window position
+</li><li>[int] y - vertical window position
+</li><li>[vec2] size - window size vector
+</li><li>[int] width - window width
+</li><li>[int] height - window height
+</li><li>[int] bbWidth - window back buffer width (prefer this for camera sizes, aspect ratio calculations etc.)
+</li><li>[int] bbHeight - window back buffer height (..)
+</li><li>[bool] hasKeyboardFocus - whether keyboard input will send events to this window
+</li><li>[bool] hasMouseFocus - whether mouse input will send events to this window
+</li><li>[bool] isScreenKeyboardShown - whether the screen keyboard is shown by this window
+</li><li>[ptr] nativeWindow - the platform-specific window pointer
+</li><li>[string] renderingAPI - the rendering API used, if the rendered is initialized
+</li><li>[ptr] rendererPtr - the API-specific low-level pointer to some API handle (NULL for OpenGL, IDirect3DDevice9* for Direct3D9)
+</li></ul><li>other features:
+<ul><li>GC-safe</li></ul></li></ul></div>
+<div class='item'><a name='SS-Window-show-method'></a><hr><h2>SS_Window.show [method]</h2><h3>self SS_Window.show()</h3><h4>makes the window visible</h4></div>
+<div class='item'><a name='SS-Window-hide-method'></a><hr><h2>SS_Window.hide [method]</h2><h3>self SS_Window.hide()</h3><h4>hides the window</h4></div>
+<div class='item'><a name='SS-Window-minimize-method'></a><hr><h2>SS_Window.minimize [method]</h2><h3>self SS_Window.minimize()</h3><h4>minimizes the window (reduces it to a taskbar icon)</h4></div>
+<div class='item'><a name='SS-Window-maximize-method'></a><hr><h2>SS_Window.maximize [method]</h2><h3>self SS_Window.maximize()</h3><h4>makes the window maximized (occupying all of the allowed screen space)</h4></div>
+<div class='item'><a name='SS-Window-restore-method'></a><hr><h2>SS_Window.restore [method]</h2><h3>self SS_Window.restore()</h3><h4>restores a window to non-maximized, non-iconic (minimized) state</h4></div>
+<div class='item'><a name='SS-Window-raise-method'></a><hr><h2>SS_Window.raise [method]</h2><h3>self SS_Window.raise()</h3><h4>puts the window above all other windows of the same layer (topmost windows have a different layer)</h4></div>
+<div class='item'><a name='SS-Window-setPosition-method'></a><hr><h2>SS_Window.setPosition [method]</h2></div>
+<div class='item'><a name='SS-Window-setSize-method'></a><hr><h2>SS_Window.setSize [method]</h2></div>
+<div class='item'><a name='SS-Window-setMaxSize-method'></a><hr><h2>SS_Window.setMaxSize [method]</h2></div>
+<div class='item'><a name='SS-Window-setMinSize-method'></a><hr><h2>SS_Window.setMinSize [method]</h2></div>
+<div class='item'><a name='SS-Window-warpMouse-method'></a><hr><h2>SS_Window.warpMouse [method]</h2></div>
+<div class='item'><a name='SS-Window-initRenderer-method'></a><hr><h2>SS_Window.initRenderer [method]</h2></div>
+<div class='item'><a name='SS-Window-makeCurrent-method'></a><hr><h2>SS_Window.makeCurrent [method]</h2></div>
+<div class='item'><a name='SS-Window-setBufferScale-method'></a><hr><h2>SS_Window.setBufferScale [method]</h2></div>
+<div class='item'><a name='SS-Joystick-object'></a><hr><h2>SS_Joystick [object]</h2></div>
+<div class='item'><a name='SS-Joystick-open-method'></a><hr><h2>SS_Joystick.open [method]</h2></div>
+<div class='item'><a name='SS-Joystick-close-method'></a><hr><h2>SS_Joystick.close [method]</h2></div>
+<div class='item'><a name='SS-Joystick-getAxis-method'></a><hr><h2>SS_Joystick.getAxis [method]</h2></div>
+<div class='item'><a name='SS-Joystick-getBall-method'></a><hr><h2>SS_Joystick.getBall [method]</h2></div>
+<div class='item'><a name='SS-Joystick-getButton-method'></a><hr><h2>SS_Joystick.getButton [method]</h2></div>
+<div class='item'><a name='SS-Joystick-getHat-method'></a><hr><h2>SS_Joystick.getHat [method]</h2></div>
+<div class='item'><a name='SS-GameController-object'></a><hr><h2>SS_GameController [object]</h2></div>
+<div class='item'><a name='SS-GameController-open-method'></a><hr><h2>SS_GameController.open [method]</h2></div>
+<div class='item'><a name='SS-GameController-close-method'></a><hr><h2>SS_GameController.close [method]</h2></div>
+<div class='item'><a name='SS-GameController-getAxis-method'></a><hr><h2>SS_GameController.getAxis [method]</h2></div>
+<div class='item'><a name='SS-GameController-getButton-method'></a><hr><h2>SS_GameController.getButton [method]</h2></div>
+<div class='item'><a name='SS-GameController-getBindForAxis-method'></a><hr><h2>SS_GameController.getBindForAxis [method]</h2></div>
+<div class='item'><a name='SS-GameController-getBindForButton-method'></a><hr><h2>SS_GameController.getBindForButton [method]</h2></div>
 <div class='item'><a name='C-API'></a><hr><h2>C API</h2><p>
 TODO
 </p></div>
