@@ -7,7 +7,7 @@ function initialize()
 {
 	global Window = SS_CreateWindow( "SGS-SDL Game Framework", SDL_WINDOWPOS_UNDEFINED,
 		SDL_WINDOWPOS_UNDEFINED, 1024, 576, SDL_WINDOW_OPENGLMAYBE | SDL_WINDOW_RESIZABLE );
-	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
+	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
 	Window.setBufferScale( 128, 128, SS_POSMODE_FIT );
 	
 	global Texture = SS_CreateTexture( "images/ntset.png" );

@@ -6,15 +6,10 @@
 
 
 static const char* scr_preconfig =
-	"_dirname = function(s){p=string_find_rev(s,'/');\n"
-	"	if(p===null){ p=string_find(s,':'); if(p===null){ return ''; } p++; }\n"
-	"	return string_part(s,0,p);};\n"
-	"\n"
 	"global sys_exit = false;\n"
+	"global sys_wait_events = false;\n"
 	"global sys_initial_dir = io_getcwd();\n"
-	"global sys_executable_path = string_replace( io_getexecpath(), '\\\\', '/' );\n"
-	"global sys_executable_dir = _dirname( sys_executable_path );\n"
-	"io_setcwd( sys_executable_dir );\n"
+	"io_setcwd( sys_curprocdir() );\n"
 ;
 
 
@@ -193,18 +188,12 @@ int ss_Initialize( int argc, char* argv[], int debug )
 	printf( "called 'configure': %f\n", sgs_GetTime() );
 #endif
 	
+	/* check if already required to exit */
+	if( sgs_GlobalBool( C, "sys_exit" ) )
+		return 0;
+	
 	if( GEnabledProfiler )
 		sgs_ProfInit( C, &P, GEnabledProfiler );
-	
-	/* check if already required to exit */
-	{
-		int b;
-		sgs_PushGlobal( C, "sys_exit" );
-		b = sgs_GetBool( C, -1 );
-		if( b )
-			return 0;
-		sgs_Pop( C, 1 );
-	}
 	
 #if SS_STARTUP_PROFILING
 	printf( "pre-SDL init: %f\n", sgs_GetTime() );
@@ -269,8 +258,9 @@ int ss_Frame()
 		return 1;
 	
 	{
+		int wait = sgs_GlobalBool( C, "sys_wait_events" );
 		SDL_Event event;
-		while( SDL_PollEvent( &event ) )
+		while( wait ? SDL_WaitEvent( &event ) : SDL_PollEvent( &event ) )
 		{
 			int ssz = sgs_StackSize( C );
 			if( event.type == SDL_KEYDOWN && event.key.state == SDL_PRESSED &&
@@ -279,7 +269,8 @@ int ss_Frame()
 				sgs_ExecString( C, "global sys_exit = true;" );
 				break;
 			}
-			if( ss_CreateSDLEvent( C, &event ) || sgs_GlobalCall( C, "on_event", 1, 0 ) )
+			ss_CreateSDLEvent( C, &event );
+			if( SGS_FAILED( sgs_GlobalCall( C, "on_event", 1, 0 ) ) )
 			{
 				fprintf( stderr, "error in event creation\n" );
 				sgs_Pop( C, sgs_StackSize( C ) - ssz );

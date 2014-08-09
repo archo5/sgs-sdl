@@ -75,7 +75,7 @@ static void ss_ri_gl__resetviewport( SS_Renderer* R )
 static void ss_ri_gl_init();
 static void ss_ri_gl_free();
 static int ss_ri_gl_available();
-static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t version, uint32_t flags );
+static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t flags );
 static void ss_ri_gl_destroy( SS_Renderer* R );
 static void* ss_ri_gl_get_pointer( SS_Renderer* R, int which );
 static void ss_ri_gl_modify( SS_Renderer* R, int* modlist );
@@ -152,7 +152,7 @@ static int ss_ri_gl_available()
 	return 1;
 }
 
-static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t version, uint32_t flags )
+static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t flags )
 {
 	int w, h, x, y;
 	SDL_GLContext* ctx, *origctx;

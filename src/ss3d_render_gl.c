@@ -9,7 +9,7 @@
 #include "ss3d_engine.h"
 
 
-int SS3D_PushRenderer_GL( SGS_CTX, uint32_t version )
+int SS3D_PushRenderer_GL( SGS_CTX )
 {
 	return sgs_Msg(C,SGS_ERROR,"TODO");
 }

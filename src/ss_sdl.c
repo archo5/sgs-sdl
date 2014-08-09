@@ -164,7 +164,7 @@ static int SS_RecordGesture( SGS_CTX )
 	SGSFN( "SS_RecordGesture" );
 	if( !sgs_LoadArgs( C, "i", &touchID ) )
 		return 0;
-	sgs_PushInt( C, SDL_RecordGesture( touchID ) );
+	sgs_PushBool( C, SDL_RecordGesture( touchID ) );
 	return 1;
 }
 
@@ -195,7 +195,10 @@ static int SS_PollEvent( SGS_CTX )
 {
 	SDL_Event ev;
 	SGSFN( "SS_PollEvent" );
-	return ( SDL_PollEvent( &ev ) && SGS_SUCCEEDED( ss_CreateSDLEvent( C, &ev ) ) ) ? 1 : 0;
+	if( !SDL_PollEvent( &ev ) )
+		return 0;
+	ss_CreateSDLEvent( C, &ev );
+	return 1;
 }
 
 static int SS_WaitEvent( SGS_CTX )
@@ -210,7 +213,10 @@ static int SS_WaitEvent( SGS_CTX )
 		ret = SDL_WaitEventTimeout( &ev, timeout );
 	else
 		ret = SDL_WaitEvent( &ev );
-	return ( ret && SGS_SUCCEEDED( ss_CreateSDLEvent( C, &ev ) ) ) ? 1 : 0;
+	if( !ret )
+		return 0;
+	ss_CreateSDLEvent( C, &ev );
+	return 1;
 }
 
 static int _SS_PeepEvents_PG( SGS_CTX, int get )
@@ -218,8 +224,10 @@ static int _SS_PeepEvents_PG( SGS_CTX, int get )
 	int i, outevents;
 	Uint32 eventcount, mintype, maxtype;
 	SDL_Event* events;
-	if( !sgs_LoadArgs( C, "+lll", &eventcount, &mintype, &maxtype ) )
+	if( !sgs_LoadArgs( C, "+ll|l", &eventcount, &mintype, &maxtype ) )
 		return 0;
+	if( sgs_StackSize( C ) <= 2 )
+		maxtype = mintype;
 	if( eventcount > 65535 )
 		_WARN( "too many events requested" )
 	events = sgs_Alloc_n( SDL_Event, eventcount );
@@ -234,8 +242,7 @@ static int _SS_PeepEvents_PG( SGS_CTX, int get )
 	{
 		for( i = 0; i < outevents; ++i )
 		{
-			if( SGS_FAILED( ss_CreateSDLEvent( C, &events[ i ] ) ) )
-				sgs_PushNull( C );
+			ss_CreateSDLEvent( C, &events[ i ] );
 		}
 		sgs_PushArray( C, outevents );
 		return 1;
@@ -339,13 +346,13 @@ static int SS_SetClipboardText( SGS_CTX )
 
 static int SS_Sleep( SGS_CTX )
 {
-	sgs_Integer time;
+	sgs_Integer tms;
 	SGSFN( "SS_Sleep" );
 	if( sgs_StackSize( C ) != 1 ||
-		!sgs_ParseInt( C, 0, &time ) )
+		!sgs_ParseInt( C, 0, &tms ) )
 		_WARN( "function expects 1 argument: int" )
 	
-	SDL_Delay( time );
+	SDL_Delay( tms );
 	return 0;
 }
 
@@ -459,13 +466,16 @@ static int ss_ParseDisplayMode( SGS_CTX, sgs_StkIdx item, SDL_DisplayMode** dm )
 */
 static int ss_acf_DisplayMode( SGS_CTX, int item, va_list* args, int flags )
 {
-	if( sgs_IsObject( C, item, ss_displaymode_iface ) )
-	{
-		if( flags & SGS_LOADARG_WRITE )
-			*va_arg( *args, SDL_DisplayMode** ) = (SDL_DisplayMode*) sgs_GetObjectData( C, item );
-		return 1;
-	}
-	return 0;
+	SDL_DisplayMode** DM = NULL;
+	if( flags & SGS_LOADARG_WRITE )
+		DM = va_arg( *args, SDL_DisplayMode** );
+	
+	if( !sgs_IsObject( C, item, ss_displaymode_iface ) )
+		return 0;
+	
+	if( DM )
+		*DM = (SDL_DisplayMode*) sgs_GetObjectData( C, item );
+	return 1;
 }
 
 static int SS_DisplayMode( SGS_CTX )
@@ -482,11 +492,16 @@ static int SS_DisplayMode( SGS_CTX )
 static int SS_GetNumDisplays( SGS_CTX ){ SGSFN( "SS_GetNumDisplays" ); sgs_PushInt( C, SDL_GetNumVideoDisplays() ); return 1; }
 static int SS_GetDisplayName( SGS_CTX )
 {
+	const char* name;
 	sgs_Int i;
 	SGSFN( "SS_GetDisplayName" );
 	if( !sgs_LoadArgs( C, "i", &i ) )
 		return 0;
-	sgs_PushString( C, SDL_GetDisplayName( i ) );
+	name = SDL_GetDisplayName( i );
+	if( name )
+		sgs_PushString( C, name );
+	else
+		sgs_PushNull( C );
 	return 1;
 }
 static int SS_GetNumDisplayModes( SGS_CTX )
@@ -576,10 +591,10 @@ static int SS_GetClosestDisplayMode( SGS_CTX )
 }
 static int SS_GetCurrentDisplayMode( SGS_CTX )
 {
-	sgs_Int i;
+	sgs_Int i = 0;
 	SDL_DisplayMode mode;
 	SGSFN( "SS_GetCurrentDisplayMode" );
-	if( !sgs_LoadArgs( C, "i", &i ) )
+	if( !sgs_LoadArgs( C, "|i", &i ) )
 		return 0;
 	
 	if( 0 != SDL_GetCurrentDisplayMode( i, &mode ) )
@@ -590,10 +605,10 @@ static int SS_GetCurrentDisplayMode( SGS_CTX )
 }
 static int SS_GetDesktopDisplayMode( SGS_CTX )
 {
-	sgs_Int i;
+	sgs_Int i = 0;
 	SDL_DisplayMode mode;
 	SGSFN( "SS_GetDesktopDisplayMode" );
-	if( !sgs_LoadArgs( C, "i", &i ) )
+	if( !sgs_LoadArgs( C, "|i", &i ) )
 		return 0;
 	
 	if( 0 != SDL_GetDesktopDisplayMode( i, &mode ) )
@@ -705,12 +720,12 @@ static int SS_WindowI_warpMouse( SGS_CTX )
 
 static int SS_WindowI_initRenderer( SGS_CTX )
 {
-	sgs_Int renderer = SS_RENDERER_DONTCARE, version = SS_RENDERER_DONTCARE, flags = 0;
+	sgs_Int renderer = SS_RENDERER_DONTCARE, flags = 0;
 	SS_RenderInterface* riface;
 	SS_Renderer* R;
 	WND_IHDR( initRenderer );
 	
-	if( !sgs_LoadArgs( C, "|iii", &renderer, &version, &flags ) )
+	if( !sgs_LoadArgs( C, "|ii", &renderer, &flags ) )
 		return 0;
 	
 	if( W->riface )
@@ -732,7 +747,7 @@ static int SS_WindowI_initRenderer( SGS_CTX )
 	if( !riface )
 		return sgs_Msg( C, SGS_WARNING, "specified renderer is unavailable" );
 	
-	R = riface->create( W->window, version, flags );
+	R = riface->create( W->window, flags );
 	if( !R )
 		return sgs_Msg( C, SGS_WARNING, "failed to create the renderer: %s", riface->last_error );
 	
@@ -741,8 +756,7 @@ static int SS_WindowI_initRenderer( SGS_CTX )
 	
 	ss_MakeCurrent( riface, R );
 	
-	sgs_PushBool( C, 1 );
-	return 1;
+	SGS_RETURN_THIS( C );
 }
 
 static int SS_WindowI_makeCurrent( SGS_CTX )
@@ -773,8 +787,7 @@ static int SS_WindowI_setBufferScale( SGS_CTX )
 		ss_TmpRestoreCurrent( &ctx );
 	}
 	
-	sgs_PushBool( C, 1 );
-	return 1;
+	SGS_RETURN_THIS( C );
 }
 
 
@@ -1063,6 +1076,31 @@ static SS_Window* SS_Window_from_id( Uint32 id )
 }
 
 
+static int ss_acf_Window( SGS_CTX, int item, va_list* args, int flags )
+{
+	SS_Window** W = NULL;
+	if( flags & SGS_LOADARG_WRITE )
+		W = va_arg( *args, SS_Window** );
+	
+	if( !sgs_IsObject( C, item, SS_Window_iface ) )
+		return 0;
+	
+	if( W )
+		*W = (SS_Window*) sgs_GetObjectData( C, item );
+	return 1;
+}
+
+static int SS_MessageBox( SGS_CTX )
+{
+	sgs_Int flags;
+	char *title, *message;
+	SS_Window* W = NULL;
+	SGSFN( "SS_MessageBox" );
+	if( sgs_LoadArgs( C, "iss|x", &flags, &title, &message, ss_acf_Window, &W ) )
+		return 0;
+	SGS_RETURN_BOOL( 0 == SDL_ShowSimpleMessageBox( flags, title, message, W ? W->window : NULL ) );
+}
+
 
 static int SS_GetKeyFromName( SGS_CTX )
 {
@@ -1175,20 +1213,6 @@ static int SS_SetModState( SGS_CTX )
 	return 0;
 }
 
-static int SS_HasScreenKeyboardSupport( SGS_CTX )
-{
-	SGSFN( "SS_HasScreenKeyboardSupport" );
-	sgs_PushBool( C, SDL_HasScreenKeyboardSupport() );
-	return 1;
-}
-
-static int SS_IsTextInputActive( SGS_CTX )
-{
-	SGSFN( "SS_IsTextInputActive" );
-	sgs_PushBool( C, SDL_IsTextInputActive() );
-	return 1;
-}
-
 
 static int SS_ShowCursor( SGS_CTX )
 {
@@ -1233,11 +1257,10 @@ static int SS_GetMouseState( SGS_CTX )
 	int x, y, btnmask;
 	SGSFN( "SS_GetMouseState" );
 	btnmask = SDL_GetMouseState( &x, &y );
+	sgs_PushInt( C, btnmask );
 	sgs_PushInt( C, x );
 	sgs_PushInt( C, y );
-	sgs_PushInt( C, btnmask );
-	sgs_PushArray( C, 3 );
-	return 1;
+	return 3;
 }
 
 static int SS_GetRelativeMouseState( SGS_CTX )
@@ -1245,11 +1268,10 @@ static int SS_GetRelativeMouseState( SGS_CTX )
 	int x, y, btnmask;
 	SGSFN( "SS_GetRelativeMouseState" );
 	btnmask = SDL_GetRelativeMouseState( &x, &y );
+	sgs_PushInt( C, btnmask );
 	sgs_PushInt( C, x );
 	sgs_PushInt( C, y );
-	sgs_PushInt( C, btnmask );
-	sgs_PushArray( C, 3 );
-	return 1;
+	return 3;
 }
 
 static int SS_GetRelativeMouseMode( SGS_CTX )
@@ -1278,6 +1300,20 @@ static int SS_SetRelativeMouseMode( SGS_CTX )
 	}
 }
 
+
+static int SS_HasScreenKeyboardSupport( SGS_CTX )
+{
+	SGSFN( "SS_HasScreenKeyboardSupport" );
+	sgs_PushBool( C, SDL_HasScreenKeyboardSupport() );
+	return 1;
+}
+
+static int SS_IsTextInputActive( SGS_CTX )
+{
+	SGSFN( "SS_IsTextInputActive" );
+	sgs_PushBool( C, SDL_IsTextInputActive() );
+	return 1;
+}
 
 static int SS_StartTextInput( SGS_CTX )
 {
@@ -1779,7 +1815,7 @@ static int SS_GameControllerAddMappingsFromFile( SGS_CTX )
 	ret = SDL_GameControllerAddMappingsFromFile( mapping );
 	if( ret >= 0 )
 	{
-		sgs_PushBool( C, ret );
+		sgs_PushInt( C, ret );
 		return 1;
 	}
 	else
@@ -1921,11 +1957,11 @@ static int SS_GameControllerEventState( SGS_CTX )
 
 static int SS_IsGameController( SGS_CTX )
 {
-	int32_t state;
+	int32_t joyid;
 	SGSFN( "SS_IsGameController" );
-	if( !sgs_LoadArgs( C, "l", &state ) )
+	if( !sgs_LoadArgs( C, "l", &joyid ) )
 		return 0;
-	sgs_PushBool( C, SDL_IsGameController( state ) );
+	sgs_PushBool( C, SDL_IsGameController( joyid ) );
 	return 1;
 }
 
@@ -2686,11 +2722,6 @@ static sgs_RegIntConst sdl_ints[] =
 	IC( SDL_WINDOW_INPUT_GRABBED ),
 	IC( SDL_WINDOW_ALLOW_HIGHDPI ),
 	
-	IC( SDL_RENDERER_SOFTWARE ),
-	IC( SDL_RENDERER_ACCELERATED ),
-	IC( SDL_RENDERER_PRESENTVSYNC ),
-	IC( SDL_RENDERER_TARGETTEXTURE ),
-	
 	IC( SDL_MESSAGEBOX_ERROR ),
 	IC( SDL_MESSAGEBOX_WARNING ),
 	IC( SDL_MESSAGEBOX_INFORMATION ),
@@ -2731,7 +2762,6 @@ static sgs_RegIntConst sdl_ints[] =
 	IC( SS_RENDERER_OPENGL ),
 	IC( SS_RENDERER_DIRECT3D9 ),
 	IC( SS_RENDERER_VSYNC ),
-	IC( SS_RENDERER_DEBUG ),
 	
 	IC( SS_POSMODE_STRETCH ),
 	IC( SS_POSMODE_CROP ),
@@ -2793,7 +2823,7 @@ static sgs_RegFuncConst sdl_funcs[] =
 	{ "SDL_WINDOWPOS_CENTERED_DISPLAY", SS_SDL_WINDOWPOS_CENTERED_DISPLAY },
 	
 	FN( CreateWindow ), FN( GetWindowFromID ),
-	
+	FN( MessageBox ),
 	FN( GetKeyFromName ), FN( GetScancodeFromName ),
 	FN( GetKeyFromScancode ), FN( GetScancodeFromKey ),
 	FN( GetKeyName ), FN( GetScancodeName ),
@@ -2901,7 +2931,7 @@ static void ss_calc_cursor_pos( int* rcp_x, int* rcp_y, int x, int y, Uint32 wid
 	*rcp_y = y;
 }
 
-int ss_CreateSDLEvent( SGS_CTX, SDL_Event* event )
+void ss_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 {
 	int osz, ret, rcp_x, rcp_y;
 	
@@ -2958,6 +2988,7 @@ int ss_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 	case SDL_DROPFILE:
 		sgs_PushString( C, "file" );
 		sgs_PushString( C, event->drop.file );
+		SDL_free( event->drop.file );
 		break;
 		
 	case SDL_FINGERMOTION:
@@ -3164,7 +3195,7 @@ int ss_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 		sgs_PushInt( C, event->window.data2 );
 		break;
 		
-	default:
+	case SDL_USEREVENT:
 		sgs_PushString( C, "windowID" );
 		sgs_PushInt( C, event->user.windowID );
 		sgs_PushString( C, "code" );
@@ -3178,7 +3209,5 @@ int ss_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 	}
 	
 	ret = sgs_PushDict( C, sgs_StackSize( C ) - osz );
-	if( ret != SGS_SUCCESS )
-		sgs_Pop( C, sgs_StackSize( C ) - osz );
-	return ret;
+	sgs_BreakIf( ret != SGS_SUCCESS );
 }

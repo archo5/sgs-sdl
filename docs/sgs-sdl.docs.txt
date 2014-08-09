@@ -12,6 +12,66 @@ This is a graphics framework that acts as a SGScript virtual machine, providing 
 # >>>
 
 
+# Main interface [info]
+
+To the user, everything starts with the `main` file.
+After setting up all the core libraries, the file is in the `include "main";` way, it can be "main.sgs", "main.sgc", "main.dll"/"main.so" in the executable's directory.
+
+At `main`, basic libraries are already available (core + math + images) as well as...
+
+- `sys_exit` - the exit switch (default: `false`)
+- `sys_wait_events` - should events be waited for or polled (default: `false`)
+- `sys_initial_dir` - the starting directory (it is stored because current directory is changed to executable directory)
+- `sys_args` - the input arguments
+
+After the `**main**` file is loaded, a `**configure**` function is called (no error in case it doesn't exist). After it, it's possible to quit the application prematurely by setting `sys_exit` to `true`.
+
+Then `**initialize**` function is called, now with everything available. This is the place to set up window, rendering, resources. This is required to succeed.
+
+After successful initialization, the looping stage is entered. The `**update**` and `**on_event**` functions are called all the time up until `sys_exit` is `true`. `update` is the place to do the frame-to-frame work. `on_event` is required for input handling.
+
+`cleanup` is called at the end to free resources that cannot be freed by the GC. There are very few such resources, generally not available unless created manually.
+
+
+# Extended interface information [info]
+
+The exact startup of the system:
+
+- scripting engine is created
+- error handling is initialized
+-- `debug` executable: interactive debugger is initialized
+-- `release` executable: message box hard error (SGS_ERROR) handler is initialized
+- core libraries are initialized (fmt, io, math, os, re, string)
+- extended libraries are initialized (profiler function, extended math, images)
+- `sys_args` program arguments are made available
+- preconfiguration script is initialized (current directory is stored and reset to executable directory)
+- `core/config` is included (font search path generator)
+- `core/ext` is included (scripted extensions)
+- `**main**` is included (starting point)
+- `configure` is called (the place to parse arguments and enable the profiler before hardware API initialization)
+- [exit] if `sys_exit` is true, execution is stopped
+- [optional] if requested, profiler is initialized
+- SDL subsystems are initialized (timer, video, joystick, haptic, controller, events)
+- basic GL attributes are set
+- display / windowing / rendering interfaces are initialized
+- `**initialize**` is called (the place to actually start doing things - create windows, renderers, load resources)
+
+One 'frame' in the system:
+
+- event polling is done
+-- for each relevant event, `**on_event**` is called with the event
+- [exit] if `sys_exit` is true, frame is stopped
+- `**update**` is called
+
+Finalization in the system:
+
+- `**cleanup**` is called
+- [optional] if requested, profiler data is dumped and profiler is unloaded
+- [debug executable] interactive debugger is unloaded
+- scripting engine is unloaded
+- graphics APIs are unloaded
+
+
 # Image handling [info]
 
 === Objects and their methods:
@@ -165,6 +225,7 @@ This is a graphics framework that acts as a SGScript virtual machine, providing 
 - @SS_GetDesktopDisplayMode
 - @SS_CreateWindow
 - @SS_GetWindowFromID
+- @SS_MessageBox
 - @SS_GetKeyFromName
 - @SS_GetScancodeFromName
 - @SS_GetKeyFromScancode
@@ -209,25 +270,28 @@ This is a graphics framework that acts as a SGScript virtual machine, providing 
 - @SDL_WINDOWPOS_UNDEFINED_DISPLAY
 - @SDL_WINDOWPOS_CENTERED_DISPLAY
 
+=== Interfaces:
+
+- @"SDL event data"<SDL event types>
+
 === Constants:
 
-- @SDL event types
-- @SDL_CURSOR_*, SDL_SYSTEM_CURSOR_* - system cursor types
-- @SDLK_* - key types
-- @SDL_SCANCODE_* - keyboard scan code types
-- @KMOD_* - keyboard modifier flags
-- @SDL_BUTTON_* - mouse button constants
-- @SDL_TOUCH_MOUSEID - ???
-- @SDL_CONTROLLER_BINDTYPE_* - controller binding types
-- @SDL_CONTROLLER_AXIS_* - controller axis types
-- @SDL_HAT_* - controller hat positions
-- @SDL_WINDOWPOS_* - special window positioning values
-- @SDL_WINDOW_* - window creation flags
-- @SDL_RENDERER_* - renderer creation flags
-- @SDL_MESSAGEBOX_* - message box types
-- @SDL_POWERSTATE_* - power states
-- @SS_RENDERER_* - renderer types & flags
-- @SS_POSMODE_* - output rectangle positioning modes for detached output rectangle mode
+- @"SDL event types"
+- @"SDL_[SYSTEM_]CURSOR_*" - system cursor types
+- @"SDLK_*" - key types
+- @"SDL_SCANCODE_*" - keyboard scan code types
+- @"SDL_KMOD_*" - keyboard modifier flags
+- @"SDL_BUTTON_*" - mouse button constants
+- @SDL_TOUCH_MOUSEID - the mouse ID for mouse events coming from a touch input device
+- @"SDL_CONTROLLER_BINDTYPE_*" - controller binding types
+- @"SDL_CONTROLLER_AXIS_*" - controller axis types
+- @"SDL_HAT_*" - controller hat positions
+- @"SDL_WINDOWPOS_*" - special window positioning values
+- @"SDL_WINDOW_*" - window creation flags
+- @"SDL_MESSAGEBOX_*" - message box types
+- @"SDL_POWERSTATE_*" - power states
+- @"SS_RENDERER_*" - renderer types & flags
+- @"SS_POSMODE_*" - output rectangle positioning modes for detached output rectangle mode
 
 
 # Utility functions [info]
@@ -1020,29 +1084,1250 @@ A display mode data container. Exactly the same as @SDL_DisplayMode<http://wiki.
 
 
 # SS_Window.setPosition [method]
+
+== self SS_Window.setPosition( int x, int y )
+=== set both x and y position of the window
+
+
 # SS_Window.setSize [method]
+
+== self SS_Window.setSize( int width, int height )
+=== set both width and height of the window
+
+
 # SS_Window.setMaxSize [method]
+
+== self SS_Window.setMaxSize( int width, int height )
+=== set both max. width and max. height of the window
+
+
 # SS_Window.setMinSize [method]
+
+== self SS_Window.setMinSize( int width, int height )
+=== set both min. width and min. height of the window
+
+
 # SS_Window.warpMouse [method]
+
+== self SS_Window.warpMouse( int x, int y )
+=== move the mouse cursor to a position in the window
+
+- This function generates a mouse motion event.
+
+
 # SS_Window.initRenderer [method]
+
+== self? SS_Window.initRenderer( int renderer = SS_RENDERER_DONTCARE, flags = 0 )
+=== initialize the specified rendering system
+
+- `renderer` can be one of:
+-- `SS_RENDERER_DONTCARE` - pick the best renderer for the platform - Direct3D9 for Windows and OpenGL for any other OS.
+-- `SS_RENDERER_DIRECT3D9` - Direct3D9
+-- `SS_RENDERER_OPENGL` - OpenGL (1.x)
+- `flags` are a combination of:
+-- `SS_RENDERER_VSYNC` - enable vertical synchronization on presentation
+
+Renderer is made current after initialization.
+
+
 # SS_Window.makeCurrent [method]
+
+== bool SS_Window.makeCurrent()
+=== sets the renderer of the window as the current one (activates it)
+
+- function returns whether there was a renderer to activate (if it was initialized)
+
+
 # SS_Window.setBufferScale [method]
+
+== self? SS_Window.setBufferScale( int width = -1, int height = -1, int mode = SS_POSMODE_FIT )
+=== detach backbuffer (main rendering surface) from window size and specify custom size / scaling mode for it
+
+This function enables what works as a "pixel art mode" - fixed background surface size + non-interpolating scaling
+
+- If called without passing any arguments, the function (re-)attaches the main surface.
+- `mode` can be one of @"SS_POSMODE_*":
+-- `SS_POSMODE_STRETCH` - stretches the surface without maintaining the aspect ratio
+-- `SS_POSMODE_CROP` - resizes the surface so that all window space is optimally covered, retaining the aspect ratio
+-- `SS_POSMODE_FIT` - resizes the surface so that all of the surface is visible as large as possible, retaining the aspect ratio
+-- `SS_POSMODE_FITRND` - same as SS_POSMODE_FIT, but rounds down to nearest whole-pixel scale
+-- `SS_POSMODE_CENTER` - surface is put in the middle and retains its size and aspect ratio
+
+- It is advised to use @"SS_Window.setMinSize" and @"SS_Window.setMaxSize" together with this function to optimize visibility.
 
 
 # SS_Joystick [object]
+
+Joystick interface object.
+
+- methods:
+-- @open<SS_Joystick.open>
+-- @close<SS_Joystick.close>
+-- @getAxis<SS_Joystick.getAxis>
+-- @getBall<SS_Joystick.getBall>
+-- @getButton<SS_Joystick.getButton>
+-- @getHat<SS_Joystick.getHat>
+- read-only properties:
+-- [bool] attached - whether the joystick is still attached to the device
+-- [int] instanceID - joystic instance ID
+-- [string] guid - the globally unique identifier string for the joystick
+-- [int] numAxes - number of axes the joystick has
+-- [int] numBalls - number of balls the joystick has
+-- [int] numButtons - number of buttons the joystick has
+-- [int] numHats - number of hats the joystick has
+- other features:
+-- GC-safe
+
+
 # SS_Joystick.open [method]
+
+== bool+ SS_Joystick.open( int index = 0 )
+=== opens the joystick for reading
+
+- if joystick was previously open, it is closed before proceeding
+-- on failure, previous opened joystick is not restored
+- on success, the function returns `true`
+- on failure, the function returns `false` and an error string
+
+
 # SS_Joystick.close [method]
+
+== void SS_Joystick.close()
+=== closes the joystick
+
+
 # SS_Joystick.getAxis [method]
+
+== int SS_Joystick.getAxis( int which )
+=== reads the joystick axis value for the specified axis
+
+
 # SS_Joystick.getBall [method]
+
+== int,int SS_Joystick.getBall( int which )
+=== reads the joystick ball values (x,y) for the specified ball
+
+
 # SS_Joystick.getButton [method]
+
+== int SS_Joystick.getButton( int which )
+=== reads the joystick button value for the specified button
+
+
 # SS_Joystick.getHat [method]
+
+== int SS_Joystick.getHat( int which )
+=== reads the joystick hat value for the specified hat
+
+Hat values can be found at @"SDL_HAT_*".
+
+
 # SS_GameController [object]
+
+Game controller interface object.
+
+- methods:
+-- @open<SS_GameController.open>
+-- @close<SS_GameController.close>
+-- @getAxis<SS_GameController.getAxis>
+-- @getButton<SS_GameController.getButton>
+-- @getBindForAxis<SS_GameController.getBindForAxis>
+-- @getBindForButton<SS_GameController.getBindForButton>
+- read-only properties:
+-- [bool] attached - whether the game controller is attached
+-- [SS_Joystick] joystick - the joystick used as the game controller
+-- [string?] name - returns game controller name or null if failed to retrieve it
+- other features:
+-- GC-safe
+
+
 # SS_GameController.open [method]
+
+== bool+ SS_GameController.open( int index = 0 )
+=== opens the game controller for reading
+
+- if game controller was previously open, it is closed before proceeding
+-- on failure, previous opened game controller is not restored
+- on success, the function returns `true`
+- on failure, the function returns `false` and an error string
+
+
 # SS_GameController.close [method]
+
+== void SS_GameController.close()
+=== closes the game controller
+
+
 # SS_GameController.getAxis [method]
+
+== int SS_GameController.getAxis( int which )
+=== reads the game controller axis value for the specified axis
+
+
 # SS_GameController.getButton [method]
+
+== int SS_GameController.getButton( int which )
+=== reads the game controller button value for the specified button
+
+
 # SS_GameController.getBindForAxis [method]
+
+== dict SS_GameController.getBindForAxis( int which )
+=== return the controller - joystick input binding for a controller axis
+
+- the returned value contains:
+-- int bindType - binding type (one of @"SDL_CONTROLLER_BINDTYPE_*")
+-- [if bindType is SDL_CONTROLLER_BINDTYPE_BUTTON] int button - button number
+-- [if bindType is SDL_CONTROLLER_BINDTYPE_AXIS] int axis - axis number
+-- [if bindType is SDL_CONTROLLER_BINDTYPE_HAT] int hat - hat number
+-- [if bindType is SDL_CONTROLLER_BINDTYPE_HAT] int hat_mask - hat mask
+
+
 # SS_GameController.getBindForButton [method]
+
+== dict SS_GameController.getBindForButton( int which )
+=== return the controller - joystick input binding for a controller button
+
+For return value description, see @"SS_GameController.getBindForAxis"
+
+
+
+# SS_SetError [function]
+
+== void SS_SetError()
+=== clears the SDL error string
+
+== void SS_SetError( string error )
+=== sets the SDL error string to the specified value
+
+
+# SS_GetError [function]
+
+== string SS_GetError()
+=== retrieves the SDL error string
+
+
+# SS_EventState [function]
+
+== bool SS_EventState( int event, int state = SDL_QUERY )
+=== sets/returns whether the specified event is processed
+
+- `event` is one of the @"SDL event types"
+- `state` is one of:
+-- `SDL_ENABLE` - enable the event
+-- `SDL_DISABLE` - disable the event
+-- `SDL_QUERY` - query the state of the event without changing it
+
+
+# SS_GetNumTouchDevices [function]
+
+== int SS_GetNumTouchDevices()
+=== returns the number of available touch input devices
+
+
+# SS_GetTouchDevice [function]
+
+== int SS_GetTouchDevice( int index )
+=== returns the touch ID for the touch input device
+
+- `index` can be between 0 and @SS_GetNumTouchDevices - 1
+- IDs for all devices can be retrieved by @SS_GetTouchDevices
+
+
+# SS_GetTouchDevices [function]
+
+== array[int] SS_GetTouchDevices()
+=== returns an array of all touch input device IDs
+
+- IDs for specific devices can be retrieved by @SS_GetTouchDevice
+
+
+# SS_GetNumTouchFingers [function]
+
+== int SS_GetNumTouchFingers( int touchID )
+=== returns the number of fingers on the touch device
+
+
+# SS_GetTouchFinger [function]
+
+== dict? SS_GetTouchFinger( int touchID, int finger_index )
+=== returns finger data for a finger in the specified touch device
+
+- on success, the function returns a `dict` containing:
+-- [int] id - finger ID
+-- [real] x - normalized X position of the finger (0-1)
+-- [real] y - normalized Y position of the finger (0-1)
+-- [real] pressure - normalized pressure of the finger (0-1)
+- on failure, the function returns `null`
+
+
+# SS_GetTouchFingers [function]
+
+== array[dict?] SS_GetTouchFingers( int touchID )
+=== returns finger data list for all fingers in the specified touch device
+
+
+# SS_RecordGesture [function]
+
+== bool SS_RecordGesture( int touchID )
+=== begins recording a gesture
+
+- `touchID` can be -1 to record on all devices
+- function returns if the device can be found (`true` if `touchID` is -1)
+
+
+# SS_FlushEvents [function]
+
+== void SS_FlushEvents( int type )
+=== flush events of the specified type
+
+== void SS_FlushEvents( int minType, int maxType )
+=== flush events from / to the specified types
+
+- "flush" means "extract from queue and process"
+- event types are @"SDL event types"
+
+
+# SS_HasEvents [function]
+
+== bool SS_HasEvents( int type )
+=== returns if there are events on the queue of the specified type
+
+== bool SS_HasEvents( int minType, int maxType )
+=== returns if there are events on the queue from / to the specified types
+
+- event types are @"SDL event types"
+
+
+# SS_PollEvent [function]
+
+== dict? SS_PollEvent()
+=== returns an event if there is one, without removing it from the queue
+
+
+# SS_WaitEvent [function]
+
+== dict? SS_WaitEvent([ int timeout ])
+=== returns an event if there is one and removes it from the queue
+
+- if `timeout` is not specified, there is no limit
+
+
+# SS_PeekEvents [function]
+
+== array[dict]? SS_PeekEvents( int maxcount, int type )
+=== returns a list of events matching the type, without removing them from the queue
+
+== array[dict]? SS_PeekEvents( int maxcount, int minType, int maxType )
+=== returns a list of events matching the type range, without removing them from the queue
+
+- on failure, the function returns `null` and the error string
+
+
+# SS_GetEvents [function]
+
+== array[dict]? SS_GetEvents( int maxcount, int type )
+=== returns a list of events matching the type and removes them from the queue
+
+== array[dict]? SS_GetEvents( int maxcount, int minType, int maxType )
+=== returns a list of events matching the type range and removes them from the queue
+
+- on failure, the function returns `null` and the error string
+
+
+# SS_PumpEvents [function]
+
+== void SS_PumpEvents()
+=== pump the input devices for unprocessed events and place them in the event queue
+
+
+# SS_QuitRequested [function]
+
+== bool SS_QuitRequested()
+=== check if an application quit event is in the queue
+
+
+# SS_HasClipboardText [function]
+
+== bool SS_HasClipboardText()
+=== returns if there's some text in the clipboard
+
+
+# SS_GetClipboardText [function]
+
+== string SS_GetClipboardText()
+=== returns the clipboard text (UTF-8)
+
+
+# SS_SetClipboardText [function]
+
+== bool SS_SetClipboardText( string text )
+=== sets the clipboard text, returns if successful
+
+- on failure, a warning is emitted additionally to returning `false`
+
+
+# SS_GetVideoDrivers [function]
+
+== array[string] SS_GetVideoDrivers()
+=== returns the list of available video driver names
+
+
+# SS_DisplayMode [function]
+
+== SS_DisplayMode SS_DisplayMode()
+=== returns a new @SS_DisplayMode<SS_DisplayMode [object]>
+
+
+# SS_GetNumDisplays [function]
+
+== int SS_GetNumDisplays()
+=== returns the number of displays available
+
+
+# SS_GetDisplayName [function]
+
+== string? SS_GetDisplayName( int index )
+=== returns the name of the specified display
+
+- `index` is an index between 0 and @SS_GetNumDisplays -1
+
+
+# SS_GetNumDisplayModes [function]
+
+== int SS_GetNumDisplayModes( int index )
+=== returns the number of available display modes for a display or emits a warning on failure
+
+
+# SS_GetDisplayMode [function]
+
+== SS_DisplayMode SS_GetDisplayMode( int displayIndex, int modeIndex )
+=== returns the required display mode for the specified display or emits a warning on failure
+
+
+# SS_GetDisplayModes [function]
+
+== array[SS_DisplayMode] SS_GetDisplayModes( int displayIndex )
+=== returns all available display modes for the specified display or emits a warning on failure
+
+
+# SS_GetDisplayBounds [function]
+
+== dict? SS_GetDisplayBounds( int index )
+=== returns rectangle mapped to the display or emits a warning on failure
+
+
+# SS_GetClosestDisplayMode [function]
+
+== SS_DisplayMode? SS_GetClosestDisplayMode( int displayIndex, SS_DisplayMode mode )
+=== return the closest available display mode for the specified display or `null` if no such modes could be found
+
+- if the function returns `null`, use @SS_GetError to retrieve the error string
+
+
+# SS_GetCurrentDisplayMode [function]
+
+== SS_DisplayMode SS_GetCurrentDisplayMode( int index = 0 )
+=== return the currently set display mode for the display
+
+
+# SS_GetDesktopDisplayMode [function]
+
+== SS_DisplayMode SS_GetCurrentDisplayMode( int index = 0 )
+=== return the currently set desktop display mode for the display (differs from current if any application has requested fullscreen windows)
+
+
+# SS_CreateWindow [function]
+
+== SS_Window SS_CreateWindow( string title, int x, int y, int width, int height, int flags = 0 )
+=== creates a window (@SS_Window) or emits a warning on failure
+
+- `x` and `y` can not only be coordinates but also @"SDL_WINDOWPOS_*" constants and functions
+- `width` and `height` should not be negative
+- `flags` are a bitwise combination of the specified @"SDL_WINDOW_*" constants
+
+
+# SS_GetWindowFromID [function]
+
+== SS_Window? SS_GetWindowFromID( int ID )
+=== returns a window mapped to the specified ID or `null` if that window doesn't exist
+
+
+# SS_MessageBox [function]
+
+== bool SS_MessageBox( int flags, string title, string text, SS_Window window = null )
+=== shows a simple message box of the type (icon) specified by `flags`, showing title and text, optionally locking the specified parent window
+
+
+# SS_GetKeyFromName [function]
+
+== int SS_GetKeyFromName( string key )
+=== returns key code by name or SDLK_UNKNOWN if a code was not found
+
+- key code list: @"SDLK_*"
+
+
+# SS_GetScancodeFromName [function]
+
+== int SS_GetScancodeFromName( string key )
+=== returns scan code by name or SDL_SCANCODE_UNKNOWN if a code was not found
+
+- scan code list: @"SDL_SCANCODE_*"
+
+
+# SS_GetKeyFromScancode [function]
+
+== int SS_GetKeyFromScancode( int code )
+=== returns the key code currently corresponding to the specified scan code
+
+- key code list: @"SDLK_*"
+- scan code list: @"SDL_SCANCODE_*"
+
+
+# SS_GetScancodeFromKey [function]
+
+== int SS_GetScancodeFromKey( int code )
+=== returns the scan code currently corresponding to the specified key code
+
+- key code list: @"SDLK_*"
+- scan code list: @"SDL_SCANCODE_*"
+
+
+# SS_GetKeyName [function]
+
+== string SS_GetKeyName( int code )
+=== returns name for a key code (one of @"SDLK_*") or an empty string if there was no name for the index
+
+
+# SS_GetScancodeName [function]
+
+== string SS_GetScancodeName( int code )
+=== returns name for a scancode (one of @"SDL_SCANCODE_*") or an empty string if there was no name for the index
+
+
+# SS_GetKeyboardFocus [function]
+
+== SS_Window? SS_GetKeyboardFocus()
+=== returns the @SS_Window object that has keyboard focus
+
+
+# SS_GetMouseFocus [function]
+
+== SS_Window? SS_GetMouseFocus()
+=== returns the @SS_Window object that has mouse focus
+
+
+# SS_GetModState [function]
+
+== int SS_GetModState()
+=== returns the keyboard modifier state
+
+- returned state is a bitwise combination of @"SDL_KMOD_*" flags
+
+
+# SS_SetModState [function]
+
+== void SS_SetModState( int state )
+=== sets keyboard modifiers (only internal flags, not keyboard state) to the specified state
+
+- `state` should be a bitwise combination of @"SDL_KMOD_*" flags
+
+
+# SS_ShowCursor [function]
+
+== void SS_ShowCursor( bool show )
+=== enable or disable showing of the cursor for all application windows
+
+
+# SS_SetSystemCursor [function]
+
+== bool SS_SetSystemCursor( int which )
+=== set the cursor for all application windows to a system cursor
+
+- function returns whether a system cursor was found and set successfully
+- `which` can be one of the following values:
+
+
+# SS_WarpMouse [function]
+
+== void SS_WarpMouse( int x, int y )
+=== set cursor position to the specified position in window that is currently in focus
+
+
+# SS_GetMouseState [function]
+
+== int,int,int SS_GetMouseState()
+=== returns full mouse state
+
+- return values:
+-- button mask - @"SDL_BUTTON_*"
+-- absolute X cursor position
+-- absolute Y cursor position
+
+
+# SS_GetRelativeMouseState [function]
+
+== int,int,int SS_GetRelativeMouseState()
+=== returns full relative mouse state
+
+- return values:
+-- button mask - @"SDL_BUTTON_*"
+-- X cursor movement since last recorded position
+-- Y cursor movement since last recorded position
+
+
+# SS_GetRelativeMouseMode [function]
+
+== bool SS_GetRelativeMouseMode()
+=== returns whether relative mouse mode is enabled
+
+For more info, see @SS_SetRelativeMouseMode.
+
+
+# SS_SetRelativeMouseMode [function]
+
+== bool+ SS_SetRelativeMouseMode( bool enable )
+=== enable or disable relative mouse mode
+
+- On success, function returns `true`, on failure - `false` and the error string.
+- Relative mouse mode means that the cursor is hidden, cursor position won't change and only relative motion events are delivered.
+- For more info, see @"https://wiki.libsdl.org/SDL_SetRelativeMouseMode"
+
+
+# SS_HasScreenKeyboardSupport [function]
+
+== bool SS_HasScreenKeyboardSupport()
+=== returns if the platform has some screen keyboard support
+
+
+# SS_IsTextInputActive [function]
+
+== bool SS_IsTextInputActive()
+=== returns if text input events are being sent
+
+- to change the state, see @SS_StartTextInput and @SS_StopTextInput.
+
+
+# SS_StartTextInput [function]
+
+== void SS_StartTextInput()
+=== begin sending text input events (SDL_TEXTINPUT, SDL_TEXTEDITING)
+
+- to query the state, use @SS_IsTextInputActive
+- to stop sending these events, use @SS_StopTextInput
+
+
+# SS_StopTextInput [function]
+
+== void SS_StartTextInput()
+=== stop sending text input events (SDL_TEXTINPUT, SDL_TEXTEDITING)
+
+- to query the state, use @SS_IsTextInputActive
+- to start sending these events, use @SS_StartTextInput
+
+
+# SS_SetTextInputRect [function]
+
+== void SS_SetTextInputRect( int left, int top, int right, int bottom )
+=== set the area in the window where text input takes place (generally the bounding box of an edit control) for input helper window placement
+
+
+# SS_GetJoystick [function]
+
+== SS_Joystick SS_GetJoystick()
+=== creates a new joystick interface object
+
+== SS_Joystick?+ SS_GetJoystick( int joystick_index )
+=== creates a new joystick interface object and tries to open it with the specified joystick index
+
+- on success, the function returns @SS_Joystick, on error - `null` and the error string.
+
+
+# SS_NumJoysticks [function]
+
+== int SS_NumJoysticks()
+=== returns the number of joysticks available
+
+
+# SS_GetJoystickName [function]
+
+== string? SS_GetJoystickName( int joystick_index )
+=== returns a joystick name or null if could not retrieve it
+
+- `joystick_index` is an index between 0 and @SS_NumJoysticks - 1
+
+
+# SS_GetJoystickNames [function]
+
+== array[string|null] SS_GetJoystickNames()
+=== returns an array containing joystick names or null for every joystick index that could not give a name
+
+
+# SS_JoystickUpdate [function]
+
+== void SS_JoystickUpdate()
+=== manually update the joystick and send the events
+
+- this is not necessary if joystick events are enabled with @SS_JoystickEventState
+
+
+# SS_JoystickEventState [function]
+
+== bool?+ SS_JoystickEventState( int newstate )
+=== sets and/or retrieves whether joysticks emit events
+
+On success, function returns `bool` containing the state of events. On failure, it returns `null` and the error string.
+
+- `newstate` can be one of:
+-- `SDL_ENABLE`(1) - enable events
+-- `SDL_DISABLE`(0) - disable events
+-- `SDL_QUERY`(-1) - don't change event state, just return it
+
+
+# SS_GetGameController [function]
+
+== SS_GameController SS_GetGameController()
+=== creates a new game controller interface object
+
+== SS_GameController?+ SS_GetGameController( int joystick_index )
+=== creates a new game controller interface object and tries to open it with the specified joystick index
+
+- on success, the function returns @SS_GameController, on error - `null` and the error string.
+
+
+# SS_GameControllerAddMapping [function]
+
+== bool?+ SS_GameControllerAddMapping( string mapping )
+=== loads one controller mapping from a string
+
+- on success, the function returns whether a new mapping was added (true) or an old one was updated (false), on failure - `null` and the error string.
+
+- For more info about the mapping format, see @"https://wiki.libsdl.org/SDL_GameControllerAddMapping".
+
+
+# SS_GameControllerAddMappingsFromFile [function]
+
+== int?+ SS_GameControllerAddMappingsFromFile( string filename )
+=== loads controller mappings from a file
+
+- on success, the function returns the number of mappings found, on failure - `null` and the error string.
+
+- For more info about the mapping format, see @"https://wiki.libsdl.org/SDL_GameControllerAddMapping".
+
+
+# SS_GameControllerMappingForGUID [function]
+
+== string?+ SS_GameControllerMappingForGUID( string guid )
+=== returns a game controller mapping string, mapped to the specified GUID
+
+- on success, the function returns a mapping string, on failure - `null` and the error string.
+
+
+# SS_GetGameControllerName [function]
+
+== string? SS_GetGameControllerName( int joystick_index )
+=== returns a game controller name or null if could not retrieve it
+
+- `joystick_index` is an index between 0 and @SS_NumJoysticks - 1
+
+
+# SS_GetGameControllerNames [function]
+
+== array[string|null] SS_GetGameControllerNames()
+=== returns an array containing game controller names or null for every joystick index that is not a game controller or could not give a name for any other reason
+
+
+# SS_GameControllerGetAxisFromString [function]
+
+== int SS_GameControllerGetAxisFromString( string axis )
+=== returns axis number from axis name string
+
+
+# SS_GameControllerGetButtonFromString [function]
+
+== int SS_GameControllerGetButtonFromString( string button )
+=== returns button number from button name string
+
+
+# SS_GameControllerGetStringForAxis [function]
+
+== string SS_GameControllerGetStringForAxis( int axis )
+=== returns axis name string from axis number
+
+
+# SS_GameControllerGetStringForButton [function]
+
+== string SS_GameControllerGetStringForButton( int button )
+=== returns button name string from button number
+
+
+# SS_GameControllerUpdate [function]
+
+== void SS_GameControllerUpdate()
+=== manually update the game controller and send the events
+
+- this is not necessary if game controller events are enabled with @SS_GameControllerEventState
+
+
+# SS_GameControllerEventState [function]
+
+== bool?+ SS_GameControllerEventState( int newstate )
+=== sets and/or retrieves whether game controllers emit events
+
+- on success, function returns `bool` containing the state of events. On failure, it returns `null` and the error string.
+
+- `newstate` can be one of:
+-- `SDL_ENABLE`(1) - enable events
+-- `SDL_DISABLE`(0) - disable events
+-- `SDL_QUERY`(-1) - don't change event state, just return it
+
+
+# SS_IsGameController [function]
+
+== bool SS_IsGameController( int joystick_index )
+=== returns whether the joystick with the specified index is also a game controller
+
+
+# SDL_WINDOWPOS_UNDEFINED_DISPLAY [function]
+
+== int SDL_WINDOWPOS_UNDEFINED_DISPLAY( int display )
+=== returns a constant for @SS_CreateWindow window placement (X/Y arguments) at any place on the specified display
+
+
+# SDL_WINDOWPOS_CENTERED_DISPLAY [function]
+
+== int SDL_WINDOWPOS_CENTERED_DISPLAY( int display )
+=== returns a constant for @SS_CreateWindow window placement (X/Y arguments) at the center on the specified display
+
+
+
+# SDL event types [constants]
+
+Basic types (and data sent with them):
+
+- all events:
+-- `[int] type // the event type`
+-- `[int] timestamp // event time`
+- SDL_QUIT - application end requested
+-- `no data`
+- SDL_WINDOWEVENT - window state change
+-- `[int] windowID // the window ID`
+-- `[int] event // sub-event (SDL_WINDOWEVENT_*) ID`
+-- `[int] data1 // event data 1`
+-- `[int] data2 // event data 2`
+- SDL_SYSWMEVENT - system window state change event
+-- `not fully implemented`
+- SDL_KEYDOWN - key press
+-- `[int] windowID // the window ID`
+-- `[bool] state // pressed or released`
+-- `[int] repeat // number of times the event was recently repeated`
+-- `[int] hwcode // @"SDL_SCANCODE_*" hardware scan code`
+-- `[int] keycode // @"SDLK_*" key code`
+-- `[int] mod // @"SDL_KMOD_*" keyboard modifiers`
+- SDL_KEYUP - key release
+-- `same as SDL_KEYDOWN`
+- SDL_TEXTEDITING - text pre-input
+-- `[int] windowID // the window ID`
+-- `[string] text // text sent`
+-- `[int] start // text location`
+-- `[int] length // size of previous area to replace`
+- SDL_TEXTINPUT - text input
+-- `[int] windowID // the window ID`
+-- `[string] text // text sent`
+- SDL_MOUSEMOTION - mouse was moved
+-- `[int] windowID // the window ID`
+-- `[int] which // mouse ID`
+-- `[int] buttons // the buttons pressed, combined from button flags @"SDL_BUTTON_*"`
+-- `[bool] lbutton // whether the left button is pressed`
+-- `[bool] mbutton // whether the middle button is pressed`
+-- `[bool] rbutton // whether the right button is pressed`
+-- `[bool] x1button // whether the extra button 1 is pressed`
+-- `[bool] x2button // whether the extra button 2 is pressed`
+-- `[int] x // buffer scale-aware cursor X position`
+-- `[int] y // buffer scale-aware cursor Y position`
+-- `[int] wx // cursor X position in window`
+-- `[int] wy // cursor Y position in window`
+-- `[int] xrel // cursor X movement`
+-- `[int] yrel // cursor Y movement`
+- SDL_MOUSEBUTTONDOWN - mouse button press
+-- `[int] windowID // the window ID`
+-- `[int] which // mouse ID`
+-- `[int] buttons // ID of the button, one of @"SDL_BUTTON_*"`
+-- `[bool] state // pressed or released`
+-- `[int] clicks // click number`
+-- `[int] x // buffer scale-aware cursor X position`
+-- `[int] y // buffer scale-aware cursor Y position`
+-- `[int] wx // cursor X position in window`
+-- `[int] wy // cursor Y position in window`
+- SDL_MOUSEBUTTONUP - mouse button release
+-- `same as SDL_MOUSEBUTTONDOWN`
+- SDL_MOUSEWHEEL - mouse wheel movement
+-- `[int] windowID // the window ID`
+-- `[int] which // mouse ID`
+-- `[int] x // horizontal wheel movement`
+-- `[int] y // vertical wheel movement`
+- SDL_JOYAXISMOTION - joystick axis movement
+-- `[int] which // joystick ID`
+-- `[int] axis // axis number`
+-- `[int] value // axis value (range: -32768 to 32767)`
+- SDL_JOYBALLMOTION - joystick ball movement
+-- `[int] which // joystick ID`
+-- `[int] ball // ball number`
+-- `[int] xrel // relative X movement`
+-- `[int] yrel // relative Y movement`
+- SDL_JOYHATMOTION - joystick hat movement
+-- `[int] which // joystick ID`
+-- `[int] hat // hat number`
+-- `[int] value // hat value, one of @"SDL_HAT_*"`
+- SDL_JOYBUTTONDOWN - joystick button press
+-- `[int] which // joystick ID`
+-- `[int] button // button number`
+-- `[bool] state // pressed or released`
+- SDL_JOYBUTTONUP - joystick button release
+-- `same as SDL_JOYBUTTONDOWN`
+- SDL_JOYDEVICEADDED - joystick device was added (plugged in/installed/enabled)
+-- `[int] which // joystick ID`
+- SDL_JOYDEVICEREMOVED - joystick device was removed (unplugged/uninstalled/disabled)
+-- `[int] which // joystick ID`
+- SDL_CONTROLLERAXISMOTION - controller axis movement
+-- `[int] which // joystick/controller ID`
+-- `[int] axis // axis number`
+-- `[int] value // axis value (range: -32768 to 32767)`
+- SDL_CONTROLLERBUTTONDOWN - controller button press
+-- `[int] which // joystick/controller ID`
+-- `[int] button // button number`
+-- `[bool] state // pressed or released`
+- SDL_CONTROLLERBUTTONUP - controller button release
+-- `same as SDL_CONTROLLERBUTTONDOWN`
+- SDL_CONTROLLERDEVICEADDED - controller device was added (plugged in/installed/enabled)
+-- `[int] which // joystick/controller ID`
+- SDL_CONTROLLERDEVICEREMOVED - controller device was removed (unplugged/uninstalled/disabled)
+-- `[int] which // joystick/controller ID`
+- SDL_CONTROLLERDEVICEREMAPPED - controller device was remapped
+-- `[int] which // joystick/controller ID`
+- SDL_FINGERDOWN - touch device finger press
+-- `[int] touchID // touch device ID`
+-- `[int] fingerID // finger ID for the device`
+-- `[real] x // absolute normalized X position (0-1)`
+-- `[real] y // absolute normalized Y position (0-1)`
+-- `[real] dx // normalized X movement (0-1)`
+-- `[real] dy // normalized Y movement (0-1)`
+-- `[real] pressure // normalized pressure applied (0-1)`
+- SDL_FINGERUP - touch device finger release
+-- `same as SDL_FINGERDOWN`
+- SDL_FINGERMOTION - touch device finger movement
+-- `same as SDL_FINGERDOWN`
+- SDL_DOLLARGESTURE - gesture performed
+-- `[int] touchID // touch device ID`
+-- `[int] gestureID // closest matched gesture ID`
+-- `[int] numFingers // number of fingers used to perform the gesture`
+-- `[real] error // difference between gesture and input (lower is better)`
+-- `[real] x // normalized X center of gesture (0-1)`
+-- `[real] y // normalized Y center of gesture (0-1)`
+- SDL_DOLLARRECORD - gesture input recorded
+-- `no data`
+- SDL_MULTIGESTURE - basic multiple-finger gesture received
+-- `[int] touchID // touch device ID`
+-- `[real] dTheta // finger rotation amount`
+-- `[real] dDist // finger pinch amount`
+-- `[real] x // normalized X center of gesture (0-1)`
+-- `[real] y // normalized Y center of gesture (0-1)`
+-- `[int] numFingers // number of fingers used to perform the gesture`
+- SDL_CLIPBOARDUPDATE - clipboard content was changed
+-- `no data`
+- SDL_DROPFILE - file was dropped on the window
+-- `[string] file // the path to dropped file`
+- SDL_VIDEODEVICELOST - video device was lost (with Direct3D9 renderer only)
+-- `no data`
+- SDL_VIDEODEVICERESET - video device was reset (with Direct3D9 renderer only)
+-- `no data`
+- SDL_USEREVENT - user event was sent
+-- `[int] windowID // the window ID`
+-- `[int] code // user-assigned sub-event ID`
+-- `[ptr] data1 // event data 1`
+-- `[ptr] data2 // event data 2`
+
+Additional values:
+
+- SDL_FIRSTEVENT - the first event index (to be used with @SS_FlushEvents)
+- SDL_LASTEVENT - the last event index (to be used with @SS_FlushEvents)
+
+Window event (SDL_WINDOWEVENT) subtypes (and meanings for data parameters):
+
+- SDL_WINDOWEVENT_SHOWN - window was shown
+- SDL_WINDOWEVENT_HIDDEN - window was hidden
+- SDL_WINDOWEVENT_EXPOSED - window content repainting was requested due to having a part of it made visible
+- SDL_WINDOWEVENT_MOVED - window was manually moved (data1 = new X position, data2 = new Y position)
+- SDL_WINDOWEVENT_RESIZED - window was manually resized (data1 = new width, data2 = new height)
+- SDL_WINDOWEVENT_SIZE_CHANGED - window size was changed
+- SDL_WINDOWEVENT_MINIMIZED - window was minimized
+- SDL_WINDOWEVENT_MAXIMIZED - window was maximized
+- SDL_WINDOWEVENT_RESTORED - window was restored
+- SDL_WINDOWEVENT_ENTER - window has gained mouse focus
+- SDL_WINDOWEVENT_LEAVE - window has lost mouse focus
+- SDL_WINDOWEVENT_FOCUS_GAINED - window has gained keyboard focus
+- SDL_WINDOWEVENT_FOCUS_LOST - window has lost keyboard focus
+- SDL_WINDOWEVENT_CLOSE - window was closed
+
+
+# SDL_[SYSTEM_]CURSOR_* [constants]
+
+- SDL_[SYSTEM_]CURSOR_ARROW - default arrow
+- SDL_[SYSTEM_]CURSOR_IBEAM - vertical line
+- SDL_[SYSTEM_]CURSOR_WAIT - waiting animation
+- SDL_[SYSTEM_]CURSOR_CROSSHAIR - crosshair
+- SDL_[SYSTEM_]CURSOR_WAITARROW - waiting animation with an arrow
+- SDL_[SYSTEM_]CURSOR_SIZENWSE - diagonal sizing cursor, from northwest to southeast
+- SDL_[SYSTEM_]CURSOR_SIZENESW - diagonal sizing cursor, from northeast to southwest
+- SDL_[SYSTEM_]CURSOR_SIZEWE - horizontal sizing cursor
+- SDL_[SYSTEM_]CURSOR_SIZENS - vertical sizing cursor
+- SDL_[SYSTEM_]CURSOR_SIZEALL - all-direction sizing cursor
+- SDL_[SYSTEM_]CURSOR_NO - restriction
+- SDL_[SYSTEM_]CURSOR_HAND - (pointing) "hand" cursor (usually used for links)
+
+
+# SDLK_* [constants]
+
+SDL keyboard codes. For more info, see @"https://wiki.libsdl.org/SDL_Keycode".
+
+- These constants can be compared to `keycode` member of SDL_KEYDOWN / SDL_KEYUP event data.
+- Unlike SDL, for consistency alphabet keys are mapped to both uppercase and lowercase names of keys (for example, SDLK_A and SDLK_a point to the same value, the numeric value of 'a', decimal 97, hexadecimal 0x61).
+
+
+# SDL_SCANCODE_* [constants]
+
+Keyboard hardware scan codes. For more info, see @"https://wiki.libsdl.org/SDL_Scancode".
+
+- These constants can be compared to `hwcode` member of SDL_KEYDOWN / SDL_KEYUP event data.
+
+
+# SDL_KMOD_* [constants]
+
+Keyboard modifier flags.
+
+- SDL_KMOD_NONE - no modifiers
+- SDL_KMOD_NUM - Num Lock is enabled
+- SDL_KMOD_CAPS - Caps Lock is enabled
+- SDL_KMOD_MODE - AltGr key is pressed
+- SDL_KMOD_LCTRL - Left Control key is pressed
+- SDL_KMOD_RCTRL - Right Control key is pressed
+- SDL_KMOD_RSHIFT - Right Shift key is pressed
+- SDL_KMOD_LSHIFT - Left Shift key is pressed
+- SDL_KMOD_RALT - Right Alt key is pressed
+- SDL_KMOD_LALT - Left Alt key is pressed
+- SDL_KMOD_RGUI - Right special "GUI" (Windows) key is pressed
+- SDL_KMOD_LGUI - Left special "GUI" (Windows) key is pressed
+- SDL_KMOD_CTRL - any Control key is pressed
+- SDL_KMOD_SHIFT - any Shift key is pressed
+- SDL_KMOD_ALT - any Alt key is pressed
+- SDL_KMOD_GUI - any special "GUI" key is pressed
+
+! These are the only constants that have the prefix extended from original SDL2 code. Original constants have the `KMOD_` prefix, *without* `SDL_`. For more info, see @"https://wiki.libsdl.org/SDL_Keymod"
+
+
+# SDL_BUTTON_* [constants]
+
+There are two constant types under this prefix: button IDs and masks.
+
+- IDs are used for events where there can be only one button type at any given time, such as click events (SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP).
+- Masks are used where multiple buttons are expected to be pressed at some time, like the mouse motion event (SDL_MOUSEMOTION).
+
+IDs:
+
+SDL_BUTTON_LEFT - left button
+SDL_BUTTON_MIDDLE - middle button (mouse scroll button)
+SDL_BUTTON_RIGHT - right button
+SDL_BUTTON_X1 - first additional button
+SDL_BUTTON_X2 - second additional button
+
+Masks:
+
+SDL_BUTTON_LMASK - left button
+SDL_BUTTON_MMASK - middle button (mouse scroll button)
+SDL_BUTTON_RMASK - right button
+SDL_BUTTON_X1MASK - first additional button
+SDL_BUTTON_X2MASK - second additional button
+
+
+# SDL_TOUCH_MOUSEID [constant]
+
+== SDL_TOUCH_MOUSEID
+
+the mouse ID for mouse events coming from a touch input device.
+
+
+# SDL_CONTROLLER_BINDTYPE_* [constants]
+
+Game controller - joystick binding types.
+
+- SDL_CONTROLLER_BINDTYPE_NONE - no binding
+- SDL_CONTROLLER_BINDTYPE_BUTTON - binding to a joystick button
+- SDL_CONTROLLER_BINDTYPE_AXIS - binding to a joystick axis
+- SDL_CONTROLLER_BINDTYPE_HAT - binding to a joystick hat
+
+
+# SDL_CONTROLLER_AXIS_* [constants]
+
+Axis types for a controller.
+
+- SDL_CONTROLLER_AXIS_INVALID - invalid axis type
+- SDL_CONTROLLER_AXIS_LEFTX - left X
+- SDL_CONTROLLER_AXIS_LEFTY - left Y
+- SDL_CONTROLLER_AXIS_RIGHTX - right X
+- SDL_CONTROLLER_AXIS_RIGHTY - right Y
+- SDL_CONTROLLER_AXIS_TRIGGERLEFT - left trigger
+- SDL_CONTROLLER_AXIS_TRIGGERRIGHT - right trigger
+- SDL_CONTROLLER_AXIS_MAX - one over last valid type
+
+
+# SDL_HAT_* [constants]
+
+Joystick hat position bit masks.
+
+- SDL_HAT_CENTERED
+- SDL_HAT_UP
+- SDL_HAT_RIGHT
+- SDL_HAT_DOWN
+- SDL_HAT_LEFT
+- SDL_HAT_RIGHTUP
+- SDL_HAT_RIGHTDOWN
+- SDL_HAT_LEFTUP
+- SDL_HAT_LEFTDOWN
+
+
+# SDL_WINDOWPOS_* [constants]
+
+Special window position constants for use with @SS_CreateWindow.
+
+- SDL_WINDOWPOS_UNDEFINED - any window position is accepted in the first display
+- SDL_WINDOWPOS_CENTERED - window should be centered in the first display
+- For more options, see @SDL_WINDOWPOS_UNDEFINED_DISPLAY and @SDL_WINDOWPOS_CENTERED_DISPLAY
+
+
+# SDL_WINDOW_* [constants]
+
+Window state flags, used by @SS_Window (the `flags` property) and @SS_CreateWindow.
+
+- SDL_WINDOW_FULLSCREEN - window is in a fullscreen mode
+- SDL_WINDOW_FULLSCREEN_DESKTOP - window is in a desktop fullscreen mode (topmost screen-sized window, without display mode change)
+- SDL_WINDOW_OPENGL - window is OpenGL-ready
+- SDL_WINDOW_OPENGLMAYBE - for use with @"SS_RENDERER_DONTCARE"<SS_RENDERER_*> in @"SS_Window.initRenderer" - depending on renderer choice, the window may or may not need to be OpenGL-ready
+- SDL_WINDOW_HIDDEN - window is not visible / should not be visible on creation
+- SDL_WINDOW_BORDERLESS - window should not have a border
+- SDL_WINDOW_RESIZABLE - window can be resized
+- SDL_WINDOW_MINIMIZED - window is / should be minimized
+- SDL_WINDOW_MAXIMIZED - window is / should be maximized
+- SDL_WINDOW_INPUT_GRABBED - window has taken all input from input devices to itself
+- SDL_WINDOW_ALLOW_HIGHDPI - high DPI support is enabled
+
+
+# SDL_MESSAGEBOX_* [constants]
+
+These constants generally specify the icon that is used for the message box created by @SS_MessageBox.
+
+- SDL_MESSAGEBOX_ERROR - error message box
+- SDL_MESSAGEBOX_WARNING - warning message box
+- SDL_MESSAGEBOX_INFORMATION - information message box
+
+
+# SDL_POWERSTATE_* [constants]
+
+These constants specify the power state of the hardware platform, returned by @SS_GetPowerInfo.
+
+- SDL_POWERSTATE_UNKNOWN - state cannot be determined
+- SDL_POWERSTATE_ON_BATTERY - working on battery power
+- SDL_POWERSTATE_NO_BATTERY - there is no battery for the device
+- SDL_POWERSTATE_CHARGING - battery is being charged at the moment
+- SDL_POWERSTATE_CHARGED - battery is being charged and is fully charged
+
+
+# SS_RENDERER_* [constants]
+
+There are two types of constants under this prefix - renderer types and renderer flags. Both are used for @"SS_Window.initRenderer" - more info about these flags can be found there.
+
+Renderer types:
+
+- SS_RENDERER_DONTCARE
+- SS_RENDERER_OPENGL
+- SS_RENDERER_DIRECT3D9
+
+Renderer flags:
+
+- SS_RENDERER_VSYNC
+
+
+# SS_POSMODE_* [constants]
+
+Values used for @"SS_Window.setBufferScale".
+
+- SS_POSMODE_STRETCH
+- SS_POSMODE_CROP
+- SS_POSMODE_FIT
+- SS_POSMODE_FITRND
+- SS_POSMODE_CENTER
+
+
+
+# SS_GetPlatformInfo [function]
+
+== dict SS_GetPlatformInfo()
+=== returns platform hardware information (CPU capabilities, RAM size)
+
+- the returned value contains:
+-- string name - name (OS type) of the platform, for all types see @"http://wiki.libsdl.org/SDL_GetPlatform"
+-- int cpu_cache_line_size - size of L1 CPU cache line in KB
+-- int cpu_count - total number of logical CPU cores
+-- int ram_size - amount of RAM configured in the system in MB
+-- bool has_3dnow - whether CPU supports 3DNow! instructions
+-- bool has_altivec - whether CPU supports AltiVec instructions
+-- bool has_mmx - whether CPU supports MMX instructions
+-- bool has_rdtsc - whether CPU supports the RDTSC (high-performance timer) instruction
+-- bool has_sse - whether CPU supports SSE instructions
+-- bool has_sse2 - whether CPU supports SSE2 instructions
+-- bool has_sse3 - whether CPU supports SSE3 instructions
+-- bool has_sse41 - whether CPU supports SSE4.1 instructions
+-- bool has_sse42 - whether CPU supports SSE4.2 instructions
+
+
+# SS_GetPowerInfo [function]
+
+== dict SS_GetPowerInfo()
+=== returns power state, seconds of battery life left and battery percentage
+
+- the returned value contains:
+-- int state - one of @"SDL_POWERSTATE_*"
+-- int secs - seconds of battery life left or -1 if cannot determine
+-- int pct - percentage of battery life left or -1 if cannot determine
+
+For more info, see @"http://wiki.libsdl.org/SDL_GetPowerInfo".
+
+
+# SS_Sleep [function]
+
+== void SS_Sleep( int ms )
+=== stops execution of the application for at least the specified number of milliseconds
+
+
+# SS_EnableScreenSaver [function]
+
+== void SS_EnableScreenSaver()
+=== enables the screen saver (allows it to be triggered) while the application is running
+
+For the opposite action, see @"SS_DisableScreenSaver".
+
+
+# SS_DisableScreenSaver [function]
+
+== void SS_DisableScreenSaver()
+=== disables the screen saver (prevents it from being triggered) for the duration of this application
+
+For the opposite action, see @"SS_EnableScreenSaver".
+
+
+# SS_IsScreenSaverEnabled [function]
+
+== bool SS_IsScreenSaverEnabled()
+=== returns if the screen saver is enabled (will be triggered after some time of inactivity)
 
 
 

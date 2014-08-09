@@ -9,10 +9,6 @@
 #define CN( x ) { "SS3D" #x, SS3D##x }
 
 
-/* todo merge: */
-#define SGS_PARSE_PTR( out ) { void* V; if( sgs_ParsePtrP( C, val, &V ) ){ out = V; return SGS_SUCCESS; } return SGS_EINVAL; }
-
-
 
 static size_t divideup( size_t x, int d )
 {
@@ -2702,20 +2698,19 @@ void SS3D_Renderer_PushScene( SS3D_Renderer* R )
 static int SS3D_CreateRenderer( SGS_CTX )
 {
 	char* rendererType;
-	sgs_Int version = 0;
 	void* device = NULL;
 	
 	SGSFN( "SS3D_CreateRenderer" );
-	if( !sgs_LoadArgs( C, "s|i&", &rendererType, &version, &device ) )
+	if( !sgs_LoadArgs( C, "s|&", &rendererType, &device ) )
 		return 0;
 	
 	if( !strcmp( rendererType, "D3D9" ) && !device )
-		return sgs_Msg( C, SGS_WARNING, "Direct3D requires a device pointer (argument 3)" );
+		return sgs_Msg( C, SGS_WARNING, "Direct3D requires a device pointer (argument 2)" );
 	
 	if( !strcmp( rendererType, "D3D9" ) )
 		return SS3D_PushRenderer_D3D9( C, device );
 	else if( !strcmp( rendererType, "GL" ) )
-		return SS3D_PushRenderer_GL( C, version );
+		return SS3D_PushRenderer_GL( C );
 	else
 		return sgs_Msg( C, SGS_WARNING, "unsupported renderer type" );
 }

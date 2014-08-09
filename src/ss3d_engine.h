@@ -498,5 +498,5 @@ void SS3D_Renderer_PokeResource( SS3D_Renderer* R, sgs_VarObj* obj, int add );
 void SS3D_Renderer_PushScene( SS3D_Renderer* R );
 
 int SS3D_PushRenderer_D3D9( SGS_CTX, void* device );
-int SS3D_PushRenderer_GL( SGS_CTX, uint32_t version );
+int SS3D_PushRenderer_GL( SGS_CTX );
 

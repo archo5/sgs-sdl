@@ -7,7 +7,9 @@
 	</head><body>
 	<h1>SGS-SDL: SGScript / SDL2 graphics framework</h1><div><h2>Table of Contents</h2><ul><li><a href='#Description'>Description</a>
 </li><li><a href='#SGScript-API'>SGScript API</a>
-<ul><li><a href='#Image-handling'>Image handling</a>
+<ul><li><a href='#Main-interface'>Main interface</a>
+</li><li><a href='#Extended-interface-information'>Extended interface information</a>
+</li><li><a href='#Image-handling'>Image handling</a>
 </li><li><a href='#Rendering'>Rendering</a>
 </li><li><a href='#Windows-events-and-display-modes'>Windows, events and display modes</a>
 </li><li><a href='#Utility-functions'>Utility functions</a>
@@ -19,6 +21,54 @@
 This is a graphics framework that acts as a SGScript virtual machine, providing additional bindings for creating windows to render accelerated 2D graphics and a tiny bit of 3D graphics.
 </p></div>
 <div class='item'><a name='SGScript-API'></a><hr><h2>SGScript API</h2></div>
+<div class='item'><a name='Main-interface'></a><hr><h2>Main interface</h2><p>
+To the user, everything starts with the <code>main</code> file.
+After setting up all the core libraries, the file is in the <code>include &quot;main&quot;;</code> way, it can be &quot;main.sgs&quot;, &quot;main.sgc&quot;, &quot;main.dll&quot;/&quot;main.so&quot; in the executable&#39;s directory.
+</p><p>
+At <code>main</code>, basic libraries are already available (core + math + images) as well as...
+</p><ul><li><code>sys_exit</code> - the exit switch (default: <code>false</code>)
+</li><li><code>sys_wait_events</code> - should events be waited for or polled (default: <code>false</code>)
+</li><li><code>sys_initial_dir</code> - the starting directory (it is stored because current directory is changed to executable directory)
+</li><li><code>sys_args</code> - the input arguments</li></ul><p>
+After the <code>**main**</code> file is loaded, a <code>**configure**</code> function is called (no error in case it doesn&#39;t exist). After it, it&#39;s possible to quit the application prematurely by setting <code>sys_exit</code> to <code>true</code>.
+</p><p>
+Then <code>**initialize**</code> function is called, now with everything available. This is the place to set up window, rendering, resources. This is required to succeed.
+</p><p>
+After successful initialization, the looping stage is entered. The <code>**update**</code> and <code>**on_event**</code> functions are called all the time up until <code>sys_exit</code> is <code>true</code>. <code>update</code> is the place to do the frame-to-frame work. <code>on_event</code> is required for input handling.
+</p><p>
+<code>cleanup</code> is called at the end to free resources that cannot be freed by the GC. There are very few such resources, generally not available unless created manually.
+</p></div>
+<div class='item'><a name='Extended-interface-information'></a><hr><h2>Extended interface information</h2><p>
+The exact startup of the system:
+</p><ul><li>scripting engine is created
+</li><li>error handling is initialized
+<ul><li><code>debug</code> executable: interactive debugger is initialized
+</li><li><code>release</code> executable: message box hard error (SGS_ERROR) handler is initialized
+</li></ul><li>core libraries are initialized (fmt, io, math, os, re, string)
+</li><li>extended libraries are initialized (profiler function, extended math, images)
+</li><li><code>sys_args</code> program arguments are made available
+</li><li>preconfiguration script is initialized (current directory is stored and reset to executable directory)
+</li><li><code>core/config</code> is included (font search path generator)
+</li><li><code>core/ext</code> is included (scripted extensions)
+</li><li><code>**main**</code> is included (starting point)
+</li><li><code>configure</code> is called (the place to parse arguments and enable the profiler before hardware API initialization)
+</li><li>[exit] if <code>sys_exit</code> is true, execution is stopped
+</li><li>[optional] if requested, profiler is initialized
+</li><li>SDL subsystems are initialized (timer, video, joystick, haptic, controller, events)
+</li><li>basic GL attributes are set
+</li><li>display / windowing / rendering interfaces are initialized
+</li><li><code>**initialize**</code> is called (the place to actually start doing things - create windows, renderers, load resources)</li></ul><p>
+One &#39;frame&#39; in the system:
+</p><ul><li>event polling is done
+<ul><li>for each relevant event, <code>**on_event**</code> is called with the event
+</li></ul><li>[exit] if <code>sys_exit</code> is true, frame is stopped
+</li><li><code>**update**</code> is called</li></ul><p>
+Finalization in the system:
+</p><ul><li><code>**cleanup**</code> is called
+</li><li>[optional] if requested, profiler data is dumped and profiler is unloaded
+</li><li>[debug executable] interactive debugger is unloaded
+</li><li>scripting engine is unloaded
+</li><li>graphics APIs are unloaded</li></ul></div>
 <div class='item'><a name='Image-handling'></a><hr><h2>Image handling</h2><h4>Objects and their methods:</h4><ul><li><a href="#SS-Image-object">SS_Image</a>
 <ul><li><a href="#SS-Image-resize-method">resize</a>
 </li><li><a href="#SS-Image-clear-method">clear</a>
@@ -97,128 +147,212 @@ This is a graphics framework that acts as a SGScript virtual machine, providing 
 </li><li><a href="#SS-GameController-getAxis-method">getAxis</a>
 </li><li><a href="#SS-GameController-getButton-method">getButton</a>
 </li><li><a href="#SS-GameController-getBindForAxis-method">getBindForAxis</a>
-</li><li><a href="#SS-GameController-getBindForButton-method">getBindForButton</a></li></ul></li></ul><h4>Functions:</h4><ul><li><a href="#SS-SetError">SS_SetError</a>
-</li><li><a href="#SS-GetError">SS_GetError</a>
-</li><li><a href="#SS-EventState">SS_EventState</a>
-</li><li><a href="#SS-GetNumTouchDevices">SS_GetNumTouchDevices</a>
-</li><li><a href="#SS-GetTouchDevice">SS_GetTouchDevice</a>
-</li><li><a href="#SS-GetTouchDevices">SS_GetTouchDevices</a>
-</li><li><a href="#SS-GetNumTouchFingers">SS_GetNumTouchFingers</a>
-</li><li><a href="#SS-GetTouchFinger">SS_GetTouchFinger</a>
-</li><li><a href="#SS-GetTouchFingers">SS_GetTouchFingers</a>
-</li><li><a href="#SS-RecordGesture">SS_RecordGesture</a>
-</li><li><a href="#SS-FlushEvents">SS_FlushEvents</a>
-</li><li><a href="#SS-HasEvents">SS_HasEvents</a>
-</li><li><a href="#SS-PollEvent">SS_PollEvent</a>
-</li><li><a href="#SS-WaitEvent">SS_WaitEvent</a>
-</li><li><a href="#SS-PeekEvents">SS_PeekEvents</a>
-</li><li><a href="#SS-GetEvents">SS_GetEvents</a>
-</li><li><a href="#SS-PumpEvents">SS_PumpEvents</a>
-</li><li><a href="#SS-QuitRequested">SS_QuitRequested</a>
-</li><li><a href="#SS-HasClipboardText">SS_HasClipboardText</a>
-</li><li><a href="#SS-GetClipboardText">SS_GetClipboardText</a>
-</li><li><a href="#SS-SetClipboardText">SS_SetClipboardText</a>
-</li><li><a href="#SS-GetVideoDrivers">SS_GetVideoDrivers</a>
+</li><li><a href="#SS-GameController-getBindForButton-method">getBindForButton</a></li></ul></li></ul><h4>Functions:</h4><ul><li><a href="#SS-SetError-function">SS_SetError</a>
+</li><li><a href="#SS-GetError-function">SS_GetError</a>
+</li><li><a href="#SS-EventState-function">SS_EventState</a>
+</li><li><a href="#SS-GetNumTouchDevices-function">SS_GetNumTouchDevices</a>
+</li><li><a href="#SS-GetTouchDevice-function">SS_GetTouchDevice</a>
+</li><li><a href="#SS-GetTouchDevices-function">SS_GetTouchDevices</a>
+</li><li><a href="#SS-GetNumTouchFingers-function">SS_GetNumTouchFingers</a>
+</li><li><a href="#SS-GetTouchFinger-function">SS_GetTouchFinger</a>
+</li><li><a href="#SS-GetTouchFingers-function">SS_GetTouchFingers</a>
+</li><li><a href="#SS-RecordGesture-function">SS_RecordGesture</a>
+</li><li><a href="#SS-FlushEvents-function">SS_FlushEvents</a>
+</li><li><a href="#SS-HasEvents-function">SS_HasEvents</a>
+</li><li><a href="#SS-PollEvent-function">SS_PollEvent</a>
+</li><li><a href="#SS-WaitEvent-function">SS_WaitEvent</a>
+</li><li><a href="#SS-PeekEvents-function">SS_PeekEvents</a>
+</li><li><a href="#SS-GetEvents-function">SS_GetEvents</a>
+</li><li><a href="#SS-PumpEvents-function">SS_PumpEvents</a>
+</li><li><a href="#SS-QuitRequested-function">SS_QuitRequested</a>
+</li><li><a href="#SS-HasClipboardText-function">SS_HasClipboardText</a>
+</li><li><a href="#SS-GetClipboardText-function">SS_GetClipboardText</a>
+</li><li><a href="#SS-SetClipboardText-function">SS_SetClipboardText</a>
+</li><li><a href="#SS-GetVideoDrivers-function">SS_GetVideoDrivers</a>
 </li><li><a href="#SS-DisplayMode-object">SS_DisplayMode</a>
-</li><li><a href="#SS-GetNumDisplays">SS_GetNumDisplays</a>
-</li><li><a href="#SS-GetDisplayName">SS_GetDisplayName</a>
-</li><li><a href="#SS-GetNumDisplayModes">SS_GetNumDisplayModes</a>
-</li><li><a href="#SS-GetDisplayMode">SS_GetDisplayMode</a>
-</li><li><a href="#SS-GetDisplayModes">SS_GetDisplayModes</a>
-</li><li><a href="#SS-GetDisplayBounds">SS_GetDisplayBounds</a>
-</li><li><a href="#SS-GetClosestDisplayMode">SS_GetClosestDisplayMode</a>
-</li><li><a href="#SS-GetCurrentDisplayMode">SS_GetCurrentDisplayMode</a>
-</li><li><a href="#SS-GetDesktopDisplayMode">SS_GetDesktopDisplayMode</a>
-</li><li><a href="#SS-CreateWindow">SS_CreateWindow</a>
-</li><li><a href="#SS-GetWindowFromID">SS_GetWindowFromID</a>
-</li><li><a href="#SS-GetKeyFromName">SS_GetKeyFromName</a>
-</li><li><a href="#SS-GetScancodeFromName">SS_GetScancodeFromName</a>
-</li><li><a href="#SS-GetKeyFromScancode">SS_GetKeyFromScancode</a>
-</li><li><a href="#SS-GetScancodeFromKey">SS_GetScancodeFromKey</a>
-</li><li><a href="#SS-GetKeyName">SS_GetKeyName</a>
-</li><li><a href="#SS-GetScancodeName">SS_GetScancodeName</a>
-</li><li><a href="#SS-GetKeyboardFocus">SS_GetKeyboardFocus</a>
-</li><li><a href="#SS-GetMouseFocus">SS_GetMouseFocus</a>
-</li><li><a href="#SS-GetModState">SS_GetModState</a>
-</li><li><a href="#SS-SetModState">SS_SetModState</a>
-</li><li><a href="#SS-HasScreenKeyboardSupport">SS_HasScreenKeyboardSupport</a>
-</li><li><a href="#SS-IsTextInputActive">SS_IsTextInputActive</a>
-</li><li><a href="#SS-ShowCursor">SS_ShowCursor</a>
-</li><li><a href="#SS-SetSystemCursor">SS_SetSystemCursor</a>
-</li><li><a href="#SS-WarpMouse">SS_WarpMouse</a>
-</li><li><a href="#SS-GetMouseState">SS_GetMouseState</a>
-</li><li><a href="#SS-GetRelativeMouseState">SS_GetRelativeMouseState</a>
-</li><li><a href="#SS-GetRelativeMouseMode">SS_GetRelativeMouseMode</a>
-</li><li><a href="#SS-SetRelativeMouseMode">SS_SetRelativeMouseMode</a>
-</li><li><a href="#SS-StartTextInput">SS_StartTextInput</a>
-</li><li><a href="#SS-StopTextInput">SS_StopTextInput</a>
-</li><li><a href="#SS-SetTextInputRect">SS_SetTextInputRect</a>
-</li><li><a href="#SS-GetJoystick">SS_GetJoystick</a>
-</li><li><a href="#SS-NumJoysticks">SS_NumJoysticks</a>
-</li><li><a href="#SS-GetJoystickName">SS_GetJoystickName</a>
-</li><li><a href="#SS-GetJoystickNames">SS_GetJoystickNames</a>
-</li><li><a href="#SS-JoystickUpdate">SS_JoystickUpdate</a>
-</li><li><a href="#SS-JoystickEventState">SS_JoystickEventState</a>
-</li><li><a href="#SS-GetGameController">SS_GetGameController</a>
-</li><li><a href="#SS-GameControllerAddMapping">SS_GameControllerAddMapping</a>
-</li><li><a href="#SS-GameControllerAddMappingsFromFile">SS_GameControllerAddMappingsFromFile</a>
-</li><li><a href="#SS-GameControllerMappingForGUID">SS_GameControllerMappingForGUID</a>
-</li><li><a href="#SS-GetGameControllerName">SS_GetGameControllerName</a>
-</li><li><a href="#SS-GetGameControllerNames">SS_GetGameControllerNames</a>
-</li><li><a href="#SS-GameControllerGetAxisFromString">SS_GameControllerGetAxisFromString</a>
-</li><li><a href="#SS-GameControllerGetButtonFromString">SS_GameControllerGetButtonFromString</a>
-</li><li><a href="#SS-GameControllerGetStringForAxis">SS_GameControllerGetStringForAxis</a>
-</li><li><a href="#SS-GameControllerGetStringForButton">SS_GameControllerGetStringForButton</a>
-</li><li><a href="#SS-GameControllerUpdate">SS_GameControllerUpdate</a>
-</li><li><a href="#SS-GameControllerEventState">SS_GameControllerEventState</a>
-</li><li><a href="#SS-IsGameController">SS_IsGameController</a>
-</li><li><a href="#SDL-WINDOWPOS-UNDEFINED-DISPLAY">SDL_WINDOWPOS_UNDEFINED_DISPLAY</a>
-</li><li><a href="#SDL-WINDOWPOS-CENTERED-DISPLAY">SDL_WINDOWPOS_CENTERED_DISPLAY</a></li></ul><h4>Constants:</h4><ul><li><a href="#SDL-GL-constants">SDL</a> event types
-</li><li><a href="#SDL-CURSOR">SDL_CURSOR_*</a>, SDL_SYSTEM_CURSOR_* - system cursor types
-</li><li><a href="#SDLK">SDLK_*</a> - key types
-</li><li><a href="#SDL-SCANCODE">SDL_SCANCODE_*</a> - keyboard scan code types
-</li><li><a href="#KMOD">KMOD_*</a> - keyboard modifier flags
-</li><li><a href="#SDL-BUTTON">SDL_BUTTON_*</a> - mouse button constants
-</li><li><a href="#SDL-TOUCH-MOUSEID">SDL_TOUCH_MOUSEID</a> - ???
-</li><li><a href="#SDL-CONTROLLER-BINDTYPE">SDL_CONTROLLER_BINDTYPE_*</a> - controller binding types
-</li><li><a href="#SDL-CONTROLLER-AXIS">SDL_CONTROLLER_AXIS_*</a> - controller axis types
-</li><li><a href="#SDL-HAT">SDL_HAT_*</a> - controller hat positions
-</li><li><a href="#SDL-WINDOWPOS">SDL_WINDOWPOS_*</a> - special window positioning values
-</li><li><a href="#SDL-WINDOW">SDL_WINDOW_*</a> - window creation flags
-</li><li><a href="#SDL-RENDERER">SDL_RENDERER_*</a> - renderer creation flags
-</li><li><a href="#SDL-MESSAGEBOX">SDL_MESSAGEBOX_*</a> - message box types
-</li><li><a href="#SDL-POWERSTATE">SDL_POWERSTATE_*</a> - power states
-</li><li><a href="#SS-RENDERER">SS_RENDERER_*</a> - renderer types &amp; flags
-</li><li><a href="#SS-POSMODE">SS_POSMODE_*</a> - output rectangle positioning modes for detached output rectangle mode</li></ul></div>
-<div class='item'><a name='Utility-functions'></a><hr><h2>Utility functions</h2><ul><li><a href="#SS-GetPlatformInfo">SS_GetPlatformInfo</a>
-</li><li><a href="#SS-GetPowerInfo">SS_GetPowerInfo</a>
-</li><li><a href="#SS-Sleep">SS_Sleep</a>
-</li><li><a href="#SS-EnableScreenSaver">SS_EnableScreenSaver</a>
-</li><li><a href="#SS-DisableScreenSaver">SS_DisableScreenSaver</a>
-</li><li><a href="#SS-IsScreenSaverEnabled">SS_IsScreenSaverEnabled</a></li></ul></div>
-<div class='item'><a name='ALL-SGScript-functions-A-Z'></a><hr><h2>ALL SGScript functions (A-Z)</h2><ul><li><a href="#SS-Clear-function">SS_Clear [function]</a>
+</li><li><a href="#SS-GetNumDisplays-function">SS_GetNumDisplays</a>
+</li><li><a href="#SS-GetDisplayName-function">SS_GetDisplayName</a>
+</li><li><a href="#SS-GetNumDisplayModes-function">SS_GetNumDisplayModes</a>
+</li><li><a href="#SS-GetDisplayMode-function">SS_GetDisplayMode</a>
+</li><li><a href="#SS-GetDisplayModes-function">SS_GetDisplayModes</a>
+</li><li><a href="#SS-GetDisplayBounds-function">SS_GetDisplayBounds</a>
+</li><li><a href="#SS-GetClosestDisplayMode-function">SS_GetClosestDisplayMode</a>
+</li><li><a href="#SS-GetCurrentDisplayMode-function">SS_GetCurrentDisplayMode</a>
+</li><li><a href="#SS-GetDesktopDisplayMode-function">SS_GetDesktopDisplayMode</a>
+</li><li><a href="#SS-CreateWindow-function">SS_CreateWindow</a>
+</li><li><a href="#SS-GetWindowFromID-function">SS_GetWindowFromID</a>
+</li><li><a href="#SS-MessageBox-function">SS_MessageBox</a>
+</li><li><a href="#SS-GetKeyFromName-function">SS_GetKeyFromName</a>
+</li><li><a href="#SS-GetScancodeFromName-function">SS_GetScancodeFromName</a>
+</li><li><a href="#SS-GetKeyFromScancode-function">SS_GetKeyFromScancode</a>
+</li><li><a href="#SS-GetScancodeFromKey-function">SS_GetScancodeFromKey</a>
+</li><li><a href="#SS-GetKeyName-function">SS_GetKeyName</a>
+</li><li><a href="#SS-GetScancodeName-function">SS_GetScancodeName</a>
+</li><li><a href="#SS-GetKeyboardFocus-function">SS_GetKeyboardFocus</a>
+</li><li><a href="#SS-GetMouseFocus-function">SS_GetMouseFocus</a>
+</li><li><a href="#SS-GetModState-function">SS_GetModState</a>
+</li><li><a href="#SS-SetModState-function">SS_SetModState</a>
+</li><li><a href="#SS-HasScreenKeyboardSupport-function">SS_HasScreenKeyboardSupport</a>
+</li><li><a href="#SS-IsTextInputActive-function">SS_IsTextInputActive</a>
+</li><li><a href="#SS-ShowCursor-function">SS_ShowCursor</a>
+</li><li><a href="#SS-SetSystemCursor-function">SS_SetSystemCursor</a>
+</li><li><a href="#SS-WarpMouse-function">SS_WarpMouse</a>
+</li><li><a href="#SS-GetMouseState-function">SS_GetMouseState</a>
+</li><li><a href="#SS-GetRelativeMouseState-function">SS_GetRelativeMouseState</a>
+</li><li><a href="#SS-GetRelativeMouseMode-function">SS_GetRelativeMouseMode</a>
+</li><li><a href="#SS-SetRelativeMouseMode-function">SS_SetRelativeMouseMode</a>
+</li><li><a href="#SS-StartTextInput-function">SS_StartTextInput</a>
+</li><li><a href="#SS-StopTextInput-function">SS_StopTextInput</a>
+</li><li><a href="#SS-SetTextInputRect-function">SS_SetTextInputRect</a>
+</li><li><a href="#SS-GetJoystick-function">SS_GetJoystick</a>
+</li><li><a href="#SS-NumJoysticks-function">SS_NumJoysticks</a>
+</li><li><a href="#SS-GetJoystickName-function">SS_GetJoystickName</a>
+</li><li><a href="#SS-GetJoystickNames-function">SS_GetJoystickNames</a>
+</li><li><a href="#SS-JoystickUpdate-function">SS_JoystickUpdate</a>
+</li><li><a href="#SS-JoystickEventState-function">SS_JoystickEventState</a>
+</li><li><a href="#SS-GetGameController-function">SS_GetGameController</a>
+</li><li><a href="#SS-GameControllerAddMapping-function">SS_GameControllerAddMapping</a>
+</li><li><a href="#SS-GameControllerAddMappingsFromFile-function">SS_GameControllerAddMappingsFromFile</a>
+</li><li><a href="#SS-GameControllerMappingForGUID-function">SS_GameControllerMappingForGUID</a>
+</li><li><a href="#SS-GetGameControllerName-function">SS_GetGameControllerName</a>
+</li><li><a href="#SS-GetGameControllerNames-function">SS_GetGameControllerNames</a>
+</li><li><a href="#SS-GameControllerGetAxisFromString-function">SS_GameControllerGetAxisFromString</a>
+</li><li><a href="#SS-GameControllerGetButtonFromString-function">SS_GameControllerGetButtonFromString</a>
+</li><li><a href="#SS-GameControllerGetStringForAxis-function">SS_GameControllerGetStringForAxis</a>
+</li><li><a href="#SS-GameControllerGetStringForButton-function">SS_GameControllerGetStringForButton</a>
+</li><li><a href="#SS-GameControllerUpdate-function">SS_GameControllerUpdate</a>
+</li><li><a href="#SS-GameControllerEventState-function">SS_GameControllerEventState</a>
+</li><li><a href="#SS-IsGameController-function">SS_IsGameController</a>
+</li><li><a href="#SDL-WINDOWPOS-UNDEFINED-DISPLAY-function">SDL_WINDOWPOS_UNDEFINED_DISPLAY</a>
+</li><li><a href="#SDL-WINDOWPOS-CENTERED-DISPLAY-function">SDL_WINDOWPOS_CENTERED_DISPLAY</a></li></ul><h4>Interfaces:</h4><ul><li><a href="#SDL-event-types-constants">SDL event data</a></li></ul><h4>Constants:</h4><ul><li><a href="#SDL-event-types-constants">SDL event types</a>
+</li><li><a href="#SDL-SYSTEM-CURSOR-constants">SDL_[SYSTEM_]CURSOR_*</a> - system cursor types
+</li><li><a href="#SDLK-constants">SDLK_*</a> - key types
+</li><li><a href="#SDL-SCANCODE-constants">SDL_SCANCODE_*</a> - keyboard scan code types
+</li><li><a href="#SDL-KMOD-constants">SDL_KMOD_*</a> - keyboard modifier flags
+</li><li><a href="#SDL-BUTTON-constants">SDL_BUTTON_*</a> - mouse button constants
+</li><li><a href="#SDL-TOUCH-MOUSEID-constant">SDL_TOUCH_MOUSEID</a> - the mouse ID for mouse events coming from a touch input device
+</li><li><a href="#SDL-CONTROLLER-BINDTYPE-constants">SDL_CONTROLLER_BINDTYPE_*</a> - controller binding types
+</li><li><a href="#SDL-CONTROLLER-AXIS-constants">SDL_CONTROLLER_AXIS_*</a> - controller axis types
+</li><li><a href="#SDL-HAT-constants">SDL_HAT_*</a> - controller hat positions
+</li><li><a href="#SDL-WINDOWPOS-constants">SDL_WINDOWPOS_*</a> - special window positioning values
+</li><li><a href="#SDL-WINDOW-constants">SDL_WINDOW_*</a> - window creation flags
+</li><li><a href="#SDL-MESSAGEBOX-constants">SDL_MESSAGEBOX_*</a> - message box types
+</li><li><a href="#SDL-POWERSTATE-constants">SDL_POWERSTATE_*</a> - power states
+</li><li><a href="#SS-RENDERER-constants">SS_RENDERER_*</a> - renderer types &amp; flags
+</li><li><a href="#SS-POSMODE-constants">SS_POSMODE_*</a> - output rectangle positioning modes for detached output rectangle mode</li></ul></div>
+<div class='item'><a name='Utility-functions'></a><hr><h2>Utility functions</h2><ul><li><a href="#SS-GetPlatformInfo-function">SS_GetPlatformInfo</a>
+</li><li><a href="#SS-GetPowerInfo-function">SS_GetPowerInfo</a>
+</li><li><a href="#SS-Sleep-function">SS_Sleep</a>
+</li><li><a href="#SS-EnableScreenSaver-function">SS_EnableScreenSaver</a>
+</li><li><a href="#SS-DisableScreenSaver-function">SS_DisableScreenSaver</a>
+</li><li><a href="#SS-IsScreenSaverEnabled-function">SS_IsScreenSaverEnabled</a></li></ul></div>
+<div class='item'><a name='ALL-SGScript-functions-A-Z'></a><hr><h2>ALL SGScript functions (A-Z)</h2><ul><li><a href="#SDL-WINDOWPOS-CENTERED-DISPLAY-function">SDL_WINDOWPOS_CENTERED_DISPLAY [function]</a>
+</li><li><a href="#SDL-WINDOWPOS-UNDEFINED-DISPLAY-function">SDL_WINDOWPOS_UNDEFINED_DISPLAY [function]</a>
+</li><li><a href="#SS-Clear-function">SS_Clear [function]</a>
 </li><li><a href="#SS-CreateFont-function">SS_CreateFont [function]</a>
 </li><li><a href="#SS-CreateImage-function">SS_CreateImage [function]</a>
 </li><li><a href="#SS-CreateRenderBuffer-function">SS_CreateRenderBuffer [function]</a>
 </li><li><a href="#SS-CreateRenderTexture-function">SS_CreateRenderTexture [function]</a>
 </li><li><a href="#SS-CreateTexture-function">SS_CreateTexture [function]</a>
+</li><li><a href="#SS-CreateWindow-function">SS_CreateWindow [function]</a>
+</li><li><a href="#SS-DisableScreenSaver-function">SS_DisableScreenSaver [function]</a>
+</li><li><a href="#SS-DisplayMode-function">SS_DisplayMode [function]</a>
 </li><li><a href="#SS-Draw-function">SS_Draw [function]</a>
 </li><li><a href="#SS-DrawPacked-function">SS_DrawPacked [function]</a>
 </li><li><a href="#SS-DrawTextLine-functions">SS_DrawTextLine* [functions]</a>
+</li><li><a href="#SS-EnableScreenSaver-function">SS_EnableScreenSaver [function]</a>
+</li><li><a href="#SS-EventState-function">SS_EventState [function]</a>
+</li><li><a href="#SS-FlushEvents-function">SS_FlushEvents [function]</a>
+</li><li><a href="#SS-GameControllerAddMapping-function">SS_GameControllerAddMapping [function]</a>
+</li><li><a href="#SS-GameControllerAddMappingsFromFile-function">SS_GameControllerAddMappingsFromFile [function]</a>
+</li><li><a href="#SS-GameControllerEventState-function">SS_GameControllerEventState [function]</a>
+</li><li><a href="#SS-GameControllerGetAxisFromString-function">SS_GameControllerGetAxisFromString [function]</a>
+</li><li><a href="#SS-GameControllerGetButtonFromString-function">SS_GameControllerGetButtonFromString [function]</a>
+</li><li><a href="#SS-GameControllerGetStringForAxis-function">SS_GameControllerGetStringForAxis [function]</a>
+</li><li><a href="#SS-GameControllerGetStringForButton-function">SS_GameControllerGetStringForButton [function]</a>
+</li><li><a href="#SS-GameControllerMappingForGUID-function">SS_GameControllerMappingForGUID [function]</a>
+</li><li><a href="#SS-GameControllerUpdate-function">SS_GameControllerUpdate [function]</a>
+</li><li><a href="#SS-GetClipboardText-function">SS_GetClipboardText [function]</a>
+</li><li><a href="#SS-GetClosestDisplayMode-function">SS_GetClosestDisplayMode [function]</a>
+</li><li><a href="#SS-GetCurrentDisplayMode-function">SS_GetCurrentDisplayMode [function]</a>
+</li><li><a href="#SS-GetDesktopDisplayMode-function">SS_GetDesktopDisplayMode [function]</a>
+</li><li><a href="#SS-GetDisplayBounds-function">SS_GetDisplayBounds [function]</a>
+</li><li><a href="#SS-GetDisplayMode-function">SS_GetDisplayMode [function]</a>
+</li><li><a href="#SS-GetDisplayModes-function">SS_GetDisplayModes [function]</a>
+</li><li><a href="#SS-GetDisplayName-function">SS_GetDisplayName [function]</a>
+</li><li><a href="#SS-GetError-function">SS_GetError [function]</a>
+</li><li><a href="#SS-GetEvents-function">SS_GetEvents [function]</a>
+</li><li><a href="#SS-GetGameController-function">SS_GetGameController [function]</a>
+</li><li><a href="#SS-GetGameControllerName-function">SS_GetGameControllerName [function]</a>
+</li><li><a href="#SS-GetGameControllerNames-function">SS_GetGameControllerNames [function]</a>
+</li><li><a href="#SS-GetJoystick-function">SS_GetJoystick [function]</a>
+</li><li><a href="#SS-GetJoystickName-function">SS_GetJoystickName [function]</a>
+</li><li><a href="#SS-GetJoystickNames-function">SS_GetJoystickNames [function]</a>
+</li><li><a href="#SS-GetKeyFromName-function">SS_GetKeyFromName [function]</a>
+</li><li><a href="#SS-GetKeyFromScancode-function">SS_GetKeyFromScancode [function]</a>
+</li><li><a href="#SS-GetKeyName-function">SS_GetKeyName [function]</a>
+</li><li><a href="#SS-GetKeyboardFocus-function">SS_GetKeyboardFocus [function]</a>
+</li><li><a href="#SS-GetModState-function">SS_GetModState [function]</a>
+</li><li><a href="#SS-GetMouseFocus-function">SS_GetMouseFocus [function]</a>
+</li><li><a href="#SS-GetMouseState-function">SS_GetMouseState [function]</a>
+</li><li><a href="#SS-GetNumDisplayModes-function">SS_GetNumDisplayModes [function]</a>
+</li><li><a href="#SS-GetNumDisplays-function">SS_GetNumDisplays [function]</a>
+</li><li><a href="#SS-GetNumTouchDevices-function">SS_GetNumTouchDevices [function]</a>
+</li><li><a href="#SS-GetNumTouchFingers-function">SS_GetNumTouchFingers [function]</a>
+</li><li><a href="#SS-GetPlatformInfo-function">SS_GetPlatformInfo [function]</a>
+</li><li><a href="#SS-GetPowerInfo-function">SS_GetPowerInfo [function]</a>
+</li><li><a href="#SS-GetRelativeMouseMode-function">SS_GetRelativeMouseMode [function]</a>
+</li><li><a href="#SS-GetRelativeMouseState-function">SS_GetRelativeMouseState [function]</a>
+</li><li><a href="#SS-GetScancodeFromKey-function">SS_GetScancodeFromKey [function]</a>
+</li><li><a href="#SS-GetScancodeFromName-function">SS_GetScancodeFromName [function]</a>
+</li><li><a href="#SS-GetScancodeName-function">SS_GetScancodeName [function]</a>
+</li><li><a href="#SS-GetTouchDevice-function">SS_GetTouchDevice [function]</a>
+</li><li><a href="#SS-GetTouchDevices-function">SS_GetTouchDevices [function]</a>
+</li><li><a href="#SS-GetTouchFinger-function">SS_GetTouchFinger [function]</a>
+</li><li><a href="#SS-GetTouchFingers-function">SS_GetTouchFingers [function]</a>
+</li><li><a href="#SS-GetVideoDrivers-function">SS_GetVideoDrivers [function]</a>
+</li><li><a href="#SS-GetWindowFromID-function">SS_GetWindowFromID [function]</a>
+</li><li><a href="#SS-HasClipboardText-function">SS_HasClipboardText [function]</a>
+</li><li><a href="#SS-HasEvents-function">SS_HasEvents [function]</a>
+</li><li><a href="#SS-HasScreenKeyboardSupport-function">SS_HasScreenKeyboardSupport [function]</a>
 </li><li><a href="#SS-IsFont-function">SS_IsFont [function]</a>
+</li><li><a href="#SS-IsGameController-function">SS_IsGameController [function]</a>
+</li><li><a href="#SS-IsScreenSaverEnabled-function">SS_IsScreenSaverEnabled [function]</a>
+</li><li><a href="#SS-IsTextInputActive-function">SS_IsTextInputActive [function]</a>
+</li><li><a href="#SS-JoystickEventState-function">SS_JoystickEventState [function]</a>
+</li><li><a href="#SS-JoystickUpdate-function">SS_JoystickUpdate [function]</a>
 </li><li><a href="#SS-LoadImage-function">SS_LoadImage [function]</a>
 </li><li><a href="#SS-MakeVertexFormat-function">SS_MakeVertexFormat [function]</a>
 </li><li><a href="#SS-MatrixPop-function">SS_MatrixPop [function]</a>
 </li><li><a href="#SS-MatrixPush-function">SS_MatrixPush [function]</a>
+</li><li><a href="#SS-MessageBox-function">SS_MessageBox [function]</a>
+</li><li><a href="#SS-NumJoysticks-function">SS_NumJoysticks [function]</a>
+</li><li><a href="#SS-PeekEvents-function">SS_PeekEvents [function]</a>
+</li><li><a href="#SS-PollEvent-function">SS_PollEvent [function]</a>
 </li><li><a href="#SS-Present-function">SS_Present [function]</a>
+</li><li><a href="#SS-PumpEvents-function">SS_PumpEvents [function]</a>
+</li><li><a href="#SS-QuitRequested-function">SS_QuitRequested [function]</a>
+</li><li><a href="#SS-RecordGesture-function">SS_RecordGesture [function]</a>
 </li><li><a href="#SS-SetBlending-function">SS_SetBlending [function]</a>
 </li><li><a href="#SS-SetCamera-function">SS_SetCamera [function]</a>
 </li><li><a href="#SS-SetClipRect-function">SS_SetClipRect [function]</a>
+</li><li><a href="#SS-SetClipboardText-function">SS_SetClipboardText [function]</a>
 </li><li><a href="#SS-SetCulling-function">SS_SetCulling [function]</a>
 </li><li><a href="#SS-SetDepthTest-function">SS_SetDepthTest [function]</a>
+</li><li><a href="#SS-SetError-function">SS_SetError [function]</a>
 </li><li><a href="#SS-SetGLAttrib-function">SS_SetGLAttrib [function]</a>
+</li><li><a href="#SS-SetModState-function">SS_SetModState [function]</a>
+</li><li><a href="#SS-SetRelativeMouseMode-function">SS_SetRelativeMouseMode [function]</a>
 </li><li><a href="#SS-SetRenderTarget-function">SS_SetRenderTarget [function]</a>
+</li><li><a href="#SS-SetSystemCursor-function">SS_SetSystemCursor [function]</a>
+</li><li><a href="#SS-SetTextInputRect-function">SS_SetTextInputRect [function]</a>
 </li><li><a href="#SS-SetViewport-function">SS_SetViewport [function]</a>
+</li><li><a href="#SS-ShowCursor-function">SS_ShowCursor [function]</a>
+</li><li><a href="#SS-Sleep-function">SS_Sleep [function]</a>
+</li><li><a href="#SS-StartTextInput-function">SS_StartTextInput [function]</a>
+</li><li><a href="#SS-StopTextInput-function">SS_StopTextInput [function]</a>
+</li><li><a href="#SS-WaitEvent-function">SS_WaitEvent [function]</a>
+</li><li><a href="#SS-WarpMouse-function">SS_WarpMouse [function]</a>
 </li><li><a href="#ss-load-image-functions">ss_load_image_* [functions]</a></li></ul></div>
 <div class='item'><a name='ALL-SGScript-objects-A-Z'></a><hr><h2>ALL SGScript objects (A-Z)</h2><ul><li><a href="#SS-DisplayMode-object">SS_DisplayMode [object]</a>
 </li><li><a href="#SS-Font-object">SS_Font [object]</a>
@@ -563,13 +697,13 @@ A display mode data container. Exactly the same as <a href="http://wiki.libsdl.o
 </li></ul><li>read/write properties:
 <ul><li>[bool] borderless - whether window has no border around it
 </li><li>[real] brightness - brightness value for the window
-</li><li>[int] fullscreen - fullscreen state (see <a href="#SDL-WINDOW">SDL_WINDOW_*</a>)
+</li><li>[int] fullscreen - fullscreen state (see <a href="#SDL-WINDOW-constants">SDL_WINDOW_*</a>)
 </li><li>[bool] grab - whether window has grabbed all input
 </li><li>[string] title - window caption
 </li></ul><li>read-only properties:
 <ul><li>[int] displayIndex - number in a list of SDL displays
 </li><li>[SS_DisplayMode] displayMode - <a href="#SS-DisplayMode-object">SS_DisplayMode</a> data about the display the window is currently on
-</li><li>[int] flags - window state flags (see <a href="#SDL-WINDOW">SDL_WINDOW_*</a>)
+</li><li>[int] flags - window state flags (see <a href="#SDL-WINDOW-constants">SDL_WINDOW_*</a>)
 </li><li>[int] id - unique window ID
 </li><li>[vec2] maxSize - upper window size limit 
 </li><li>[real] maxWidth - upper horizontal window size limit
@@ -600,28 +734,529 @@ A display mode data container. Exactly the same as <a href="http://wiki.libsdl.o
 <div class='item'><a name='SS-Window-maximize-method'></a><hr><h2>SS_Window.maximize [method]</h2><h3>self SS_Window.maximize()</h3><h4>makes the window maximized (occupying all of the allowed screen space)</h4></div>
 <div class='item'><a name='SS-Window-restore-method'></a><hr><h2>SS_Window.restore [method]</h2><h3>self SS_Window.restore()</h3><h4>restores a window to non-maximized, non-iconic (minimized) state</h4></div>
 <div class='item'><a name='SS-Window-raise-method'></a><hr><h2>SS_Window.raise [method]</h2><h3>self SS_Window.raise()</h3><h4>puts the window above all other windows of the same layer (topmost windows have a different layer)</h4></div>
-<div class='item'><a name='SS-Window-setPosition-method'></a><hr><h2>SS_Window.setPosition [method]</h2></div>
-<div class='item'><a name='SS-Window-setSize-method'></a><hr><h2>SS_Window.setSize [method]</h2></div>
-<div class='item'><a name='SS-Window-setMaxSize-method'></a><hr><h2>SS_Window.setMaxSize [method]</h2></div>
-<div class='item'><a name='SS-Window-setMinSize-method'></a><hr><h2>SS_Window.setMinSize [method]</h2></div>
-<div class='item'><a name='SS-Window-warpMouse-method'></a><hr><h2>SS_Window.warpMouse [method]</h2></div>
-<div class='item'><a name='SS-Window-initRenderer-method'></a><hr><h2>SS_Window.initRenderer [method]</h2></div>
-<div class='item'><a name='SS-Window-makeCurrent-method'></a><hr><h2>SS_Window.makeCurrent [method]</h2></div>
-<div class='item'><a name='SS-Window-setBufferScale-method'></a><hr><h2>SS_Window.setBufferScale [method]</h2></div>
-<div class='item'><a name='SS-Joystick-object'></a><hr><h2>SS_Joystick [object]</h2></div>
-<div class='item'><a name='SS-Joystick-open-method'></a><hr><h2>SS_Joystick.open [method]</h2></div>
-<div class='item'><a name='SS-Joystick-close-method'></a><hr><h2>SS_Joystick.close [method]</h2></div>
-<div class='item'><a name='SS-Joystick-getAxis-method'></a><hr><h2>SS_Joystick.getAxis [method]</h2></div>
-<div class='item'><a name='SS-Joystick-getBall-method'></a><hr><h2>SS_Joystick.getBall [method]</h2></div>
-<div class='item'><a name='SS-Joystick-getButton-method'></a><hr><h2>SS_Joystick.getButton [method]</h2></div>
-<div class='item'><a name='SS-Joystick-getHat-method'></a><hr><h2>SS_Joystick.getHat [method]</h2></div>
-<div class='item'><a name='SS-GameController-object'></a><hr><h2>SS_GameController [object]</h2></div>
-<div class='item'><a name='SS-GameController-open-method'></a><hr><h2>SS_GameController.open [method]</h2></div>
-<div class='item'><a name='SS-GameController-close-method'></a><hr><h2>SS_GameController.close [method]</h2></div>
-<div class='item'><a name='SS-GameController-getAxis-method'></a><hr><h2>SS_GameController.getAxis [method]</h2></div>
-<div class='item'><a name='SS-GameController-getButton-method'></a><hr><h2>SS_GameController.getButton [method]</h2></div>
-<div class='item'><a name='SS-GameController-getBindForAxis-method'></a><hr><h2>SS_GameController.getBindForAxis [method]</h2></div>
-<div class='item'><a name='SS-GameController-getBindForButton-method'></a><hr><h2>SS_GameController.getBindForButton [method]</h2></div>
+<div class='item'><a name='SS-Window-setPosition-method'></a><hr><h2>SS_Window.setPosition [method]</h2><h3>self SS_Window.setPosition( int x, int y )</h3><h4>set both x and y position of the window</h4></div>
+<div class='item'><a name='SS-Window-setSize-method'></a><hr><h2>SS_Window.setSize [method]</h2><h3>self SS_Window.setSize( int width, int height )</h3><h4>set both width and height of the window</h4></div>
+<div class='item'><a name='SS-Window-setMaxSize-method'></a><hr><h2>SS_Window.setMaxSize [method]</h2><h3>self SS_Window.setMaxSize( int width, int height )</h3><h4>set both max. width and max. height of the window</h4></div>
+<div class='item'><a name='SS-Window-setMinSize-method'></a><hr><h2>SS_Window.setMinSize [method]</h2><h3>self SS_Window.setMinSize( int width, int height )</h3><h4>set both min. width and min. height of the window</h4></div>
+<div class='item'><a name='SS-Window-warpMouse-method'></a><hr><h2>SS_Window.warpMouse [method]</h2><h3>self SS_Window.warpMouse( int x, int y )</h3><h4>move the mouse cursor to a position in the window</h4><ul><li>This function generates a mouse motion event.</li></ul></div>
+<div class='item'><a name='SS-Window-initRenderer-method'></a><hr><h2>SS_Window.initRenderer [method]</h2><h3>self? SS_Window.initRenderer( int renderer = SS_RENDERER_DONTCARE, flags = 0 )</h3><h4>initialize the specified rendering system</h4><ul><li><code>renderer</code> can be one of:
+<ul><li><code>SS_RENDERER_DONTCARE</code> - pick the best renderer for the platform - Direct3D9 for Windows and OpenGL for any other OS.
+</li><li><code>SS_RENDERER_DIRECT3D9</code> - Direct3D9
+</li><li><code>SS_RENDERER_OPENGL</code> - OpenGL (1.x)
+</li></ul><li><code>flags</code> are a combination of:
+<ul><li><code>SS_RENDERER_VSYNC</code> - enable vertical synchronization on presentation</li></ul></li></ul><p>
+Renderer is made current after initialization.
+</p></div>
+<div class='item'><a name='SS-Window-makeCurrent-method'></a><hr><h2>SS_Window.makeCurrent [method]</h2><h3>bool SS_Window.makeCurrent()</h3><h4>sets the renderer of the window as the current one (activates it)</h4><ul><li>function returns whether there was a renderer to activate (if it was initialized)</li></ul></div>
+<div class='item'><a name='SS-Window-setBufferScale-method'></a><hr><h2>SS_Window.setBufferScale [method]</h2><h3>self? SS_Window.setBufferScale( int width = -1, int height = -1, int mode = SS_POSMODE_FIT )</h3><h4>detach backbuffer (main rendering surface) from window size and specify custom size / scaling mode for it</h4><p>
+This function enables what works as a &quot;pixel art mode&quot; - fixed background surface size + non-interpolating scaling
+</p><ul><li>If called without passing any arguments, the function (re-)attaches the main surface.
+</li><li><code>mode</code> can be one of <a href="#SS-POSMODE-constants">SS_POSMODE_*</a>:
+<ul><li><code>SS_POSMODE_STRETCH</code> - stretches the surface without maintaining the aspect ratio
+</li><li><code>SS_POSMODE_CROP</code> - resizes the surface so that all window space is optimally covered, retaining the aspect ratio
+</li><li><code>SS_POSMODE_FIT</code> - resizes the surface so that all of the surface is visible as large as possible, retaining the aspect ratio
+</li><li><code>SS_POSMODE_FITRND</code> - same as SS_POSMODE_FIT, but rounds down to nearest whole-pixel scale
+</li><li><code>SS_POSMODE_CENTER</code> - surface is put in the middle and retains its size and aspect ratio</li></ul></li></ul><ul><li>It is advised to use <a href="#SS-Window-setMinSize-method">SS_Window.setMinSize</a> and <a href="#SS-Window-setMaxSize-method">SS_Window.setMaxSize</a> together with this function to optimize visibility.</li></ul></div>
+<div class='item'><a name='SS-Joystick-object'></a><hr><h2>SS_Joystick [object]</h2><p>
+Joystick interface object.
+</p><ul><li>methods:
+<ul><li><a href="#SS-Joystick-open-method">open</a>
+</li><li><a href="#SS-Joystick-close-method">close</a>
+</li><li><a href="#SS-Joystick-getAxis-method">getAxis</a>
+</li><li><a href="#SS-Joystick-getBall-method">getBall</a>
+</li><li><a href="#SS-Joystick-getButton-method">getButton</a>
+</li><li><a href="#SS-Joystick-getHat-method">getHat</a>
+</li></ul><li>read-only properties:
+<ul><li>[bool] attached - whether the joystick is still attached to the device
+</li><li>[int] instanceID - joystic instance ID
+</li><li>[string] guid - the globally unique identifier string for the joystick
+</li><li>[int] numAxes - number of axes the joystick has
+</li><li>[int] numBalls - number of balls the joystick has
+</li><li>[int] numButtons - number of buttons the joystick has
+</li><li>[int] numHats - number of hats the joystick has
+</li></ul><li>other features:
+<ul><li>GC-safe</li></ul></li></ul></div>
+<div class='item'><a name='SS-Joystick-open-method'></a><hr><h2>SS_Joystick.open [method]</h2><h3>bool+ SS_Joystick.open( int index = 0 )</h3><h4>opens the joystick for reading</h4><ul><li>if joystick was previously open, it is closed before proceeding
+<ul><li>on failure, previous opened joystick is not restored
+</li></ul><li>on success, the function returns <code>true</code>
+</li><li>on failure, the function returns <code>false</code> and an error string</li></ul></div>
+<div class='item'><a name='SS-Joystick-close-method'></a><hr><h2>SS_Joystick.close [method]</h2><h3>void SS_Joystick.close()</h3><h4>closes the joystick</h4></div>
+<div class='item'><a name='SS-Joystick-getAxis-method'></a><hr><h2>SS_Joystick.getAxis [method]</h2><h3>int SS_Joystick.getAxis( int which )</h3><h4>reads the joystick axis value for the specified axis</h4></div>
+<div class='item'><a name='SS-Joystick-getBall-method'></a><hr><h2>SS_Joystick.getBall [method]</h2><h3>int,int SS_Joystick.getBall( int which )</h3><h4>reads the joystick ball values (x,y) for the specified ball</h4></div>
+<div class='item'><a name='SS-Joystick-getButton-method'></a><hr><h2>SS_Joystick.getButton [method]</h2><h3>int SS_Joystick.getButton( int which )</h3><h4>reads the joystick button value for the specified button</h4></div>
+<div class='item'><a name='SS-Joystick-getHat-method'></a><hr><h2>SS_Joystick.getHat [method]</h2><h3>int SS_Joystick.getHat( int which )</h3><h4>reads the joystick hat value for the specified hat</h4><p>
+Hat values can be found at <a href="#SDL-HAT-constants">SDL_HAT_*</a>.
+</p></div>
+<div class='item'><a name='SS-GameController-object'></a><hr><h2>SS_GameController [object]</h2><p>
+Game controller interface object.
+</p><ul><li>methods:
+<ul><li><a href="#SS-GameController-open-method">open</a>
+</li><li><a href="#SS-GameController-close-method">close</a>
+</li><li><a href="#SS-GameController-getAxis-method">getAxis</a>
+</li><li><a href="#SS-GameController-getButton-method">getButton</a>
+</li><li><a href="#SS-GameController-getBindForAxis-method">getBindForAxis</a>
+</li><li><a href="#SS-GameController-getBindForButton-method">getBindForButton</a>
+</li></ul><li>read-only properties:
+<ul><li>[bool] attached - whether the game controller is attached
+</li><li>[SS_Joystick] joystick - the joystick used as the game controller
+</li><li>[string?] name - returns game controller name or null if failed to retrieve it
+</li></ul><li>other features:
+<ul><li>GC-safe</li></ul></li></ul></div>
+<div class='item'><a name='SS-GameController-open-method'></a><hr><h2>SS_GameController.open [method]</h2><h3>bool+ SS_GameController.open( int index = 0 )</h3><h4>opens the game controller for reading</h4><ul><li>if game controller was previously open, it is closed before proceeding
+<ul><li>on failure, previous opened game controller is not restored
+</li></ul><li>on success, the function returns <code>true</code>
+</li><li>on failure, the function returns <code>false</code> and an error string</li></ul></div>
+<div class='item'><a name='SS-GameController-close-method'></a><hr><h2>SS_GameController.close [method]</h2><h3>void SS_GameController.close()</h3><h4>closes the game controller</h4></div>
+<div class='item'><a name='SS-GameController-getAxis-method'></a><hr><h2>SS_GameController.getAxis [method]</h2><h3>int SS_GameController.getAxis( int which )</h3><h4>reads the game controller axis value for the specified axis</h4></div>
+<div class='item'><a name='SS-GameController-getButton-method'></a><hr><h2>SS_GameController.getButton [method]</h2><h3>int SS_GameController.getButton( int which )</h3><h4>reads the game controller button value for the specified button</h4></div>
+<div class='item'><a name='SS-GameController-getBindForAxis-method'></a><hr><h2>SS_GameController.getBindForAxis [method]</h2><h3>dict SS_GameController.getBindForAxis( int which )</h3><h4>return the controller - joystick input binding for a controller axis</h4><ul><li>the returned value contains:
+<ul><li>int bindType - binding type (one of <a href="#SDL-CONTROLLER-BINDTYPE-constants">SDL_CONTROLLER_BINDTYPE_*</a>)
+</li><li>[if bindType is SDL_CONTROLLER_BINDTYPE_BUTTON] int button - button number
+</li><li>[if bindType is SDL_CONTROLLER_BINDTYPE_AXIS] int axis - axis number
+</li><li>[if bindType is SDL_CONTROLLER_BINDTYPE_HAT] int hat - hat number
+</li><li>[if bindType is SDL_CONTROLLER_BINDTYPE_HAT] int hat_mask - hat mask</li></ul></li></ul></div>
+<div class='item'><a name='SS-GameController-getBindForButton-method'></a><hr><h2>SS_GameController.getBindForButton [method]</h2><h3>dict SS_GameController.getBindForButton( int which )</h3><h4>return the controller - joystick input binding for a controller button</h4><p>
+For return value description, see <a href="#SS-GameController-getBindForAxis-method">SS_GameController.getBindForAxis</a>
+</p></div>
+<div class='item'><a name='SS-SetError-function'></a><hr><h2>SS_SetError [function]</h2><h3>void SS_SetError()</h3><h4>clears the SDL error string</h4><h3>void SS_SetError( string error )</h3><h4>sets the SDL error string to the specified value</h4></div>
+<div class='item'><a name='SS-GetError-function'></a><hr><h2>SS_GetError [function]</h2><h3>string SS_GetError()</h3><h4>retrieves the SDL error string</h4></div>
+<div class='item'><a name='SS-EventState-function'></a><hr><h2>SS_EventState [function]</h2><h3>bool SS_EventState( int event, int state = SDL_QUERY )</h3><h4>sets/returns whether the specified event is processed</h4><ul><li><code>event</code> is one of the <a href="#SDL-event-types-constants">SDL event types</a>
+</li><li><code>state</code> is one of:
+<ul><li><code>SDL_ENABLE</code> - enable the event
+</li><li><code>SDL_DISABLE</code> - disable the event
+</li><li><code>SDL_QUERY</code> - query the state of the event without changing it</li></ul></li></ul></div>
+<div class='item'><a name='SS-GetNumTouchDevices-function'></a><hr><h2>SS_GetNumTouchDevices [function]</h2><h3>int SS_GetNumTouchDevices()</h3><h4>returns the number of available touch input devices</h4></div>
+<div class='item'><a name='SS-GetTouchDevice-function'></a><hr><h2>SS_GetTouchDevice [function]</h2><h3>int SS_GetTouchDevice( int index )</h3><h4>returns the touch ID for the touch input device</h4><ul><li><code>index</code> can be between 0 and <a href="#SS-GetNumTouchDevices-function">SS_GetNumTouchDevices</a> - 1
+</li><li>IDs for all devices can be retrieved by <a href="#SS-GetTouchDevices-function">SS_GetTouchDevices</a></li></ul></div>
+<div class='item'><a name='SS-GetTouchDevices-function'></a><hr><h2>SS_GetTouchDevices [function]</h2><h3>array[int] SS_GetTouchDevices()</h3><h4>returns an array of all touch input device IDs</h4><ul><li>IDs for specific devices can be retrieved by <a href="#SS-GetTouchDevice-function">SS_GetTouchDevice</a></li></ul></div>
+<div class='item'><a name='SS-GetNumTouchFingers-function'></a><hr><h2>SS_GetNumTouchFingers [function]</h2><h3>int SS_GetNumTouchFingers( int touchID )</h3><h4>returns the number of fingers on the touch device</h4></div>
+<div class='item'><a name='SS-GetTouchFinger-function'></a><hr><h2>SS_GetTouchFinger [function]</h2><h3>dict? SS_GetTouchFinger( int touchID, int finger_index )</h3><h4>returns finger data for a finger in the specified touch device</h4><ul><li>on success, the function returns a <code>dict</code> containing:
+<ul><li>[int] id - finger ID
+</li><li>[real] x - normalized X position of the finger (0-1)
+</li><li>[real] y - normalized Y position of the finger (0-1)
+</li><li>[real] pressure - normalized pressure of the finger (0-1)
+</li></ul><li>on failure, the function returns <code>null</code></li></ul></div>
+<div class='item'><a name='SS-GetTouchFingers-function'></a><hr><h2>SS_GetTouchFingers [function]</h2><h3>array[dict?] SS_GetTouchFingers( int touchID )</h3><h4>returns finger data list for all fingers in the specified touch device</h4></div>
+<div class='item'><a name='SS-RecordGesture-function'></a><hr><h2>SS_RecordGesture [function]</h2><h3>bool SS_RecordGesture( int touchID )</h3><h4>begins recording a gesture</h4><ul><li><code>touchID</code> can be -1 to record on all devices
+</li><li>function returns if the device can be found (<code>true</code> if <code>touchID</code> is -1)</li></ul></div>
+<div class='item'><a name='SS-FlushEvents-function'></a><hr><h2>SS_FlushEvents [function]</h2><h3>void SS_FlushEvents( int type )</h3><h4>flush events of the specified type</h4><h3>void SS_FlushEvents( int minType, int maxType )</h3><h4>flush events from / to the specified types</h4><ul><li>&quot;flush&quot; means &quot;extract from queue and process&quot;
+</li><li>event types are <a href="#SDL-event-types-constants">SDL event types</a></li></ul></div>
+<div class='item'><a name='SS-HasEvents-function'></a><hr><h2>SS_HasEvents [function]</h2><h3>bool SS_HasEvents( int type )</h3><h4>returns if there are events on the queue of the specified type</h4><h3>bool SS_HasEvents( int minType, int maxType )</h3><h4>returns if there are events on the queue from / to the specified types</h4><ul><li>event types are <a href="#SDL-event-types-constants">SDL event types</a></li></ul></div>
+<div class='item'><a name='SS-PollEvent-function'></a><hr><h2>SS_PollEvent [function]</h2><h3>dict? SS_PollEvent()</h3><h4>returns an event if there is one, without removing it from the queue</h4></div>
+<div class='item'><a name='SS-WaitEvent-function'></a><hr><h2>SS_WaitEvent [function]</h2><h3>dict? SS_WaitEvent([ int timeout ])</h3><h4>returns an event if there is one and removes it from the queue</h4><ul><li>if <code>timeout</code> is not specified, there is no limit</li></ul></div>
+<div class='item'><a name='SS-PeekEvents-function'></a><hr><h2>SS_PeekEvents [function]</h2><h3>array[dict]? SS_PeekEvents( int maxcount, int type )</h3><h4>returns a list of events matching the type, without removing them from the queue</h4><h3>array[dict]? SS_PeekEvents( int maxcount, int minType, int maxType )</h3><h4>returns a list of events matching the type range, without removing them from the queue</h4><ul><li>on failure, the function returns <code>null</code> and the error string</li></ul></div>
+<div class='item'><a name='SS-GetEvents-function'></a><hr><h2>SS_GetEvents [function]</h2><h3>array[dict]? SS_GetEvents( int maxcount, int type )</h3><h4>returns a list of events matching the type and removes them from the queue</h4><h3>array[dict]? SS_GetEvents( int maxcount, int minType, int maxType )</h3><h4>returns a list of events matching the type range and removes them from the queue</h4><ul><li>on failure, the function returns <code>null</code> and the error string</li></ul></div>
+<div class='item'><a name='SS-PumpEvents-function'></a><hr><h2>SS_PumpEvents [function]</h2><h3>void SS_PumpEvents()</h3><h4>pump the input devices for unprocessed events and place them in the event queue</h4></div>
+<div class='item'><a name='SS-QuitRequested-function'></a><hr><h2>SS_QuitRequested [function]</h2><h3>bool SS_QuitRequested()</h3><h4>check if an application quit event is in the queue</h4></div>
+<div class='item'><a name='SS-HasClipboardText-function'></a><hr><h2>SS_HasClipboardText [function]</h2><h3>bool SS_HasClipboardText()</h3><h4>returns if there&#39;s some text in the clipboard</h4></div>
+<div class='item'><a name='SS-GetClipboardText-function'></a><hr><h2>SS_GetClipboardText [function]</h2><h3>string SS_GetClipboardText()</h3><h4>returns the clipboard text (UTF-8)</h4></div>
+<div class='item'><a name='SS-SetClipboardText-function'></a><hr><h2>SS_SetClipboardText [function]</h2><h3>bool SS_SetClipboardText( string text )</h3><h4>sets the clipboard text, returns if successful</h4><ul><li>on failure, a warning is emitted additionally to returning <code>false</code></li></ul></div>
+<div class='item'><a name='SS-GetVideoDrivers-function'></a><hr><h2>SS_GetVideoDrivers [function]</h2><h3>array[string] SS_GetVideoDrivers()</h3><h4>returns the list of available video driver names</h4></div>
+<div class='item'><a name='SS-DisplayMode-function'></a><hr><h2>SS_DisplayMode [function]</h2><h3>SS_DisplayMode SS_DisplayMode()</h3><h4>returns a new <a href="#SS-DisplayMode-object">SS_DisplayMode</a></h4></div>
+<div class='item'><a name='SS-GetNumDisplays-function'></a><hr><h2>SS_GetNumDisplays [function]</h2><h3>int SS_GetNumDisplays()</h3><h4>returns the number of displays available</h4></div>
+<div class='item'><a name='SS-GetDisplayName-function'></a><hr><h2>SS_GetDisplayName [function]</h2><h3>string? SS_GetDisplayName( int index )</h3><h4>returns the name of the specified display</h4><ul><li><code>index</code> is an index between 0 and <a href="#SS-GetNumDisplays-function">SS_GetNumDisplays</a> -1</li></ul></div>
+<div class='item'><a name='SS-GetNumDisplayModes-function'></a><hr><h2>SS_GetNumDisplayModes [function]</h2><h3>int SS_GetNumDisplayModes( int index )</h3><h4>returns the number of available display modes for a display or emits a warning on failure</h4></div>
+<div class='item'><a name='SS-GetDisplayMode-function'></a><hr><h2>SS_GetDisplayMode [function]</h2><h3>SS_DisplayMode SS_GetDisplayMode( int displayIndex, int modeIndex )</h3><h4>returns the required display mode for the specified display or emits a warning on failure</h4></div>
+<div class='item'><a name='SS-GetDisplayModes-function'></a><hr><h2>SS_GetDisplayModes [function]</h2><h3>array[SS_DisplayMode] SS_GetDisplayModes( int displayIndex )</h3><h4>returns all available display modes for the specified display or emits a warning on failure</h4></div>
+<div class='item'><a name='SS-GetDisplayBounds-function'></a><hr><h2>SS_GetDisplayBounds [function]</h2><h3>dict? SS_GetDisplayBounds( int index )</h3><h4>returns rectangle mapped to the display or emits a warning on failure</h4></div>
+<div class='item'><a name='SS-GetClosestDisplayMode-function'></a><hr><h2>SS_GetClosestDisplayMode [function]</h2><h3>SS_DisplayMode? SS_GetClosestDisplayMode( int displayIndex, SS_DisplayMode mode )</h3><h4>return the closest available display mode for the specified display or <code>null</code> if no such modes could be found</h4><ul><li>if the function returns <code>null</code>, use <a href="#SS-GetError-function">SS_GetError</a> to retrieve the error string</li></ul></div>
+<div class='item'><a name='SS-GetCurrentDisplayMode-function'></a><hr><h2>SS_GetCurrentDisplayMode [function]</h2><h3>SS_DisplayMode SS_GetCurrentDisplayMode( int index = 0 )</h3><h4>return the currently set display mode for the display</h4></div>
+<div class='item'><a name='SS-GetDesktopDisplayMode-function'></a><hr><h2>SS_GetDesktopDisplayMode [function]</h2><h3>SS_DisplayMode SS_GetCurrentDisplayMode( int index = 0 )</h3><h4>return the currently set desktop display mode for the display (differs from current if any application has requested fullscreen windows)</h4></div>
+<div class='item'><a name='SS-CreateWindow-function'></a><hr><h2>SS_CreateWindow [function]</h2><h3>SS_Window SS_CreateWindow( string title, int x, int y, int width, int height, int flags = 0 )</h3><h4>creates a window (<a href="#SS-Window-object">SS_Window)</a> or emits a warning on failure</h4><ul><li><code>x</code> and <code>y</code> can not only be coordinates but also <a href="#SDL-WINDOWPOS-constants">SDL_WINDOWPOS_*</a> constants and functions
+</li><li><code>width</code> and <code>height</code> should not be negative
+</li><li><code>flags</code> are a bitwise combination of the specified <a href="#SDL-WINDOW-constants">SDL_WINDOW_*</a> constants</li></ul></div>
+<div class='item'><a name='SS-GetWindowFromID-function'></a><hr><h2>SS_GetWindowFromID [function]</h2><h3>SS_Window? SS_GetWindowFromID( int ID )</h3><h4>returns a window mapped to the specified ID or <code>null</code> if that window doesn&#39;t exist</h4></div>
+<div class='item'><a name='SS-MessageBox-function'></a><hr><h2>SS_MessageBox [function]</h2><h3>bool SS_MessageBox( int flags, string title, string text, SS_Window window = null )</h3><h4>shows a simple message box of the type (icon) specified by <code>flags</code>, showing title and text, optionally locking the specified parent window</h4></div>
+<div class='item'><a name='SS-GetKeyFromName-function'></a><hr><h2>SS_GetKeyFromName [function]</h2><h3>int SS_GetKeyFromName( string key )</h3><h4>returns key code by name or SDLK_UNKNOWN if a code was not found</h4><ul><li>key code list: <a href="#SDLK-constants">SDLK_*</a></li></ul></div>
+<div class='item'><a name='SS-GetScancodeFromName-function'></a><hr><h2>SS_GetScancodeFromName [function]</h2><h3>int SS_GetScancodeFromName( string key )</h3><h4>returns scan code by name or SDL_SCANCODE_UNKNOWN if a code was not found</h4><ul><li>scan code list: <a href="#SDL-SCANCODE-constants">SDL_SCANCODE_*</a></li></ul></div>
+<div class='item'><a name='SS-GetKeyFromScancode-function'></a><hr><h2>SS_GetKeyFromScancode [function]</h2><h3>int SS_GetKeyFromScancode( int code )</h3><h4>returns the key code currently corresponding to the specified scan code</h4><ul><li>key code list: <a href="#SDLK-constants">SDLK_*</a>
+</li><li>scan code list: <a href="#SDL-SCANCODE-constants">SDL_SCANCODE_*</a></li></ul></div>
+<div class='item'><a name='SS-GetScancodeFromKey-function'></a><hr><h2>SS_GetScancodeFromKey [function]</h2><h3>int SS_GetScancodeFromKey( int code )</h3><h4>returns the scan code currently corresponding to the specified key code</h4><ul><li>key code list: <a href="#SDLK-constants">SDLK_*</a>
+</li><li>scan code list: <a href="#SDL-SCANCODE-constants">SDL_SCANCODE_*</a></li></ul></div>
+<div class='item'><a name='SS-GetKeyName-function'></a><hr><h2>SS_GetKeyName [function]</h2><h3>string SS_GetKeyName( int code )</h3><h4>returns name for a key code (one of <a href="#SDLK-constants">SDLK_*</a>) or an empty string if there was no name for the index</h4></div>
+<div class='item'><a name='SS-GetScancodeName-function'></a><hr><h2>SS_GetScancodeName [function]</h2><h3>string SS_GetScancodeName( int code )</h3><h4>returns name for a scancode (one of <a href="#SDL-SCANCODE-constants">SDL_SCANCODE_*</a>) or an empty string if there was no name for the index</h4></div>
+<div class='item'><a name='SS-GetKeyboardFocus-function'></a><hr><h2>SS_GetKeyboardFocus [function]</h2><h3>SS_Window? SS_GetKeyboardFocus()</h3><h4>returns the <a href="#SS-Window-object">SS_Window</a> object that has keyboard focus</h4></div>
+<div class='item'><a name='SS-GetMouseFocus-function'></a><hr><h2>SS_GetMouseFocus [function]</h2><h3>SS_Window? SS_GetMouseFocus()</h3><h4>returns the <a href="#SS-Window-object">SS_Window</a> object that has mouse focus</h4></div>
+<div class='item'><a name='SS-GetModState-function'></a><hr><h2>SS_GetModState [function]</h2><h3>int SS_GetModState()</h3><h4>returns the keyboard modifier state</h4><ul><li>returned state is a bitwise combination of <a href="#SDL-KMOD-constants">SDL_KMOD_*</a> flags</li></ul></div>
+<div class='item'><a name='SS-SetModState-function'></a><hr><h2>SS_SetModState [function]</h2><h3>void SS_SetModState( int state )</h3><h4>sets keyboard modifiers (only internal flags, not keyboard state) to the specified state</h4><ul><li><code>state</code> should be a bitwise combination of <a href="#SDL-KMOD-constants">SDL_KMOD_*</a> flags</li></ul></div>
+<div class='item'><a name='SS-ShowCursor-function'></a><hr><h2>SS_ShowCursor [function]</h2><h3>void SS_ShowCursor( bool show )</h3><h4>enable or disable showing of the cursor for all application windows</h4></div>
+<div class='item'><a name='SS-SetSystemCursor-function'></a><hr><h2>SS_SetSystemCursor [function]</h2><h3>bool SS_SetSystemCursor( int which )</h3><h4>set the cursor for all application windows to a system cursor</h4><ul><li>function returns whether a system cursor was found and set successfully
+</li><li><code>which</code> can be one of the following values:</li></ul></div>
+<div class='item'><a name='SS-WarpMouse-function'></a><hr><h2>SS_WarpMouse [function]</h2><h3>void SS_WarpMouse( int x, int y )</h3><h4>set cursor position to the specified position in window that is currently in focus</h4></div>
+<div class='item'><a name='SS-GetMouseState-function'></a><hr><h2>SS_GetMouseState [function]</h2><h3>int,int,int SS_GetMouseState()</h3><h4>returns full mouse state</h4><ul><li>return values:
+<ul><li>button mask - <a href="#SDL-BUTTON-constants">SDL_BUTTON_*</a>
+</li><li>absolute X cursor position
+</li><li>absolute Y cursor position</li></ul></li></ul></div>
+<div class='item'><a name='SS-GetRelativeMouseState-function'></a><hr><h2>SS_GetRelativeMouseState [function]</h2><h3>int,int,int SS_GetRelativeMouseState()</h3><h4>returns full relative mouse state</h4><ul><li>return values:
+<ul><li>button mask - <a href="#SDL-BUTTON-constants">SDL_BUTTON_*</a>
+</li><li>X cursor movement since last recorded position
+</li><li>Y cursor movement since last recorded position</li></ul></li></ul></div>
+<div class='item'><a name='SS-GetRelativeMouseMode-function'></a><hr><h2>SS_GetRelativeMouseMode [function]</h2><h3>bool SS_GetRelativeMouseMode()</h3><h4>returns whether relative mouse mode is enabled</h4><p>
+For more info, see <a href="#SS-SetRelativeMouseMode-function">SS_SetRelativeMouseMode</a>.
+</p></div>
+<div class='item'><a name='SS-SetRelativeMouseMode-function'></a><hr><h2>SS_SetRelativeMouseMode [function]</h2><h3>bool+ SS_SetRelativeMouseMode( bool enable )</h3><h4>enable or disable relative mouse mode</h4><ul><li>On success, function returns <code>true</code>, on failure - <code>false</code> and the error string.
+</li><li>Relative mouse mode means that the cursor is hidden, cursor position won&#39;t change and only relative motion events are delivered.
+</li><li>For more info, see <a href="https://wiki.libsdl.org/SDL_SetRelativeMouseMode" target="_blank">https://wiki.libsdl.org/SDL_SetRelativeMouseMode</a></li></ul></div>
+<div class='item'><a name='SS-HasScreenKeyboardSupport-function'></a><hr><h2>SS_HasScreenKeyboardSupport [function]</h2><h3>bool SS_HasScreenKeyboardSupport()</h3><h4>returns if the platform has some screen keyboard support</h4></div>
+<div class='item'><a name='SS-IsTextInputActive-function'></a><hr><h2>SS_IsTextInputActive [function]</h2><h3>bool SS_IsTextInputActive()</h3><h4>returns if text input events are being sent</h4><ul><li>to change the state, see <a href="#SS-StartTextInput-function">SS_StartTextInput</a> and <a href="#SS-StopTextInput-function">SS_StopTextInput</a>.</li></ul></div>
+<div class='item'><a name='SS-StartTextInput-function'></a><hr><h2>SS_StartTextInput [function]</h2><h3>void SS_StartTextInput()</h3><h4>begin sending text input events (SDL_TEXTINPUT, SDL_TEXTEDITING)</h4><ul><li>to query the state, use <a href="#SS-IsTextInputActive-function">SS_IsTextInputActive</a>
+</li><li>to stop sending these events, use <a href="#SS-StopTextInput-function">SS_StopTextInput</a></li></ul></div>
+<div class='item'><a name='SS-StopTextInput-function'></a><hr><h2>SS_StopTextInput [function]</h2><h3>void SS_StartTextInput()</h3><h4>stop sending text input events (SDL_TEXTINPUT, SDL_TEXTEDITING)</h4><ul><li>to query the state, use <a href="#SS-IsTextInputActive-function">SS_IsTextInputActive</a>
+</li><li>to start sending these events, use <a href="#SS-StartTextInput-function">SS_StartTextInput</a></li></ul></div>
+<div class='item'><a name='SS-SetTextInputRect-function'></a><hr><h2>SS_SetTextInputRect [function]</h2><h3>void SS_SetTextInputRect( int left, int top, int right, int bottom )</h3><h4>set the area in the window where text input takes place (generally the bounding box of an edit control) for input helper window placement</h4></div>
+<div class='item'><a name='SS-GetJoystick-function'></a><hr><h2>SS_GetJoystick [function]</h2><h3>SS_Joystick SS_GetJoystick()</h3><h4>creates a new joystick interface object</h4><h3>SS_Joystick?+ SS_GetJoystick( int joystick_index )</h3><h4>creates a new joystick interface object and tries to open it with the specified joystick index</h4><ul><li>on success, the function returns <a href="#SS-Joystick-object">SS_Joystick</a>, on error - <code>null</code> and the error string.</li></ul></div>
+<div class='item'><a name='SS-NumJoysticks-function'></a><hr><h2>SS_NumJoysticks [function]</h2><h3>int SS_NumJoysticks()</h3><h4>returns the number of joysticks available</h4></div>
+<div class='item'><a name='SS-GetJoystickName-function'></a><hr><h2>SS_GetJoystickName [function]</h2><h3>string? SS_GetJoystickName( int joystick_index )</h3><h4>returns a joystick name or null if could not retrieve it</h4><ul><li><code>joystick_index</code> is an index between 0 and <a href="#SS-NumJoysticks-function">SS_NumJoysticks</a> - 1</li></ul></div>
+<div class='item'><a name='SS-GetJoystickNames-function'></a><hr><h2>SS_GetJoystickNames [function]</h2><h3>array[string|null] SS_GetJoystickNames()</h3><h4>returns an array containing joystick names or null for every joystick index that could not give a name</h4></div>
+<div class='item'><a name='SS-JoystickUpdate-function'></a><hr><h2>SS_JoystickUpdate [function]</h2><h3>void SS_JoystickUpdate()</h3><h4>manually update the joystick and send the events</h4><ul><li>this is not necessary if joystick events are enabled with <a href="#SS-JoystickEventState-function">SS_JoystickEventState</a></li></ul></div>
+<div class='item'><a name='SS-JoystickEventState-function'></a><hr><h2>SS_JoystickEventState [function]</h2><h3>bool?+ SS_JoystickEventState( int newstate )</h3><h4>sets and/or retrieves whether joysticks emit events</h4><p>
+On success, function returns <code>bool</code> containing the state of events. On failure, it returns <code>null</code> and the error string.
+</p><ul><li><code>newstate</code> can be one of:
+<ul><li><code>SDL_ENABLE</code>(1) - enable events
+</li><li><code>SDL_DISABLE</code>(0) - disable events
+</li><li><code>SDL_QUERY</code>(-1) - don&#39;t change event state, just return it</li></ul></li></ul></div>
+<div class='item'><a name='SS-GetGameController-function'></a><hr><h2>SS_GetGameController [function]</h2><h3>SS_GameController SS_GetGameController()</h3><h4>creates a new game controller interface object</h4><h3>SS_GameController?+ SS_GetGameController( int joystick_index )</h3><h4>creates a new game controller interface object and tries to open it with the specified joystick index</h4><ul><li>on success, the function returns <a href="#SS-GameController-object">SS_GameController</a>, on error - <code>null</code> and the error string.</li></ul></div>
+<div class='item'><a name='SS-GameControllerAddMapping-function'></a><hr><h2>SS_GameControllerAddMapping [function]</h2><h3>bool?+ SS_GameControllerAddMapping( string mapping )</h3><h4>loads one controller mapping from a string</h4><ul><li>on success, the function returns whether a new mapping was added (true) or an old one was updated (false), on failure - <code>null</code> and the error string.</li></ul><ul><li>For more info about the mapping format, see <a href="https://wiki.libsdl.org/SDL_GameControllerAddMapping" target="_blank">https://wiki.libsdl.org/SDL_GameControllerAddMapping</a>.</li></ul></div>
+<div class='item'><a name='SS-GameControllerAddMappingsFromFile-function'></a><hr><h2>SS_GameControllerAddMappingsFromFile [function]</h2><h3>int?+ SS_GameControllerAddMappingsFromFile( string filename )</h3><h4>loads controller mappings from a file</h4><ul><li>on success, the function returns the number of mappings found, on failure - <code>null</code> and the error string.</li></ul><ul><li>For more info about the mapping format, see <a href="https://wiki.libsdl.org/SDL_GameControllerAddMapping" target="_blank">https://wiki.libsdl.org/SDL_GameControllerAddMapping</a>.</li></ul></div>
+<div class='item'><a name='SS-GameControllerMappingForGUID-function'></a><hr><h2>SS_GameControllerMappingForGUID [function]</h2><h3>string?+ SS_GameControllerMappingForGUID( string guid )</h3><h4>returns a game controller mapping string, mapped to the specified GUID</h4><ul><li>on success, the function returns a mapping string, on failure - <code>null</code> and the error string.</li></ul></div>
+<div class='item'><a name='SS-GetGameControllerName-function'></a><hr><h2>SS_GetGameControllerName [function]</h2><h3>string? SS_GetGameControllerName( int joystick_index )</h3><h4>returns a game controller name or null if could not retrieve it</h4><ul><li><code>joystick_index</code> is an index between 0 and <a href="#SS-NumJoysticks-function">SS_NumJoysticks</a> - 1</li></ul></div>
+<div class='item'><a name='SS-GetGameControllerNames-function'></a><hr><h2>SS_GetGameControllerNames [function]</h2><h3>array[string|null] SS_GetGameControllerNames()</h3><h4>returns an array containing game controller names or null for every joystick index that is not a game controller or could not give a name for any other reason</h4></div>
+<div class='item'><a name='SS-GameControllerGetAxisFromString-function'></a><hr><h2>SS_GameControllerGetAxisFromString [function]</h2><h3>int SS_GameControllerGetAxisFromString( string axis )</h3><h4>returns axis number from axis name string</h4></div>
+<div class='item'><a name='SS-GameControllerGetButtonFromString-function'></a><hr><h2>SS_GameControllerGetButtonFromString [function]</h2><h3>int SS_GameControllerGetButtonFromString( string button )</h3><h4>returns button number from button name string</h4></div>
+<div class='item'><a name='SS-GameControllerGetStringForAxis-function'></a><hr><h2>SS_GameControllerGetStringForAxis [function]</h2><h3>string SS_GameControllerGetStringForAxis( int axis )</h3><h4>returns axis name string from axis number</h4></div>
+<div class='item'><a name='SS-GameControllerGetStringForButton-function'></a><hr><h2>SS_GameControllerGetStringForButton [function]</h2><h3>string SS_GameControllerGetStringForButton( int button )</h3><h4>returns button name string from button number</h4></div>
+<div class='item'><a name='SS-GameControllerUpdate-function'></a><hr><h2>SS_GameControllerUpdate [function]</h2><h3>void SS_GameControllerUpdate()</h3><h4>manually update the game controller and send the events</h4><ul><li>this is not necessary if game controller events are enabled with <a href="#SS-GameControllerEventState-function">SS_GameControllerEventState</a></li></ul></div>
+<div class='item'><a name='SS-GameControllerEventState-function'></a><hr><h2>SS_GameControllerEventState [function]</h2><h3>bool?+ SS_GameControllerEventState( int newstate )</h3><h4>sets and/or retrieves whether game controllers emit events</h4><ul><li>on success, function returns <code>bool</code> containing the state of events. On failure, it returns <code>null</code> and the error string.</li></ul><ul><li><code>newstate</code> can be one of:
+<ul><li><code>SDL_ENABLE</code>(1) - enable events
+</li><li><code>SDL_DISABLE</code>(0) - disable events
+</li><li><code>SDL_QUERY</code>(-1) - don&#39;t change event state, just return it</li></ul></li></ul></div>
+<div class='item'><a name='SS-IsGameController-function'></a><hr><h2>SS_IsGameController [function]</h2><h3>bool SS_IsGameController( int joystick_index )</h3><h4>returns whether the joystick with the specified index is also a game controller</h4></div>
+<div class='item'><a name='SDL-WINDOWPOS-UNDEFINED-DISPLAY-function'></a><hr><h2>SDL_WINDOWPOS_UNDEFINED_DISPLAY [function]</h2><h3>int SDL_WINDOWPOS_UNDEFINED_DISPLAY( int display )</h3><h4>returns a constant for <a href="#SS-CreateWindow-function">SS_CreateWindow</a> window placement (X/Y arguments) at any place on the specified display</h4></div>
+<div class='item'><a name='SDL-WINDOWPOS-CENTERED-DISPLAY-function'></a><hr><h2>SDL_WINDOWPOS_CENTERED_DISPLAY [function]</h2><h3>int SDL_WINDOWPOS_CENTERED_DISPLAY( int display )</h3><h4>returns a constant for <a href="#SS-CreateWindow-function">SS_CreateWindow</a> window placement (X/Y arguments) at the center on the specified display</h4></div>
+<div class='item'><a name='SDL-event-types-constants'></a><hr><h2>SDL event types [constants]</h2><p>
+Basic types (and data sent with them):
+</p><ul><li>all events:
+<ul><li><code>[int] type // the event type</code>
+</li><li><code>[int] timestamp // event time</code>
+</li></ul><li>SDL_QUIT - application end requested
+<ul><li><code>no data</code>
+</li></ul><li>SDL_WINDOWEVENT - window state change
+<ul><li><code>[int] windowID // the window ID</code>
+</li><li><code>[int] event // sub-event (SDL_WINDOWEVENT_*) ID</code>
+</li><li><code>[int] data1 // event data 1</code>
+</li><li><code>[int] data2 // event data 2</code>
+</li></ul><li>SDL_SYSWMEVENT - system window state change event
+<ul><li><code>not fully implemented</code>
+</li></ul><li>SDL_KEYDOWN - key press
+<ul><li><code>[int] windowID // the window ID</code>
+</li><li><code>[bool] state // pressed or released</code>
+</li><li><code>[int] repeat // number of times the event was recently repeated</code>
+</li><li><code>[int] hwcode // <a href="#SDL-SCANCODE-constants">SDL_SCANCODE_*</a> hardware scan code</code>
+</li><li><code>[int] keycode // <a href="#SDLK-constants">SDLK_*</a> key code</code>
+</li><li><code>[int] mod // <a href="#SDL-KMOD-constants">SDL_KMOD_*</a> keyboard modifiers</code>
+</li></ul><li>SDL_KEYUP - key release
+<ul><li><code>same as SDL_KEYDOWN</code>
+</li></ul><li>SDL_TEXTEDITING - text pre-input
+<ul><li><code>[int] windowID // the window ID</code>
+</li><li><code>[string] text // text sent</code>
+</li><li><code>[int] start // text location</code>
+</li><li><code>[int] length // size of previous area to replace</code>
+</li></ul><li>SDL_TEXTINPUT - text input
+<ul><li><code>[int] windowID // the window ID</code>
+</li><li><code>[string] text // text sent</code>
+</li></ul><li>SDL_MOUSEMOTION - mouse was moved
+<ul><li><code>[int] windowID // the window ID</code>
+</li><li><code>[int] which // mouse ID</code>
+</li><li><code>[int] buttons // the buttons pressed, combined from button flags @&quot;SDL_BUTTON_*&quot;</code>
+</li><li><code>[bool] lbutton // whether the left button is pressed</code>
+</li><li><code>[bool] mbutton // whether the middle button is pressed</code>
+</li><li><code>[bool] rbutton // whether the right button is pressed</code>
+</li><li><code>[bool] x1button // whether the extra button 1 is pressed</code>
+</li><li><code>[bool] x2button // whether the extra button 2 is pressed</code>
+</li><li><code>[int] x // buffer scale-aware cursor X position</code>
+</li><li><code>[int] y // buffer scale-aware cursor Y position</code>
+</li><li><code>[int] wx // cursor X position in window</code>
+</li><li><code>[int] wy // cursor Y position in window</code>
+</li><li><code>[int] xrel // cursor X movement</code>
+</li><li><code>[int] yrel // cursor Y movement</code>
+</li></ul><li>SDL_MOUSEBUTTONDOWN - mouse button press
+<ul><li><code>[int] windowID // the window ID</code>
+</li><li><code>[int] which // mouse ID</code>
+</li><li><code>[int] buttons // ID of the button, one of @&quot;SDL_BUTTON_*&quot;</code>
+</li><li><code>[bool] state // pressed or released</code>
+</li><li><code>[int] clicks // click number</code>
+</li><li><code>[int] x // buffer scale-aware cursor X position</code>
+</li><li><code>[int] y // buffer scale-aware cursor Y position</code>
+</li><li><code>[int] wx // cursor X position in window</code>
+</li><li><code>[int] wy // cursor Y position in window</code>
+</li></ul><li>SDL_MOUSEBUTTONUP - mouse button release
+<ul><li><code>same as SDL_MOUSEBUTTONDOWN</code>
+</li></ul><li>SDL_MOUSEWHEEL - mouse wheel movement
+<ul><li><code>[int] windowID // the window ID</code>
+</li><li><code>[int] which // mouse ID</code>
+</li><li><code>[int] x // horizontal wheel movement</code>
+</li><li><code>[int] y // vertical wheel movement</code>
+</li></ul><li>SDL_JOYAXISMOTION - joystick axis movement
+<ul><li><code>[int] which // joystick ID</code>
+</li><li><code>[int] axis // axis number</code>
+</li><li><code>[int] value // axis value (range: -32768 to 32767)</code>
+</li></ul><li>SDL_JOYBALLMOTION - joystick ball movement
+<ul><li><code>[int] which // joystick ID</code>
+</li><li><code>[int] ball // ball number</code>
+</li><li><code>[int] xrel // relative X movement</code>
+</li><li><code>[int] yrel // relative Y movement</code>
+</li></ul><li>SDL_JOYHATMOTION - joystick hat movement
+<ul><li><code>[int] which // joystick ID</code>
+</li><li><code>[int] hat // hat number</code>
+</li><li><code>[int] value // hat value, one of @&quot;SDL_HAT_*&quot;</code>
+</li></ul><li>SDL_JOYBUTTONDOWN - joystick button press
+<ul><li><code>[int] which // joystick ID</code>
+</li><li><code>[int] button // button number</code>
+</li><li><code>[bool] state // pressed or released</code>
+</li></ul><li>SDL_JOYBUTTONUP - joystick button release
+<ul><li><code>same as SDL_JOYBUTTONDOWN</code>
+</li></ul><li>SDL_JOYDEVICEADDED - joystick device was added (plugged in/installed/enabled)
+<ul><li><code>[int] which // joystick ID</code>
+</li></ul><li>SDL_JOYDEVICEREMOVED - joystick device was removed (unplugged/uninstalled/disabled)
+<ul><li><code>[int] which // joystick ID</code>
+</li></ul><li>SDL_CONTROLLERAXISMOTION - controller axis movement
+<ul><li><code>[int] which // joystick/controller ID</code>
+</li><li><code>[int] axis // axis number</code>
+</li><li><code>[int] value // axis value (range: -32768 to 32767)</code>
+</li></ul><li>SDL_CONTROLLERBUTTONDOWN - controller button press
+<ul><li><code>[int] which // joystick/controller ID</code>
+</li><li><code>[int] button // button number</code>
+</li><li><code>[bool] state // pressed or released</code>
+</li></ul><li>SDL_CONTROLLERBUTTONUP - controller button release
+<ul><li><code>same as SDL_CONTROLLERBUTTONDOWN</code>
+</li></ul><li>SDL_CONTROLLERDEVICEADDED - controller device was added (plugged in/installed/enabled)
+<ul><li><code>[int] which // joystick/controller ID</code>
+</li></ul><li>SDL_CONTROLLERDEVICEREMOVED - controller device was removed (unplugged/uninstalled/disabled)
+<ul><li><code>[int] which // joystick/controller ID</code>
+</li></ul><li>SDL_CONTROLLERDEVICEREMAPPED - controller device was remapped
+<ul><li><code>[int] which // joystick/controller ID</code>
+</li></ul><li>SDL_FINGERDOWN - touch device finger press
+<ul><li><code>[int] touchID // touch device ID</code>
+</li><li><code>[int] fingerID // finger ID for the device</code>
+</li><li><code>[real] x // absolute normalized X position (0-1)</code>
+</li><li><code>[real] y // absolute normalized Y position (0-1)</code>
+</li><li><code>[real] dx // normalized X movement (0-1)</code>
+</li><li><code>[real] dy // normalized Y movement (0-1)</code>
+</li><li><code>[real] pressure // normalized pressure applied (0-1)</code>
+</li></ul><li>SDL_FINGERUP - touch device finger release
+<ul><li><code>same as SDL_FINGERDOWN</code>
+</li></ul><li>SDL_FINGERMOTION - touch device finger movement
+<ul><li><code>same as SDL_FINGERDOWN</code>
+</li></ul><li>SDL_DOLLARGESTURE - gesture performed
+<ul><li><code>[int] touchID // touch device ID</code>
+</li><li><code>[int] gestureID // closest matched gesture ID</code>
+</li><li><code>[int] numFingers // number of fingers used to perform the gesture</code>
+</li><li><code>[real] error // difference between gesture and input (lower is better)</code>
+</li><li><code>[real] x // normalized X center of gesture (0-1)</code>
+</li><li><code>[real] y // normalized Y center of gesture (0-1)</code>
+</li></ul><li>SDL_DOLLARRECORD - gesture input recorded
+<ul><li><code>no data</code>
+</li></ul><li>SDL_MULTIGESTURE - basic multiple-finger gesture received
+<ul><li><code>[int] touchID // touch device ID</code>
+</li><li><code>[real] dTheta // finger rotation amount</code>
+</li><li><code>[real] dDist // finger pinch amount</code>
+</li><li><code>[real] x // normalized X center of gesture (0-1)</code>
+</li><li><code>[real] y // normalized Y center of gesture (0-1)</code>
+</li><li><code>[int] numFingers // number of fingers used to perform the gesture</code>
+</li></ul><li>SDL_CLIPBOARDUPDATE - clipboard content was changed
+<ul><li><code>no data</code>
+</li></ul><li>SDL_DROPFILE - file was dropped on the window
+<ul><li><code>[string] file // the path to dropped file</code>
+</li></ul><li>SDL_VIDEODEVICELOST - video device was lost (with Direct3D9 renderer only)
+<ul><li><code>no data</code>
+</li></ul><li>SDL_VIDEODEVICERESET - video device was reset (with Direct3D9 renderer only)
+<ul><li><code>no data</code>
+</li></ul><li>SDL_USEREVENT - user event was sent
+<ul><li><code>[int] windowID // the window ID</code>
+</li><li><code>[int] code // user-assigned sub-event ID</code>
+</li><li><code>[ptr] data1 // event data 1</code>
+</li><li><code>[ptr] data2 // event data 2</code></li></ul></li></ul><p>
+Additional values:
+</p><ul><li>SDL_FIRSTEVENT - the first event index (to be used with <a href="#SS-FlushEvents-function">SS_FlushEvents)</a>
+</li><li>SDL_LASTEVENT - the last event index (to be used with <a href="#SS-FlushEvents-function">SS_FlushEvents)</a></li></ul><p>
+Window event (SDL_WINDOWEVENT) subtypes (and meanings for data parameters):
+</p><ul><li>SDL_WINDOWEVENT_SHOWN - window was shown
+</li><li>SDL_WINDOWEVENT_HIDDEN - window was hidden
+</li><li>SDL_WINDOWEVENT_EXPOSED - window content repainting was requested due to having a part of it made visible
+</li><li>SDL_WINDOWEVENT_MOVED - window was manually moved (data1 = new X position, data2 = new Y position)
+</li><li>SDL_WINDOWEVENT_RESIZED - window was manually resized (data1 = new width, data2 = new height)
+</li><li>SDL_WINDOWEVENT_SIZE_CHANGED - window size was changed
+</li><li>SDL_WINDOWEVENT_MINIMIZED - window was minimized
+</li><li>SDL_WINDOWEVENT_MAXIMIZED - window was maximized
+</li><li>SDL_WINDOWEVENT_RESTORED - window was restored
+</li><li>SDL_WINDOWEVENT_ENTER - window has gained mouse focus
+</li><li>SDL_WINDOWEVENT_LEAVE - window has lost mouse focus
+</li><li>SDL_WINDOWEVENT_FOCUS_GAINED - window has gained keyboard focus
+</li><li>SDL_WINDOWEVENT_FOCUS_LOST - window has lost keyboard focus
+</li><li>SDL_WINDOWEVENT_CLOSE - window was closed</li></ul></div>
+<div class='item'><a name='SDL-SYSTEM-CURSOR-constants'></a><hr><h2>SDL_[SYSTEM_]CURSOR_* [constants]</h2><ul><li>SDL_[SYSTEM_]CURSOR_ARROW - default arrow
+</li><li>SDL_[SYSTEM_]CURSOR_IBEAM - vertical line
+</li><li>SDL_[SYSTEM_]CURSOR_WAIT - waiting animation
+</li><li>SDL_[SYSTEM_]CURSOR_CROSSHAIR - crosshair
+</li><li>SDL_[SYSTEM_]CURSOR_WAITARROW - waiting animation with an arrow
+</li><li>SDL_[SYSTEM_]CURSOR_SIZENWSE - diagonal sizing cursor, from northwest to southeast
+</li><li>SDL_[SYSTEM_]CURSOR_SIZENESW - diagonal sizing cursor, from northeast to southwest
+</li><li>SDL_[SYSTEM_]CURSOR_SIZEWE - horizontal sizing cursor
+</li><li>SDL_[SYSTEM_]CURSOR_SIZENS - vertical sizing cursor
+</li><li>SDL_[SYSTEM_]CURSOR_SIZEALL - all-direction sizing cursor
+</li><li>SDL_[SYSTEM_]CURSOR_NO - restriction
+</li><li>SDL_[SYSTEM_]CURSOR_HAND - (pointing) &quot;hand&quot; cursor (usually used for links)</li></ul></div>
+<div class='item'><a name='SDLK-constants'></a><hr><h2>SDLK_* [constants]</h2><p>
+SDL keyboard codes. For more info, see <a href="https://wiki.libsdl.org/SDL_Keycode" target="_blank">https://wiki.libsdl.org/SDL_Keycode</a>.
+</p><ul><li>These constants can be compared to <code>keycode</code> member of SDL_KEYDOWN / SDL_KEYUP event data.
+</li><li>Unlike SDL, for consistency alphabet keys are mapped to both uppercase and lowercase names of keys (for example, SDLK_A and SDLK_a point to the same value, the numeric value of &#39;a&#39;, decimal 97, hexadecimal 0x61).</li></ul></div>
+<div class='item'><a name='SDL-SCANCODE-constants'></a><hr><h2>SDL_SCANCODE_* [constants]</h2><p>
+Keyboard hardware scan codes. For more info, see <a href="https://wiki.libsdl.org/SDL_Scancode" target="_blank">https://wiki.libsdl.org/SDL_Scancode</a>.
+</p><ul><li>These constants can be compared to <code>hwcode</code> member of SDL_KEYDOWN / SDL_KEYUP event data.</li></ul></div>
+<div class='item'><a name='SDL-KMOD-constants'></a><hr><h2>SDL_KMOD_* [constants]</h2><p>
+Keyboard modifier flags.
+</p><ul><li>SDL_KMOD_NONE - no modifiers
+</li><li>SDL_KMOD_NUM - Num Lock is enabled
+</li><li>SDL_KMOD_CAPS - Caps Lock is enabled
+</li><li>SDL_KMOD_MODE - AltGr key is pressed
+</li><li>SDL_KMOD_LCTRL - Left Control key is pressed
+</li><li>SDL_KMOD_RCTRL - Right Control key is pressed
+</li><li>SDL_KMOD_RSHIFT - Right Shift key is pressed
+</li><li>SDL_KMOD_LSHIFT - Left Shift key is pressed
+</li><li>SDL_KMOD_RALT - Right Alt key is pressed
+</li><li>SDL_KMOD_LALT - Left Alt key is pressed
+</li><li>SDL_KMOD_RGUI - Right special &quot;GUI&quot; (Windows) key is pressed
+</li><li>SDL_KMOD_LGUI - Left special &quot;GUI&quot; (Windows) key is pressed
+</li><li>SDL_KMOD_CTRL - any Control key is pressed
+</li><li>SDL_KMOD_SHIFT - any Shift key is pressed
+</li><li>SDL_KMOD_ALT - any Alt key is pressed
+</li><li>SDL_KMOD_GUI - any special &quot;GUI&quot; key is pressed</li></ul><p>
+<em class='notice-bgr'>These are the only constants that have the prefix extended from original SDL2 code. Original constants have the <code>KMOD_</code> prefix, <i>without</i> <code>SDL_</code>. For more info, see <a href="https://wiki.libsdl.org/SDL_Keymod" target="_blank">https://wiki.libsdl.org/SDL_Keymod</a></em>
+</p></div>
+<div class='item'><a name='SDL-BUTTON-constants'></a><hr><h2>SDL_BUTTON_* [constants]</h2><p>
+There are two constant types under this prefix: button IDs and masks.
+</p><ul><li>IDs are used for events where there can be only one button type at any given time, such as click events (SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP).
+</li><li>Masks are used where multiple buttons are expected to be pressed at some time, like the mouse motion event (SDL_MOUSEMOTION).</li></ul><p>
+IDs:
+</p><p>
+SDL_BUTTON_LEFT - left button
+SDL_BUTTON_MIDDLE - middle button (mouse scroll button)
+SDL_BUTTON_RIGHT - right button
+SDL_BUTTON_X1 - first additional button
+SDL_BUTTON_X2 - second additional button
+</p><p>
+Masks:
+</p><p>
+SDL_BUTTON_LMASK - left button
+SDL_BUTTON_MMASK - middle button (mouse scroll button)
+SDL_BUTTON_RMASK - right button
+SDL_BUTTON_X1MASK - first additional button
+SDL_BUTTON_X2MASK - second additional button
+</p></div>
+<div class='item'><a name='SDL-TOUCH-MOUSEID-constant'></a><hr><h2>SDL_TOUCH_MOUSEID [constant]</h2><h3>SDL_TOUCH_MOUSEID</h3><p>
+the mouse ID for mouse events coming from a touch input device.
+</p></div>
+<div class='item'><a name='SDL-CONTROLLER-BINDTYPE-constants'></a><hr><h2>SDL_CONTROLLER_BINDTYPE_* [constants]</h2><p>
+Game controller - joystick binding types.
+</p><ul><li>SDL_CONTROLLER_BINDTYPE_NONE - no binding
+</li><li>SDL_CONTROLLER_BINDTYPE_BUTTON - binding to a joystick button
+</li><li>SDL_CONTROLLER_BINDTYPE_AXIS - binding to a joystick axis
+</li><li>SDL_CONTROLLER_BINDTYPE_HAT - binding to a joystick hat</li></ul></div>
+<div class='item'><a name='SDL-CONTROLLER-AXIS-constants'></a><hr><h2>SDL_CONTROLLER_AXIS_* [constants]</h2><p>
+Axis types for a controller.
+</p><ul><li>SDL_CONTROLLER_AXIS_INVALID - invalid axis type
+</li><li>SDL_CONTROLLER_AXIS_LEFTX - left X
+</li><li>SDL_CONTROLLER_AXIS_LEFTY - left Y
+</li><li>SDL_CONTROLLER_AXIS_RIGHTX - right X
+</li><li>SDL_CONTROLLER_AXIS_RIGHTY - right Y
+</li><li>SDL_CONTROLLER_AXIS_TRIGGERLEFT - left trigger
+</li><li>SDL_CONTROLLER_AXIS_TRIGGERRIGHT - right trigger
+</li><li>SDL_CONTROLLER_AXIS_MAX - one over last valid type</li></ul></div>
+<div class='item'><a name='SDL-HAT-constants'></a><hr><h2>SDL_HAT_* [constants]</h2><p>
+Joystick hat position bit masks.
+</p><ul><li>SDL_HAT_CENTERED
+</li><li>SDL_HAT_UP
+</li><li>SDL_HAT_RIGHT
+</li><li>SDL_HAT_DOWN
+</li><li>SDL_HAT_LEFT
+</li><li>SDL_HAT_RIGHTUP
+</li><li>SDL_HAT_RIGHTDOWN
+</li><li>SDL_HAT_LEFTUP
+</li><li>SDL_HAT_LEFTDOWN</li></ul></div>
+<div class='item'><a name='SDL-WINDOWPOS-constants'></a><hr><h2>SDL_WINDOWPOS_* [constants]</h2><p>
+Special window position constants for use with <a href="#SS-CreateWindow-function">SS_CreateWindow</a>.
+</p><ul><li>SDL_WINDOWPOS_UNDEFINED - any window position is accepted in the first display
+</li><li>SDL_WINDOWPOS_CENTERED - window should be centered in the first display
+</li><li>For more options, see <a href="#SDL-WINDOWPOS-UNDEFINED-DISPLAY-function">SDL_WINDOWPOS_UNDEFINED_DISPLAY</a> and <a href="#SDL-WINDOWPOS-CENTERED-DISPLAY-function">SDL_WINDOWPOS_CENTERED_DISPLAY</a></li></ul></div>
+<div class='item'><a name='SDL-WINDOW-constants'></a><hr><h2>SDL_WINDOW_* [constants]</h2><p>
+Window state flags, used by <a href="#SS-Window-object">SS_Window</a> (the <code>flags</code> property) and <a href="#SS-CreateWindow-function">SS_CreateWindow</a>.
+</p><ul><li>SDL_WINDOW_FULLSCREEN - window is in a fullscreen mode
+</li><li>SDL_WINDOW_FULLSCREEN_DESKTOP - window is in a desktop fullscreen mode (topmost screen-sized window, without display mode change)
+</li><li>SDL_WINDOW_OPENGL - window is OpenGL-ready
+</li><li>SDL_WINDOW_OPENGLMAYBE - for use with <a href="#SS-RENDERER-constants">SS_RENDERER_DONTCARE</a> in <a href="#SS-Window-initRenderer-method">SS_Window.initRenderer</a> - depending on renderer choice, the window may or may not need to be OpenGL-ready
+</li><li>SDL_WINDOW_HIDDEN - window is not visible / should not be visible on creation
+</li><li>SDL_WINDOW_BORDERLESS - window should not have a border
+</li><li>SDL_WINDOW_RESIZABLE - window can be resized
+</li><li>SDL_WINDOW_MINIMIZED - window is / should be minimized
+</li><li>SDL_WINDOW_MAXIMIZED - window is / should be maximized
+</li><li>SDL_WINDOW_INPUT_GRABBED - window has taken all input from input devices to itself
+</li><li>SDL_WINDOW_ALLOW_HIGHDPI - high DPI support is enabled</li></ul></div>
+<div class='item'><a name='SDL-MESSAGEBOX-constants'></a><hr><h2>SDL_MESSAGEBOX_* [constants]</h2><p>
+These constants generally specify the icon that is used for the message box created by <a href="#SS-MessageBox-function">SS_MessageBox</a>.
+</p><ul><li>SDL_MESSAGEBOX_ERROR - error message box
+</li><li>SDL_MESSAGEBOX_WARNING - warning message box
+</li><li>SDL_MESSAGEBOX_INFORMATION - information message box</li></ul></div>
+<div class='item'><a name='SDL-POWERSTATE-constants'></a><hr><h2>SDL_POWERSTATE_* [constants]</h2><p>
+These constants specify the power state of the hardware platform, returned by <a href="#SS-GetPowerInfo-function">SS_GetPowerInfo</a>.
+</p><ul><li>SDL_POWERSTATE_UNKNOWN - state cannot be determined
+</li><li>SDL_POWERSTATE_ON_BATTERY - working on battery power
+</li><li>SDL_POWERSTATE_NO_BATTERY - there is no battery for the device
+</li><li>SDL_POWERSTATE_CHARGING - battery is being charged at the moment
+</li><li>SDL_POWERSTATE_CHARGED - battery is being charged and is fully charged</li></ul></div>
+<div class='item'><a name='SS-RENDERER-constants'></a><hr><h2>SS_RENDERER_* [constants]</h2><p>
+There are two types of constants under this prefix - renderer types and renderer flags. Both are used for <a href="#SS-Window-initRenderer-method">SS_Window.initRenderer</a> - more info about these flags can be found there.
+</p><p>
+Renderer types:
+</p><ul><li>SS_RENDERER_DONTCARE
+</li><li>SS_RENDERER_OPENGL
+</li><li>SS_RENDERER_DIRECT3D9</li></ul><p>
+Renderer flags:
+</p><ul><li>SS_RENDERER_VSYNC</li></ul></div>
+<div class='item'><a name='SS-POSMODE-constants'></a><hr><h2>SS_POSMODE_* [constants]</h2><p>
+Values used for <a href="#SS-Window-setBufferScale-method">SS_Window.setBufferScale</a>.
+</p><ul><li>SS_POSMODE_STRETCH
+</li><li>SS_POSMODE_CROP
+</li><li>SS_POSMODE_FIT
+</li><li>SS_POSMODE_FITRND
+</li><li>SS_POSMODE_CENTER</li></ul></div>
+<div class='item'><a name='SS-GetPlatformInfo-function'></a><hr><h2>SS_GetPlatformInfo [function]</h2><h3>dict SS_GetPlatformInfo()</h3><h4>returns platform hardware information (CPU capabilities, RAM size)</h4><ul><li>the returned value contains:
+<ul><li>string name - name (OS type) of the platform, for all types see <a href="http://wiki.libsdl.org/SDL_GetPlatform" target="_blank">http://wiki.libsdl.org/SDL_GetPlatform</a>
+</li><li>int cpu_cache_line_size - size of L1 CPU cache line in KB
+</li><li>int cpu_count - total number of logical CPU cores
+</li><li>int ram_size - amount of RAM configured in the system in MB
+</li><li>bool has_3dnow - whether CPU supports 3DNow! instructions
+</li><li>bool has_altivec - whether CPU supports AltiVec instructions
+</li><li>bool has_mmx - whether CPU supports MMX instructions
+</li><li>bool has_rdtsc - whether CPU supports the RDTSC (high-performance timer) instruction
+</li><li>bool has_sse - whether CPU supports SSE instructions
+</li><li>bool has_sse2 - whether CPU supports SSE2 instructions
+</li><li>bool has_sse3 - whether CPU supports SSE3 instructions
+</li><li>bool has_sse41 - whether CPU supports SSE4.1 instructions
+</li><li>bool has_sse42 - whether CPU supports SSE4.2 instructions</li></ul></li></ul></div>
+<div class='item'><a name='SS-GetPowerInfo-function'></a><hr><h2>SS_GetPowerInfo [function]</h2><h3>dict SS_GetPowerInfo()</h3><h4>returns power state, seconds of battery life left and battery percentage</h4><ul><li>the returned value contains:
+<ul><li>int state - one of <a href="#SDL-POWERSTATE-constants">SDL_POWERSTATE_*</a>
+</li><li>int secs - seconds of battery life left or -1 if cannot determine
+</li><li>int pct - percentage of battery life left or -1 if cannot determine</li></ul></li></ul><p>
+For more info, see <a href="http://wiki.libsdl.org/SDL_GetPowerInfo" target="_blank">http://wiki.libsdl.org/SDL_GetPowerInfo</a>.
+</p></div>
+<div class='item'><a name='SS-Sleep-function'></a><hr><h2>SS_Sleep [function]</h2><h3>void SS_Sleep( int ms )</h3><h4>stops execution of the application for at least the specified number of milliseconds</h4></div>
+<div class='item'><a name='SS-EnableScreenSaver-function'></a><hr><h2>SS_EnableScreenSaver [function]</h2><h3>void SS_EnableScreenSaver()</h3><h4>enables the screen saver (allows it to be triggered) while the application is running</h4><p>
+For the opposite action, see <a href="#SS-DisableScreenSaver-function">SS_DisableScreenSaver</a>.
+</p></div>
+<div class='item'><a name='SS-DisableScreenSaver-function'></a><hr><h2>SS_DisableScreenSaver [function]</h2><h3>void SS_DisableScreenSaver()</h3><h4>disables the screen saver (prevents it from being triggered) for the duration of this application</h4><p>
+For the opposite action, see <a href="#SS-EnableScreenSaver-function">SS_EnableScreenSaver</a>.
+</p></div>
+<div class='item'><a name='SS-IsScreenSaverEnabled-function'></a><hr><h2>SS_IsScreenSaverEnabled [function]</h2><h3>bool SS_IsScreenSaverEnabled()</h3><h4>returns if the screen saver is enabled (will be triggered after some time of inactivity)</h4></div>
 <div class='item'><a name='C-API'></a><hr><h2>C API</h2><p>
 TODO
 </p></div>

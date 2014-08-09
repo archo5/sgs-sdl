@@ -76,7 +76,7 @@ void ss_DeleteImage( SS_Image* img, SGS_CTX );
 
 /* SGScript - SDL */
 int ss_InitSDL( SGS_CTX );
-int ss_CreateSDLEvent( SGS_CTX, SDL_Event* event );
+void ss_CreateSDLEvent( SGS_CTX, SDL_Event* event );
 void ss_FreeGraphics( SGS_CTX );
 
 
@@ -96,7 +96,6 @@ void SS_Mat4Multiply( float src1[4][4], float src2[4][4], float dest[4][4] );
 #define SS_RENDERER_DIRECT3D9 2
 
 #define SS_RENDERER_VSYNC 0x00000001
-#define SS_RENDERER_DEBUG 0x00000002
 
 #define SS_RMOD_WIDTH  1
 #define SS_RMOD_HEIGHT 2
@@ -231,7 +230,7 @@ SS_BasicVertex;
 typedef void (*ss_ri_init) ();
 typedef void (*ss_ri_free) ();
 typedef int (*ss_ri_available) ();
-typedef SS_Renderer* (*ss_ri_create) ( SDL_Window*, uint32_t, uint32_t ); /* version, flags */
+typedef SS_Renderer* (*ss_ri_create) ( SDL_Window*, uint32_t ); /* version, flags */
 typedef void (*ss_ri_destroy) ( SS_Renderer* );
 typedef void* (*ss_ri_get_pointer) ( SS_Renderer*, int );
 typedef void (*ss_ri_modify) ( SS_Renderer*, int* );

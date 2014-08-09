@@ -82,7 +82,7 @@ static void ss_ri_d3d9__resetviewport( SS_Renderer* R )
 static void ss_ri_d3d9_init();
 static void ss_ri_d3d9_free();
 static int ss_ri_d3d9_available();
-static SS_Renderer* ss_ri_d3d9_create( SDL_Window* window, uint32_t version, uint32_t flags );
+static SS_Renderer* ss_ri_d3d9_create( SDL_Window* window, uint32_t flags );
 static void ss_ri_d3d9_destroy( SS_Renderer* R );
 static void* ss_ri_d3d9_get_pointer( SS_Renderer* R, int which );
 static void ss_ri_d3d9_modify( SS_Renderer* R, int* modlist );
@@ -252,7 +252,7 @@ static int ss_ri_d3d9_available()
 	return !!GD3D;
 }
 
-static SS_Renderer* ss_ri_d3d9_create( SDL_Window* window, uint32_t version, uint32_t flags )
+static SS_Renderer* ss_ri_d3d9_create( SDL_Window* window, uint32_t flags )
 {
 	int w, h, suc;
 	SDL_SysWMinfo sysinfo;
