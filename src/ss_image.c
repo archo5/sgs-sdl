@@ -7,10 +7,12 @@
 
 #include "../ext/src/libjpg/jpeglib.h"
 #include "../ext/src/libpng/png.h"
+#include "dds.c"
 
 
 #define FN( f ) { "SS_" #f, SS_##f }
 #define FNP( f ) { #f, f }
+#define FNP2( f, f2 ) { #f, f2 }
 #define IC( i ) { #i, i }
 #define _WARN( err ) { sgs_Msg( C, SGS_WARNING, err ); return 0; }
 
@@ -404,50 +406,136 @@ static int ss_load_image_png( SGS_CTX )
 	}
 }
 
-/*
-static int ss_load_image_( SGS_CTX, int type1, int type2 )
+
+//
+// JPG SUPPORT
+
+typedef struct _jpg_error_mgr
 {
-	char *str;
+	struct jpeg_error_mgr pub;
+	jmp_buf setjmp_buffer;
+}
+jpg_error_mgr;
+
+static void _jpg_error_exit( j_common_ptr cinfo )
+{
+	jpg_error_mgr* myerr = (jpg_error_mgr*) cinfo->err;
+	(*cinfo->err->output_message) (cinfo);
+	longjmp(myerr->setjmp_buffer, 1);
+}
+
+static int ss_load_image_jpg( SGS_CTX )
+{
+	uint8_t *str;
+	char* imgname;
 	sgs_SizeVal size;
-	
-	if( sgs_StackSize( C ) != 1 || !sgs_ParseString( C, 0, &str, &size ) )
-		_WARN( "unexpected arguments; function expects 1 argument: string" )
-	
+	SGSFN( "ss_load_image_jpg" );
+	if( !sgs_LoadArgs( C, "ms", &str, &size, &imgname ) )
+		return 0;
+	else
 	{
-		int ret;
-		FIBITMAP* dib;
-		BITMAPINFOHEADER* bih;
-		int16_t w, h;
+		struct jpeg_decompress_struct cinfo;
+		jpg_error_mgr jerr;
 		
-		dib = FreeImage_Load( type1, str, type2 );
-		if( !dib )
-			_WARN( "failed to load image" )
+		JSAMPARRAY buffer;
+		int x, row_stride;
 		
-		bih = FreeImage_GetInfoHeader( dib );
-		if( !bih || !FreeImage_FlipVertical( dib ) )
-			_WARN( "failed to prepare image" )
-		
-		w = bih->biWidth, h = bih->biHeight;
-		if( bih->biBitCount != 32 )
+		cinfo.err = jpeg_std_error( &jerr.pub );
+		jerr.pub.error_exit = _jpg_error_exit;
+		if( setjmp( jerr.setjmp_buffer ) )
 		{
-			FIBITMAP* odib = dib;
-			dib = FreeImage_ConvertTo32Bits( odib );
-			FreeImage_Unload( odib );
-			if( !dib )
-				_WARN( "failed to prepare image" )
+			jpeg_destroy_decompress( &cinfo );
+			return sgs_Msg( C, SGS_WARNING, "failed to read JPG image - %s", imgname );
 		}
 		
-		ret = ss_CreateImageHelper( C, w, h, FreeImage_GetBits( dib ) );
+		jpeg_create_decompress( &cinfo );
+		jpeg_mem_src( &cinfo, str, size );
+		jpeg_read_header( &cinfo, 1 );
+		jpeg_start_decompress( &cinfo );
 		
-		FreeImage_Unload( dib );
-		return ret;
+		ss_CreateImageHelper( C, cinfo.output_width, cinfo.output_height, NULL );
+		uint8_t* imgdata = ss_image_data( C );
+		
+		row_stride = cinfo.output_width * cinfo.output_components;
+		buffer = (*cinfo.mem->alloc_sarray)( (j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1 );
+		
+		while( cinfo.output_scanline < cinfo.output_height )
+		{
+			jpeg_read_scanlines( &cinfo, buffer, 1 );
+			for( x = 0; x < cinfo.output_width; ++x )
+			{
+				imgdata[ x * 4   ] = buffer[0][ x * 3+2 ];
+				imgdata[ x * 4+1 ] = buffer[0][ x * 3+1 ];
+				imgdata[ x * 4+2 ] = buffer[0][ x * 3   ];
+				imgdata[ x * 4+3 ] = 0xff;
+			}
+			imgdata += cinfo.output_width * 4;
+		}
+		
+		jpeg_finish_decompress( &cinfo );
+		jpeg_destroy_decompress( &cinfo );
+		
+		return 1;
 	}
 }
-static int ss_load_image_png( SGS_CTX ){ SGSFN( "ss_load_image_png" ); return ss_load_image_( C, FIF_PNG, PNG_DEFAULT ); }
-static int ss_load_image_jpg( SGS_CTX ){ SGSFN( "ss_load_image_jpg" ); return ss_load_image_( C, FIF_JPEG, PNG_DEFAULT ); }
-static int ss_load_image_jpeg( SGS_CTX ){ SGSFN( "ss_load_image_jpeg" ); return ss_load_image_( C, FIF_JPEG, PNG_DEFAULT ); }
-static int ss_load_image_dds( SGS_CTX ){ SGSFN( "ss_load_image_dds" ); return ss_load_image_( C, FIF_DDS, DDS_DEFAULT ); }
-*/
+
+
+//
+// DDS SUPPORT
+
+static int ss_load_image_dds( SGS_CTX )
+{
+	uint8_t *str;
+	char* imgname;
+	sgs_SizeVal size;
+	SGSFN( "ss_load_image_dds" );
+	if( !sgs_LoadArgs( C, "ms", &str, &size, &imgname ) )
+		return 0;
+	else
+	{
+		static const dds_u32 supfmts[] = { DDS_FMT_R8G8B8A8, DDS_FMT_B8G8R8A8, DDS_FMT_B8G8R8X8, 0 };
+		dds_u32 i;
+		dds_info info;
+		dds_image_info imginfo;
+		
+		int ret = dds_load_from_memory( (dds_byte*) str, size, &info, supfmts );
+		if( ret != DDS_SUCCESS )
+		{
+			return sgs_Msg( C, SGS_WARNING, "failed to read DDS image%s - %s", ret == DDS_ENOTSUP ? " (format is not supported)" : "", imgname );
+		}
+		
+		if( dds_seek( &info, 0, 0 ) != DDS_SUCCESS )
+		{
+			dds_close( &info );
+			return sgs_Msg( C, SGS_WARNING, "could not find image data in DDS image - %s", imgname );
+		}
+		
+		dds_getinfo( &info, &imginfo );
+		
+		ss_CreateImageHelper( C, imginfo.width, imginfo.height, NULL );
+		uint8_t* imgdata = ss_image_data( C );
+		
+		dds_read( &info, imgdata );
+		if( imginfo.format == DDS_FMT_B8G8R8X8 )
+		{
+			for( i = 0; i < imginfo.width * imginfo.height; ++i )
+				imgdata[ i * 4 + 3 ] = 0xff;
+		}
+		else if( imginfo.format == DDS_FMT_R8G8B8A8 )
+		{
+			for( i = 0; i < imginfo.width * imginfo.height; ++i )
+			{
+				uint8_t tmp = imgdata[ i * 4 ];
+				imgdata[ i * 4 ] = imgdata[ i * 4 + 2 ];
+				imgdata[ i * 4 + 2 ] = tmp;
+			}
+		}
+		
+		dds_close( &info );
+		
+		return 1;
+	}
+}
 
 
 static sgs_RegIntConst img_ints[] =
@@ -460,9 +548,9 @@ static sgs_RegFuncConst img_funcs[] =
 	FN( LoadImage ),
 	
 	FNP( ss_load_image_png ),
-//	FNP( ss_load_image_jpg ),
-//	FNP( ss_load_image_jpeg ),
-//	FNP( ss_load_image_dds ),
+	FNP( ss_load_image_jpg ),
+	FNP2( ss_load_image_jpeg, ss_load_image_jpg ),
+	FNP( ss_load_image_dds ),
 };
 
 int ss_InitImage( SGS_CTX )

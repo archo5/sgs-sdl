@@ -106,7 +106,7 @@ function initialize()
 	) );
 	global MIT = SS_CreateTexture( MI, "nolerp" );
 
-	global TM = Tilemap.create( SS_CreateTexture( "images/ntset.png", "nolerp" ), 32, 32 );
+	global TM = Tilemap.create( SS_CreateTexture( "images/ntset.jpg", "nolerp" ), 32, 32 );
 	floor = _G.floor;
 	randf = _G.randf;
 	for( y = 0; y < 64; ++y )
