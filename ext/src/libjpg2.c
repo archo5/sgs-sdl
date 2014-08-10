@@ -1,0 +1,11 @@
+
+#include "libjpg/jcmarker.c"
+#include "libjpg/jccoefct.c"
+#include "libjpg/jchuff.c"
+#include "libjpg/jdarith.c"
+#include "libjpg/jdmaster.c"
+#include "libjpg/jdinput.c"
+#include "libjpg/jdmainct.c"
+#include "libjpg/jdcolor.c"
+#include "libjpg/jquant2.c"
+#include "libjpg/jmemnobs.c"

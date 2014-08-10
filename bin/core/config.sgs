@@ -1,4 +1,9 @@
 
+// ss_load_file
+// IN: string path
+// OUT: string data | null + warning
+global ss_load_file = io_file_read;
+
 global ss_font_search_paths = function()
 {
 	paths = ["."];

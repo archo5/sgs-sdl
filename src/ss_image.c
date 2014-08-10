@@ -5,7 +5,8 @@
 
 #include "ss_main.h"
 
-#include "../freeimage/FreeImage.h"
+#include "../ext/src/libjpg/jpeglib.h"
+#include "../ext/src/libpng/png.h"
 
 
 #define FN( f ) { "SS_" #f, SS_##f }
@@ -63,7 +64,7 @@ static int ss_image_resize( SGS_CTX )
 		ch = h < ii->height ? h : ii->height;
 		for( y = 0; y < ch; ++y )
 		{
-			memcpy( nbuf + y * w, ii->data + y * ii->width, sizeof(uint32_t) * cw );
+			memcpy( nbuf + y * w, ((char*)ii->data) + y * ii->width, sizeof(uint32_t) * cw );
 			for( x = cw; x < w; ++x )
 				nbuf[ y * w + x ] = 0;
 		}
@@ -209,9 +210,17 @@ static int SS_CreateImage( SGS_CTX )
 }
 
 
+static uint8_t* ss_image_data( SGS_CTX )
+{
+	SS_Image* ii = (SS_Image*) sgs_GetObjectData( C, -1 );
+	return (uint8_t*) ii->data;
+}
+
+
 int ss_LoadImageHelper( SGS_CTX, char* str, int size )
 {
 	char *ptr, *pp, buf[ 64 ];
+	sgs_StkIdx ssz;
 	ptr = str + size;
 	while( str <-- ptr )
 	{
@@ -230,13 +239,39 @@ int ss_LoadImageHelper( SGS_CTX, char* str, int size )
 		*pp = tolower( *pp );
 		pp++;
 	}
+	ssz = sgs_StackSize( C );
 	sgs_PushStringBuf( C, str, size );
-	if( sgs_PushGlobal( C, buf ) != SGS_SUCCESS )
-		return sgs_Msg( C, SGS_WARNING, "unsupported format: '%.4s'", ptr + 1 );
-	if( sgs_Call( C, 1, 1 ) != SGS_SUCCESS ) /* function is expected to provide detailed info on failure */
-		_WARN( "failed to load image file" )
+	sgs_PushItem( C, -1 );
+	if( SGS_FAILED( sgs_GlobalCall( C, "ss_load_file", 1, 1 ) ) )
+	{
+		sgs_Msg( C, SGS_WARNING, "failed to call file loader" );
+		goto fail;
+	}
+	if( sgs_ItemType( C, -1 ) != SGS_VT_STRING )
+	{
+		/* error was already sent by ss_load_file */
+		goto fail;
+	}
 	
+	sgs_PushItem( C, -2 );
+	int ret = sgs_GlobalCall( C, buf, 2, 1 );
+	if( ret == SGS_ENOTFND )
+	{
+		sgs_Msg( C, SGS_WARNING, "unsupported format: '%.4s'", ptr + 1 );
+		goto fail;
+	}
+	if( SGS_FAILED( ret ) || !sgs_IsObject( C, -1, image_iface ) )
+	{
+		/* error was already sent by ss_load_image_**** */
+		goto fail;
+	}
+	
+	sgs_PopSkip( C, sgs_StackSize( C ) - ssz - 1, 1 );
 	return 1;
+	
+fail:
+	sgs_SetStackSize( C, ssz );
+	return 0;
 }
 
 static int SS_LoadImage( SGS_CTX )
@@ -255,18 +290,121 @@ static int SS_LoadImage( SGS_CTX )
 
 int ss_CreateImageHelper( SGS_CTX, int16_t w, int16_t h, const void* bits )
 {
-	int ret;
-	
 	if( w < 1 || w > 4096 || h < 1 || h > 4096 )
 		_WARN( "invalid image size; must be between 1 and 4096 in each dimension" )
 	
-	ret = _make_image( C, w, h, bits );
-	if( ret != SGS_SUCCESS )
-		_WARN( "failed to upload image" )
-	
+	_make_image( C, w, h, bits );
 	return 1;
 }
 
+
+//
+// PNG SUPPORT
+
+static void* _ss_png_alloc( png_structp png_ptr, png_size_t size )
+{
+	SGS_CTX = (sgs_Context*) png_get_mem_ptr( png_ptr );
+	return sgs_Alloc_n( uint8_t, size );
+}
+static void _ss_png_free( png_structp png_ptr, png_voidp ptr )
+{
+	SGS_CTX = (sgs_Context*) png_get_mem_ptr( png_ptr );
+	sgs_Dealloc( ptr );
+}
+
+typedef struct _png_read_data
+{
+	uint8_t *data, *at;
+	size_t size;
+}
+png_read_data;
+
+static void _png_memread( png_structp png_ptr, png_bytep data, png_size_t size )
+{
+	png_read_data* pd = (png_read_data*) png_get_io_ptr( png_ptr );
+	sgs_BreakIf( pd->at + size > pd->data + pd->size );
+	memcpy( data, pd->at, size );
+	pd->at += size;
+}
+
+/*
+static void _png_memwrite( png_structp png_ptr, png_bytep data, png_size_t size )
+{
+	FByteWriter* bw = (FByteWriter*) png_get_io_ptr( png_ptr );
+	bw->Serialize( data, size, 1 );
+}
+*/
+
+static int ss_load_image_png( SGS_CTX )
+{
+	uint8_t *str;
+	char* imgname;
+	sgs_SizeVal size;
+	SGSFN( "ss_load_image_png" );
+	if( !sgs_LoadArgs( C, "ms", &str, &size, &imgname ) )
+		return 0;
+	else
+	{
+		png_structp png_ptr = png_create_read_struct_2( PNG_LIBPNG_VER_STRING, NULL, NULL, NULL, C, &_ss_png_alloc, &_ss_png_free );
+		
+		if( !png_ptr )
+			_WARN( "failed to initialize PNG" );
+		
+		if( setjmp( png_jmpbuf( png_ptr ) ) )
+		{
+			png_destroy_read_struct( &png_ptr, NULL, NULL );
+			return sgs_Msg( C, SGS_WARNING, "failed to read PNG image - %s", imgname );
+		}
+		
+		png_infop info_ptr = png_create_info_struct( png_ptr );
+		
+		if( !info_ptr )
+		{
+			png_destroy_read_struct( &png_ptr, NULL, NULL );
+			_WARN( "failed to set up PNG reading" );
+		}
+		
+		// Load..
+		png_read_data prd = { str, str, size };
+		png_set_read_fn( png_ptr, &prd, (png_rw_ptr) &_png_memread );
+		png_set_user_limits( png_ptr, 4096, 4096 );
+		
+		png_read_info( png_ptr, info_ptr );
+		png_set_strip_16( png_ptr );
+		png_set_packing( png_ptr );
+		png_set_gray_to_rgb( png_ptr );
+		png_set_bgr( png_ptr );
+		png_set_add_alpha( png_ptr, 0xffffffff, PNG_FILLER_AFTER );
+		
+		// send info..
+		uint32_t width = png_get_image_width( png_ptr, info_ptr );
+		uint32_t height = png_get_image_height( png_ptr, info_ptr );
+		
+		ss_CreateImageHelper( C, width, height, NULL );
+		uint8_t* imgdata = ss_image_data( C );
+		
+		uint16_t offsets[ 4096 ] = {0};
+		int pass, number_passes = png_set_interlace_handling(png_ptr);
+		for( pass = 0; pass < number_passes; ++pass )
+		{
+			uint32_t y;
+			for( y = 0; y < height; ++y )
+			{
+				png_bytep rowp = (png_bytep) imgdata + y * width * 4;
+				png_bytep crp = rowp + offsets[ y ];
+				png_read_rows(png_ptr, &crp, NULL, 1);
+				offsets[ y ] = crp - rowp;
+			}
+		}
+		
+		png_read_end( png_ptr, info_ptr );
+		
+		png_destroy_read_struct( &png_ptr, &info_ptr, NULL );
+		return 1;
+	}
+}
+
+/*
 static int ss_load_image_( SGS_CTX, int type1, int type2 )
 {
 	char *str;
@@ -309,6 +447,7 @@ static int ss_load_image_png( SGS_CTX ){ SGSFN( "ss_load_image_png" ); return ss
 static int ss_load_image_jpg( SGS_CTX ){ SGSFN( "ss_load_image_jpg" ); return ss_load_image_( C, FIF_JPEG, PNG_DEFAULT ); }
 static int ss_load_image_jpeg( SGS_CTX ){ SGSFN( "ss_load_image_jpeg" ); return ss_load_image_( C, FIF_JPEG, PNG_DEFAULT ); }
 static int ss_load_image_dds( SGS_CTX ){ SGSFN( "ss_load_image_dds" ); return ss_load_image_( C, FIF_DDS, DDS_DEFAULT ); }
+*/
 
 
 static sgs_RegIntConst img_ints[] =
@@ -321,9 +460,9 @@ static sgs_RegFuncConst img_funcs[] =
 	FN( LoadImage ),
 	
 	FNP( ss_load_image_png ),
-	FNP( ss_load_image_jpg ),
-	FNP( ss_load_image_jpeg ),
-	FNP( ss_load_image_dds ),
+//	FNP( ss_load_image_jpg ),
+//	FNP( ss_load_image_jpeg ),
+//	FNP( ss_load_image_dds ),
 };
 
 int ss_InitImage( SGS_CTX )

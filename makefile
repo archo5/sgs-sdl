@@ -1,3 +1,248 @@
+# SGS-SDL makefile
+
+
+# MAKE
+comma := ,
+space :=
+space +=
+
+
+# BASIC VARIABLES
+ifeq ($(CC),cc) # no such compiler on Windows
+	CC=
+endif
+ifeq ($(CC),)
+	CC=gcc
+endif
+ifeq ($(CXX),)
+	CXX=g++
+endif
+ifeq ($(OUTDIR),)
+	OUTDIR=bin
+endif
+
+
+# UTILITIES
+cOS=os_unknown
+cARCH=arch_unknown
+cCOMPILER=compiler_unknown
+ifeq ($(OS),Windows_NT)
+	fnREMOVE_ALL = del /F /S /Q
+	fnCOPY_FILE = copy
+	fnFIX_PATH = $(subst /,\,$1)
+	cOS=windows
+	ifeq ($(PROCESSOR_ARCHITECTURE),x86)
+		cARCH=x86
+	endif
+	ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
+		cARCH=x64
+	endif
+else
+	fnREMOVE_ALL = rm -rf
+	fnCOPY_FILE = cp
+	fnFIX_PATH = $1
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S),Linux)
+		cOS=linux
+	endif
+	ifeq ($(UNAME_S),Darwin)
+		cOS=osx
+	endif
+	UNAME_P := $(shell uname -p)
+	ifneq ($(filter %86,$(UNAME_P)),)
+		cARCH=x86
+	endif
+	ifeq ($(UNAME_P),x86_64)
+		cARCH=x64
+	endif
+	ifneq ($(filter arm%,$(UNAME_P)),)
+		cARCH=arm
+	endif
+endif
+CC_V := $(shell $(CC) -v 2>&1)
+ifneq ($(findstring clang,$(CC_V)),)
+	cCOMPILER=clang
+endif
+ifneq ($(findstring gcc,$(CC_V)),)
+	cCOMPILER=gcc
+endif
+cOS_ARCH=$(cOS)-$(cARCH)
+
+
+ifeq ($(target),)
+	target=$(cOS_ARCH)
+endif
+target_os=$(word 1,$(subst -, ,$(target)))
+target_arch=$(word 2,$(subst -, ,$(target)))
+ifeq ($(target_os),)
+$(error Target OS not specified (windows/linux/osx))
+endif
+ifeq ($(target_arch),)
+$(error Target CPU type not specified (x86/x64/arm/..))
+endif
+cIF_RELEASE=$(findstring release,$(mode))
+fnIF_RELEASE=$(if $(cIF_RELEASE),$1,$2)
+fnIF_OS=$(if $(findstring $1,$(target_os)),$2,$3)
+fnIF_ARCH=$(if $(findstring $1,$(target_arch)),$2,$3)
+fnIF_OS_ARCH=$(if $(findstring $1,$(target)),$2,$3)
+fnIF_COMPILER=$(if $(findstring $1,$(cCOMPILER)),$2,$3)
+
+
+# PLATFORM SPECIFICS
+ifeq ($(target_os),windows)
+	BINEXT=.exe
+	LIBPFX=
+	LIBEXT=.dll
+else
+	BINEXT=
+	LIBPFX=lib
+	LIBEXT=.so
+endif
+
+
+# SGS-SDL FLAGS
+SS_OUTFILE=$(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT)
+SS_OUTFLAGS=-L$(OUTDIR) -lsgs-sdl
+CFLAGS=-Wall -Wshadow -Wpointer-arith -Wcast-align \
+	$(call fnIF_RELEASE,-O3,-D_DEBUG -g) $(call fnIF_COMPILER gcc,-static-libgcc,) \
+	$(call fnIF_ARCH,x86,-m32,$(call fnIF_ARCH,x64,-m64,)) -Isrc \
+	$(call fnIF_OS,windows,,-fPIC -D_FILE_OFFSET_BITS=64) \
+	$(call fnIF_OS,android,-DSGS_PF_ANDROID,)
+SS_CFLAGS=$(CFLAGS) -Isgscript/src -Isgscript/ext -Iext/include -Wno-comment
+BINFLAGS=$(CFLAGS) $(OUTFLAGS) -lm \
+	$(call fnIF_OS,android,-ldl -Wl$(comma)-rpath$(comma)'$$ORIGIN' -Wl$(comma)-z$(comma)origin,) \
+	$(call fnIF_OS,windows,-lkernel32,) \
+	$(call fnIF_OS,osx,-ldl -Wl$(comma)-rpath$(comma)'@executable_path/.',) \
+	$(call fnIF_OS,linux,-ldl -lrt -Wl$(comma)-rpath$(comma)'$$ORIGIN' -Wl$(comma)-z$(comma)origin,)
+MODULEFLAGS=$(BINFLAGS) -shared
+EXEFLAGS=$(BINFLAGS)
+
+_DEPS = ss_main.h ss_cfg.h
+_OBJ = ss_main.o ss_script.o ss_sdl.o ss_render.o ss_image.o ss_render_gl.o
+
+DEPS = $(patsubst %,src/%,$(_DEPS))
+OBJ = $(patsubst %,obj/%,$(_OBJ))
+
+ifeq ($(target_os),windows)
+	SS_PF_DEPS = obj/libjpg.a obj/libpng.a obj/zlib.a
+	PF_LINK = -Lext/lib-win32 -Lfreeimage -Lfreetype -lOpenGL32 -lfreetype obj/libjpg.a obj/libpng.a obj/zlib.a
+	PF_POST = $(fnCOPY_FILE) $(call fnFIX_PATH,ext/bin-win32/SDL2.dll bin) & \
+	           $(fnCOPY_FILE) $(call fnFIX_PATH,ext/bin-win32/libfreetype-6.dll bin) & \
+	           $(fnCOPY_FILE) $(call fnFIX_PATH,sgscript/bin/sgscript.dll bin) & \
+	           $(fnCOPY_FILE) $(call fnFIX_PATH,sgscript/bin/sgsxgmath.dll bin)
+else
+	SS_PF_DEPS = $(OUTDIR)/$(LIBPFX)jpg$(LIBEXT) $(OUTDIR)/$(LIBPFX)png$(LIBEXT) $(OUTDIR)/$(LIBPFX)zlib$(LIBEXT)
+	PF_LINK = $(OUTDIR)/$(LIBPFX)jpg$(LIBEXT) $(OUTDIR)/$(LIBPFX)png$(LIBEXT) $(OUTDIR)/$(LIBPFX)zlib$(LIBEXT)
+endif
+
+SGS_SDL_FLAGS = $(SS_CFLAGS) $(MODULEFLAGS) $(PF_LINK) -Lsgscript/bin -lSDL2main -lSDL2 -lsgscript -lsgsxgmath $(PF_DEPS)
+SGS_SDL_LAUNCHER_FLAGS = $(SS_CFLAGS) $(BINFLAGS) -L$(OUTDIR) -lsgs-sdl
+
+
+# BUILD INFO
+ifneq ($(MAKECMDGOALS),clean)
+ifneq ($(MAKECMDGOALS),clean_obj)
+ifneq ($(MAKECMDGOALS),clean_objbin)
+$(info -------------------)
+$(info SGS-SDL build info )
+$(info -------------------)
+$(info OS - $(cOS))
+$(info ARCH - $(cARCH))
+$(info COMPILER - $(cCOMPILER))
+$(info TARGET - $(target_os)/$(target_arch))
+$(info MODE - $(call fnIF_RELEASE,release,debug))
+$(info OUT.LIB. - $(OUTFILE))
+$(info TODO - $(MAKECMDGOALS))
+$(info -------------------)
+endif
+endif
+endif
+
+
+# TARGETS
+## the library (default target)
+.PHONY: launchers, make, ss3d, sgs-sdl
+
+launchers: $(OUTDIR)/sgs-sdl-release$(BINEXT) $(OUTDIR)/sgs-sdl-debug$(BINEXT)
+sgs-sdl: $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT)
+ss3d: $(OUTDIR)/$(LIBPFX)ss3d$(LIBEXT)
+
+$(OUTDIR)/sgs-sdl-release$(BINEXT): $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) src/ss_launcher.c
+	$(LINUXHACKPRE)
+	gcc -o $@ src/ss_launcher.c $(call fnIF_OS,windows,-mwindows,) $(SGS_SDL_LAUNCHER_FLAGS) -DSS_RELEASE -s
+	$(LINUXHACKPOST)
+$(OUTDIR)/sgs-sdl-debug$(BINEXT): $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) src/ss_launcher.c
+	$(LINUXHACKPRE)
+	gcc -o $@ src/ss_launcher.c $(SGS_SDL_LAUNCHER_FLAGS) -s
+	$(LINUXHACKPOST)
+
+$(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT): $(OBJ) $(SS_PF_DEPS)
+	$(MAKE) -C sgscript xgmath
+	$(LINUXHACKPRE)
+	gcc -o $@ $(OBJ) $(SGS_SDL_FLAGS)
+	$(LINUXHACKPOST)
+	$(PF_POST)
+
+obj/ss_%.o: src/ss_%.c $(DEPS)
+	$(CC) -c -o $@ $< $(SS_CFLAGS)
+
+
+
+# INPUT LIBRARIES
+.PHONY: libjpg zlib libpng sgs-sdl-deps
+sgs-sdl-deps: libjpg libpng zlib
+ifeq ($(target_os),windows)
+libjpg: obj/libjpg.a
+obj/libjpg.a:
+	gcc -o obj/libjpg1.o -c $(CFLAGS) ext/src/libjpg1.c
+	gcc -o obj/libjpg2.o -c $(CFLAGS) ext/src/libjpg2.c
+	gcc -o obj/libjpg3.o -c $(CFLAGS) ext/src/libjpg3.c
+	ar -rcs obj/libjpg.a obj/libjpg1.o obj/libjpg2.o obj/libjpg3.o
+zlib: obj/zlib.a
+obj/zlib.a:
+	gcc -o obj/zlib1.o -c $(CFLAGS) ext/src/zlib1.c
+	gcc -o obj/zlib2.o -c $(CFLAGS) ext/src/zlib2.c
+	gcc -o obj/zlib3.o -c $(CFLAGS) ext/src/zlib3.c
+	ar -rcs obj/zlib.a obj/zlib1.o obj/zlib2.o obj/zlib3.o
+libpng: obj/libpng.a
+obj/libpng.a:
+	gcc -o obj/libpng1.o -c $(CFLAGS) ext/src/libpng1.c -Iext/src/zlib
+	ar -rcs obj/libpng.a obj/libpng1.o
+else
+libjpg: $(OUTDIR)/$(LIBPFX)jpg$(LIBEXT)
+$(OUTDIR)/$(LIBPFX)jpg$(LIBEXT):
+	gcc -o $@ $(CFLAGS) -shared ext/src/libjpg1.c ext/src/libjpg2.c ext/src/libjpg3.c
+zlib: $(OUTDIR)/$(LIBPFX)zlib$(LIBEXT)
+$(OUTDIR)/$(LIBPFX)zlib$(LIBEXT):
+	gcc -o $@ $(CFLAGS) -shared ext/src/zlib1.c ext/src/zlib2.c ext/src/zlib3.c
+libpng: $(OUTDIR)/$(LIBPFX)png$(LIBEXT)
+$(OUTDIR)/$(LIBPFX)png$(LIBEXT): $(OUTDIR)/$(LIBPFX)zlib$(LIBEXT)
+	gcc -o $@ $(CFLAGS) -shared ext/src/libpng1.c -Iext/src/zlib $^
+endif
+
+# UTILITY TARGETS
+.PHONY: clean clean_all
+clean:
+	$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/*.o bin/sgs*)
+clean_all: clean
+	$(MAKE) -C sgscript clean
+
+
+
+#
+#
+#
+#
+# DISABLES THE REST OF THE FILE
+ifeq (0,1)
+#
+#
+#
+#
+
+
+
+
 
 CC=gcc
 
@@ -222,4 +467,7 @@ clean_all: clean
 
 endif
 
+
+
+endif
 

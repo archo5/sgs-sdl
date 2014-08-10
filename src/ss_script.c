@@ -21,11 +21,11 @@ uint32_t ss_GetFlagString( SGS_CTX, int pos, flag_string_item_t* items )
 	
 	while( items->name )
 	{
-		char* pos = strstr( str, items->name );
-		if( pos )
+		char* p = strstr( str, items->name );
+		if( p )
 		{
 			int len = strlen( items->name );
-			if( pos[ len ] == ',' || pos[ len ] == 0 )
+			if( p[ len ] == ',' || p[ len ] == 0 )
 				flags |= items->value;
 		}
 		items++;

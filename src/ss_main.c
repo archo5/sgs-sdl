@@ -17,12 +17,12 @@ static sgs_MemBuf g_tmpbuf;
 
 
 
-static SGS_CTX;
+static sgs_Context* g_C;
 static sgs_IDbg D;
 static sgs_Prof P;
 
 
-sgs_Context* ss_GetContext(){ return C; }
+sgs_Context* ss_GetContext(){ return g_C; }
 
 
 /* #define SS_STARTUP_PROFILING 1 */
@@ -55,12 +55,12 @@ char* ss_GetBufferPtr()
 }
 char* ss_RequestMemory( size_t numbytes )
 {
-	sgs_membuf_resize( &g_tmpbuf, C, g_tmpbuf.size + numbytes );
+	sgs_membuf_resize( &g_tmpbuf, g_C, g_tmpbuf.size + numbytes );
 	return g_tmpbuf.ptr + g_tmpbuf.size - numbytes;
 }
 void ss_ResetBuffer()
 {
-	sgs_membuf_resize( &g_tmpbuf, C, 0 );
+	sgs_membuf_resize( &g_tmpbuf, g_C, 0 );
 }
 
 
@@ -78,6 +78,7 @@ static void ss_MsgFunc( void* unused, SGS_CTX, int type, const char* message )
 int ss_Initialize( int argc, char* argv[], int debug )
 {
 	int ret;
+	SGS_CTX;
 	
 	GEnabledDebugging = debug;
 	
@@ -85,7 +86,7 @@ int ss_Initialize( int argc, char* argv[], int debug )
 	printf( "ss_Initialize called: %f\n", sgs_GetTime() );
 #endif
 	
-	C = sgs_CreateEngine();
+	C = g_C = sgs_CreateEngine();
 	
 #if SS_STARTUP_PROFILING
 	printf( "SGS engine created: %f\n", sgs_GetTime() );
@@ -254,6 +255,7 @@ int ss_Initialize( int argc, char* argv[], int debug )
 
 int ss_Frame()
 {
+	SGS_CTX = g_C;
 	if( sgs_GlobalInt( C, "sys_exit" ) )
 		return 1;
 	
@@ -300,6 +302,7 @@ int ss_Frame()
 
 int ss_Free()
 {
+	SGS_CTX = g_C;
 	/* clean the application */
 	if( sgs_GlobalCall( C, "cleanup", 0, 0 ) )
 	{
