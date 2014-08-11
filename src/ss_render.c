@@ -714,11 +714,11 @@ static int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 			float* mtx = xdata + i * 16;
 			float posx = pdata[ i * 2 ];
 			float posy = pdata[ i * 2 + 1 ];
-			float angle = 0;
+			float angz = 0;
 			float sclx = 1;
 			float scly = 1;
 			if( angdata.size )
-				angle = adata[ i % angdata.cnt ];
+				angz = adata[ i % angdata.cnt ];
 			if( scaledata.size )
 			{
 				int32_t off = i % scaledata.cnt;
@@ -730,7 +730,7 @@ static int _draw_load_inst( SGS_CTX, floatbuf* xform, floatbuf* icol )
 				- clockwise rotation
 			*/
 			{
-				float ca = cosf( angle ), sa = sinf( angle );
+				float ca = cosf( angz ), sa = sinf( angz );
 				
 				/*
 					cos * sx, -sin * sx, 0, posx

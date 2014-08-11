@@ -66,3 +66,11 @@ None that I could approve of. The extensibility/development speed combo is rathe
 ## Developer info
 
 Developed by Arvīds Kokins, the developer of [SGScript](http://www.sgscript.org/).
+
+These libraries are included in the software:
+
+- [SDL2](https://www.libsdl.org/index.php)
+- [FreeType](http://www.freetype.org/)
+- [libpng](http://www.libpng.org/pub/png/libpng.html)
+- [libjpeg](http://www.ijg.org/)
+- [zlib](http://www.zlib.net/)

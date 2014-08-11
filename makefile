@@ -108,7 +108,7 @@ CFLAGS=-Wall -Wshadow -Wpointer-arith -Wcast-align \
 	$(call fnIF_ARCH,x86,-m32,$(call fnIF_ARCH,x64,-m64,)) -Isrc \
 	$(call fnIF_OS,windows,,-fPIC -D_FILE_OFFSET_BITS=64) \
 	$(call fnIF_OS,android,-DSGS_PF_ANDROID,)
-SS_CFLAGS=$(CFLAGS) -Isgscript/src -Isgscript/ext -Iext/include -Wno-comment
+SS_CFLAGS=$(CFLAGS) -Isgscript/src -Isgscript/ext -Iext/include -Iext/include/freetype -Wno-comment
 BINFLAGS=$(CFLAGS) $(OUTFLAGS) -lm \
 	$(call fnIF_OS,android,-ldl -Wl$(comma)-rpath$(comma)'$$ORIGIN' -Wl$(comma)-z$(comma)origin,) \
 	$(call fnIF_OS,windows,-lkernel32,) \
@@ -124,10 +124,9 @@ DEPS = $(patsubst %,src/%,$(_DEPS))
 OBJ = $(patsubst %,obj/%,$(_OBJ))
 
 ifeq ($(target_os),windows)
-	SS_PF_DEPS = obj/libjpg.a obj/libpng.a obj/zlib.a
-	PF_LINK = -Lext/lib-win32 -Lfreeimage -Lfreetype -lOpenGL32 -lfreetype obj/libjpg.a obj/libpng.a obj/zlib.a
+	SS_PF_DEPS = obj/libjpg.a obj/libpng.a obj/zlib.a obj/freetype.a
+	PF_LINK = -Lext/lib-win32 -lOpenGL32 obj/libjpg.a obj/libpng.a obj/zlib.a obj/freetype.a
 	PF_POST = $(fnCOPY_FILE) $(call fnFIX_PATH,ext/bin-win32/SDL2.dll bin) & \
-	           $(fnCOPY_FILE) $(call fnFIX_PATH,ext/bin-win32/libfreetype-6.dll bin) & \
 	           $(fnCOPY_FILE) $(call fnFIX_PATH,sgscript/bin/sgscript.dll bin) & \
 	           $(fnCOPY_FILE) $(call fnFIX_PATH,sgscript/bin/sgsxgmath.dll bin)
 else
@@ -189,8 +188,8 @@ obj/ss_%.o: src/ss_%.c $(DEPS)
 
 
 # INPUT LIBRARIES
-.PHONY: libjpg zlib libpng sgs-sdl-deps
-sgs-sdl-deps: libjpg libpng zlib
+.PHONY: libjpg zlib libpng freetype sgs-sdl-deps
+sgs-sdl-deps: libjpg libpng zlib freetype
 ifeq ($(target_os),windows)
 libjpg: obj/libjpg.a
 obj/libjpg.a:
@@ -208,6 +207,10 @@ libpng: obj/libpng.a
 obj/libpng.a:
 	gcc -o obj/libpng1.o -c $(CFLAGS) ext/src/libpng1.c -Iext/src/zlib
 	ar -rcs obj/libpng.a obj/libpng1.o
+freetype: obj/freetype.a
+obj/freetype.a:
+	gcc -o obj/freetype1.o -c $(CFLAGS) ext/src/freetype1.c -Iext/include/freetype
+	ar -rcs obj/freetype.a obj/freetype1.o
 else
 libjpg: $(OUTDIR)/$(LIBPFX)jpg$(LIBEXT)
 $(OUTDIR)/$(LIBPFX)jpg$(LIBEXT):
@@ -218,12 +221,15 @@ $(OUTDIR)/$(LIBPFX)zlib$(LIBEXT):
 libpng: $(OUTDIR)/$(LIBPFX)png$(LIBEXT)
 $(OUTDIR)/$(LIBPFX)png$(LIBEXT): $(OUTDIR)/$(LIBPFX)zlib$(LIBEXT)
 	gcc -o $@ $(CFLAGS) -shared ext/src/libpng1.c -Iext/src/zlib $^
+freetype: $(OUTDIR)/$(LIBPFX)freetype$(LIBEXT)
+$(OUTDIR)/$(LIBPFX)freetype$(LIBEXT):
+	gcc -o $@ $(CFLAGS) -shared ext/src/freetype1.c -Iext/include/freetype
 endif
 
 # UTILITY TARGETS
 .PHONY: clean clean_all
 clean:
-	$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/*.o bin/sgs*)
+	$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/*.o obj/*.a bin/sgs*)
 clean_all: clean
 	$(MAKE) -C sgscript clean
 
