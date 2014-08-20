@@ -42,6 +42,7 @@ typedef struct _SS3D_RenderTexture_D3D9
 	IDirect3DTexture9* DT; /* depth (output 2) texture (not used for shadowmaps, such data in CT/CS already) */
 	IDirect3DSurface9* DS; /* depth (output 2) surface (not used for shadowmaps, such data in CT/CS already) */
 	IDirect3DSurface9* DSS; /* depth/stencil surface */
+	int format;
 }
 SS3D_RenderTexture_D3D9;
 
@@ -581,40 +582,15 @@ static void rtd3d9_free( SS3D_RenderTexture_D3D9* RT )
 	SAFE_RELEASE( RT->CS );
 	SAFE_RELEASE( RT->DS );
 	SAFE_RELEASE( RT->DT );
+	SAFE_RELEASE( RT->DSS );
 }
 
-static int rtd3d9_destruct( SGS_CTX, sgs_VarObj* obj )
+static int rtd3d9_alloc( SS3D_RD3D9* R, SS3D_RenderTexture_D3D9* RT )
 {
-	RT_HDR;
-	if( RT->inh.inh.renderer )
-	{
-		SS3D_Renderer_PokeResource( RT->inh.inh.renderer, obj, 0 );
-		RT->inh.inh.renderer = NULL;
-		rtd3d9_free( RT );
-	}
-	return SGS_SUCCESS;
-}
-
-static sgs_ObjInterface SS3D_RenderTexture_D3D9_iface[1] =
-{{
-	"SS3D_RenderTexture_D3D9",
-	rtd3d9_destruct, NULL,
-	NULL, NULL,
-	NULL, NULL, NULL, NULL,
-	NULL, NULL,
-}};
-
-static int rtd3d9_create( SS3D_RD3D9* R, int width, int height, int format )
-{
-	HRESULT hr = 0;
 	D3DFORMAT d3dfmt = 0;
+	HRESULT hr = 0;
+	int width = RT->inh.inh.info.width, height = RT->inh.inh.info.height, format = RT->format;
 	
-	if( width < 1 || width > 4096 || height < 1 || height > 4096 )
-		return sgs_Msg( R->inh.C, SGS_WARNING, "illegal size: %d x %d", width, height );
-	
-	SS3D_RenderTexture_D3D9* RT = (SS3D_RenderTexture_D3D9*)
-		sgs_PushObjectIPA( R->inh.C, sizeof(SS3D_RenderTexture_D3D9), SS3D_RenderTexture_D3D9_iface );
-	memset( RT, 0, sizeof(*RT) );
 	switch( format )
 	{
 	case SS3DRT_FORMAT_BACKBUFFER:
@@ -655,9 +631,46 @@ static int rtd3d9_create( SS3D_RD3D9* R, int width, int height, int format )
 		D3DCALL_( RT->DT, GetSurfaceLevel, 0, &RT->DS );
 	}
 	
+	return 1;
+}
+
+static int rtd3d9_destruct( SGS_CTX, sgs_VarObj* obj )
+{
+	RT_HDR;
+	if( RT->inh.inh.renderer )
+	{
+		SS3D_Renderer_PokeResource( RT->inh.inh.renderer, obj, 0 );
+		RT->inh.inh.renderer = NULL;
+		rtd3d9_free( RT );
+	}
+	return SGS_SUCCESS;
+}
+
+static sgs_ObjInterface SS3D_RenderTexture_D3D9_iface[1] =
+{{
+	"SS3D_RenderTexture_D3D9",
+	rtd3d9_destruct, NULL,
+	NULL, NULL,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL,
+}};
+
+static int rtd3d9_create( SS3D_RD3D9* R, int width, int height, int format )
+{
+	if( width < 1 || width > 4096 || height < 1 || height > 4096 )
+		return sgs_Msg( R->inh.C, SGS_WARNING, "illegal size: %d x %d", width, height );
+	
+	SS3D_RenderTexture_D3D9* RT = (SS3D_RenderTexture_D3D9*)
+		sgs_PushObjectIPA( R->inh.C, sizeof(SS3D_RenderTexture_D3D9), SS3D_RenderTexture_D3D9_iface );
+	memset( RT, 0, sizeof(*RT) );
+	
 	RT->inh.inh.renderer = &R->inh;
 	RT->inh.inh.info.width = width;
 	RT->inh.inh.info.height = height;
+	RT->format = format;
+	
+	if( !rtd3d9_alloc( R, RT ) )
+		return 0;
 	
 	SS3D_Renderer_PokeResource( &R->inh, sgs_GetObjectStruct( R->inh.C, -1 ), 1 );
 	
@@ -799,6 +812,80 @@ static int meshd3d9_gcmark( SGS_CTX, sgs_VarObj* obj )
 				sgs_ObjGCMark( C, M->inh.parts[ i ].shaders[ j ] );
 	}
 	return SGS_SUCCESS;
+}
+
+static int mesh_ondevicelost( SGS_CTX, SS3D_Mesh_D3D9* M )
+{
+	void *src_data, *dst_data;
+	if( M->inh.dataFlags & SS3D_MDF_DYNAMIC )
+	{
+		int i32 = M->inh.dataFlags & SS3D_MDF_INDEX_32;
+		IDirect3DVertexBuffer9* tmpVB = NULL;
+		IDirect3DIndexBuffer9* tmpIB = NULL;
+		
+		if( FAILED( D3DCALL_( ((SS3D_RD3D9*)M->inh.renderer)->device, CreateVertexBuffer, M->inh.vertexDataSize, D3DUSAGE_DYNAMIC, 0, D3DPOOL_SYSTEMMEM, &tmpVB, NULL ) ) ) goto fail;
+		src_data = dst_data = NULL;
+		if( FAILED( D3DCALL_( M->VB, Lock, 0, 0, &src_data, 0 ) ) ) goto fail;
+		if( FAILED( D3DCALL_( tmpVB, Lock, 0, 0, &dst_data, 0 ) ) ) goto fail;
+		memcpy( dst_data, src_data, M->inh.vertexDataSize );
+		if( FAILED( D3DCALL( tmpVB, Unlock ) ) ) goto fail;
+		if( FAILED( D3DCALL( M->VB, Unlock ) ) ) goto fail;
+		SAFE_RELEASE( M->VB );
+		M->VB = tmpVB;
+		
+		if( FAILED( D3DCALL_( ((SS3D_RD3D9*)M->inh.renderer)->device, CreateIndexBuffer, M->inh.indexDataSize, D3DUSAGE_DYNAMIC, i32 ? D3DFMT_INDEX32 : D3DFMT_INDEX16, D3DPOOL_SYSTEMMEM, &tmpIB, NULL ) ) ) goto fail;
+		src_data = dst_data = NULL;
+		if( FAILED( D3DCALL_( M->IB, Lock, 0, 0, &src_data, 0 ) ) ) goto fail;
+		if( FAILED( D3DCALL_( tmpIB, Lock, 0, 0, &dst_data, 0 ) ) ) goto fail;
+		memcpy( dst_data, src_data, M->inh.indexDataSize );
+		if( FAILED( D3DCALL( tmpIB, Unlock ) ) ) goto fail;
+		if( FAILED( D3DCALL( M->IB, Unlock ) ) ) goto fail;
+		SAFE_RELEASE( M->IB );
+		M->IB = tmpIB;
+	}
+	
+	return 1;
+	
+fail:
+	sgs_Msg( C, SGS_ERROR, "failed to handle lost device mesh" );
+	return 0;
+}
+
+static int mesh_ondevicereset( SGS_CTX, SS3D_Mesh_D3D9* M )
+{
+	void *src_data, *dst_data;
+	if( M->inh.dataFlags & SS3D_MDF_DYNAMIC )
+	{
+		int i32 = M->inh.dataFlags & SS3D_MDF_INDEX_32;
+		IDirect3DVertexBuffer9* tmpVB = NULL;
+		IDirect3DIndexBuffer9* tmpIB = NULL;
+		
+		if( FAILED( D3DCALL_( ((SS3D_RD3D9*)M->inh.renderer)->device, CreateVertexBuffer, M->inh.vertexDataSize, D3DUSAGE_DYNAMIC, 0, D3DPOOL_DEFAULT, &tmpVB, NULL ) ) ) goto fail;
+		src_data = dst_data = NULL;
+		if( FAILED( D3DCALL_( M->VB, Lock, 0, 0, &src_data, 0 ) ) ) goto fail;
+		if( FAILED( D3DCALL_( tmpVB, Lock, 0, 0, &dst_data, D3DLOCK_DISCARD ) ) ) goto fail;
+		memcpy( dst_data, src_data, M->inh.vertexDataSize );
+		if( FAILED( D3DCALL( tmpVB, Unlock ) ) ) goto fail;
+		if( FAILED( D3DCALL( M->VB, Unlock ) ) ) goto fail;
+		SAFE_RELEASE( M->VB );
+		M->VB = tmpVB;
+		
+		if( FAILED( D3DCALL_( ((SS3D_RD3D9*)M->inh.renderer)->device, CreateIndexBuffer, M->inh.indexDataSize, D3DUSAGE_DYNAMIC, i32 ? D3DFMT_INDEX32 : D3DFMT_INDEX16, D3DPOOL_DEFAULT, &tmpIB, NULL ) ) ) goto fail;
+		src_data = dst_data = NULL;
+		if( FAILED( D3DCALL_( M->IB, Lock, 0, 0, &src_data, 0 ) ) ) goto fail;
+		if( FAILED( D3DCALL_( tmpIB, Lock, 0, 0, &dst_data, D3DLOCK_DISCARD ) ) ) goto fail;
+		memcpy( dst_data, src_data, M->inh.indexDataSize );
+		if( FAILED( D3DCALL( tmpIB, Unlock ) ) ) goto fail;
+		if( FAILED( D3DCALL( M->IB, Unlock ) ) ) goto fail;
+		SAFE_RELEASE( M->IB );
+		M->IB = tmpIB;
+	}
+	
+	return 1;
+	
+fail:
+	sgs_Msg( C, SGS_ERROR, "failed to handle reset device mesh" );
+	return 0;
 }
 
 static int mesh_vb_init( SGS_CTX, SS3D_Mesh_D3D9* M, sgs_SizeVal size )
@@ -1233,7 +1320,8 @@ static int create_mesh( SS3D_RD3D9* R, int dynamic )
 	SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) sgs_PushObjectIPA( R->inh.C, sizeof(*M), SS3D_Mesh_D3D9_iface );
 	SS3D_Mesh_Init( &M->inh );
 	M->inh.renderer = &R->inh;
-	M->inh.dataFlags |= dynamic;
+	if( dynamic )
+		M->inh.dataFlags |= SS3D_MDF_DYNAMIC;
 	SS3D_Renderer_PokeResource( &R->inh, sgs_GetObjectStruct( R->inh.C, -1 ), 1 );
 	M->VB = NULL;
 	M->IB = NULL;
@@ -1935,15 +2023,56 @@ static int rd3d9i_resize( SGS_CTX )
 
 static int rd3d9i_onDeviceLost( SGS_CTX )
 {
+	size_t i;
 	R_IHDR( onDeviceLost );
-	UNUSED( R );
+	for( i = 0; i < R->inh.resources.size; ++i )
+	{
+		sgs_VarObj* resobj = (sgs_VarObj*) R->inh.resources.vars[ i ].val.data.P;
+		if( resobj->iface == SS3D_Mesh_D3D9_iface )
+		{
+			SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) resobj->data;
+			mesh_ondevicelost( C, M );
+		}
+		else if( resobj->iface == SS3D_RenderTexture_D3D9_iface )
+		{
+			SS3D_RenderTexture_D3D9* RT = (SS3D_RenderTexture_D3D9*) resobj->data;
+			rtd3d9_free( RT );
+		}
+	}
+	SAFE_RELEASE( R->bb_color );
+	SAFE_RELEASE( R->bb_depth );
+	postproc_free( R, &R->drd );
 	return 0;
 }
 
 static int rd3d9i_onDeviceReset( SGS_CTX )
 {
+	size_t i;
 	R_IHDR( onDeviceReset );
-	UNUSED( R );
+	for( i = 0; i < R->inh.resources.size; ++i )
+	{
+		sgs_VarObj* resobj = (sgs_VarObj*) R->inh.resources.vars[ i ].val.data.P;
+		if( resobj->iface == SS3D_Mesh_D3D9_iface )
+		{
+			SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) resobj->data;
+			mesh_ondevicereset( C, M );
+		}
+		else if( resobj->iface == SS3D_RenderTexture_D3D9_iface )
+		{
+			SS3D_RenderTexture_D3D9* RT = (SS3D_RenderTexture_D3D9*) resobj->data;
+			rtd3d9_alloc( R, RT );
+		}
+	}
+	D3DCALL_( R->device, GetRenderTarget, 0, &R->bb_color );
+	D3DCALL_( R->device, GetDepthStencilSurface, &R->bb_depth );
+	{
+		D3DSURFACE_DESC desc;
+		HRESULT hr = D3DCALL_( R->bb_color, GetDesc, &desc );
+		sgs_BreakIf( FAILED( hr ) );
+		R->inh.width = desc.Width;
+		R->inh.height = desc.Height;
+	}
+	postproc_init( R, &R->drd, R->inh.width, R->inh.height );
 	return 0;
 }
 

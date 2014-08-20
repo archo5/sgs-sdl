@@ -177,7 +177,11 @@ static int _ssr_reset_device( SS_Renderer* R )
 	/* reset */
 	npp = R->d3dpp;
 	
-	IDirect3DDevice9_Reset( R->d3ddev, &npp );
+	if( FAILED( IDirect3DDevice9_Reset( R->d3ddev, &npp ) ) )
+	{
+		GRI_D3D9.last_error = "failed to reset the device";
+		goto fail;
+	}
 	
 	_ss_reset_states( R->d3ddev, R->d3dpp.BackBufferWidth, R->d3dpp.BackBufferHeight );
 	R->cur_rtt = NULL;
@@ -186,12 +190,12 @@ static int _ssr_reset_device( SS_Renderer* R )
 	if( FAILED( D3DCALL_( R->d3ddev, GetRenderTarget, 0, &R->backbuf ) ) )
 	{
 		GRI_D3D9.last_error = "failed to retrieve original backbuffer";
-		return 0;
+		goto fail;
 	}
 	if( FAILED( D3DCALL_( R->d3ddev, GetDepthStencilSurface, &R->dssurf ) ) )
 	{
 		GRI_D3D9.last_error = "failed to retrieve original depth stencil surface";
-		return 0;
+		goto fail;
 	}
 	/* recreate all renderable textures */
 	for( i = 0; i < R->rsrc_table.size; ++i )
@@ -207,14 +211,14 @@ static int _ssr_reset_device( SS_Renderer* R )
 				if( T->handle.tex2d == NULL || FAILED(hr) )
 				{
 					R->iface->last_error = "could not create renderable texture";
-					return 0;
+					goto fail;
 				}
 				
 				hr = D3DCALL_( T->handle.tex2d, GetSurfaceLevel, 0, &T->rsh.surf );
 				if( T->rsh.surf == NULL || FAILED(hr) )
 				{
 					R->iface->last_error = "failed to retrieve render surface";
-					return 0;
+					goto fail;
 				}
 			}
 		}
@@ -225,6 +229,9 @@ static int _ssr_reset_device( SS_Renderer* R )
 	sgs_GlobalCall( C, "on_event", 1, 0 );
 	
 	return 1;
+	
+fail:
+	return sgs_Msg( C, SGS_ERROR, GRI_D3D9.last_error );
 }
 
 
