@@ -1,6 +1,16 @@
 
 global SS3D_FileRoot = "";
 
+// CORE
+
+function SS3D_Event( renderer, e )
+{
+	if( e.type == SDL_VIDEODEVICELOST ) renderer.onDeviceLost();
+	if( e.type == SDL_VIDEODEVICERESET ) renderer.onDeviceReset();
+	if( e.type == SDL_WINDOWEVENT && e.event == SDL_WINDOWEVENT_SIZE_CHANGED )
+		renderer.resize( e.data1, e.data2 );
+}
+
 // TEXTURES
 
 function _SS3D_Texture_GetType( filepath )

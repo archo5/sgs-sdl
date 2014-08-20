@@ -8,12 +8,15 @@ function configure()
 
 function initialize()
 {
-	global Window = SS_CreateWindow( "SGS-SDL Game Framework", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 576, SDL_WINDOW_OPENGLMAYBE );
+	global Window = SS_CreateWindow( "SGS-SDL Game Framework",
+		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+		1024, 576, SDL_WINDOW_OPENGLMAYBE | SDL_WINDOW_RESIZABLE );
 	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
 	SS_InitDrawFunctions();
 	
 	global Font = SS_CreateFont( "fonts/lato-regular.ttf", 12 );
 	
+	printvar( Window.renderingAPI, Window.rendererPtr );
 	_R.SS3D = SS3D_CreateRenderer( Window.renderingAPI, Window.rendererPtr );
 	println( "SS3D: " $ _R.SS3D );
 	
@@ -328,4 +331,5 @@ function on_event( e )
 		global sys_exit = true;
 	if( e.type == SDL_MOUSEMOTION )
 		global gCursorPos = vec2( e.x, e.y );
+	SS3D_Event( _R.SS3D, e );
 }

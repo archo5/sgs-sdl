@@ -2486,13 +2486,13 @@ static int scene_destruct( SGS_CTX, sgs_VarObj* obj )
 		S->destroying = 1;
 		for( i = 0; i < S->meshInstances.size; ++i )
 		{
-			sgs_VarObj* obj = (sgs_VarObj*) S->meshInstances.vars[ i ].val.data.P;
-			sgs_ObjCallDtor( C, obj );
+			sgs_VarObj* tmpobj = (sgs_VarObj*) S->meshInstances.vars[ i ].val.data.P;
+			sgs_ObjCallDtor( C, tmpobj );
 		}
 		for( i = 0; i < S->lights.size; ++i )
 		{
-			sgs_VarObj* obj = (sgs_VarObj*) S->lights.vars[ i ].val.data.P;
-			sgs_ObjCallDtor( C, obj );
+			sgs_VarObj* tmpobj = (sgs_VarObj*) S->lights.vars[ i ].val.data.P;
+			sgs_ObjCallDtor( C, tmpobj );
 		}
 		sgs_vht_free( &S->meshInstances, C );
 		sgs_vht_free( &S->lights, C );

@@ -11,6 +11,6 @@
 
 int SS3D_PushRenderer_GL( SGS_CTX )
 {
-	return sgs_Msg(C,SGS_ERROR,"TODO");
+	return sgs_Msg(C,SGS_ERROR,"TODO [GL renderer]");
 }
 

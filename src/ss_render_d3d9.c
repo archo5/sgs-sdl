@@ -630,7 +630,7 @@ static int ss_ri_d3d9_create_texture_argb8( SS_Renderer* R, SS_Texture* T, SS_Im
 		D3DLOCKED_RECT lr;
 		IDirect3DTexture9_LockRect( tex, i, &lr, NULL, D3DLOCK_DISCARD );
 		for( y = 0; y < pdI->height; ++y )
-			memcpy( ((uint8_t*)lr.pBits) + lr.Pitch * y, pdI->data + pdI->width * 4 * y, pdI->width * 4 );
+			memcpy( ((uint8_t*)lr.pBits) + lr.Pitch * y, ((uint8_t*)pdI->data) + pdI->width * 4 * y, pdI->width * 4 );
 		IDirect3DTexture9_UnlockRect( tex, i );
 		if( i < miplev-1 )
 			pdI = ss_ImageDS2X( pdI, C );
