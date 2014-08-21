@@ -142,12 +142,12 @@ def addCached( olist, o, minpos = 0 ):
 		return len( olist ) - 1 - minpos
 #
 
-def find_in_userdata( obj, key ):
+def find_in_userdata( obj, key, default = None ):
 	for prop in obj.items():
 		if type( prop[ 1 ] ) in ( int, str, float, bool ):
 			if prop[ 0 ] == key:
 				return prop[ 1 ]
-	return None
+	return default
 #
 
 def parse_geometry( MESH, materials ):
@@ -248,7 +248,7 @@ def parse_geometry( MESH, materials ):
 				for si in range( len( Clists ) ):
 					C = Clists[ si ][ vertex[ vip ] ]
 					vip += 1
-					vertexdata += struct.pack( "4B", C.r * 255, C.g * 255, C.b * 255, 255 )
+					vertexdata += struct.pack( "4B", int(C.r * 255), int(C.g * 255), int(C.b * 255), 255 )
 				tmpidcs.append( addCached( vertices, vertexdata, vroot ) )
 			#
 			for i in range( 2, len( tmpidcs ) ):
@@ -352,10 +352,10 @@ def parse_geometry( MESH, materials ):
 	for si in range( len( Tlists ) ):
 		format += "%df2" % ( si )
 	for si in range( len( Clists ) ): # only one expected
-		format += "cf2" % ( si )
+		format += "cb4"
 	#
 	
-	return { "is_transparent": find_in_userdata( MESH, "transparent" ) != False, "bbmin": bbmin, "bbmax": bbmax, "vertices": vertices, "indices": indices, "format": format, "parts": parts }
+	return { "is_transparent": find_in_userdata( MESH, "transparent", False ) != False, "bbmin": bbmin, "bbmax": bbmax, "vertices": vertices, "indices": indices, "format": format, "parts": parts }
 #
 
 def write_ss3dmesh( ctx, filepath ):
