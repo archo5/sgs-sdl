@@ -168,6 +168,68 @@ static void postproc_free( SS3D_RD3D9* R, RTData* D )
 //  S H A D E R S
 //
 
+static int shd3d9_compile( SGS_CTX )
+{
+	HRESULT hr;
+	ID3DXBuffer *outbuf = NULL, *outerr = NULL;
+	sgs_MemBuf mb = sgs_membuf_create();
+	
+	char* code = NULL;
+	int codelen = 0;
+	if( !sgs_ParseString( C, -1, &code, &codelen ) )
+		return 0;
+	
+	static const D3DXMACRO vsmacros[] = { { "VS", "1" }, { NULL, NULL } };
+	static const D3DXMACRO psmacros[] = { { "PS", "1" }, { NULL, NULL } };
+	
+	sgs_membuf_appbuf( &mb, C, "CSH\x7f", 4 );
+	int32_t shsize;
+	
+	hr = D3DXCompileShader( code, codelen, vsmacros, NULL, "main", "vs_3_0", D3DXSHADER_OPTIMIZATION_LEVEL3, &outbuf, &outerr, NULL );
+	if( FAILED( hr ) )
+	{
+		if( outerr )
+			sgs_Msg( C, SGS_WARNING, "Errors in vertex shader compilation:\n%s", (const char*) D3DCALL( outerr, GetBufferPointer ) );
+		else
+			sgs_Msg( C, SGS_WARNING, "Unknown error in vertex shader compilation" );
+		SAFE_RELEASE( outbuf );
+		SAFE_RELEASE( outerr );
+		goto cleanup;
+	}
+	
+	shsize = D3DCALL( outbuf, GetBufferSize );
+	sgs_membuf_appbuf( &mb, C, &shsize, 4 );
+	sgs_membuf_appbuf( &mb, C, D3DCALL( outbuf, GetBufferPointer ), shsize );
+	SAFE_RELEASE( outbuf );
+	SAFE_RELEASE( outerr );
+	
+	hr = D3DXCompileShader( code, codelen, psmacros, NULL, "main", "ps_3_0", D3DXSHADER_OPTIMIZATION_LEVEL3, &outbuf, &outerr, NULL );
+	if( FAILED( hr ) )
+	{
+		if( outerr )
+			sgs_Msg( C, SGS_WARNING, "Errors in pixel shader compilation:\n%s", (const char*) D3DCALL( outerr, GetBufferPointer ) );
+		else
+			sgs_Msg( C, SGS_WARNING, "Unknown error in pixel shader compilation" );
+		SAFE_RELEASE( outbuf );
+		SAFE_RELEASE( outerr );
+		goto cleanup;
+	}
+	
+	shsize = D3DCALL( outbuf, GetBufferSize );
+	sgs_membuf_appbuf( &mb, C, &shsize, 4 );
+	sgs_membuf_appbuf( &mb, C, D3DCALL( outbuf, GetBufferPointer ), shsize );
+	SAFE_RELEASE( outbuf );
+	SAFE_RELEASE( outerr );
+	
+	sgs_PushStringBuf( C, mb.ptr, mb.size );
+	sgs_membuf_destroy( &mb, C );
+	return 1;
+	
+cleanup:
+	sgs_membuf_destroy( &mb, C );
+	return 0;
+}
+
 static void use_shader( SS3D_RD3D9* R, SS3D_Shader_D3D9* S )
 {
 	D3DCALL_( R->device, SetPixelShader, S ? S->PS : NULL );
@@ -190,61 +252,47 @@ static void shd3d9_free( SS3D_Shader_D3D9* S )
 	SAFE_RELEASE( S->VS );
 }
 
-static int shd3d9_init_source( SS3D_RD3D9* R, SS3D_Shader_D3D9* S, const char* code, int codelen )
+static int shd3d9_init_source( SS3D_RD3D9* R, SS3D_Shader_D3D9* S, const char* code, int32_t codelen )
 {
 	SGS_CTX = R->inh.C;
 	HRESULT hr;
-	ID3DXBuffer *outbuf = NULL, *outerr = NULL;
+	int eid = 0;
 	
 	memset( S, 0, sizeof(*S) );
 	
-	static const D3DXMACRO vsmacros[] = { { "VS", "1" }, { NULL, NULL } };
-	static const D3DXMACRO psmacros[] = { { "PS", "1" }, { NULL, NULL } };
+	const char *vsbuf = NULL, *psbuf = NULL;
+	int32_t vslen, pslen;
 	
-	hr = D3DXCompileShader( code, codelen, vsmacros, NULL, "main", "vs_3_0", D3DXSHADER_OPTIMIZATION_LEVEL3, &outbuf, &outerr, &S->VSCT );
-	if( FAILED( hr ) )
-	{
-		if( outerr )
-			sgs_Msg( C, SGS_WARNING, "Errors in vertex shader compilation:\n%s", (const char*) D3DCALL( outerr, GetBufferPointer ) );
-		else
-			sgs_Msg( C, SGS_WARNING, "Unknown error in vertex shader compilation" );
-		if( outbuf ) SAFE_RELEASE( outbuf );
-		if( outerr ) SAFE_RELEASE( outerr );
-		goto cleanup;
-	}
-	hr = IDirect3DDevice9_CreateVertexShader( R->device, (const DWORD*) D3DCALL( outbuf, GetBufferPointer ), &S->VS );
-	SAFE_RELEASE( outbuf );
-	if( outerr ) SAFE_RELEASE( outerr );
-	if( FAILED( hr ) )
-	{
-		sgs_Msg( C, SGS_WARNING, "Unknown error while loading vertex shader" );
-		goto cleanup;
-	}
+	if( codelen < 12 || memcmp( code, "CSH\x7f", 4 ) != 0 )
+		{ eid = 1; goto cleanup; }
+	vslen = *(int32_t*)(code+4);
+	if( vslen + 8 > codelen )
+		{ eid = 2; goto cleanup; }
+	pslen = *(int32_t*)(code+8+vslen);
+	if( pslen + 12 > codelen )
+		{ eid = 3; goto cleanup; }
 	
-	hr = D3DXCompileShader( code, codelen, psmacros, NULL, "main", "ps_3_0", D3DXSHADER_OPTIMIZATION_LEVEL3, &outbuf, &outerr, &S->PSCT );
+	vsbuf = code + 8;
+	hr = IDirect3DDevice9_CreateVertexShader( R->device, (const DWORD*) vsbuf, &S->VS );
 	if( FAILED( hr ) )
-	{
-		if( outerr )
-			sgs_Msg( C, SGS_WARNING, "Errors in pixel shader compilation:\n%s", (const char*) D3DCALL( outerr, GetBufferPointer ) );
-		else
-			sgs_Msg( C, SGS_WARNING, "Unknown error in pixel shader compilation" );
-		if( outbuf ) SAFE_RELEASE( outbuf );
-		if( outerr ) SAFE_RELEASE( outerr );
-		goto cleanup;
-	}
-	hr = IDirect3DDevice9_CreatePixelShader( R->device, (const DWORD*) D3DCALL( outbuf, GetBufferPointer ), &S->PS );
-	SAFE_RELEASE( outbuf );
-	if( outerr ) SAFE_RELEASE( outerr );
+		{ eid = 4; goto cleanup; }
+	hr = D3DXGetShaderConstantTable( (const DWORD*) vsbuf, &S->VSCT );
 	if( FAILED( hr ) )
-	{
-		sgs_Msg( C, SGS_WARNING, "Unknown error while loading pixel shader" );
-		goto cleanup;
-	}
+		{ eid = 5; goto cleanup; }
+	
+	psbuf = code + 12 + vslen;
+	hr = IDirect3DDevice9_CreatePixelShader( R->device, (const DWORD*) psbuf, &S->PS );
+	if( FAILED( hr ) )
+		{ eid = 6; goto cleanup; }
+	hr = D3DXGetShaderConstantTable( (const DWORD*) psbuf, &S->PSCT );
+	if( FAILED( hr ) )
+		{ eid = 7; goto cleanup; }
 	
 	return 1;
 	
 cleanup:
 	shd3d9_free( S );
+	sgs_Msg( C, SGS_WARNING, "Unknown error (%d) while loading shader", eid );
 	return 0;
 }
 
@@ -284,9 +332,10 @@ static int get_shader_( SS3D_RD3D9* R, sgs_Variable* key )
 		SS3D_Shader_D3D9 shader, *S;
 		
 		// load code
+		sgs_PushObjectPtr( C, R->inh._myobj );
 		sgs_PushString( C, "d3d9" );
 		sgs_PushVariable( C, key );
-		sgs_GlobalCall( C, "_SS3D_Shader_LoadCode", 2, 1 );
+		sgs_GlobalCall( C, "_SS3D_Shader_LoadCode", 3, 1 );
 		if( !sgs_ParseString( C, -1, &buf, &size ) )
 			return sgs_Msg( C, SGS_WARNING, "failed to load shader code (%s)", sgs_var_cstr( key ) );
 		
@@ -2076,6 +2125,14 @@ static int rd3d9i_onDeviceReset( SGS_CTX )
 	return 0;
 }
 
+static int rd3d9i_compileShader( SGS_CTX )
+{
+	R_IHDR( compileShader );
+	if( !sgs_LoadArgs( C, "?s" ) )
+		return 0;
+	return shd3d9_compile( C );
+}
+
 static int rd3d9i_getShader( SGS_CTX )
 {
 	sgs_Variable key;
@@ -2156,6 +2213,7 @@ static int rd3d9_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isp
 		SGS_CASE( "onDeviceLost" )     SGS_RETURN_CFUNC( rd3d9i_onDeviceLost )
 		SGS_CASE( "onDeviceReset" )    SGS_RETURN_CFUNC( rd3d9i_onDeviceReset )
 		
+		SGS_CASE( "compileShader" )    SGS_RETURN_CFUNC( rd3d9i_compileShader )
 		SGS_CASE( "getShader" )        SGS_RETURN_CFUNC( rd3d9i_getShader )
 		SGS_CASE( "getTexture" )       SGS_RETURN_CFUNC( rd3d9i_getTexture )
 		SGS_CASE( "createVertexDecl" ) SGS_RETURN_CFUNC( rd3d9i_createVertexDecl )

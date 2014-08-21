@@ -21,3 +21,4 @@ bin/testdata/
 /docs/out/*
 .DS_Store
 xcuserdata
+*.csh

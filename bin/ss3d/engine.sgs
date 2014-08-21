@@ -22,6 +22,11 @@ function _SS3D_Texture_GetType( filepath )
 
 // SHADERS
 
+function _SS3D_Shader_CleanCachePath( path )
+{
+	return string_replace( path, ":", "_" );
+}
+
 function _SS3D_Shader_NamePath( name )
 {
 	name = string_replace( name, "\\", "/" );
@@ -61,7 +66,7 @@ function _SS3D_Shader_LoadFile( renderer, name )
 	return data;
 }
 
-function _SS3D_Shader_LoadCode( renderer, name )
+function _SS3D_Shader_LoadCodeInternal( renderer, name )
 {
 	if( string_part( name, 0, 4 ) == "mtl:" )
 	{
@@ -76,6 +81,19 @@ function _SS3D_Shader_LoadCode( renderer, name )
 		);
 	}
 	return _SS3D_Shader_LoadFile( renderer, name );
+}
+
+function _SS3D_Shader_LoadCode( ss3d, renderer, name )
+{
+	filename = _SS3D_Shader_CleanCachePath( SS3D_FileRoot $ "shaders_" $ renderer $ "/" $ name $ ".csh" );
+	code = @io_file_read( filename );
+	if( code !== null )
+		return code;
+	code = _SS3D_Shader_LoadCodeInternal( renderer, name );
+	if( code !== null )
+		code = ss3d.compileShader( code );
+	io_file_write( filename, code );
+	return code;
 }
 
 // CACHES
