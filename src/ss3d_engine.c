@@ -248,7 +248,7 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 	float tha = tan( DEG2RAD( angle ) / 2.0f );
 	if( tha < 0.001f ) tha = 0.001f;
 	float itha = 1.0f / tha;
-	float xscale = itha / pow( aspect, aamix );
+	float xscale = -itha / pow( aspect, aamix );
 	float yscale = itha * pow( aspect, 1 - aamix );
 	
 	out[0][0] = xscale;
@@ -1532,14 +1532,14 @@ static void SS3D_GetFrustumPlanes( PLANE frustum[6], MAT4 mIVP )
 {
 	static VEC3 psp[8] =
 	{
-		{ -1,  1, 0 },
 		{  1,  1, 0 },
-		{  1, -1, 0 },
+		{ -1,  1, 0 },
 		{ -1, -1, 0 },
-		{ -1,  1, 1 },
+		{  1, -1, 0 },
 		{  1,  1, 1 },
-		{  1, -1, 1 },
+		{ -1,  1, 1 },
 		{ -1, -1, 1 },
+		{  1, -1, 1 },
 	};
 	
 	int i;
@@ -1554,14 +1554,14 @@ static void SS3D_GetFrustumAABB( VEC3 aabb[2], MAT4 mIVP )
 {
 	static VEC3 psp[8] =
 	{
-		{ -1,  1, 0 },
 		{  1,  1, 0 },
-		{  1, -1, 0 },
+		{ -1,  1, 0 },
 		{ -1, -1, 0 },
-		{ -1,  1, 1 },
+		{  1, -1, 0 },
 		{  1,  1, 1 },
-		{  1, -1, 1 },
+		{ -1,  1, 1 },
 		{ -1, -1, 1 },
+		{  1, -1, 1 },
 	};
 	
 	int i;

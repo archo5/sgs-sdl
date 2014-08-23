@@ -68,7 +68,7 @@ void main
 	float specularPower = 256;
 	
 	float3 totalDiffuse = float3(0,0,0);
-	float3 totalSpecular = pow( texCUBElod( EnvMap, float4( refWorld.xzy*float3(1,1,-1), 0 ) ).rgb, 2 ) * specularFactor; // float3(0,0,0);
+	float3 totalSpecular = pow( texCUBElod( EnvMap, float4( refWorld.xzy, 0 ) ).rgb, 2 ) * specularFactor; // float3(0,0,0);
 	
 	/* AMBIENT TEST */
 	totalDiffuse += float3(0.01,0.01,0.01);

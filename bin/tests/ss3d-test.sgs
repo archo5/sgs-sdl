@@ -300,6 +300,15 @@ function update()
 	_R.SS3D.render();
 	
 	point = camera.worldToScreen( vec3(-5,0,10) );
+	
+	// axis
+	SS_SetCamera( camera.viewMatrix, camera.projMatrix );
+	rb = SS_CreateRenderBuffer();
+	rb.f( 0, 0, 0 ).c4b( 1, 0, 0, 1 ).f( 10, 0, 0 ).c4b( 1, 0, 0, 1 );
+	rb.f( 0, 0, 0 ).c4b( 0, 1, 0, 1 ).f( 0, 10, 0 ).c4b( 0, 1, 0, 1 );
+	rb.f( 0, 0, 0 ).c4b( 0, 0, 1, 1 ).f( 0, 0, 10 ).c4b( 0, 0, 1, 1 );
+	rb.draw( null, SS_MakeVertexFormat( "pf3cb4" ), 0, 6, SS_PT_LINES );
+	
 	SS_SetCameraUI( 0, Window.width, 0, Window.height );
 	
 	if( 0 )
