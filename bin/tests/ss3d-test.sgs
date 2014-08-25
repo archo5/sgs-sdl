@@ -81,6 +81,7 @@ function initialize()
 	{
 	//	mesh = io_file_read( "testdata/bunny.real.ssm" );
 		mesh = io_file_read( "testdata/extest0.ssm" );
+		SS3D_MeshData_GetVertexIndexArrays( mesh );
 		_R.Mesh.loadFromBuffer( mesh );
 	}
 	else

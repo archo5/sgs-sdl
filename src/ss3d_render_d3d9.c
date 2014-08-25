@@ -397,8 +397,8 @@ static void use_texture_int( SS3D_RD3D9* R, int slot, IDirect3DBaseTexture9* T, 
 		D3DCALL_( R->device, SetSamplerState, slot, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
 		D3DCALL_( R->device, SetSamplerState, slot, D3DSAMP_MINFILTER, D3DTEXF_LINEAR );
 		D3DCALL_( R->device, SetSamplerState, slot, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
-		D3DCALL_( R->device, SetSamplerState, slot, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
-		D3DCALL_( R->device, SetSamplerState, slot, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
+		D3DCALL_( R->device, SetSamplerState, slot, D3DSAMP_ADDRESSU, usage == SS3DTEXTURE_USAGE_FULLSCREEN ? D3DTADDRESS_CLAMP : D3DTADDRESS_WRAP );
+		D3DCALL_( R->device, SetSamplerState, slot, D3DSAMP_ADDRESSV, usage == SS3DTEXTURE_USAGE_FULLSCREEN ? D3DTADDRESS_CLAMP : D3DTADDRESS_WRAP );
 		D3DCALL_( R->device, SetSamplerState, slot, D3DSAMP_SRGBTEXTURE, usage == SS3DTEXTURE_USAGE_ALBEDO );
 	}
 }
@@ -1627,9 +1627,12 @@ static int rd3d9i_render( SGS_CTX )
 			{
 				SS3D_MeshInstance* MI = pmil->MI;
 				if( !MI->mesh || !MI->enabled )
-					continue;
+					continue; /* mesh not added / instance not enabled */
 				
 				SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) MI->mesh->data;
+				if( !M->inh.vertexDecl )
+					continue; /* mesh not initialized */
+				
 				SS3D_VDecl_D3D9* VD = (SS3D_VDecl_D3D9*) M->inh.vertexDecl->data;
 				
 				/* if (transparent & want solid) or (solid & want transparent), skip */
@@ -1960,7 +1963,7 @@ static int rd3d9i_render( SGS_CTX )
 			D3DCALL_( R->device, SetRenderTarget, 2, NULL );
 			D3DCALL_( R->device, SetDepthStencilSurface, NULL );
 			
-			use_texture_int( R, 0, (IDirect3DBaseTexture9*) tx_depth, 0 );
+			use_texture_int( R, 0, (IDirect3DBaseTexture9*) tx_depth, SS3DTEXTURE_USAGE_FULLSCREEN );
 			use_texture( R, 4, scene->skyTexture ? (SS3D_Texture_D3D9*) scene->skyTexture->data : NULL );
 			
 			use_shader( R, get_shader( R, pass->shname ) );
@@ -2003,28 +2006,28 @@ static int rd3d9i_render( SGS_CTX )
 		
 		D3DCALL_( R->device, SetRenderTarget, 0, R->drd.RTS_BLOOM_DSHP );
 		D3DCALL_( R->device, Clear, 0, NULL, D3DCLEAR_TARGET, 0, 1.0f, 0 );
-		use_texture_int( R, 0, (IDirect3DBaseTexture9*) R->drd.RTT_OCOL, 0 );
+		use_texture_int( R, 0, (IDirect3DBaseTexture9*) R->drd.RTT_OCOL, SS3DTEXTURE_USAGE_FULLSCREEN );
 		use_shader( R, sh_post_dshp );
 		postproc_blit( R, &RTOUT, 4, 0 );
 		
 		D3DCALL_( R->device, SetRenderTarget, 0, R->drd.RTS_BLOOM_BLUR1 );
 		D3DCALL_( R->device, Clear, 0, NULL, D3DCLEAR_TARGET, 0, 1.0f, 0 );
-		use_texture_int( R, 0, (IDirect3DBaseTexture9*) R->drd.RTT_BLOOM_DSHP, 0 );
+		use_texture_int( R, 0, (IDirect3DBaseTexture9*) R->drd.RTT_BLOOM_DSHP, SS3DTEXTURE_USAGE_FULLSCREEN );
 		use_shader( R, sh_post_blur_h );
 		postproc_blit( R, &RTOUT, 4, 0 );
 		
 		D3DCALL_( R->device, SetRenderTarget, 0, R->drd.RTS_BLOOM_BLUR2 );
 		D3DCALL_( R->device, Clear, 0, NULL, D3DCLEAR_TARGET, 0, 1.0f, 0 );
-		use_texture_int( R, 0, (IDirect3DBaseTexture9*) R->drd.RTT_BLOOM_BLUR1, 0 );
+		use_texture_int( R, 0, (IDirect3DBaseTexture9*) R->drd.RTT_BLOOM_BLUR1, SS3DTEXTURE_USAGE_FULLSCREEN );
 		use_shader( R, sh_post_blur_v );
 		postproc_blit( R, &RTOUT, 4, 0 );
 		
 		D3DCALL_( R->device, SetRenderTarget, 0, RTOUT.CS );
 	//	D3DCALL_( R->device, Clear, 0, NULL, D3DCLEAR_TARGET, 0, 1.0f, 0 );
 		use_shader( R, sh_post_process );
-		use_texture_int( R, 0, (IDirect3DBaseTexture9*) R->drd.RTT_OCOL, 0 );
-		use_texture_int( R, 1, (IDirect3DBaseTexture9*) R->drd.RTT_PARM, 0 );
-		use_texture_int( R, 2, (IDirect3DBaseTexture9*) R->drd.RTT_BLOOM_BLUR2, 0 );
+		use_texture_int( R, 0, (IDirect3DBaseTexture9*) R->drd.RTT_OCOL, SS3DTEXTURE_USAGE_FULLSCREEN );
+		use_texture_int( R, 1, (IDirect3DBaseTexture9*) R->drd.RTT_PARM, SS3DTEXTURE_USAGE_FULLSCREEN );
+		use_texture_int( R, 2, (IDirect3DBaseTexture9*) R->drd.RTT_BLOOM_BLUR2, SS3DTEXTURE_USAGE_FULLSCREEN );
 		postproc_blit( R, &RTOUT, 1, 0 );
 	}
 	

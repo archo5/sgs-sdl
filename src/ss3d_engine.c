@@ -975,6 +975,116 @@ const char* SS3D_MeshData_Parse( char* buf, size_t size, SS3D_MeshFileData* out 
 	return NULL;
 }
 
+static void _ss3dmesh_extract_vertex( SS3D_MeshFileData* mfd, SS3D_VDeclInfo* info, SS3D_MeshFilePartData* part, int vidx, VEC3 vout )
+{
+	uint8_t* pudata;
+	char* vdata = mfd->vertexData;
+	int i;
+	VEC3_Set( vout, 0, 0, 0 );
+	for( i = 0; i < info->count; ++i )
+	{
+		if( info->usages[ i ] == SS3D_VDECLUSAGE_POSITION )
+			break;
+	}
+	if( i == info->count )
+		return;
+	
+	vdata += info->offsets[ i ] + info->size * ( part->vertexOffset + vidx );
+	switch( info->types[ i ] )
+	{
+	case SS3D_VDECLTYPE_FLOAT1: /* read 1 float, y;z=0;0 */
+		VEC3_Set( vout, ((float*) vdata)[0], 0, 0 );
+		break;
+	case SS3D_VDECLTYPE_FLOAT2: /* read 2 floats, z=0 */
+		VEC3_Set( vout, ((float*) vdata)[0], ((float*) vdata)[1], 0 );
+		break;
+	case SS3D_VDECLTYPE_FLOAT3:
+	case SS3D_VDECLTYPE_FLOAT4: /* read 3 floats */
+		VEC3_Copy( vout, ((float*)vdata) );
+		break;
+	case SS3D_VDECLTYPE_BCOL4: /* read u8[3] */
+		pudata = (uint8_t*) vdata;
+		VEC3_Set( vout, pudata[0] * (1.0f/255.0f), pudata[1] * (1.0f/255.0f), pudata[2] * (1.0f/255.0f) );
+		break;
+	default:
+		VEC3_Set( vout, 0, 0, 0 );
+		break;
+	}
+}
+
+static int SS3D_MeshData_GetVertexIndexArrays( SGS_CTX )
+{
+	int p, i;
+	char* buf, fdbuf[ 257 ];
+	const char* err;
+	sgs_SizeVal size;
+	SS3D_MeshFileData mfd;
+	SS3D_VDeclInfo vdinfo;
+	
+	SGSFN( "SS3D_MeshData_GetVertexIndexArrays" );
+	if( !sgs_LoadArgs( C, "m", &buf, &size ) )
+		return 0;
+	
+	err = SS3D_MeshData_Parse( buf, size, &mfd );
+	if( err )
+		return sgs_Msg( C, SGS_WARNING, "could not parse mesh data: %s", err );
+	if( mfd.formatSize > 256 )
+		err = "vertex declaration too long for this function";
+	else
+	{
+		memset( fdbuf, 0, sizeof(fdbuf) );
+		memcpy( fdbuf, mfd.formatData, mfd.formatSize );
+		err = SS3D_VDeclInfo_Parse( &vdinfo, fdbuf );
+	}
+	if( err )
+		return sgs_Msg( C, SGS_WARNING, "could not parse mesh vertex declaration data: %s", err );
+	
+	for( p = 0; p < mfd.numParts; ++p )
+	{
+		sgs_PushString( C, "vertices" );
+		SS3D_MeshFilePartData* part = mfd.parts + p;
+		for( i = 0; i < part->vertexCount; ++i )
+		{
+			VEC3 vout;
+			_ss3dmesh_extract_vertex( &mfd, &vdinfo, part, i, vout );
+			sgs_PushVec3p( C, vout );
+		}
+		sgs_PushArray( C, part->vertexCount );
+		sgs_PushString( C, "indices" );
+		if( mfd.dataFlags & SS3D_MDF_TRIANGLESTRIP )
+		{
+			int nic = ( part->indexCount - 2 ) * 3;
+			sgs_PushInt( C, mfd.dataFlags & SS3D_MDF_INDEX_32 ? *(((uint32_t*)mfd.indexData) + part->indexOffset + 0) : *(((uint16_t*)mfd.indexData) + part->indexOffset + 0) );
+			sgs_PushInt( C, mfd.dataFlags & SS3D_MDF_INDEX_32 ? *(((uint32_t*)mfd.indexData) + part->indexOffset + 2) : *(((uint16_t*)mfd.indexData) + part->indexOffset + 2) );
+			sgs_PushInt( C, mfd.dataFlags & SS3D_MDF_INDEX_32 ? *(((uint32_t*)mfd.indexData) + part->indexOffset + 1) : *(((uint16_t*)mfd.indexData) + part->indexOffset + 1) );
+			for( i = 3; i < part->indexCount; ++i )
+			{
+				if( i % 2 == 0 )
+				{
+					sgs_PushItem( C, -1 );
+					sgs_PushItem( C, -3 );
+				}
+				else
+				{
+					sgs_PushItem( C, -2 );
+					sgs_PushItem( C, -2 );
+				}
+				sgs_PushInt( C, mfd.dataFlags & SS3D_MDF_INDEX_32 ? *(((uint32_t*)mfd.indexData) + part->indexOffset + i) : *(((uint16_t*)mfd.indexData) + part->indexOffset + i) );
+			}
+			sgs_PushArray( C, nic );
+		}
+		else
+		{
+			for( i = 0; i < part->indexCount; ++i )
+				sgs_PushInt( C, mfd.dataFlags & SS3D_MDF_INDEX_32 ? *(((uint32_t*)mfd.indexData) + part->indexOffset + i) : *(((uint16_t*)mfd.indexData) + part->indexOffset + i) );
+			sgs_PushArray( C, part->indexCount );
+		}
+		sgs_PushDict( C, 4 );
+	}
+	sgs_PushArray( C, mfd.numParts );
+	return 1;
+}
+
 
 //
 // VDECL
@@ -2721,6 +2831,8 @@ static sgs_RegFuncConst ss3d_fconsts[] =
 	FN( MeshGen_Cube ),
 	FN( MeshGen_Particles ),
 	FN( MeshGen_Terrain ),
+	
+	FN( MeshData_GetVertexIndexArrays ),
 	
 	FN( CreateCullScene ),
 	FN( CreateCamera ),

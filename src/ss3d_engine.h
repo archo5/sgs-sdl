@@ -66,6 +66,7 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 #define SS3DTEXTURE_USAGE_MISC   0
 #define SS3DTEXTURE_USAGE_NORMAL 1
 #define SS3DTEXTURE_USAGE_ALBEDO 2
+#define SS3DTEXTURE_USAGE_FULLSCREEN 3
 
 #define SS3DFORMAT_UNKNOWN 0
 #define SS3DFORMAT_RGBA8  1
