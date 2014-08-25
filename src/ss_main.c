@@ -155,14 +155,14 @@ int ss_Initialize( int argc, char* argv[], int debug )
 	ret = sgs_Include( C, "core/config" );
 	if( !ret )
 	{
-		fprintf( stderr, "Could not run core/config (configuration script).\n" );
+		sgs_Msg( C, SGS_ERROR, "Could not run core/config (configuration script)." );
 		return -2;
 	}
 	/* run the primary extensions */
 	ret = sgs_Include( C, "core/ext" );
 	if( !ret )
 	{
-		fprintf( stderr, "Could not run core/ext.\n" );
+		sgs_Msg( C, SGS_ERROR, "Could not run core/ext." );
 		return -2;
 	}
 	
@@ -174,7 +174,7 @@ int ss_Initialize( int argc, char* argv[], int debug )
 	ret = sgs_Include( C, "main" );
 	if( !ret )
 	{
-		fprintf( stderr, "Could not execute 'main'.\n" );
+		sgs_Msg( C, SGS_ERROR, "Could not execute 'main'." );
 		return -3;
 	}
 	
@@ -208,7 +208,7 @@ int ss_Initialize( int argc, char* argv[], int debug )
 		SDL_INIT_EVENTS | SDL_INIT_NOPARACHUTE
 	) < 0 )
 	{
-		fprintf( stderr, "Couldn't initialize SDL: %s\n", SDL_GetError() );
+		sgs_Msg( C, SGS_ERROR, "Couldn't initialize SDL: %s", SDL_GetError() );
 		return -5;
 	}
 	
@@ -224,14 +224,14 @@ int ss_Initialize( int argc, char* argv[], int debug )
 	/* initialize script-space SDL API */
 	if( ss_InitSDL( C ) )
 	{
-		fprintf( stderr, "Couldn't initialize SDL API\n" );
+		sgs_Msg( C, SGS_ERROR, "Couldn't initialize SDL API" );
 		return -6;
 	}
 	
 	/* initialize script-space rendering API */
 	if( ss_InitGraphics( C ) )
 	{
-		fprintf( stderr, "Couldn't initialize rendering API\n" );
+		sgs_Msg( C, SGS_ERROR, "Couldn't initialize rendering API" );
 		return -7;
 	}
 	
@@ -240,9 +240,9 @@ int ss_Initialize( int argc, char* argv[], int debug )
 #endif
 	
 	/* initialize the application */
-	if( sgs_GlobalCall( C, "initialize", 0, 0 ) )
+	if( SGS_FAILED( sgs_GlobalCall( C, "initialize", 0, 0 ) ) )
 	{
-		fprintf( stderr, "Failed to initialize the application.\n" );
+		sgs_Msg( C, SGS_ERROR, "Failed to initialize the application." );
 		return -8;
 	}
 	
@@ -274,7 +274,7 @@ int ss_Frame()
 			ss_CreateSDLEvent( C, &event );
 			if( SGS_FAILED( sgs_GlobalCall( C, "on_event", 1, 0 ) ) )
 			{
-				fprintf( stderr, "error in event creation\n" );
+				sgs_Msg( C, SGS_ERROR, "error in event creation" );
 				sgs_Pop( C, sgs_StackSize( C ) - ssz );
 				
 				// provide default handler
@@ -290,9 +290,9 @@ int ss_Frame()
 			return 1;
 		
 		/* advance the application exactly one frame */
-		if( sgs_GlobalCall( C, "update", 0, 0 ) )
+		if( SGS_FAILED( sgs_GlobalCall( C, "update", 0, 0 ) ) )
 		{
-			fprintf( stderr, "Failed to update the application.\n" );
+			sgs_Msg( C, SGS_ERROR, "Failed to update the application." );
 			return -1;
 		}
 	}
@@ -304,9 +304,9 @@ int ss_Free()
 {
 	SGS_CTX = g_C;
 	/* clean the application */
-	if( sgs_GlobalCall( C, "cleanup", 0, 0 ) )
+	if( SGS_FAILED( sgs_GlobalCall( C, "cleanup", 0, 0 ) ) )
 	{
-		fprintf( stderr, "Failed to clean the application.\n" );
+		sgs_Msg( C, SGS_ERROR, "Failed to clean the application." );
 		return -1;
 	}
 	
