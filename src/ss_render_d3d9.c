@@ -337,6 +337,8 @@ static SS_Renderer* ss_ri_d3d9_create( SDL_Window* window, uint32_t flags )
 	sgs_SetIndexPIP( C, &R->rsdict, -1, &R->fonts, 0 );
 	sgs_Pop( C, 1 );
 	
+	IDirect3DDevice9_BeginScene( R->d3ddev );
+	
 	return R;
 }
 

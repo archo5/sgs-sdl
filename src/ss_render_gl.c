@@ -680,6 +680,16 @@ static int ss_ri_gl_apply_texture( SS_Renderer* R, SS_Texture* T )
 	{
 		glEnable( GL_TEXTURE_2D );
 		glBindTexture( GL_TEXTURE_2D, T->handle.id );
+		glMatrixMode( GL_TEXTURE );
+		float flip = T->rsh.id ? 1 : 0;
+		float m[16] =
+		{
+			1, 0, 0, 0,
+			0, 1 - flip * 2, 0, 0,
+			0, 0, 1, 0,
+			0, flip, 0, 1
+		};
+		glLoadMatrixf( m );
 	}
 	else
 		glDisable( GL_TEXTURE_2D );
