@@ -394,6 +394,7 @@ static void ss_ri_d3d9_modify( SS_Renderer* R, int* modlist )
 		R->d3dpp.BackBufferHeight = h;
 		_ssr_reset_device( R );
 		ss_ri_d3d9__resetviewport( R );
+		IDirect3DDevice9_BeginScene( R->d3ddev );
 	}
 }
 
