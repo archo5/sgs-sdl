@@ -1,129 +1,5 @@
 
-
-global TransformGizmo =
-{
-	TGM_MOVE = 1,
-	TGM_ROTATE = 2,
-	TGM_SCALE = 3,
-	
-	TGIA_MOVE_X = 0x0001,
-	TGIA_MOVE_Y = 0x0002,
-	TGIA_MOVE_Z = 0x0004,
-};
-
-function TransformGizmo._CursorNearLine( x, y, p0x, p0y, p1x, p1y )
-{
-	cur = vec2( x, y );
-	p0 = vec2( p0x, p0y );
-	p1 = vec2( p1x, p1y );
-	t = ( p1 - p0 ).normalized;
-	n = t.perp;
-	maxdist = ( p1 - p0 ).length - 3;
-	if( maxdist <= 0 )
-		return false;
-	maxdist = sqrt( maxdist );
-	
-	t0 = vec2_dot( t, p0 );
-	t1 = vec2_dot( t, p1 );
-	tc = vec2_dot( t, cur );
-	if( tc < t0 ) tc = t0;
-	if( tc > t1 ) tc = t1;
-	lpt = n * vec2_dot( n, p0 ) + t * tc;
-	dist = ( lpt - cur ).length;
-	return dist < maxdist;
-}
-
-function TransformGizmo.create()
-{
-	data =
-	{
-		position = vec3(0,0,0),
-		mode = TransformGizmo.TGM_MOVE,
-		matrix = null,
-		size = 50,
-		
-		p000 = null, ps00 = null, p0s0 = null, p00s = null,
-		
-		iacts = 0,
-	};
-	class( data, TransformGizmo );
-	data.setTransform( mat4() );
-	return data;
-}
-
-function TransformGizmo.setTransform( M )
-{
-	this.matrix = M;
-	S = this.size;
-	
-	p000 = M.transform_pos( this.position );
-	ps00 = M.transform_pos( this.position + vec3(S,0,0) );
-	p0s0 = M.transform_pos( this.position + vec3(0,S,0) );
-	p00s = M.transform_pos( this.position + vec3(0,0,S) );
-	
-	this.p000 = vec2( p000.x, p000.y );
-	this.ps00 = vec2( ps00.x, ps00.y );
-	this.p0s0 = vec2( p0s0.x, p0s0.y );
-	this.p00s = vec2( p00s.x, p00s.y );
-}
-
-function TransformGizmo.updateCursorIAct( x, y )
-{
-	this.iacts = 0;
-	
-	if( this.mode == this.TGM_MOVE )
-	{
-		if( this._CursorNearLine( x, y, this.p000.x, this.p000.y, this.ps00.x, this.ps00.y ) ){ this.iacts = this.TGIA_MOVE_X; return; }
-		if( this._CursorNearLine( x, y, this.p000.x, this.p000.y, this.p0s0.x, this.p0s0.y ) ){ this.iacts = this.TGIA_MOVE_Y; return; }
-		if( this._CursorNearLine( x, y, this.p000.x, this.p000.y, this.p00s.x, this.p00s.y ) ){ this.iacts = this.TGIA_MOVE_Z; return; }
-	}
-}
-
-function TransformGizmo.draw()
-{
-	S = this.size;
-	IA = this.iacts;
-	RB = g_RB;
-	if( this.mode == this.TGM_MOVE )
-	{
-		p000 = this.p000;
-		ps00 = this.ps00;
-		p0s0 = this.p0s0;
-		p00s = this.p00s;
-		
-		pd00 = ps00 - p000; pp00 = pd00.perp;
-		p0d0 = p0s0 - p000; p0p0 = p0d0.perp;
-		p00d = p00s - p000; p00p = p00d.perp;
-		
-		ps00a = ps00 - pd00 * 0.08 - pp00 * 0.04;
-		ps00b = ps00 - pd00 * 0.08 + pp00 * 0.04;
-		p0s0a = p0s0 - p0d0 * 0.08 - p0p0 * 0.04;
-		p0s0b = p0s0 - p0d0 * 0.08 + p0p0 * 0.04;
-		p00sa = p00s - p00d * 0.08 - p00p * 0.04;
-		p00sb = p00s - p00d * 0.08 + p00p * 0.04;
-		
-		iax = if( IA == this.TGIA_MOVE_X, 0.5, 0.0 );
-		iay = if( IA == this.TGIA_MOVE_Y, 0.5, 0.0 );
-		iaz = if( IA == this.TGIA_MOVE_Z, 0.5, 0.0 );
-		
-		RB.begin()
-			.f( ps00.x, ps00.y, p000.x, p000.y )
-			.f( ps00.x, ps00.y, ps00a.x, ps00a.y )
-			.f( ps00.x, ps00.y, ps00b.x, ps00b.y )
-			.c4b( 1, iax, iax, 1 ).interlace( 4, 8, 8, 6 )
-			.f( p0s0.x, p0s0.y, p000.x, p000.y )
-			.f( p0s0.x, p0s0.y, p0s0a.x, p0s0a.y )
-			.f( p0s0.x, p0s0.y, p0s0b.x, p0s0b.y )
-			.c4b( iay, 1, iay, 1 ).interlace( 4, 8, 8 + 6 * 12, 6 )
-			.f( p00s.x, p00s.y, p000.x, p000.y )
-			.f( p00s.x, p00s.y, p00sa.x, p00sa.y )
-			.f( p00s.x, p00s.y, p00sb.x, p00sb.y )
-			.c4b( iaz, iaz, 1, 1 ).interlace( 4, 8, 8 + 12 * 12, 6 )
-			.draw( null, g_VD_P2CC4, 0, 18, SS_PT_LINES )
-		;
-	}
-}
-
+include "utils/transform_gizmo";
 
 
 global g_MousePos = vec2( 0, 0 );
@@ -140,6 +16,20 @@ function initialize()
 	global Font = SS_CreateFont( "fonts/lato-regular.ttf", 12 );
 	
 	global TFG = TransformGizmo.create();
+	global curref = null;
+	global tfref = null;
+}
+
+
+function drawtick( p, r, g, b )
+{
+	g_RB.begin()
+		.f( p.x - 1, p.y - 1, p.z - 1, p.x + 1, p.y + 1, p.z + 1 )
+		.f( p.x - 1, p.y + 1, p.z - 1, p.x + 1, p.y - 1, p.z + 1 )
+		.f( p.x + 1, p.y + 1, p.z - 1, p.x - 1, p.y - 1, p.z + 1 )
+		.f( p.x + 1, p.y - 1, p.z - 1, p.x - 1, p.y + 1, p.z + 1 )
+		.c4b( r, g, b, 1 ).interlace( 4, 12, 12 )
+		.draw( null, SS_MakeVertexFormat( "pf3cb4" ), 0, g_RB.size / 16, SS_PT_LINES );
 }
 
 function update()
@@ -150,13 +40,37 @@ function update()
 	SS_Clear( color(0.1,1) );
 	
 	cam3d = SS_GetCamera3D( vec3(100,100,100), vec3(-1,-1,-1), vec3(0,0,1), deg2rad(90), W/H, 1, 1000 );
-	TFG.setTransform( cam3d[0].multiply( cam3d[1] ).scale( 0.5, -0.5, 0.5 ).translate( 0.5, 0.5, 0.5 ).scale( W, H, 1 ) );
-	TFG.updateCursorIAct( g_MousePos.x, g_MousePos.y );
-	TFG.draw();
+	SS_SetCamera( cam3d[0], cam3d[1] );
+	mtx_total = cam3d[0].multiply( cam3d[1] );
+	mtx_inv = mat4();
+	mtx_inv.invert_from( mtx_total );
+	tf_in_pos = vec3( g_MousePos.x / W * 2 - 1, g_MousePos.y / H * -2 + 1, 0 );
+	r_from = mtx_inv.transform_pos( tf_in_pos - vec3( 0, 0, 1 ) );
+	r_to = mtx_inv.transform_pos( tf_in_pos + vec3( 0, 0, 1 ) );
+	global tfref, curref;
+	iref = TFG.getInteractRef( vec3(-1,-1,-1), vec3(0,0,1), r_from, r_to );
+	if( tfref === null )
+	{
+		TFG.updateInteractions( r_from, r_to );
+		curref = iref;
+	}
+	else
+	{
+		if( TFG.mode == TFG.TGM_MOVE && iref !== null )
+			TFG.position = iref - tfref;
+	}
+	
+	SS_SetDepthTest( true );
+	TFG.draw( vec3(-1,-1,-1), vec3(0,0,1) );
+	if( typeof(iref) == "vec3" ) drawtick( iref, 1, 0, 0 );
+	if( typeof(curref) == "vec3" ) drawtick( curref, 0, 1, 0 );
+	if( typeof(tfref) == "vec3" ) drawtick( tfref, 0, 0, 1 );
+	SS_SetDepthTest( false );
 	
 	SS_SetCameraUI( 0, W, 0, H );
 	SS_DrawTextLine( "1/2/3 - move/rotate/scale", Font, 4, 4, color(1) );
 	SS_DrawTextLine( "interaction: " $ TFG.iacts, Font, 4, 18, color(1) );
+	SS_DrawTextLine( "interact ref: " $ curref, Font, 4, 32, color(1) );
 	
 	SS_Present();
 }
@@ -167,6 +81,19 @@ function on_event( e )
 		global sys_exit = true;
 	if( e.type == SDL_MOUSEMOTION )
 		global g_MousePos = vec2( e.x, e.y );
+	if( e.type == SDL_KEYDOWN && !e.repeat )
+	{
+		if( e.keycode == SDLK_1 ){ TFG.mode = TransformGizmo.TGM_MOVE; }
+		if( e.keycode == SDLK_2 ){ TFG.mode = TransformGizmo.TGM_ROTATE; }
+		if( e.keycode == SDLK_3 ){ TFG.mode = TransformGizmo.TGM_SCALE; }
+	}
+	if( e.type == SDL_MOUSEBUTTONDOWN && e.button == 1 )
+	{
+		global tfref = curref;
+		if( TFG.mode == TFG.TGM_MOVE && tfref !== null )
+			tfref -= TFG.position;
+	}
+	if( e.type == SDL_MOUSEBUTTONUP && e.button == 1 ){ global tfref = null; }
 }
 
 function cleanup()

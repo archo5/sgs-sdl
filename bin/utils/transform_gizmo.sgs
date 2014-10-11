@@ -1,0 +1,445 @@
+
+
+function ray_rect_intersect( r0, r1, sqo, sqd1, sqd2 )
+{
+	n = vec3_cross( sqd1, sqd2 ).normalized;
+	d = ( r1 - r0 ).normalized;
+	sd = ray_plane_intersect( r0, d, vec4( n.x, n.y, n.z, vec3_dot( n, sqo ) ) );
+	if( sd <= 0 )
+		return false;
+	risp = r0 + d * sd;
+	sqd1n = sqd1.normalized;
+	t1 = vec3_dot( risp, sqd1n ) - vec3_dot( sqo, sqd1n );
+	if( t1 < 0 || t1 > sqd1.length )
+		return false;
+	sqd2n = sqd2.normalized;
+	t2 = vec3_dot( risp, sqd2n ) - vec3_dot( sqo, sqd2n );
+	if( t2 < 0 || t2 > sqd2.length )
+		return false;
+	return true;
+}
+
+function ray_rtri_intersect( r0, r1, sqo, sqd1, sqd2 )
+{
+	n = vec3_cross( sqd1, sqd2 ).normalized;
+	d = ( r1 - r0 ).normalized;
+	sd = ray_plane_intersect( r0, d, vec4( n.x, n.y, n.z, vec3_dot( n, sqo ) ) );
+	if( sd <= 0 )
+		return false;
+	risp = r0 + d * sd;
+	sqd1n = sqd1.normalized;
+	t1 = vec3_dot( risp, sqd1n ) - vec3_dot( sqo, sqd1n );
+	if( t1 < 0 || t1 > sqd1.length )
+		return false;
+	sqd2n = sqd2.normalized;
+	t2 = vec3_dot( risp, sqd2n ) - vec3_dot( sqo, sqd2n );
+	if( t2 < 0 || t2 > sqd2.length )
+		return false;
+	if( t1 + t2 > sqd1.length )
+		return false;
+	return true;
+}
+
+global TransformGizmo =
+{
+	TGM_MOVE = 1,
+	TGM_ROTATE = 2,
+	TGM_SCALE = 3,
+	
+	TGIA_X = 0x01,
+	TGIA_Y = 0x02,
+	TGIA_Z = 0x04,
+	TGIA_XY = 0x01|0x02,
+	TGIA_YZ = 0x02|0x04,
+	TGIA_ZX = 0x04|0x01,
+	TGIA_VIEW = 0x08,
+	TGIA_ALL = 0x0f,
+};
+
+function TransformGizmo.create()
+{
+	data =
+	{
+		position = vec3(0,0,0),
+		mode = TransformGizmo.TGM_MOVE,
+		size = 50,
+		vdecl = SS_MakeVertexFormat( "pf3cb4" ),
+		ref = null,
+		
+		iacts = 0,
+	};
+	class( data, TransformGizmo );
+	return data;
+}
+
+function TransformGizmo.updateInteractions( from, to )
+{
+	P = this.position;
+	S = this.size;
+	M = S * 0.5;
+	this.iacts = 0;
+	
+	if( this.mode == this.TGM_MOVE )
+	{
+		if( distance_point_line_segment( P, from, to ) < S * 0.1 ){ this.iacts = this.TGIA_ALL; return; }
+		
+		if( distance_line_segments( from, to, P, P + vec3(S,0,0) ) < S * 0.05 ){ this.iacts = this.TGIA_X; return; }
+		if( distance_line_segments( from, to, P, P + vec3(0,S,0) ) < S * 0.05 ){ this.iacts = this.TGIA_Y; return; }
+		if( distance_line_segments( from, to, P, P + vec3(0,0,S) ) < S * 0.05 ){ this.iacts = this.TGIA_Z; return; }
+		
+		if( ray_rect_intersect( from, to, P, vec3(M,0,0), vec3(0,M,0) ) ){ this.iacts = this.TGIA_XY; return; }
+		if( ray_rect_intersect( from, to, P, vec3(0,M,0), vec3(0,0,M) ) ){ this.iacts = this.TGIA_YZ; return; }
+		if( ray_rect_intersect( from, to, P, vec3(0,0,M), vec3(M,0,0) ) ){ this.iacts = this.TGIA_ZX; return; }
+	}
+	if( this.mode == this.TGM_ROTATE )
+	{
+		ftd = (to-from).normalized;
+		dst = ray_sphere_intersect( from, ftd, P, S );
+		if( dst > 0 )
+		{
+			risp = from + ftd * dst;
+			if( abs( risp.x - P.x ) < S * 0.05 ){ this.iacts = this.TGIA_X; return; }
+			if( abs( risp.y - P.y ) < S * 0.05 ){ this.iacts = this.TGIA_Y; return; }
+			if( abs( risp.z - P.z ) < S * 0.05 ){ this.iacts = this.TGIA_Z; return; }
+			this.iacts = this.TGIA_ALL;
+			return;
+		}
+		dst = distance_point_line_segment( P, from, to );
+		if( dst > S * 1.1 && dst < S * 1.2 ){ this.iacts = this.TGIA_VIEW; return; }
+	}
+	if( this.mode == this.TGM_SCALE )
+	{
+		if( distance_point_line_segment( P, from, to ) < S * 0.1 ||
+			ray_rtri_intersect( from, to, P, vec3(M,0,0), vec3(0,M,0) ) ||
+			ray_rtri_intersect( from, to, P, vec3(0,M,0), vec3(0,0,M) ) ||
+			ray_rtri_intersect( from, to, P, vec3(0,0,M), vec3(M,0,0) ) ){ this.iacts = this.TGIA_ALL; return; }
+		
+		if( distance_line_segments( from, to, P, P + vec3(S,0,0) ) < S * 0.05 ){ this.iacts = this.TGIA_X; return; }
+		if( distance_line_segments( from, to, P, P + vec3(0,S,0) ) < S * 0.05 ){ this.iacts = this.TGIA_Y; return; }
+		if( distance_line_segments( from, to, P, P + vec3(0,0,S) ) < S * 0.05 ){ this.iacts = this.TGIA_Z; return; }
+		
+		TT = S * 2 / 3;
+		if( ray_rtri_intersect( from, to, P, vec3(TT,0,0), vec3(0,TT,0) ) ){ this.iacts = this.TGIA_XY; return; }
+		if( ray_rtri_intersect( from, to, P, vec3(0,TT,0), vec3(0,0,TT) ) ){ this.iacts = this.TGIA_YZ; return; }
+		if( ray_rtri_intersect( from, to, P, vec3(0,0,TT), vec3(TT,0,0) ) ){ this.iacts = this.TGIA_ZX; return; }
+	}
+}
+
+function TransformGizmo.getInteractRef( viewDir, viewUp, from, to )
+{
+	P = this.position;
+	IA = this.iacts;
+	if( !IA )
+		return null; // "invalid input, do not proceed"
+	
+	viewDir = viewDir.normalized;
+	viewUp = viewUp.normalized;
+	viewRight = vec3_cross( viewUp, viewDir ).normalized;
+	viewUp = vec3_cross( viewDir, viewRight ).normalized;
+	
+	ftd = (to-from).normalized;
+	
+	if( this.mode == this.TGM_MOVE || this.mode == this.TGM_SCALE )
+	{
+		// find ray test plane
+		pn = null;
+		mask = vec3(1,1,1);
+		if( IA == this.TGIA_XY )
+		{
+			pn = vec3(0,0,1);
+			mask.z = 0;
+		}
+		else if( IA == this.TGIA_YZ )
+		{
+			pn = vec3(1,0,0);
+			mask.x = 0;
+		}
+		else if( IA == this.TGIA_ZX )
+		{
+			pn = vec3(0,1,0);
+			mask.y = 0;
+		}
+		
+		if( pn === null )
+		{
+			pt0 = viewRight;
+			pt1 = viewUp;
+			
+			if( IA == this.TGIA_X )
+			{
+				mask = pt0 = vec3(1,0,0);
+				pt1 = vec3_cross( pt0, viewDir );
+			}
+			if( IA == this.TGIA_Y )
+			{
+				mask = pt0 = vec3(0,1,0);
+				pt1 = vec3_cross( pt0, viewDir );
+			}
+			if( IA == this.TGIA_Z )
+			{
+				mask = pt0 = vec3(0,0,1);
+				pt1 = vec3_cross( pt0, viewDir );
+			}
+			pn = vec3_cross( pt0, pt1 );
+		}
+		
+		// return ray/plane intersection point
+		dst = ray_plane_intersect( from, ftd, vec4( pn.x, pn.y, pn.z, vec3_dot( pn, P ) ) );
+		if( dst > 0 )
+		{
+			pos = ( from + ftd * dst ) * mask + P * ( 1 - mask );
+			if( this.mode == this.TGM_SCALE )
+			{
+				pos -= P;
+				pl = pos.length;
+				pos = vec3( pl, pl, pl );
+			}
+			return pos;
+		}
+	}
+	if( this.mode == this.TGM_ROTATE )
+	{
+		if( IA == this.TGIA_ALL )
+		{
+			dst = ray_sphere_intersect( from, ftd, P, this.size );
+			if( dst > 0 )
+			{
+				pos = from + ftd * dst;
+				return ( pos - P ).normalized;
+			}
+		}
+		pn = viewDir;
+		dst = ray_plane_intersect( from, ftd, vec4( pn.x, pn.y, pn.z, vec3_dot( pn, P ) ) );
+		if( dst > 0 )
+		{
+			pos = from + ftd * dst;
+			refx = vec3_dot( from, viewRight ) - vec3_dot( pos, viewRight );
+			refy = vec3_dot( from, viewUp ) - vec3_dot( pos, viewUp );
+			return atan2( refy, refx );
+		}
+	}
+	return null;
+}
+
+function TransformGizmo._drawCone( p0, p1, n0, n1, rad, r, g, b, a, outline )
+{
+	RB = g_RB;
+	numsides = toint( rad );
+	if( numsides < 3 )
+		numsides = 3;
+	RB.begin();
+	if( !outline )
+		RB.f( p1.x, p1.y, p1.z );
+	ang = 0;
+	ad = M_PI * 2 / numsides;
+	for( i = 0; i <= numsides; ++i )
+	{
+		x = cos( ang ) * rad;
+		y = sin( ang ) * rad;
+		p = p0 + n0 * x + n1 * y;
+		RB.f( p.x, p.y, p.z );
+		ang += ad;
+	}
+	RB.c4b( r, g, b, a ).interlace( 4, 12, 12 );
+	RB.draw( null, this.vdecl, 0, RB.size / 16, if( outline, SS_PT_LINE_STRIP, SS_PT_TRIANGLE_FAN ) );
+}
+
+function TransformGizmo._drawCircle( p, n0, n1, rad, r, g, b, a )
+{
+	return this._drawCone( p, p, n0, n1, rad, r, g, b, a );
+}
+
+function TransformGizmo._drawCircleOutline( p, n0, n1, rad, r, g, b, a )
+{
+	return this._drawCone( p, p, n0, n1, rad, r, g, b, a, true );
+}
+
+function TransformGizmo._drawQuad( p, n0, n1, rad, r, g, b, a )
+{
+	RB = g_RB.begin();
+	p0 = p + ( - n0 - n1 ) * rad;
+	p1 = p + ( + n0 - n1 ) * rad;
+	p2 = p + ( + n0 + n1 ) * rad;
+	p3 = p + ( - n0 + n1 ) * rad;
+	RB.f(
+		p0.x, p0.y, p0.z,
+		p1.x, p1.y, p1.z,
+		p2.x, p2.y, p2.z,
+		p3.x, p3.y, p3.z
+	);
+	RB.c4b( r, g, b, a ).interlace( 4, 12, 12 );
+	RB.draw( null, this.vdecl, 0, RB.size / 16, SS_PT_TRIANGLE_FAN );
+}
+
+function TransformGizmo.draw( viewDir, viewUp )
+{
+	P = this.position;
+	S = this.size;
+	M = S * 0.5;
+	IA = this.iacts;
+	RB = g_RB;
+	if( this.mode == this.TGM_MOVE )
+	{
+		iax = if( IA & this.TGIA_X == this.TGIA_X, 0.5, 0.0 );
+		iay = if( IA & this.TGIA_Y == this.TGIA_Y, 0.5, 0.0 );
+		iaz = if( IA & this.TGIA_Z == this.TGIA_Z, 0.5, 0.0 );
+		iaxy = if( IA & this.TGIA_XY == this.TGIA_XY, 0.5, 0.0 );
+		iayz = if( IA & this.TGIA_YZ == this.TGIA_YZ, 0.5, 0.0 );
+		iazx = if( IA & this.TGIA_ZX == this.TGIA_ZX, 0.5, 0.0 );
+		
+		if( iaxy )
+		{
+			RB.begin()
+				.f( P.x, P.y, P.z, P.x + M, P.y, P.z,
+					P.x + M, P.y + M, P.z, P.x, P.y + M, P.z )
+				.c4b( 1, 1, 0, 0.3 ).interlace( 4, 12, 12 )
+				.draw( null, this.vdecl, 0, RB.size / 16, SS_PT_TRIANGLE_FAN )
+			;
+		}
+		if( iayz )
+		{
+			RB.begin()
+				.f( P.x, P.y, P.z, P.x, P.y + M, P.z,
+					P.x, P.y + M, P.z + M, P.x, P.y, P.z + M )
+				.c4b( 1, 1, 0, 0.3 ).interlace( 4, 12, 12 )
+				.draw( null, this.vdecl, 0, RB.size / 16, SS_PT_TRIANGLE_FAN )
+			;
+		}
+		if( iazx )
+		{
+			RB.begin()
+				.f( P.x, P.y, P.z, P.x, P.y, P.z + M,
+					P.x + M, P.y, P.z + M, P.x + M, P.y, P.z )
+				.c4b( 1, 1, 0, 0.3 ).interlace( 4, 12, 12 )
+				.draw( null, this.vdecl, 0, RB.size / 16, SS_PT_TRIANGLE_FAN )
+			;
+		}
+		
+		o = 0;
+		RB.begin()
+			// square outlines
+			// X/Y
+			.f( P.x + M, P.y, P.z, P.x + M, P.y + M, P.z )
+			.c4b( 1, iaxy, iaxy, 1 ).interlace( 4, 12, 12 + (o++)*32, 2 )
+			.f( P.x + M, P.y + M, P.z, P.x, P.y + M, P.z )
+			.c4b( iaxy*1.8, 1, iaxy*0.25, 1 ).interlace( 4, 12, 12 + (o++)*32, 2 )
+			// Y/Z
+			.f( P.x, P.y + M, P.z, P.x, P.y + M, P.z + M )
+			.c4b( iayz*1.8, 1, iayz*0.25, 1 ).interlace( 4, 12, 12 + (o++)*32, 2 )
+			.f( P.x, P.y + M, P.z + M, P.x, P.y, P.z + M )
+			.c4b( iayz, iayz, 1, 1 ).interlace( 4, 12, 12 + (o++)*32, 2 )
+			// Z/X
+			.f( P.x, P.y, P.z + M, P.x + M, P.y, P.z + M )
+			.c4b( iazx, iazx, 1, 1 ).interlace( 4, 12, 12 + (o++)*32, 2 )
+			.f( P.x + M, P.y, P.z + M, P.x + M, P.y, P.z )
+			.c4b( 1, iazx, iazx, 1 ).interlace( 4, 12, 12 + (o++)*32, 2 )
+			// base axes
+			.f( P.x, P.y, P.z, P.x + S, P.y, P.z )
+			.c4b( 1, iax, iax, 1 ).interlace( 4, 12, 12 + (o++)*32, 2 )
+			.f( P.x, P.y, P.z, P.x, P.y + S, P.z )
+			.c4b( iay*1.8, 1, iay*0.25, 1 ).interlace( 4, 12, 12 + (o++)*32, 2 )
+			.f( P.x, P.y, P.z, P.x, P.y, P.z + S )
+			.c4b( iaz, iaz, 1, 1 ).interlace( 4, 12, 12 + (o++)*32, 2 )
+			.draw( null, this.vdecl, 0, RB.size / 16, SS_PT_LINES )
+		;
+		
+		this._drawCone( P + vec3(S,0,0), P + vec3(S,0,0), vec3(0,1,0), vec3(0,0,1), S * 0.04, 1, iax, iax, 1 );
+		this._drawCone( P + vec3(S,0,0), P + vec3(S*1.1,0,0), vec3(0,1,0), vec3(0,0,1), S * 0.04, 1, iax, iax, 1 );
+		
+		this._drawCone( P + vec3(0,S,0), P + vec3(0,S,0), vec3(1,0,0), vec3(0,0,1), S * 0.04, iay*1.8, 1, iay*0.25, 1 );
+		this._drawCone( P + vec3(0,S,0), P + vec3(0,S*1.1,0), vec3(1,0,0), vec3(0,0,1), S * 0.04, iay*1.8, 1, iay*0.25, 1 );
+		
+		this._drawCone( P + vec3(0,0,S), P + vec3(0,0,S), vec3(1,0,0), vec3(0,1,0), S * 0.04, iaz, iaz, 1, 1 );
+		this._drawCone( P + vec3(0,0,S), P + vec3(0,0,S*1.1), vec3(1,0,0), vec3(0,1,0), S * 0.04, iaz, iaz, 1, 1 );
+	}
+	if( this.mode == this.TGM_ROTATE )
+	{
+		viewDir = viewDir.normalized;
+		viewUp = viewUp.normalized;
+		viewRight = vec3_cross( viewUp, viewDir ).normalized;
+		viewUp = vec3_cross( viewDir, viewRight ).normalized;
+		
+		iax = if( IA == this.TGIA_X, 0.5, 0.0 );
+		iay = if( IA == this.TGIA_Y, 0.5, 0.0 );
+		iaz = if( IA == this.TGIA_Z, 0.5, 0.0 );
+		iav = if( IA == this.TGIA_VIEW, 0.2, 0.0 );
+		iaa = if( IA & this.TGIA_ALL == this.TGIA_ALL, 0.2, 0.0 );
+		
+		this._drawCircle( P, viewRight, viewUp, S, 0.5 + iaa, 0.5 + iaa, 0.5 + iaa, 0.3 );
+		
+		this._drawCircleOutline( P, vec3(0,1,0), vec3(0,0,1), S, 1, iax, iax, 1 );
+		this._drawCircleOutline( P, vec3(1,0,0), vec3(0,0,1), S, iay*1.8, 1, iay*0.25, 1 );
+		this._drawCircleOutline( P, vec3(1,0,0), vec3(0,1,0), S, iaz, iaz, 1, 1 );
+		
+		this._drawCircleOutline( P, viewRight, viewUp, S * 1.2, 0.8, 0.8, 0.8, 0.5 + iav );
+	}
+	if( this.mode == this.TGM_SCALE )
+	{
+		viewDir = viewDir.normalized;
+		viewUp = viewUp.normalized;
+		viewRight = vec3_cross( viewUp, viewDir ).normalized;
+		viewUp = vec3_cross( viewDir, viewRight ).normalized;
+		
+		iax = if( IA & this.TGIA_X == this.TGIA_X, 0.5, 0.0 );
+		iay = if( IA & this.TGIA_Y == this.TGIA_Y, 0.5, 0.0 );
+		iaz = if( IA & this.TGIA_Z == this.TGIA_Z, 0.5, 0.0 );
+		iaxy = if( IA & this.TGIA_XY == this.TGIA_XY, 0.5, 0.0 );
+		iayz = if( IA & this.TGIA_YZ == this.TGIA_YZ, 0.5, 0.0 );
+		iazx = if( IA & this.TGIA_ZX == this.TGIA_ZX, 0.5, 0.0 );
+		
+		if( iaxy )
+		{
+			RB.begin()
+				.f( P.x, P.y, P.z, P.x + M, P.y, P.z, P.x, P.y + M, P.z )
+				.c4b( 1, 1, 0, 0.3 ).interlace( 4, 12, 12 )
+				.draw( null, this.vdecl, 0, RB.size / 16, SS_PT_TRIANGLES )
+			;
+		}
+		if( iayz )
+		{
+			RB.begin()
+				.f( P.x, P.y, P.z, P.x, P.y + M, P.z, P.x, P.y, P.z + M )
+				.c4b( 1, 1, 0, 0.3 ).interlace( 4, 12, 12 )
+				.draw( null, this.vdecl, 0, RB.size / 16, SS_PT_TRIANGLES )
+			;
+		}
+		if( iazx )
+		{
+			RB.begin()
+				.f( P.x, P.y, P.z, P.x, P.y, P.z + M, P.x + M, P.y, P.z )
+				.c4b( 1, 1, 0, 0.3 ).interlace( 4, 12, 12 )
+				.draw( null, this.vdecl, 0, RB.size / 16, SS_PT_TRIANGLES )
+			;
+		}
+		
+		TT = S * 2 / 3;
+		
+		o = 0;
+		RB.begin()
+			// triangle outlines
+			// X/Y
+			.f( P.x + TT, P.y, P.z, P.x, P.y + TT, P.z )
+			.c4b( 0.5 + iaxy, 0.5 + iaxy, iaxy, 1 ).interlace( 4, 12, 12 + (o++)*32, 2 )
+			// Y/Z
+			.f( P.x, P.y + TT, P.z, P.x, P.y, P.z + TT )
+			.c4b( 0.5 + iayz, 0.5 + iayz, iayz, 1 ).interlace( 4, 12, 12 + (o++)*32, 2 )
+			// Z/X
+			.f( P.x, P.y, P.z + TT, P.x + TT, P.y, P.z )
+			.c4b( 0.5 + iazx, 0.5 + iazx, iazx, 1 ).interlace( 4, 12, 12 + (o++)*32, 2 )
+			// base axes
+			.f( P.x, P.y, P.z, P.x + S, P.y, P.z )
+			.c4b( 1, iax, iax, 1 ).interlace( 4, 12, 12 + (o++)*32, 2 )
+			.f( P.x, P.y, P.z, P.x, P.y + S, P.z )
+			.c4b( iay*1.8, 1, iay*0.25, 1 ).interlace( 4, 12, 12 + (o++)*32, 2 )
+			.f( P.x, P.y, P.z, P.x, P.y, P.z + S )
+			.c4b( iaz, iaz, 1, 1 ).interlace( 4, 12, 12 + (o++)*32, 2 )
+			.draw( null, this.vdecl, 0, RB.size / 16, SS_PT_LINES )
+		;
+		
+		this._drawQuad( P + vec3(S,0,0), viewRight, viewUp, S * 0.04, 1, iax, iax, 1 );
+		this._drawQuad( P + vec3(0,S,0), viewRight, viewUp, S * 0.04, iay*1.8, 1, iay*0.25, 1 );
+		this._drawQuad( P + vec3(0,0,S), viewRight, viewUp, S * 0.04, iaz, iaz, 1, 1 );
+	}
+}
+
+
