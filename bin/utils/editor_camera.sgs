@@ -1,0 +1,92 @@
+
+
+global EditorCamera = {};
+
+function EditorCamera.create( pos, tgt, fov, updir )
+{
+	pos ??= vec3(0,0,0);
+	tgt ??= vec3(1,0,0);
+	updir ??= vec3(0,0,1);
+	dir = ( tgt - pos ).normalized;
+	dir2d = vec2( dir.x, dir.y );
+	data =
+	{
+		position = pos,
+		angle = atan2( dir.y, dir.x ),
+		z_angle = vec2( dir2d.length, dir.z ).angle,
+		updir = updir,
+		fov = toreal( fov ?? 90 ),
+		
+		width = 1,
+		height = 1,
+		znear = 1.0,
+		zfar = 1000.0,
+		
+		dir = null,
+		right = null,
+		mtx_view = null,
+		mtx_proj = null,
+		mtx_full = null,
+	};
+	class( data, EditorCamera );
+	data.turn();
+	return data;
+}
+
+function EditorCamera.recalcMatrices()
+{
+	matrices = SS_GetCamera3D( this.position, this.dir, this.updir, deg2rad(this.fov), this.width / this.height, this.znear, this.zfar );
+	this.mtx_view = matrices[0];
+	this.mtx_proj = matrices[1];
+	this.mtx_full = mat4().multiply2( this.mtx_view, this.mtx_proj );
+}
+
+function EditorCamera.setViewportSize( w, h, znear, zfar )
+{
+	w = max( 1, toint( w ?? this.width ) );
+	h = max( 1, toint( h ?? this.height ) );
+	if( znear !== null ) this.znear = toreal( znear );
+	if( zfar !== null ) this.zfar = toreal( zfar );
+	this.width = w;
+	this.height = h;
+	
+	this.recalcMatrices();
+}
+
+function EditorCamera.turn( h, v )
+{
+	h ??= 0.0;
+	v ??= 0.0;
+	this.angle += h;
+	this.z_angle += v;
+	
+	this.z_angle = max( -M_PI/2, min( M_PI/2, this.z_angle ) );
+	
+	ca = cos( this.angle );
+	sa = sin( this.angle );
+	cz = cos( this.z_angle );
+	sz = sin( this.z_angle );
+	
+	this.dir = vec3( ca * cz, sa * cz, sz );
+	this.right = vec3_cross( this.dir, this.updir ).normalized;
+	this.recalcMatrices();
+}
+
+function EditorCamera.move( fb, rl, ud, mul )
+{
+	fb ??= 0.0;
+	rl ??= 0.0;
+	ud ??= 0.0;
+	mul ??= 1.0;
+	
+	this.position += this.dir * fb * mul;
+	this.position += this.right * rl * mul;
+	this.position += this.updir * ud * mul;
+	this.recalcMatrices();
+}
+
+function EditorCamera.apply()
+{
+	SS_SetCamera( this.mtx_view, this.mtx_proj );
+}
+

@@ -1,5 +1,5 @@
 
-include "utils/transform_gizmo";
+include "utils/transform_gizmo", "utils/editor_camera";
 
 
 global g_MousePos = vec2( 0, 0 );
@@ -18,6 +18,49 @@ function initialize()
 	global TFG = TransformGizmo.create();
 	global curref = null;
 	global tfref = null;
+	
+	global EDCAM = EditorCamera.create( vec3(100,100,100), vec3(0,0,0) );
+	EDCAM.setViewportSize( Window.width, Window.height );
+	
+	global ITEM_POS = vec3(0,0,32);
+	global ITEM_ROT = mat4();
+	global ITEM_SCALE = vec3(1,1,1);
+	global ITEM_VD = SS_MakeVertexFormat( "pf3tf2cb4" );
+	
+	// -------------- WORLD ----------------
+	global WORLD = SS_CreateRenderBuffer().begin();
+	global WORLD_VD = SS_MakeVertexFormat( "pf3tf2" );
+	global WORLD_TX = SS_CreateTexture( "images/texture.png", "nolerp,hrepeat,vrepeat" );
+	function define_plane( x1, y1, x2, y2, z )
+	{
+		t = 32;
+		WORLD.f(
+			x1, y1, z, x1/t, y1/t,
+			x2, y1, z, x2/t, y1/t,
+			x2, y2, z, x2/t, y2/t,
+			x1, y2, z, x1/t, y2/t
+		);
+	}
+	function define_wall( x1, y1, z1, x2, y2, z2 )
+	{
+		t = 32;
+		dir = vec2( x2 - x1, y2 - y1 ).normalized;
+		xt1 = vec2_dot( vec2( x1, y1 ), dir ) / t;
+		xt2 = vec2_dot( vec2( x2, y2 ), dir ) / t;
+		WORLD.f(
+			x1, y1, z1, xt1, z1/t,
+			x1, y1, z2, xt1, z2/t,
+			x2, y2, z2, xt2, z2/t,
+			x2, y2, z1, xt2, z1/t
+		);
+	}
+	define_plane( -1024, -1024, 1024, 1024, 0 ); // base surface
+	define_wall( -128, -128, 0, 128, -128, 128 ); // side wall 1
+	define_wall( -128, -128, 0, -128, -512, 128 ); // side wall 2
+	define_wall( -128, -128, 0, -128, 128, 32 ); // low surface side
+	define_plane( -128, -256, -256, 128, 32 ); // low surface
+	WORLD.quadsToTris( 20 );
+	// -------------- WORLD ----------------
 }
 
 
@@ -32,23 +75,54 @@ function drawtick( p, r, g, b )
 		.draw( null, SS_MakeVertexFormat( "pf3cb4" ), 0, g_RB.size / 16, SS_PT_LINES );
 }
 
+function drawitem()
+{
+	mtx_total = mat4().scale_v3( ITEM_SCALE ).multiply( ITEM_ROT ).translate_v3( ITEM_POS );
+	SS_MatrixPush( mtx_total );
+	g_RB.begin()
+		// base
+		.f( -6, -6, -6, 0, 0 ).c4b( 1, 0.5, 0.5, 1 )
+		.f( 6, -6, -6, 1, 0 ).c4b( 0.5, 1, 0.5, 1 )
+		.f( 0, 8, -6, 0.5, 1 ).c4b( 0.5, 0.5, 1, 1 )
+		// side 1
+		.f( -6, -6, -6, 0, 0 ).c4b( 1, 0.5, 0.5, 1 )
+		.f( 6, -6, -6, 1, 0 ).c4b( 0.5, 1, 0.5, 1 )
+		.f( 0, 0, 8, 0.5, 0.5 ).c4b( 1, 1, 1, 1 )
+		// side 2
+		.f( 6, -6, -6, 1, 0 ).c4b( 0.5, 1, 0.5, 1 )
+		.f( 0, 8, -6, 0.5, 1 ).c4b( 0.5, 0.5, 1, 1 )
+		.f( 0, 0, 8, 0.5, 0.5 ).c4b( 1, 1, 1, 1 )
+		// side 3
+		.f( 0, 8, -6, 0.5, 1 ).c4b( 0.5, 0.5, 1, 1 )
+		.f( -6, -6, -6, 0, 0 ).c4b( 1, 0.5, 0.5, 1 )
+		.f( 0, 0, 8, 0.5, 0.5 ).c4b( 1, 1, 1, 1 )
+		.draw( WORLD_TX, ITEM_VD, 0, g_RB.size / 24, SS_PT_TRIANGLES );
+	SS_MatrixPop();
+}
+
+global lasttime = ftime();
 function update()
 {
+	curtime = ftime();
+	delta = curtime - lasttime;
+	global lasttime = curtime;
+	
 	W = Window.bbWidth;
 	H = Window.bbHeight;
 	
 	SS_Clear( color(0.1,1) );
 	
-	cam3d = SS_GetCamera3D( vec3(100,100,100), vec3(-1,-1,-1), vec3(0,0,1), deg2rad(90), W/H, 1, 1000 );
-	SS_SetCamera( cam3d[0], cam3d[1] );
-	mtx_total = cam3d[0].multiply( cam3d[1] );
+	EDCAM.move( @keys[ SDLK_W ] - @keys[ SDLK_S ], @keys[ SDLK_D ] - @keys[ SDLK_A ], @keys[ SDLK_E ] - @keys[ SDLK_Q ], delta * 200 );
+	EDCAM.apply();
 	mtx_inv = mat4();
-	mtx_inv.invert_from( mtx_total );
+	mtx_inv.invert_from( EDCAM.mtx_full );
+	
 	tf_in_pos = vec3( g_MousePos.x / W * 2 - 1, g_MousePos.y / H * -2 + 1, 0 );
 	r_from = mtx_inv.transform_pos( tf_in_pos - vec3( 0, 0, 1 ) );
 	r_to = mtx_inv.transform_pos( tf_in_pos + vec3( 0, 0, 1 ) );
-	global tfref, curref;
-	iref = TFG.getInteractRef( vec3(-1,-1,-1), vec3(0,0,1), r_from, r_to );
+	
+	global tfref, curref, ITEM_POS, ITEM_ROT, ITEM_SCALE;
+	iref = TFG.getInteractRef( EDCAM.dir, EDCAM.updir, r_from, r_to );
 	if( tfref === null )
 	{
 		TFG.updateInteractions( r_from, r_to );
@@ -57,11 +131,35 @@ function update()
 	else
 	{
 		if( TFG.mode == TFG.TGM_MOVE && iref !== null )
-			TFG.position = iref - tfref;
+			ITEM_POS = iref - tfref;
+		if( TFG.mode == TFG.TGM_SCALE && iref !== null )
+			ITEM_SCALE = iref / tfref;
+		if( TFG.mode == TFG.TGM_ROTATE && iref !== null )
+		{
+			ITEM_ROT = clone(STORED_ROT);
+			if( TFG.iacts == TFG.TGIA_ALL )
+			{
+				axis = vec3_cross( iref, tfref );
+				angle = acos( min( 1, vec3_dot( iref.normalized, tfref.normalized ) ) );
+			}
+			else
+			{
+				if( TFG.iacts == TFG.TGIA_VIEW )
+					axis = -EDCAM.dir;
+				else
+					axis = vec3( TFG.iacts == TFG.TGIA_X, TFG.iacts == TFG.TGIA_Y, TFG.iacts == TFG.TGIA_Z );
+				angle = iref - tfref;
+			}
+			ITEM_ROT.rotate_axis_angle_v3( axis, angle );
+		}
 	}
 	
 	SS_SetDepthTest( true );
-	TFG.draw( vec3(-1,-1,-1), vec3(0,0,1) );
+	WORLD.draw( WORLD_TX, WORLD_VD, 0, WORLD.size / 20, SS_PT_TRIANGLES );
+	drawitem();
+	TFG.position = ITEM_POS;
+	TFG.size = ( EDCAM.position - TFG.position ).length * 0.25;
+	TFG.draw( EDCAM.dir, EDCAM.updir );
 	if( typeof(iref) == "vec3" ) drawtick( iref, 1, 0, 0 );
 	if( typeof(curref) == "vec3" ) drawtick( curref, 0, 1, 0 );
 	if( typeof(tfref) == "vec3" ) drawtick( tfref, 0, 0, 1 );
@@ -75,6 +173,7 @@ function update()
 	SS_Present();
 }
 
+global keys = map();
 function on_event( e )
 {
 	if( e.type == SDL_QUIT )
@@ -91,9 +190,21 @@ function on_event( e )
 	{
 		global tfref = curref;
 		if( TFG.mode == TFG.TGM_MOVE && tfref !== null )
-			tfref -= TFG.position;
+			tfref -= ITEM_POS;
+		if( TFG.mode == TFG.TGM_SCALE && tfref !== null )
+			tfref /= ITEM_SCALE;
+		if( TFG.mode == TFG.TGM_ROTATE && tfref !== null )
+			global STORED_ROT = ITEM_ROT;
 	}
 	if( e.type == SDL_MOUSEBUTTONUP && e.button == 1 ){ global tfref = null; }
+	
+	if( e.type == SDL_MOUSEBUTTONDOWN && e.button == 3 ) global g_TurnCam = true;
+	if( e.type == SDL_MOUSEBUTTONUP && e.button == 3 ) global g_TurnCam = false;
+	if( e.type == SDL_MOUSEMOTION && @g_TurnCam )
+	{
+		EDCAM.turn( -e.xrel * 0.01, -e.yrel * 0.01 );
+	}
+	if( e.type == SDL_KEYDOWN || e.type == SDL_KEYUP ) keys[ e.keycode ] = e.type == SDL_KEYDOWN;
 }
 
 function cleanup()
