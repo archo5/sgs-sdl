@@ -1395,22 +1395,22 @@ static int meshinst_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	MI_HDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "mesh" )    SGS_RETURN_OBJECT( MI->mesh )
-		SGS_CASE( "matrix" )  SGS_RETURN_MAT4( *MI->matrix )
-		SGS_CASE( "color" )   SGS_RETURN_COLORP( MI->color )
-		SGS_CASE( "enabled" ) SGS_RETURN_BOOL( MI->enabled )
+		SGS_CASE( "mesh" )    SGS_RETURN_OBJECT( MI->mesh );
+		SGS_CASE( "matrix" )  SGS_RETURN_MAT4( *MI->matrix );
+		SGS_CASE( "color" )   SGS_RETURN_COLORP( MI->color );
+		SGS_CASE( "enabled" ) SGS_RETURN_BOOL( MI->enabled );
 		
-		SGS_CASE( "setConstF" ) SGS_RETURN_CFUNC( meshinsti_setConstF )
-		SGS_CASE( "setConstV2" ) SGS_RETURN_CFUNC( meshinsti_setConstV2 )
-		SGS_CASE( "setConstV3" ) SGS_RETURN_CFUNC( meshinsti_setConstV3 )
-		SGS_CASE( "setConstV4" ) SGS_RETURN_CFUNC( meshinsti_setConstV4 )
-		SGS_CASE( "setConstM4" ) SGS_RETURN_CFUNC( meshinsti_setConstM4 )
-		SGS_CASE( "setTexture" ) SGS_RETURN_CFUNC( meshinsti_setTexture )
+		SGS_CASE( "setConstF" ) SGS_RETURN_CFUNC( meshinsti_setConstF );
+		SGS_CASE( "setConstV2" ) SGS_RETURN_CFUNC( meshinsti_setConstV2 );
+		SGS_CASE( "setConstV3" ) SGS_RETURN_CFUNC( meshinsti_setConstV3 );
+		SGS_CASE( "setConstV4" ) SGS_RETURN_CFUNC( meshinsti_setConstV4 );
+		SGS_CASE( "setConstM4" ) SGS_RETURN_CFUNC( meshinsti_setConstM4 );
+		SGS_CASE( "setTexture" ) SGS_RETURN_CFUNC( meshinsti_setTexture );
 		
-		SGS_CASE( "texture0" ) SGS_RETURN_OBJECT( MI->textures[0] )
-		SGS_CASE( "texture1" ) SGS_RETURN_OBJECT( MI->textures[1] )
-		SGS_CASE( "texture2" ) SGS_RETURN_OBJECT( MI->textures[2] )
-		SGS_CASE( "texture3" ) SGS_RETURN_OBJECT( MI->textures[3] )
+		SGS_CASE( "texture0" ) SGS_RETURN_OBJECT( MI->textures[0] );
+		SGS_CASE( "texture1" ) SGS_RETURN_OBJECT( MI->textures[1] );
+		SGS_CASE( "texture2" ) SGS_RETURN_OBJECT( MI->textures[2] );
+		SGS_CASE( "texture3" ) SGS_RETURN_OBJECT( MI->textures[3] );
 	SGS_END_INDEXFUNC;
 }
 
@@ -1462,22 +1462,22 @@ static int light_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	L_HDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "type" )          SGS_RETURN_INT( L->type )
-		SGS_CASE( "isEnabled" )     SGS_RETURN_BOOL( L->isEnabled )
-		SGS_CASE( "position" )      SGS_RETURN_VEC3P( L->position )
-		SGS_CASE( "direction" )     SGS_RETURN_VEC3P( L->direction )
-		SGS_CASE( "updir" )         SGS_RETURN_VEC3P( L->updir )
-		SGS_CASE( "color" )         SGS_RETURN_VEC3P( L->color )
-		SGS_CASE( "range" )         SGS_RETURN_REAL( L->range )
-		SGS_CASE( "power" )         SGS_RETURN_REAL( L->power )
-		SGS_CASE( "angle" )         SGS_RETURN_REAL( L->angle )
-		SGS_CASE( "aspect" )        SGS_RETURN_REAL( L->aspect )
-		SGS_CASE( "cookieTexture" ) SGS_RETURN_OBJECT( L->cookieTexture )
-		SGS_CASE( "shadowTexture" ) SGS_RETURN_OBJECT( L->shadowTexture )
-		SGS_CASE( "projMatrix" )    SGS_RETURN_MAT4( *L->projMatrix )
-		SGS_CASE( "hasShadows" )    SGS_RETURN_BOOL( L->hasShadows )
+		SGS_CASE( "type" )          SGS_RETURN_INT( L->type );
+		SGS_CASE( "isEnabled" )     SGS_RETURN_BOOL( L->isEnabled );
+		SGS_CASE( "position" )      SGS_RETURN_VEC3P( L->position );
+		SGS_CASE( "direction" )     SGS_RETURN_VEC3P( L->direction );
+		SGS_CASE( "updir" )         SGS_RETURN_VEC3P( L->updir );
+		SGS_CASE( "color" )         SGS_RETURN_VEC3P( L->color );
+		SGS_CASE( "range" )         SGS_RETURN_REAL( L->range );
+		SGS_CASE( "power" )         SGS_RETURN_REAL( L->power );
+		SGS_CASE( "angle" )         SGS_RETURN_REAL( L->angle );
+		SGS_CASE( "aspect" )        SGS_RETURN_REAL( L->aspect );
+		SGS_CASE( "cookieTexture" ) SGS_RETURN_OBJECT( L->cookieTexture );
+		SGS_CASE( "shadowTexture" ) SGS_RETURN_OBJECT( L->shadowTexture );
+		SGS_CASE( "projMatrix" )    SGS_RETURN_MAT4( *L->projMatrix );
+		SGS_CASE( "hasShadows" )    SGS_RETURN_BOOL( L->hasShadows );
 		
-		SGS_CASE( "genSpotLightMatrices" ) SGS_RETURN_CFUNC( lighti_genSpotLightMatrices )
+		SGS_CASE( "genSpotLightMatrices" ) SGS_RETURN_CFUNC( lighti_genSpotLightMatrices );
 	SGS_END_INDEXFUNC;
 }
 
@@ -1846,19 +1846,19 @@ static int cullscene_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	CS_HDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "camera_meshlist" ) SGS_RETURN_PTR( CS->camera_meshlist )
-		SGS_CASE( "camera_pointlightlist" ) SGS_RETURN_PTR( CS->camera_pointlightlist )
-		SGS_CASE( "camera_spotlightlist" ) SGS_RETURN_PTR( CS->camera_spotlightlist )
-		SGS_CASE( "mesh_pointlightlist" ) SGS_RETURN_PTR( CS->mesh_pointlightlist )
-		SGS_CASE( "mesh_spotlightlist" ) SGS_RETURN_PTR( CS->mesh_spotlightlist )
-		SGS_CASE( "data" ) SGS_RETURN_PTR( CS->data )
+		SGS_CASE( "camera_meshlist" ) SGS_RETURN_PTR( CS->camera_meshlist );
+		SGS_CASE( "camera_pointlightlist" ) SGS_RETURN_PTR( CS->camera_pointlightlist );
+		SGS_CASE( "camera_spotlightlist" ) SGS_RETURN_PTR( CS->camera_spotlightlist );
+		SGS_CASE( "mesh_pointlightlist" ) SGS_RETURN_PTR( CS->mesh_pointlightlist );
+		SGS_CASE( "mesh_spotlightlist" ) SGS_RETURN_PTR( CS->mesh_spotlightlist );
+		SGS_CASE( "data" ) SGS_RETURN_PTR( CS->data );
 		SGS_CASE( "store" ) { sgs_PushVariable( C, &CS->store ); return SGS_SUCCESS; }
 		
-		SGS_CASE( "enable_camera_meshlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_CAM_MESH )
-		SGS_CASE( "enable_camera_pointlightlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_CAM_PLT )
-		SGS_CASE( "enable_camera_spotlightlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_CAM_SLT )
-		SGS_CASE( "enable_mesh_pointlightlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_MESH_PLT )
-		SGS_CASE( "enable_mesh_spotlightlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_MESH_SLT )
+		SGS_CASE( "enable_camera_meshlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_CAM_MESH );
+		SGS_CASE( "enable_camera_pointlightlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_CAM_PLT );
+		SGS_CASE( "enable_camera_spotlightlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_CAM_SLT );
+		SGS_CASE( "enable_mesh_pointlightlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_MESH_PLT );
+		SGS_CASE( "enable_mesh_spotlightlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_MESH_SLT );
 	SGS_END_INDEXFUNC;
 }
 
@@ -1994,23 +1994,23 @@ static int camera_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	CAM_HDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "position" )  SGS_RETURN_VEC3P( CAM->position )
-		SGS_CASE( "direction" ) SGS_RETURN_VEC3P( CAM->direction )
-		SGS_CASE( "up" )        SGS_RETURN_VEC3P( CAM->up )
-		SGS_CASE( "angle" )     SGS_RETURN_REAL( CAM->angle )
-		SGS_CASE( "aspect" )    SGS_RETURN_REAL( CAM->aspect )
-		SGS_CASE( "aamix" )     SGS_RETURN_REAL( CAM->aamix )
-		SGS_CASE( "znear" )     SGS_RETURN_REAL( CAM->znear )
-		SGS_CASE( "zfar" )      SGS_RETURN_REAL( CAM->zfar )
+		SGS_CASE( "position" )  SGS_RETURN_VEC3P( CAM->position );
+		SGS_CASE( "direction" ) SGS_RETURN_VEC3P( CAM->direction );
+		SGS_CASE( "up" )        SGS_RETURN_VEC3P( CAM->up );
+		SGS_CASE( "angle" )     SGS_RETURN_REAL( CAM->angle );
+		SGS_CASE( "aspect" )    SGS_RETURN_REAL( CAM->aspect );
+		SGS_CASE( "aamix" )     SGS_RETURN_REAL( CAM->aamix );
+		SGS_CASE( "znear" )     SGS_RETURN_REAL( CAM->znear );
+		SGS_CASE( "zfar" )      SGS_RETURN_REAL( CAM->zfar );
 		
-		SGS_CASE( "viewMatrix" ) SGS_RETURN_MAT4( *CAM->mView )
-		SGS_CASE( "invViewMatrix" ) SGS_RETURN_MAT4( *CAM->mInvView )
-		SGS_CASE( "projMatrix" ) SGS_RETURN_MAT4( *CAM->mProj )
+		SGS_CASE( "viewMatrix" ) SGS_RETURN_MAT4( *CAM->mView );
+		SGS_CASE( "invViewMatrix" ) SGS_RETURN_MAT4( *CAM->mInvView );
+		SGS_CASE( "projMatrix" ) SGS_RETURN_MAT4( *CAM->mProj );
 		
-		SGS_CASE( "genViewMatrix" ) SGS_RETURN_CFUNC( camerai_genViewMatrix )
-		SGS_CASE( "genProjMatrix" ) SGS_RETURN_CFUNC( camerai_genProjMatrix )
-		SGS_CASE( "worldToScreen" ) SGS_RETURN_CFUNC( camerai_worldToScreen )
-		SGS_CASE( "getCursorRay" ) SGS_RETURN_CFUNC( camerai_getCursorRay )
+		SGS_CASE( "genViewMatrix" ) SGS_RETURN_CFUNC( camerai_genViewMatrix );
+		SGS_CASE( "genProjMatrix" ) SGS_RETURN_CFUNC( camerai_genProjMatrix );
+		SGS_CASE( "worldToScreen" ) SGS_RETURN_CFUNC( camerai_worldToScreen );
+		SGS_CASE( "getCursorRay" ) SGS_RETURN_CFUNC( camerai_getCursorRay );
 	SGS_END_INDEXFUNC;
 }
 
@@ -2501,27 +2501,27 @@ static int scene_getindex( SGS_ARGS_GETINDEXFUNC )
 	SC_HDR;
 	SGS_BEGIN_INDEXFUNC
 		// methods
-		SGS_CASE( "createMeshInstance" )  SGS_RETURN_CFUNC( scenei_createMeshInstance )
-		SGS_CASE( "destroyMeshInstance" ) SGS_RETURN_CFUNC( scenei_destroyMeshInstance )
-		SGS_CASE( "createLight" )         SGS_RETURN_CFUNC( scenei_createLight )
-		SGS_CASE( "destroyLight" )        SGS_RETURN_CFUNC( scenei_destroyLight )
+		SGS_CASE( "createMeshInstance" )  SGS_RETURN_CFUNC( scenei_createMeshInstance );
+		SGS_CASE( "destroyMeshInstance" ) SGS_RETURN_CFUNC( scenei_destroyMeshInstance );
+		SGS_CASE( "createLight" )         SGS_RETURN_CFUNC( scenei_createLight );
+		SGS_CASE( "destroyLight" )        SGS_RETURN_CFUNC( scenei_destroyLight );
 		
 		// properties
-		SGS_CASE( "cullScenes" ) SGS_RETURN_OBJECT( S->cullScenes )
-		SGS_CASE( "camera" )    SGS_RETURN_OBJECT( S->camera )
+		SGS_CASE( "cullScenes" ) SGS_RETURN_OBJECT( S->cullScenes );
+		SGS_CASE( "camera" )    SGS_RETURN_OBJECT( S->camera );
 		
-		SGS_CASE( "fogColor" )         SGS_RETURN_VEC3P( S->fogColor )
-		SGS_CASE( "fogHeightFactor" )  SGS_RETURN_REAL( S->fogHeightFactor )
-		SGS_CASE( "fogDensity" )       SGS_RETURN_REAL( S->fogDensity )
-		SGS_CASE( "fogHeightDensity" ) SGS_RETURN_REAL( S->fogHeightDensity )
-		SGS_CASE( "fogStartHeight" )   SGS_RETURN_REAL( S->fogStartHeight )
-		SGS_CASE( "fogMinDist" )       SGS_RETURN_REAL( S->fogMinDist )
+		SGS_CASE( "fogColor" )         SGS_RETURN_VEC3P( S->fogColor );
+		SGS_CASE( "fogHeightFactor" )  SGS_RETURN_REAL( S->fogHeightFactor );
+		SGS_CASE( "fogDensity" )       SGS_RETURN_REAL( S->fogDensity );
+		SGS_CASE( "fogHeightDensity" ) SGS_RETURN_REAL( S->fogHeightDensity );
+		SGS_CASE( "fogStartHeight" )   SGS_RETURN_REAL( S->fogStartHeight );
+		SGS_CASE( "fogMinDist" )       SGS_RETURN_REAL( S->fogMinDist );
 		
-		SGS_CASE( "ambientLightColor" ) SGS_RETURN_VEC3P( S->ambientLightColor )
-		SGS_CASE( "dirLightColor" )     SGS_RETURN_VEC3P( S->dirLightColor )
-		SGS_CASE( "dirLightDir" )       SGS_RETURN_VEC3P( S->dirLightDir )
+		SGS_CASE( "ambientLightColor" ) SGS_RETURN_VEC3P( S->ambientLightColor );
+		SGS_CASE( "dirLightColor" )     SGS_RETURN_VEC3P( S->dirLightColor );
+		SGS_CASE( "dirLightDir" )       SGS_RETURN_VEC3P( S->dirLightDir );
 		
-		SGS_CASE( "skyTexture" )       SGS_RETURN_OBJECT( S->skyTexture )
+		SGS_CASE( "skyTexture" )       SGS_RETURN_OBJECT( S->skyTexture );
 	SGS_END_INDEXFUNC;
 }
 

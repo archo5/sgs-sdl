@@ -1308,30 +1308,30 @@ static int meshd3d9_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	M_HDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "numParts" )         SGS_RETURN_INT( M->inh.numParts )
-		SGS_CASE( "useTriStrips" )     SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ) )
-		SGS_CASE( "useI32" )           SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_INDEX_32 ) )
-		SGS_CASE( "isDynamic" )        SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_DYNAMIC ) )
-		SGS_CASE( "transparent" )      SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_TRANSPARENT ) )
-		SGS_CASE( "vertexCount" )      SGS_RETURN_INT( M->inh.vertexCount )
-		SGS_CASE( "vertexDataSize" )   SGS_RETURN_INT( M->inh.vertexDataSize )
-		SGS_CASE( "indexCount" )       SGS_RETURN_INT( M->inh.indexCount )
-		SGS_CASE( "indexDataSize" )    SGS_RETURN_INT( M->inh.indexDataSize )
+		SGS_CASE( "numParts" )         SGS_RETURN_INT( M->inh.numParts );
+		SGS_CASE( "useTriStrips" )     SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ) );
+		SGS_CASE( "useI32" )           SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_INDEX_32 ) );
+		SGS_CASE( "isDynamic" )        SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_DYNAMIC ) );
+		SGS_CASE( "transparent" )      SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_TRANSPARENT ) );
+		SGS_CASE( "vertexCount" )      SGS_RETURN_INT( M->inh.vertexCount );
+		SGS_CASE( "vertexDataSize" )   SGS_RETURN_INT( M->inh.vertexDataSize );
+		SGS_CASE( "indexCount" )       SGS_RETURN_INT( M->inh.indexCount );
+		SGS_CASE( "indexDataSize" )    SGS_RETURN_INT( M->inh.indexDataSize );
 		
-		SGS_CASE( "boundsMin" )        SGS_RETURN_VEC3P( M->inh.boundsMin )
-		SGS_CASE( "boundsMax" )        SGS_RETURN_VEC3P( M->inh.boundsMax )
+		SGS_CASE( "boundsMin" )        SGS_RETURN_VEC3P( M->inh.boundsMin );
+		SGS_CASE( "boundsMax" )        SGS_RETURN_VEC3P( M->inh.boundsMax );
 		
-		SGS_CASE( "setVertexData" )    SGS_RETURN_CFUNC( meshd3d9i_setVertexData )
-		SGS_CASE( "setIndexData" )     SGS_RETURN_CFUNC( meshd3d9i_setIndexData )
-		SGS_CASE( "setAABBFromVertexData" ) SGS_RETURN_CFUNC( meshd3d9i_setAABBFromVertexData )
-		SGS_CASE( "initVertexBuffer" ) SGS_RETURN_CFUNC( meshd3d9i_initVertexBuffer )
-		SGS_CASE( "initIndexBuffer" )  SGS_RETURN_CFUNC( meshd3d9i_initIndexBuffer )
-		SGS_CASE( "updateVertexData" ) SGS_RETURN_CFUNC( meshd3d9i_updateVertexData )
-		SGS_CASE( "updateIndexData" )  SGS_RETURN_CFUNC( meshd3d9i_updateIndexData )
-		SGS_CASE( "setPartRanges" )    SGS_RETURN_CFUNC( meshd3d9i_setPartRanges )
-		SGS_CASE( "setPartShader" )    SGS_RETURN_CFUNC( meshd3d9i_setPartShader )
-		SGS_CASE( "setPartTexture" )   SGS_RETURN_CFUNC( meshd3d9i_setPartTexture )
-		SGS_CASE( "loadFromBuffer" )   SGS_RETURN_CFUNC( meshd3d9i_loadFromBuffer )
+		SGS_CASE( "setVertexData" )    SGS_RETURN_CFUNC( meshd3d9i_setVertexData );
+		SGS_CASE( "setIndexData" )     SGS_RETURN_CFUNC( meshd3d9i_setIndexData );
+		SGS_CASE( "setAABBFromVertexData" ) SGS_RETURN_CFUNC( meshd3d9i_setAABBFromVertexData );
+		SGS_CASE( "initVertexBuffer" ) SGS_RETURN_CFUNC( meshd3d9i_initVertexBuffer );
+		SGS_CASE( "initIndexBuffer" )  SGS_RETURN_CFUNC( meshd3d9i_initIndexBuffer );
+		SGS_CASE( "updateVertexData" ) SGS_RETURN_CFUNC( meshd3d9i_updateVertexData );
+		SGS_CASE( "updateIndexData" )  SGS_RETURN_CFUNC( meshd3d9i_updateIndexData );
+		SGS_CASE( "setPartRanges" )    SGS_RETURN_CFUNC( meshd3d9i_setPartRanges );
+		SGS_CASE( "setPartShader" )    SGS_RETURN_CFUNC( meshd3d9i_setPartShader );
+		SGS_CASE( "setPartTexture" )   SGS_RETURN_CFUNC( meshd3d9i_setPartTexture );
+		SGS_CASE( "loadFromBuffer" )   SGS_RETURN_CFUNC( meshd3d9i_loadFromBuffer );
 	SGS_END_INDEXFUNC;
 }
 
