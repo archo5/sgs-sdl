@@ -415,9 +415,14 @@ static void ss_ri_gl_swap( SS_Renderer* R )
 
 static void ss_ri_gl_clear( SS_Renderer* R, float* col4f )
 {
+	int flags = GL_DEPTH_BUFFER_BIT;
 	glClearDepth( 1.0f );
-	glClearColor( col4f[0], col4f[1], col4f[2], col4f[3] );
-	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+	if( col4f )
+	{
+		glClearColor( col4f[0], col4f[1], col4f[2], col4f[3] );
+		flags |= GL_COLOR_BUFFER_BIT;
+	}
+	glClear( flags );
 }
 
 static void ss_ri_gl_set_render_state( SS_Renderer* R, int which, int arg0, int arg1, int arg2, int arg3 )

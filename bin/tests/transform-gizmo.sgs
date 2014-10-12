@@ -159,6 +159,7 @@ function update()
 	drawitem();
 	TFG.position = ITEM_POS;
 	TFG.size = ( EDCAM.position - TFG.position ).length * 0.25;
+	SS_Clear();
 	TFG.draw( EDCAM.dir, EDCAM.updir );
 	if( typeof(iref) == "vec3" ) drawtick( iref, 1, 0, 0 );
 	if( typeof(curref) == "vec3" ) drawtick( curref, 0, 1, 0 );

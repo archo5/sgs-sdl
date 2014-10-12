@@ -510,9 +510,14 @@ static void ss_ri_d3d9_swap( SS_Renderer* R )
 
 static void ss_ri_d3d9_clear( SS_Renderer* R, float* col4f )
 {
-	uint32_t cc = (((uint8_t)(col4f[3]*255))<<24) | (((uint8_t)(col4f[0]*255))<<16) |
-		(((uint8_t)(col4f[1]*255))<<8) | (((uint8_t)(col4f[2]*255)));
-	uint32_t flags = D3DCLEAR_TARGET;
+	uint32_t cc = 0;
+	uint32_t flags = 0;
+	if( col4f )
+	{
+		cc = (((uint8_t)(col4f[3]*255))<<24) | (((uint8_t)(col4f[0]*255))<<16) |
+			(((uint8_t)(col4f[1]*255))<<8) | (((uint8_t)(col4f[2]*255)));
+		flags = D3DCLEAR_TARGET;
+	}
 	if( !R->cur_rtt )
 		flags |= D3DCLEAR_ZBUFFER;
 	IDirect3DDevice9_Clear( R->d3ddev, 0, NULL, flags, cc, 1.0f, 0 );

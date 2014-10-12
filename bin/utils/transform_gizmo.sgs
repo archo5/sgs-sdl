@@ -98,9 +98,10 @@ function TransformGizmo.updateInteractions( from, to )
 		if( dst > 0 )
 		{
 			risp = from + ftd * dst;
-			if( abs( risp.x - P.x ) < S * 0.05 ){ this.iacts = this.TGIA_X; return; }
-			if( abs( risp.y - P.y ) < S * 0.05 ){ this.iacts = this.TGIA_Y; return; }
-			if( abs( risp.z - P.z ) < S * 0.05 ){ this.iacts = this.TGIA_Z; return; }
+			q = ( vec3_dot( ftd, ( risp - P ).normalized ) + 1 ) * 0.15 + 0.05;
+			if( abs( risp.x - P.x ) < S * q ){ this.iacts = this.TGIA_X; return; }
+			if( abs( risp.y - P.y ) < S * q ){ this.iacts = this.TGIA_Y; return; }
+			if( abs( risp.z - P.z ) < S * q ){ this.iacts = this.TGIA_Z; return; }
 			this.iacts = this.TGIA_ALL;
 			return;
 		}
@@ -246,9 +247,39 @@ function TransformGizmo._drawCone( p0, p1, n0, n1, rad, r, g, b, a, outline )
 	RB.draw( null, this.vdecl, 0, RB.size / 16, if( outline, SS_PT_LINE_STRIP, SS_PT_TRIANGLE_FAN ) );
 }
 
-function TransformGizmo._drawCircle( p, n0, n1, rad, r, g, b, a )
+function TransformGizmo._drawHemisphere( p0, n0, n1, n2, rad, r, g, b, a )
 {
-	return this._drawCone( p, p, n0, n1, rad, r, g, b, a );
+	RB = g_RB;
+	numsides = 32;//toint( rad );
+	if( numsides < 3 )
+		numsides = 3;
+	numlevels = numsides / 4;
+	if( numlevels < 1 )
+		numlevels = 1;
+	RB.begin();
+	ad = M_PI * 2 / numsides;
+	for( j = 0; j < numlevels; ++j )
+	{
+		ang = 0;
+		d1 = j / numlevels;
+		d2 = (j+1) / numlevels;
+		z1 = n2 * sin( acos( d1 ) ) * rad;
+		z2 = n2 * sin( acos( d2 ) ) * rad;
+		for( i = 0; i <= numsides; ++i )
+		{
+			x = cos( ang ) * d1 * rad;
+			y = sin( ang ) * d1 * rad;
+			p = p0 + n0 * x + n1 * y + z1;
+			RB.f( p.x, p.y, p.z );
+			x = cos( ang ) * d2 * rad;
+			y = sin( ang ) * d2 * rad;
+			p = p0 + n0 * x + n1 * y + z2;
+			RB.f( p.x, p.y, p.z );
+			ang += ad;
+		}
+	}
+	RB.c4b( r, g, b, a ).interlace( 4, 12, 12 );
+	RB.draw( null, this.vdecl, 0, RB.size / 16, SS_PT_TRIANGLE_STRIP );
 }
 
 function TransformGizmo._drawCircleOutline( p, n0, n1, rad, r, g, b, a )
@@ -367,7 +398,7 @@ function TransformGizmo.draw( viewDir, viewUp )
 		iav = if( IA == this.TGIA_VIEW, 0.2, 0.0 );
 		iaa = if( IA & this.TGIA_ALL == this.TGIA_ALL, 0.2, 0.0 );
 		
-		this._drawCircle( P, viewRight, viewUp, S, 0.5 + iaa, 0.5 + iaa, 0.5 + iaa, 0.3 );
+		this._drawHemisphere( P, viewRight, viewUp, -viewDir, S * 0.99, 0.5 + iaa, 0.5 + iaa, 0.5 + iaa, 0.3 );
 		
 		this._drawCircleOutline( P, vec3(0,1,0), vec3(0,0,1), S, 1, iax, iax, 1 );
 		this._drawCircleOutline( P, vec3(1,0,0), vec3(0,0,1), S, iay*1.8, 1, iay*0.25, 1 );

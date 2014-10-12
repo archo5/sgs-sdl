@@ -1985,9 +1985,15 @@ static int SS_Clear( SGS_CTX )
 	SGSFN( "SS_Clear" );
 	SCRFN_NEEDS_RENDER_CONTEXT;
 	
+	if( sgs_StackSize( C ) == 0 || sgs_ItemType( C, 0 ) == SGS_VT_NULL )
+	{
+		GCurRI->clear( GCurRr, NULL );
+		return 0;
+	}
+	
 	if( sgs_StackSize( C ) != 1 ||
 		!ss_ParseColor( C, 0, col ) )
-		_WARN( "function expects 1 argument: array of 1-4 real values" )
+		_WARN( "function expects 0-1 arguments: optional array of 1-4 real values" )
 	
 	GCurRI->clear( GCurRr, col );
 	return 0;
