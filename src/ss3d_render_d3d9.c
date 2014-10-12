@@ -1416,6 +1416,17 @@ typedef struct _rtoutinfo
 }
 rtoutinfo;
 
+
+static void viewport_apply( SS3D_RD3D9* R, int ds )
+{
+	if( R->inh.viewport )
+	{
+		SS3D_Viewport* VP = (SS3D_Viewport*) R->inh.viewport->data;
+		D3DVIEWPORT9 d3dvp = { VP->x1 / ds, VP->y1 / ds, ( VP->x2 - VP->x1 ) / ds, ( VP->y2 - VP->y1 ) / ds, 0.0f, 1.0f };
+		D3DCALL_( R->device, SetViewport, &d3dvp );
+	}
+}
+
 static void postproc_blit( SS3D_RD3D9* R, rtoutinfo* pRTOUT, int ds, int ppdata_location )
 {
 	int w = pRTOUT->w, h = pRTOUT->h;
@@ -1424,14 +1435,15 @@ static void postproc_blit( SS3D_RD3D9* R, rtoutinfo* pRTOUT, int ds, int ppdata_
 	SS3D_Scene* scene = (SS3D_Scene*) R->inh.currentScene->data;
 	SS3D_Camera* cam = (SS3D_Camera*) scene->camera->data;
 	
-	float invQW = 2.0f, invQH = 2.0f;
+	float invQW = 2.0f, invQH = 2.0f, offX = -1.0f, offY = -1.0f, t0x = 0, t0y = 0, t1x = 1, t1y = 1;
 	if( R->inh.viewport )
 	{
 		SS3D_Viewport* VP = (SS3D_Viewport*) R->inh.viewport->data;
-		D3DVIEWPORT9 d3dvp = { VP->x1 / ds, VP->y1 / ds, ( VP->x2 - VP->x1 ) / ds, ( VP->y2 - VP->y1 ) / ds, 0.0f, 1.0f };
-		invQW = w * 2.0f / ( VP->x2 - VP->x1 );
-		invQH = h * 2.0f / ( VP->y2 - VP->y1 );
-		D3DCALL_( R->device, SetViewport, &d3dvp );
+		t0x = (float) VP->x1 / (float) w;
+		t0y = (float) VP->y1 / (float) h;
+		t1x = (float) VP->x2 / (float) w;
+		t1y = (float) VP->y2 / (float) h;
+		viewport_apply( R, ds );
 	}
 	
 	w /= ds;
@@ -1443,10 +1455,10 @@ static void postproc_blit( SS3D_RD3D9* R, rtoutinfo* pRTOUT, int ds, int ppdata_
 	float fsy = 1/cam->mProj[1][1];
 	ssvtx ssVertices[] =
 	{
-		{ -1, -1, 0, 0+hpox, 1+hpoy, -fsx, -fsy },
-		{ invQW - 1, -1, 0, 1+hpox, 1+hpoy, +fsx, -fsy },
-		{ invQW - 1, invQH - 1, 0, 1+hpox, 0+hpoy, +fsx, +fsy },
-		{ -1, invQH - 1, 0, 0+hpox, 0+hpoy, -fsx, +fsy },
+		{ offX, offY, 0, t0x+hpox, t1y+hpoy, -fsx, -fsy },
+		{ invQW + offX, offY, 0, t1x+hpox, t1y+hpoy, +fsx, -fsy },
+		{ invQW + offX, invQH + offY, 0, t1x+hpox, t0y+hpoy, +fsx, +fsy },
+		{ offX, invQH + offY, 0, t0x+hpox, t0y+hpoy, -fsx, +fsy },
 	};
 	
 	if( ppdata_location >= 0 )
@@ -1489,7 +1501,7 @@ static int rd3d9i_render( SGS_CTX )
 	
 	IDirect3DTexture9* tx_depth = R->drd.RTT_DEPTH;
 	IDirect3DSurface9* su_depth = R->drd.RTS_DEPTH;
-	rtoutinfo RTOUT = { R->bb_color, su_depth, R->bb_depth, R->inh.width, R->inh.height };
+	rtoutinfo RTOUT = { NULL, su_depth, NULL, R->inh.width, R->inh.height };
 	if( R->inh.currentRT )
 	{
 		SS3D_RenderTexture_D3D9* RT = (SS3D_RenderTexture_D3D9*) R->inh.currentRT->data;
@@ -1500,6 +1512,11 @@ static int rd3d9i_render( SGS_CTX )
 		RTOUT.h = RT->inh.inh.info.height;
 		tx_depth = RT->DT;
 		su_depth = RT->DS;
+	}
+	else
+	{
+		D3DCALL_( R->device, GetRenderTarget, 0, &RTOUT.CS );
+		D3DCALL_( R->device, GetDepthStencilSurface, &RTOUT.DSS );
 	}
 	int w = RTOUT.w, h = RTOUT.h;
 	
@@ -1687,12 +1704,7 @@ static int rd3d9i_render( SGS_CTX )
 	D3DCALL_( R->device, SetRenderState, D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
 	D3DCALL_( R->device, SetRenderState, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
 	
-	if( R->inh.viewport )
-	{
-		SS3D_Viewport* VP = (SS3D_Viewport*) R->inh.viewport->data;
-		D3DVIEWPORT9 d3dvp = { 0, 0, VP->x2 - VP->x1, VP->y2 - VP->y1, 0.0f, 1.0f };
-		D3DCALL_( R->device, SetViewport, &d3dvp );
-	}
+	viewport_apply( R, 1 );
 	
 	D3DCALL_( R->device, Clear, 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, 0, 1.0f, 0 );
 	
@@ -1794,6 +1806,8 @@ static int rd3d9i_render( SGS_CTX )
 				MAT4 m_world_view;
 				
 				SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) MI->mesh->data;
+				if( !M->inh.vertexDecl )
+					continue;
 				SS3D_VDecl_D3D9* VD = (SS3D_VDecl_D3D9*) M->inh.vertexDecl->data;
 				
 				/* if (transparent & want solid) or (solid & want transparent), skip */
@@ -1982,6 +1996,8 @@ static int rd3d9i_render( SGS_CTX )
 				D3DCALL_( R->device, SetDepthStencilSurface, R->drd.RTSD );
 			}
 			
+			viewport_apply( R, 1 );
+			
 			D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 1 );
 		}
 		/* shadow passes rendered above */
@@ -2059,6 +2075,12 @@ static int rd3d9i_render( SGS_CTX )
 	D3DCALL_( R->device, SetRenderState, D3DRS_ALPHABLENDENABLE, 1 );
 	D3DCALL_( R->device, SetRenderState, D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
 	D3DCALL_( R->device, SetRenderState, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
+	
+	if( !R->inh.currentRT )
+	{
+		SAFE_RELEASE( RTOUT.CS );
+		SAFE_RELEASE( RTOUT.DSS );
+	}
 	
 	return 0;
 }
