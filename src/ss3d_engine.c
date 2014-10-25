@@ -1085,6 +1085,94 @@ static int SS3D_MeshData_GetVertexIndexArrays( SGS_CTX )
 	return 1;
 }
 
+static void SS3D_PushVDeclInfo( SGS_CTX, SS3D_VDeclInfo* vdinfo )
+{
+	uint8_t i;
+	sgs_PushString( C, "items" );
+	for( i = 0; i < vdinfo->count; ++i )
+	{
+		sgs_PushString( C, "offset" );
+		sgs_PushInt( C, vdinfo->offsets[ i ] );
+		sgs_PushString( C, "type" );
+		sgs_PushInt( C, vdinfo->types[ i ] );
+		sgs_PushString( C, "usage" );
+		sgs_PushInt( C, vdinfo->usages[ i ] );
+		sgs_PushDict( C, 6 );
+	}
+	sgs_PushArray( C, vdinfo->count );
+	sgs_PushString( C, "size" );
+	sgs_PushInt( C, vdinfo->size );
+	sgs_PushDict( C, 4 );
+}
+
+static int SS3D_MeshData_ParseToSGS( SGS_CTX )
+{
+	int p, i;
+	char* buf, fdbuf[ 257 ];
+	const char* err;
+	sgs_SizeVal size;
+	SS3D_MeshFileData mfd;
+	SS3D_VDeclInfo vdinfo;
+	
+	SGSFN( "SS3D_MeshData_Parse" );
+	if( !sgs_LoadArgs( C, "m", &buf, &size ) )
+		return 0;
+	
+	err = SS3D_MeshData_Parse( buf, size, &mfd );
+	if( err )
+		return sgs_Msg( C, SGS_WARNING, "could not parse mesh data: %s", err );
+	if( mfd.formatSize > 256 )
+		err = "vertex declaration too long for this function";
+	else
+	{
+		memset( fdbuf, 0, sizeof(fdbuf) );
+		memcpy( fdbuf, mfd.formatData, mfd.formatSize );
+		err = SS3D_VDeclInfo_Parse( &vdinfo, fdbuf );
+	}
+	if( err )
+		return sgs_Msg( C, SGS_WARNING, "could not parse mesh vertex declaration data: %s", err );
+	
+	sgs_PushString( C, "flags" );
+	sgs_PushInt( C, mfd.dataFlags );
+	sgs_PushString( C, "boundsMin" );
+	sgs_PushVec3p( C, mfd.boundsMin );
+	sgs_PushString( C, "boundsMax" );
+	sgs_PushVec3p( C, mfd.boundsMax );
+	sgs_PushString( C, "vdata" );
+	sgs_PushStringBuf( C, mfd.vertexData, mfd.vertexDataSize );
+	sgs_PushString( C, "idata" );
+	sgs_PushStringBuf( C, mfd.indexData, mfd.indexDataSize );
+	sgs_PushString( C, "format" );
+	sgs_PushStringBuf( C, mfd.formatData, mfd.formatSize );
+	sgs_PushString( C, "vdecl" );
+	SS3D_PushVDeclInfo( C, &vdinfo );
+	sgs_PushString( C, "parts" );
+	for( p = 0; p < mfd.numParts; ++p )
+	{
+		SS3D_MeshFilePartData* part = mfd.parts + p;
+		sgs_PushString( C, "vertexOffset" );
+		sgs_PushInt( C, part->vertexOffset );
+		sgs_PushString( C, "vertexCount" );
+		sgs_PushInt( C, part->vertexCount );
+		sgs_PushString( C, "indexOffset" );
+		sgs_PushInt( C, part->indexOffset );
+		sgs_PushString( C, "indexCount" );
+		sgs_PushInt( C, part->indexCount );
+		sgs_PushString( C, "shader" );
+		sgs_PushStringBuf( C, part->materialStrings[0], part->materialStringSizes[0] );
+		sgs_PushString( C, "textures" );
+		for( i = 1; i < part->materialTextureCount; ++i )
+		{
+			sgs_PushStringBuf( C, part->materialStrings[i], part->materialStringSizes[i] );
+		}
+		sgs_PushArray( C, part->materialTextureCount );
+		sgs_PushDict( C, 12 );
+	}
+	sgs_PushArray( C, mfd.numParts );
+	sgs_PushDict( C, 16 );
+	return 1;
+}
+
 
 //
 // VDECL
@@ -2833,6 +2921,7 @@ static sgs_RegFuncConst ss3d_fconsts[] =
 	FN( MeshGen_Terrain ),
 	
 	FN( MeshData_GetVertexIndexArrays ),
+	{ "SS3D_MeshData_Parse", SS3D_MeshData_ParseToSGS },
 	
 	FN( CreateCullScene ),
 	FN( CreateCamera ),
@@ -2845,6 +2934,11 @@ static sgs_RegIntConst ss3d_iconsts[] =
 	CN( TEXTURE_USAGE_MISC ), CN( TEXTURE_USAGE_ALBEDO ), CN( TEXTURE_USAGE_NORMAL ),
 	CN( LIGHT_POINT ), CN( LIGHT_SPOT ),
 	CN( RT_FORMAT_BACKBUFFER ), CN( RT_FORMAT_DEPTH ),
+	
+	CN( _VDECLTYPE_FLOAT1 ), CN( _VDECLTYPE_FLOAT2 ), CN( _VDECLTYPE_FLOAT3 ), CN( _VDECLTYPE_FLOAT4 ), CN( _VDECLTYPE_BCOL4 ),
+	CN( _VDECLUSAGE_POSITION ), CN( _VDECLUSAGE_COLOR ), CN( _VDECLUSAGE_NORMAL ), CN( _VDECLUSAGE_TANGENT ),
+	CN( _VDECLUSAGE_TEXTURE0 ), CN( _VDECLUSAGE_TEXTURE1 ), CN( _VDECLUSAGE_TEXTURE2 ), CN( _VDECLUSAGE_TEXTURE3 ),
+	CN( _MDF_INDEX_32 ), CN( _MDF_TRIANGLESTRIP ), CN( _MDF_TRANSPARENT ),
 };
 
 
