@@ -268,7 +268,7 @@ def parse_geometry( MESH, materials ):
 		tan1list = [ Vector([0,0,0]) for i in range(len(vertices)) ]
 		tan2list = [ Vector([0,0,0]) for i in range(len(vertices)) ]
 		
-		for face_start in range( 0, len( parts ), 3 ):
+		for i in range( 0, len( indices ), 3 ):
 			i1 = indices[ i + 0 ]
 			i2 = indices[ i + 1 ]
 			i3 = indices[ i + 2 ]
