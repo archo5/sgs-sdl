@@ -22,10 +22,28 @@ function initialize()
 	
 	reflect_cubemap = _R.SS3D.getTexture( "testdata/cubemap_beach_reflect.dds" );
 	
+//	_R.SS3D.debugDrawClipWorld = true;
 	_R.SS3D.debugDraw = function( ss3d )
 	{
-		ss3d.debugDrawColor = color(0.5,1);
+		ss3d.debugDrawClipWorld = true;
+		
+		ss3d.debugDrawColor = color(0.9,0.5,0.1,1);
 		ss3d.debugDrawLine( vec3(0,0,0), vec3(10,10,10) );
+		ss3d.debugDrawColor = color(0.1,0.2,0.7,1);
+		ss3d.debugDrawTick( vec3(10,-5,5), 2 );
+		
+		ss3d.debugDrawClipWorld = false;
+		
+		ss3d.debugDrawColor = color(0.9,0.4,0.1,1);
+		ss3d.debugDrawBox( mat4().scale( 2, 4, 1 ).rotateZ( deg2rad( 45 ) ).translate( 0, 0, 1 ) );
+		ss3d.debugDrawColor = color(0.9,0.3,0.1,1);
+		ss3d.debugDrawCone( vec3(10,10,10), vec3(0,0,-5), deg2rad( 45 ) );
+		ss3d.debugDrawColor = color(0.9,0.2,0.1,1);
+		ss3d.debugDrawCircle( vec3(10,0,5), vec3(0,0,1), 2 );
+		ss3d.debugDrawColor = color(0.2,0.8,0.1,1);
+		ss3d.debugDrawSphere( vec3(10,-5,5), 3 );
+		ss3d.debugDrawColor = color(0.1,0.4,0.9,0.5);
+		ss3d.debugDrawSquare( vec3(10,-5,5), 1 );
 	};
 	
 	_R.Scene = _R.SS3D.createScene();

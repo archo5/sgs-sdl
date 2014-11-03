@@ -2741,6 +2741,8 @@ void SS3D_Renderer_Construct( SS3D_Renderer* R, SGS_CTX )
 	
 	R->disablePostProcessing = 0;
 	R->dbg_rt = 0;
+	R->inDebugDraw = 0;
+	R->debugDrawClipWorld = 0;
 	
 	R->stat_numVisMeshes = 0;
 	R->stat_numVisPLights = 0;

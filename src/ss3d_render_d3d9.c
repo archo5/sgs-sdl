@@ -2048,6 +2048,36 @@ static int rd3d9i_render( SGS_CTX )
 	}
 	
 	
+	/* debug rendering */
+	if( R->inh.debugDraw.type != SGS_VT_NULL )
+	{
+		SS3D_Shader_D3D9* sh_debug_draw = get_shader( R, "debug_draw" );
+		use_shader( R, sh_debug_draw );
+		MAT4 viewProjMatrix;
+		SS3D_Mtx_Multiply( viewProjMatrix, cam->mView, cam->mProj );
+		vshc_set_mat4( R, 4, viewProjMatrix );
+		
+		R->inh.inDebugDraw = 1;
+		D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, R->inh.debugDrawClipWorld );
+		if( R->inh.disablePostProcessing )
+			D3DCALL_( R->device, SetDepthStencilSurface, RTOUT.DSS );
+		else
+			D3DCALL_( R->device, SetDepthStencilSurface, R->drd.RTSD );
+		D3DCALL_( R->device, SetRenderState, D3DRS_ALPHABLENDENABLE, 1 );
+		D3DCALL_( R->device, SetRenderState, D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
+		D3DCALL_( R->device, SetRenderState, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
+		
+		sgs_PushObjectPtr( C, R->inh._myobj );
+		if( SGS_CALL_FAILED( sgs_CallP( C, &R->inh.debugDraw, 1, 0 ) ) )
+			sgs_Pop( C, 1 );
+		
+		R->inh.inDebugDraw = 0;
+		D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 0 );
+		D3DCALL_( R->device, SetDepthStencilSurface, RTOUT.DSS );
+		D3DCALL_( R->device, SetRenderState, D3DRS_ALPHABLENDENABLE, 0 );
+	}
+	
+	
 	use_texture_int( R, 0, NULL, 0 );
 	use_shader( R, NULL );
 	
@@ -2219,12 +2249,285 @@ static int rd3d9i_debugDrawLine( SGS_CTX )
 	if( !sgs_LoadArgs( C, "xx", sgs_ArgCheck_Vec3, p1, sgs_ArgCheck_Vec3, p2 ) )
 		return 0;
 	
+	MAT4 ident;
+	SS3D_Mtx_Identity( ident );
+	vshc_set_mat4( R, 0, ident );
 	pshc_set_vec4array( R, DD_COLOR_PSHPOS, R->inh.debugDrawColor, 1 );
+	
 	float verts[] = { p1[0], p1[1], p1[2], p2[0], p2[1], p2[2] };
 	
 	D3DCALL_( R->device, SetFVF, D3DFVF_XYZ );
-	D3DCALL_( R->device, DrawPrimitiveUP, D3DPT_LINELIST, 2, verts, sizeof(float)*3 );
+	D3DCALL_( R->device, DrawPrimitiveUP, D3DPT_LINELIST, 1, verts, sizeof(float)*3 );
 	R->inh.stat_numDrawCalls++;
+	return 0;
+}
+
+static int rd3d9i_debugDrawTick( SGS_CTX )
+{
+	VEC3 pos;
+	float size;
+	R_IHDR( debugDrawTick );
+	if( !sgs_LoadArgs( C, "xf", sgs_ArgCheck_Vec3, pos, &size ) )
+		return 0;
+	
+	MAT4 ident;
+	SS3D_Mtx_Identity( ident );
+	vshc_set_mat4( R, 0, ident );
+	pshc_set_vec4array( R, DD_COLOR_PSHPOS, R->inh.debugDrawColor, 1 );
+	
+	float verts[] = {
+		pos[0] - size, pos[1], pos[2], pos[0] + size, pos[1], pos[2],
+		pos[0], pos[1] - size, pos[2], pos[0], pos[1] + size, pos[2],
+		pos[0], pos[1], pos[2] - size, pos[0], pos[1], pos[2] + size,
+	};
+	
+	D3DCALL_( R->device, SetFVF, D3DFVF_XYZ );
+	D3DCALL_( R->device, DrawPrimitiveUP, D3DPT_LINELIST, 3, verts, sizeof(float)*3 );
+	R->inh.stat_numDrawCalls++;
+	return 0;
+}
+
+static int rd3d9i_debugDrawBox( SGS_CTX )
+{
+	MAT4 mtx;
+	R_IHDR( debugDrawBox );
+	if( !sgs_LoadArgs( C, "x", sgs_ArgCheck_Mat4, mtx ) )
+		return 0;
+	
+	vshc_set_mat4( R, 0, mtx );
+	pshc_set_vec4array( R, DD_COLOR_PSHPOS, R->inh.debugDrawColor, 1 );
+	
+	float verts[] = {
+		1, 1, 1,  -1, 1, 1,  1, -1, 1,  -1, -1, 1,
+		1, 1, -1,  -1, 1, -1,  1, -1, -1,  -1, -1, -1,
+	};
+	uint16_t indices[] = {
+		/* X */ 0, 1, 2, 3, 4, 5, 6, 7,
+		/* Y */ 0, 2, 1, 3, 4, 6, 5, 7,
+		/* Z */ 0, 4, 1, 5, 2, 6, 3, 7,
+	};
+	
+	D3DCALL_( R->device, SetFVF, D3DFVF_XYZ );
+	D3DCALL_( R->device, DrawIndexedPrimitiveUP, D3DPT_LINELIST, 0, 8, 12, indices, D3DFMT_INDEX16, verts, sizeof(float)*3 );
+	R->inh.stat_numDrawCalls++;
+	return 0;
+}
+
+static int rd3d9i_debugDrawCone( SGS_CTX )
+{
+	VEC3 pos, dir, tg1, tg2;
+	float angle;
+	int32_t count = 32;
+	R_IHDR( debugDrawCone );
+	if( !sgs_LoadArgs( C, "xxf|l", sgs_ArgCheck_Vec3, pos, sgs_ArgCheck_Vec3, dir, &angle, &count ) )
+		return 0;
+	if( count < 3 || count > 256 )
+		return sgs_Msg( C, SGS_WARNING, "invalid count (must be between 3 and 256)" );
+	if( VEC3_Dot( dir, dir ) < 0.001f )
+		return 0; /* too small to render but not really an error */
+	
+	MAT4 ident;
+	SS3D_Mtx_Identity( ident );
+	vshc_set_mat4( R, 0, ident );
+	pshc_set_vec4array( R, DD_COLOR_PSHPOS, R->inh.debugDrawColor, 1 );
+	
+	float vca = cos( angle );
+	float vsa = sin( angle );
+	
+	tg1[0] = dir[1];
+	tg1[1] = -dir[2];
+	tg1[2] = dir[0];
+	VEC3_Cross( tg2, tg1, dir );
+	VEC3_Normalized( tg2, tg2 );
+	VEC3_Cross( tg1, dir, tg2 );
+	VEC3_Normalized( tg1, tg1 );
+	float radius = VEC3_Length( dir );
+	VEC3_Scale( tg1, tg1, radius );
+	VEC3_Scale( tg2, tg2, radius );
+	
+	VEC3 verts[ 1 + 256 ];
+	uint16_t indices[ 4 * 256 ];
+	VEC3_Copy( verts[0], pos );
+	float iang = 0, angincr = M_PI * 2 / count;
+	int32_t i;
+	for( i = 0; i < count; ++i )
+	{
+		float hca = cos( iang );
+		float hsa = sin( iang );
+		
+		verts[ i + 1 ][0] = pos[0] + dir[0] * vca + ( tg1[0] * hca + tg2[0] * hsa ) * vsa;
+		verts[ i + 1 ][1] = pos[1] + dir[1] * vca + ( tg1[1] * hca + tg2[1] * hsa ) * vsa;
+		verts[ i + 1 ][2] = pos[2] + dir[2] * vca + ( tg1[2] * hca + tg2[2] * hsa ) * vsa;
+		
+		indices[ 4 * i + 0 ] = 0;
+		indices[ 4 * i + 1 ] = i + 1;
+		indices[ 4 * i + 2 ] = i + 1;
+		indices[ 4 * i + 3 ] = ( i + 1 ) % count + 1;
+		
+		iang += angincr;
+	}
+	
+	D3DCALL_( R->device, SetFVF, D3DFVF_XYZ );
+	D3DCALL_( R->device, DrawIndexedPrimitiveUP, D3DPT_LINELIST, 0, 1 + count, 2 * count, indices, D3DFMT_INDEX16, verts, sizeof(float)*3 );
+	R->inh.stat_numDrawCalls++;
+	return 0;
+}
+
+static int rd3d9i_debugDrawCircle( SGS_CTX )
+{
+	VEC3 pos, dir, tg1, tg2;
+	float radius;
+	int32_t count = 32;
+	R_IHDR( debugDrawCircle );
+	if( !sgs_LoadArgs( C, "xxf|l", sgs_ArgCheck_Vec3, pos, sgs_ArgCheck_Vec3, dir, &radius, &count ) )
+		return 0;
+	if( count < 3 || count > 256 )
+		return sgs_Msg( C, SGS_WARNING, "invalid count (must be between 3 and 256)" );
+	if( VEC3_Dot( dir, dir ) < 0.001f || radius < 0.001f )
+		return 0; /* too small to render but not really an error */
+	
+	MAT4 ident;
+	SS3D_Mtx_Identity( ident );
+	vshc_set_mat4( R, 0, ident );
+	pshc_set_vec4array( R, DD_COLOR_PSHPOS, R->inh.debugDrawColor, 1 );
+	
+	tg1[0] = dir[1];
+	tg1[1] = -dir[2];
+	tg1[2] = dir[0];
+	VEC3_Cross( tg2, tg1, dir );
+	VEC3_Normalized( tg2, tg2 );
+	VEC3_Cross( tg1, dir, tg2 );
+	VEC3_Normalized( tg1, tg1 );
+	VEC3_Scale( tg1, tg1, radius );
+	VEC3_Scale( tg2, tg2, radius );
+	
+	VEC3 verts[ 1 + 256 ];
+	float iang = 0, angincr = M_PI * 2 / count;
+	int32_t i;
+	for( i = 0; i <= count; ++i )
+	{
+		float hca = cos( iang );
+		float hsa = sin( iang );
+		
+		verts[ i ][0] = pos[0] + ( tg1[0] * hca + tg2[0] * hsa );
+		verts[ i ][1] = pos[1] + ( tg1[1] * hca + tg2[1] * hsa );
+		verts[ i ][2] = pos[2] + ( tg1[2] * hca + tg2[2] * hsa );
+		
+		iang += angincr;
+	}
+	
+	D3DCALL_( R->device, SetFVF, D3DFVF_XYZ );
+	D3DCALL_( R->device, DrawPrimitiveUP, D3DPT_LINESTRIP, count, verts, sizeof(float)*3 );
+	R->inh.stat_numDrawCalls++;
+	return 0;
+}
+
+static int rd3d9i_debugDrawSphere( SGS_CTX )
+{
+	VEC3 pos;
+	float radius;
+	int32_t count = 32;
+	R_IHDR( debugDrawSphere );
+	if( !sgs_LoadArgs( C, "xf|l", sgs_ArgCheck_Vec3, pos, &radius, &count ) )
+		return 0;
+	if( count < 3 || count > 256 )
+		return sgs_Msg( C, SGS_WARNING, "invalid count (must be between 3 and 256)" );
+	if( radius < 0.001f )
+		return 0; /* too small to render but not really an error */
+	
+	MAT4 ident;
+	SS3D_Mtx_Identity( ident );
+	vshc_set_mat4( R, 0, ident );
+	pshc_set_vec4array( R, DD_COLOR_PSHPOS, R->inh.debugDrawColor, 1 );
+	D3DCALL_( R->device, SetFVF, D3DFVF_XYZ );
+	
+	VEC3 verts[ 1 + 256 ];
+	float iang = 0, angincr = M_PI * 2 / count;
+	int32_t i;
+	
+	// Around X
+	for( i = 0; i <= count; ++i )
+	{
+		verts[ i ][0] = pos[0];
+		verts[ i ][1] = pos[1] + cos( iang ) * radius;
+		verts[ i ][2] = pos[2] + sin( iang ) * radius;
+		
+		iang += angincr;
+	}
+	D3DCALL_( R->device, DrawPrimitiveUP, D3DPT_LINESTRIP, count, verts, sizeof(float)*3 );
+	
+	// Around Y
+	for( i = 0; i <= count; ++i )
+	{
+		verts[ i ][0] = pos[0] + sin( iang ) * radius;
+		verts[ i ][1] = pos[1];
+		verts[ i ][2] = pos[2] + cos( iang ) * radius;
+		
+		iang += angincr;
+	}
+	D3DCALL_( R->device, DrawPrimitiveUP, D3DPT_LINESTRIP, count, verts, sizeof(float)*3 );
+	
+	// Around Z
+	for( i = 0; i <= count; ++i )
+	{
+		verts[ i ][0] = pos[0] + cos( iang ) * radius;
+		verts[ i ][1] = pos[1] + sin( iang ) * radius;
+		verts[ i ][2] = pos[2];
+		
+		iang += angincr;
+	}
+	D3DCALL_( R->device, DrawPrimitiveUP, D3DPT_LINESTRIP, count, verts, sizeof(float)*3 );
+	
+	R->inh.stat_numDrawCalls += 3;
+	return 0;
+}
+
+static int rd3d9i_debugDrawSquare( SGS_CTX )
+{
+	VEC3 pos, tg1 = {1,0,0}, tg2 = {0,1,0};
+	float ext = 1;
+	sgs_Bool scrsize = 0;
+	R_IHDR( debugDrawSquare );
+	if( !sgs_LoadArgs( C, "xf|b", sgs_ArgCheck_Vec3, pos, &ext, &scrsize ) )
+		return 0;
+	if( ext < 0.001f )
+		return 0; /* too small to render but not really an error */
+	
+	/* doesn't work without the camera info */
+	if( !R->inh.currentScene )
+		return 0;
+	SS3D_Scene* scene = (SS3D_Scene*) R->inh.currentScene->data;
+	
+	if( !scene->camera )
+		return 0;
+	SS3D_Camera* cam = (SS3D_Camera*) scene->camera->data;
+	
+	MAT4 ident, vmtp;
+	SS3D_Mtx_Identity( ident );
+	vshc_set_mat4( R, 0, ident );
+	pshc_set_vec4array( R, DD_COLOR_PSHPOS, R->inh.debugDrawColor, 1 );
+	D3DCALL_( R->device, SetFVF, D3DFVF_XYZ );
+	
+	memcpy( vmtp, cam->mView, sizeof(MAT4) );
+	SS3D_Mtx_Transpose( vmtp );
+	SS3D_Mtx_TransformNormal( tg1, tg1, vmtp );
+	SS3D_Mtx_TransformNormal( tg2, tg2, vmtp );
+	VEC3_Scale( tg1, tg1, ext );
+	VEC3_Scale( tg2, tg2, ext );
+	
+	VEC3 verts[ 4 ];
+	VEC3_Sub( verts[0], pos, tg1 );
+	VEC3_Add( verts[1], pos, tg1 );
+	VEC3_Add( verts[2], pos, tg1 );
+	VEC3_Sub( verts[3], pos, tg1 );
+	VEC3_Sub( verts[0], verts[0], tg2 );
+	VEC3_Sub( verts[1], verts[1], tg2 );
+	VEC3_Add( verts[2], verts[2], tg2 );
+	VEC3_Add( verts[3], verts[3], tg2 );
+	
+	D3DCALL_( R->device, DrawPrimitiveUP, D3DPT_TRIANGLEFAN, 2, verts, sizeof(float)*3 );
+	R->inh.stat_numDrawCalls++;
+	return 0;
 }
 
 static int rd3d9_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isprop )
@@ -2239,6 +2542,7 @@ static int rd3d9_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isp
 		
 		SGS_CASE( "debugDraw" )        { sgs_PushVariable( C, &R->inh.debugDraw ); return SGS_SUCCESS; }
 		SGS_CASE( "debugDrawColor" )   SGS_RETURN_COLORP( R->inh.debugDrawColor );
+		SGS_CASE( "debugDrawClipWorld" ) SGS_RETURN_BOOL( R->inh.debugDrawClipWorld );
 		
 		SGS_CASE( "disablePostProcessing" ) SGS_RETURN_BOOL( R->inh.disablePostProcessing )
 		SGS_CASE( "dbg_rt" ) SGS_RETURN_BOOL( R->inh.dbg_rt )
@@ -2266,7 +2570,13 @@ static int rd3d9_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isp
 		SGS_CASE( "createRT" )         SGS_RETURN_CFUNC( rd3d9i_createRT )
 		SGS_CASE( "createScene" )      SGS_RETURN_CFUNC( rd3d9i_createScene )
 		
-		SGS_CASE( "debugDrawLine" )  SGS_RETURN_CFUNC( rd3d9i_debugDrawLine )
+		SGS_CASE( "debugDrawLine" )   SGS_RETURN_CFUNC( rd3d9i_debugDrawLine )
+		SGS_CASE( "debugDrawTick" )   SGS_RETURN_CFUNC( rd3d9i_debugDrawTick )
+		SGS_CASE( "debugDrawBox" )    SGS_RETURN_CFUNC( rd3d9i_debugDrawBox )
+		SGS_CASE( "debugDrawCone" )   SGS_RETURN_CFUNC( rd3d9i_debugDrawCone )
+		SGS_CASE( "debugDrawCircle" ) SGS_RETURN_CFUNC( rd3d9i_debugDrawCircle )
+		SGS_CASE( "debugDrawSphere" ) SGS_RETURN_CFUNC( rd3d9i_debugDrawSphere )
+		SGS_CASE( "debugDrawSquare" ) SGS_RETURN_CFUNC( rd3d9i_debugDrawSquare )
 	SGS_END_INDEXFUNC;
 }
 
@@ -2302,6 +2612,19 @@ static int rd3d9_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Var
 				return SGS_EINVAL;
 		}
 		SGS_CASE( "debugDrawColor" ) SGS_PARSE_COLOR( R->inh.debugDrawColor, 0 )
+		SGS_CASE( "debugDrawClipWorld" )
+		{
+			sgs_Bool tmp;
+			if( sgs_ParseBoolP( C, val, &tmp ) )
+			{
+				R->inh.debugDrawClipWorld = tmp;
+				if( R->inh.inDebugDraw )
+					D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, tmp );
+				return SGS_SUCCESS;
+			}
+			else
+				return SGS_EINVAL;
+		}
 		
 		SGS_CASE( "disablePostProcessing" ) SGS_PARSE_BOOL( R->inh.disablePostProcessing )
 		SGS_CASE( "dbg_rt" ) SGS_PARSE_BOOL( R->inh.dbg_rt )

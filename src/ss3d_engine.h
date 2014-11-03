@@ -31,6 +31,7 @@ typedef uint32_t bitfield_t;
 #define VEC3_Mul( V, A, B ) V[0]=A[0]*B[0]; V[1]=A[1]*B[1]; V[2]=A[2]*B[2];
 #define VEC3_Div( V, A, B ) V[0]=A[0]/B[0]; V[1]=A[1]/B[1]; V[2]=A[2]/B[2];
 #define VEC3_Dot( A, B ) (A[0]*B[0]+A[1]*B[1]+A[2]*B[2])
+#define VEC3_Scale( V, A, S ) V[0]=A[0]*S; V[1]=A[1]*S; V[2]=A[2]*S;
 #define VEC3_Length( X ) sqrt( VEC3_Dot( X, X ) );
 #define VEC3_Cross( V, A, B ) V[0]=A[1]*B[2]-A[2]*B[1]; V[1]=A[2]*B[0]-A[0]*B[2]; V[2]=A[0]*B[1]-A[1]*B[0];
 #define VEC3_Normalized( V, X ) { float len = VEC3_Length( X ); if( len > 0 ){ V[0]=X[0]/len; V[1]=X[1]/len; V[2]=X[2]/len; }else{ VEC3_Set( V, 0, 0, 0 ); } }
@@ -472,6 +473,9 @@ struct _SS3D_Renderer
 	
 	bitfield_t disablePostProcessing : 1;
 	bitfield_t dbg_rt : 1;
+	
+	bitfield_t inDebugDraw : 1;
+	bitfield_t debugDrawClipWorld : 1;
 	
 	/* common rendering stats */
 	uint32_t stat_numVisMeshes;

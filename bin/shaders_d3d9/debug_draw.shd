@@ -1,0 +1,27 @@
+
+#ifdef VS
+
+float4x4 mWorld : register(c0);
+float4x4 mViewProj : register(c4);
+
+void main
+(
+	float4 ipos : POSITION0,
+	out float4 opos : POSITION0
+)
+{
+	float4 worldPos = mul( mWorld, ipos );
+	opos = mul( mViewProj, worldPos );
+}
+
+#elif defined(PS)
+
+float4 vColor : register(c0);
+
+float4 main() : COLOR0
+{
+	return vColor;
+}
+
+#endif
+
