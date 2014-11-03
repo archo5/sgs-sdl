@@ -22,6 +22,12 @@ function initialize()
 	
 	reflect_cubemap = _R.SS3D.getTexture( "testdata/cubemap_beach_reflect.dds" );
 	
+	_R.SS3D.debugDraw = function( ss3d )
+	{
+		ss3d.debugDrawColor = color(0.5,1);
+		ss3d.debugDrawLine( vec3(0,0,0), vec3(10,10,10) );
+	};
+	
 	_R.Scene = _R.SS3D.createScene();
 	_R.Scene.fogColor = vec3(0.50,0.55,0.48);
 	_R.Scene.fogDensity = 0.001;

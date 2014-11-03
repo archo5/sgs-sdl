@@ -2736,6 +2736,9 @@ void SS3D_Renderer_Construct( SS3D_Renderer* R, SGS_CTX )
 	R->currentRT = NULL;
 	R->viewport = NULL;
 	
+	sgs_InitNull( &R->debugDraw );
+	VEC4_Set( R->debugDrawColor, 1, 1, 1, 1 );
+	
 	R->disablePostProcessing = 0;
 	R->dbg_rt = 0;
 	
@@ -2830,6 +2833,9 @@ void SS3D_Renderer_Destruct( SS3D_Renderer* R )
 	sgs_vht_free( &R->shaders, R->C );
 	sgs_vht_free( &R->textures, R->C );
 	sgs_vht_free( &R->materials, R->C );
+	
+	sgs_Release( R->C, &R->debugDraw );
+	
 	if( R->currentScene )
 		sgs_ObjRelease( R->C, R->currentScene );
 	if( R->currentRT )

@@ -2210,6 +2210,23 @@ static int rd3d9i_createScene( SGS_CTX )
 	return 1;
 }
 
+#define DD_COLOR_PSHPOS 0
+
+static int rd3d9i_debugDrawLine( SGS_CTX )
+{
+	VEC3 p1, p2;
+	R_IHDR( debugDrawLine );
+	if( !sgs_LoadArgs( C, "xx", sgs_ArgCheck_Vec3, p1, sgs_ArgCheck_Vec3, p2 ) )
+		return 0;
+	
+	pshc_set_vec4array( R, DD_COLOR_PSHPOS, R->inh.debugDrawColor, 1 );
+	float verts[] = { p1[0], p1[1], p1[2], p2[0], p2[1], p2[2] };
+	
+	D3DCALL_( R->device, SetFVF, D3DFVF_XYZ );
+	D3DCALL_( R->device, DrawPrimitiveUP, D3DPT_LINELIST, 2, verts, sizeof(float)*3 );
+	R->inh.stat_numDrawCalls++;
+}
+
 static int rd3d9_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isprop )
 {
 	R_HDR;
@@ -2219,6 +2236,9 @@ static int rd3d9_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isp
 		SGS_CASE( "store" )            SGS_RETURN_OBJECT( R->inh.store )
 		SGS_CASE( "currentRT" )        SGS_RETURN_OBJECT( R->inh.currentRT )
 		SGS_CASE( "viewport" )         SGS_RETURN_OBJECT( R->inh.viewport )
+		
+		SGS_CASE( "debugDraw" )        { sgs_PushVariable( C, &R->inh.debugDraw ); return SGS_SUCCESS; }
+		SGS_CASE( "debugDrawColor" )   SGS_RETURN_COLORP( R->inh.debugDrawColor );
 		
 		SGS_CASE( "disablePostProcessing" ) SGS_RETURN_BOOL( R->inh.disablePostProcessing )
 		SGS_CASE( "dbg_rt" ) SGS_RETURN_BOOL( R->inh.dbg_rt )
@@ -2245,6 +2265,8 @@ static int rd3d9_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isp
 		SGS_CASE( "createMesh" )       SGS_RETURN_CFUNC( rd3d9i_createMesh )
 		SGS_CASE( "createRT" )         SGS_RETURN_CFUNC( rd3d9i_createRT )
 		SGS_CASE( "createScene" )      SGS_RETURN_CFUNC( rd3d9i_createScene )
+		
+		SGS_CASE( "debugDrawLine" )  SGS_RETURN_CFUNC( rd3d9i_debugDrawLine )
 	SGS_END_INDEXFUNC;
 }
 
@@ -2268,6 +2290,18 @@ static int rd3d9_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Var
 			}
 			return SGS_EINVAL;
 		}
+		
+		SGS_CASE( "debugDraw" )
+		{
+			if( val->type == SGS_VT_NULL || sgs_IsCallableP( val ) )
+			{
+				sgs_Assign( C, &R->inh.debugDraw, val );
+				return SGS_SUCCESS;
+			}
+			else
+				return SGS_EINVAL;
+		}
+		SGS_CASE( "debugDrawColor" ) SGS_PARSE_COLOR( R->inh.debugDrawColor, 0 )
 		
 		SGS_CASE( "disablePostProcessing" ) SGS_PARSE_BOOL( R->inh.disablePostProcessing )
 		SGS_CASE( "dbg_rt" ) SGS_PARSE_BOOL( R->inh.dbg_rt )

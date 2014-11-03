@@ -466,6 +466,10 @@ struct _SS3D_Renderer
 	sgs_VarObj* store;
 	sgs_VarObj* currentRT;
 	sgs_VarObj* viewport;
+	
+	sgs_Variable debugDraw;
+	VEC4 debugDrawColor;
+	
 	bitfield_t disablePostProcessing : 1;
 	bitfield_t dbg_rt : 1;
 	
