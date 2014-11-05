@@ -1591,7 +1591,7 @@ static int rd3d9i_render( SGS_CTX )
 	for( light_id = 0; light_id < scene->lights.size; ++light_id )
 	{
 		SS3D_Light* L = (SS3D_Light*) scene->lights.vars[ light_id ].val.data.O->data;
-		if( !L->isEnabled )
+		if( !L->enabled )
 			continue;
 		L->mibuf_begin = NULL;
 		L->mibuf_end = NULL;
@@ -1623,7 +1623,7 @@ static int rd3d9i_render( SGS_CTX )
 			MAT4 m_world_view, m_inv_view;
 			
 			SS3D_Light* L = (SS3D_Light*) scene->lights.vars[ light_id ].val.data.O->data;
-			if( !L->isEnabled || !L->shadowTexture )
+			if( !L->enabled || !L->shadowTexture )
 				continue;
 			
 			SS3D_RenderTexture_D3D9* RT = (SS3D_RenderTexture_D3D9*) L->shadowTexture->data;

@@ -1551,7 +1551,7 @@ static int light_getindex( SGS_ARGS_GETINDEXFUNC )
 	L_HDR;
 	SGS_BEGIN_INDEXFUNC
 		SGS_CASE( "type" )          SGS_RETURN_INT( L->type );
-		SGS_CASE( "isEnabled" )     SGS_RETURN_BOOL( L->isEnabled );
+		SGS_CASE( "enabled" )       SGS_RETURN_BOOL( L->enabled );
 		SGS_CASE( "position" )      SGS_RETURN_VEC3P( L->position );
 		SGS_CASE( "direction" )     SGS_RETURN_VEC3P( L->direction );
 		SGS_CASE( "updir" )         SGS_RETURN_VEC3P( L->updir );
@@ -1574,7 +1574,7 @@ static int light_setindex( SGS_ARGS_SETINDEXFUNC )
 	L_HDR;
 	SGS_BEGIN_INDEXFUNC
 		SGS_CASE( "type" )          SGS_PARSE_INT( L->type )
-		SGS_CASE( "isEnabled" )     SGS_PARSE_BOOL( L->isEnabled )
+		SGS_CASE( "enabled" )       SGS_PARSE_BOOL( L->enabled )
 		SGS_CASE( "position" )      SGS_PARSE_VEC3( L->position, 0 )
 		SGS_CASE( "direction" )     SGS_PARSE_VEC3( L->direction, 0 )
 		SGS_CASE( "updir" )         SGS_PARSE_VEC3( L->updir, 0 )
@@ -1621,7 +1621,7 @@ static int light_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 	
 	sprintf( bfr,
 		"\ntype=%d"
-		"\nisEnabled=%s"
+		"\nenabled=%s"
 		"\nposition=(%g;%g;%g)"
 		"\ndirection=(%g;%g;%g)"
 		"\nupdir=(%g;%g;%g)"
@@ -1635,7 +1635,7 @@ static int light_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 		"\nprojMatrix=..."
 		"\nhasShadows=%s",
 		L->type,
-		L->isEnabled ? "true" : "false",
+		L->enabled ? "true" : "false",
 		L->position[0], L->position[1], L->position[2],
 		L->direction[0], L->direction[1], L->direction[2],
 		L->updir[0], L->updir[1], L->updir[2],
@@ -2452,7 +2452,7 @@ uint32_t SS3D_Scene_Cull_Camera_PointLightList( SGS_CTX, sgs_MemBuf* MB, SS3D_Sc
 	for( light_id = 0; light_id < S->lights.size; ++light_id )
 	{
 		SS3D_Light* L = (SS3D_Light*) S->lights.vars[ light_id ].val.data.O->data;
-		if( !L->isEnabled || L->type != SS3DLIGHT_POINT )
+		if( !L->enabled || L->type != SS3DLIGHT_POINT )
 			continue;
 		
 		light_instances[ data_size ] = L;
@@ -2528,7 +2528,7 @@ uint32_t SS3D_Scene_Cull_Camera_SpotLightList( SGS_CTX, sgs_MemBuf* MB, SS3D_Sce
 	{
 		SS3D_CullSceneCamera light_frustum;
 		SS3D_Light* L = (SS3D_Light*) S->lights.vars[ light_id ].val.data.O->data;
-		if( !L->isEnabled || L->type != SS3DLIGHT_SPOT )
+		if( !L->enabled || L->type != SS3DLIGHT_SPOT )
 			continue;
 		
 		get_frustum_from_light( L, &light_frustum );

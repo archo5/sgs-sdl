@@ -256,7 +256,7 @@ struct _SS3D_Light
 	SS3D_Scene* scene;
 	
 	int type;
-	int isEnabled;
+	int enabled;
 	VEC3 position;
 	VEC3 direction;
 	VEC3 updir;
