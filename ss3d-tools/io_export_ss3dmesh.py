@@ -244,7 +244,7 @@ def parse_geometry( MESH, materials ):
 				for si in range( len( Tlists ) ):
 					T = Tlists[ si ][ vertex[ vip ] ]
 					vip += 1
-					vertexdata += struct.pack( "2f", T.x, T.y )
+					vertexdata += struct.pack( "2f", T.x, 1 - T.y )
 				for si in range( len( Clists ) ):
 					C = Clists[ si ][ vertex[ vip ] ]
 					vip += 1

@@ -196,7 +196,7 @@ function initialize()
 	light.position = vec3(10,0,5);
 	light.range = 50;
 	light.power = 2;
-	light.isEnabled = true;
+	light.enabled = true;
 	printvar( light );
 	
 	_R.Light2 = light2 = _R.Scene.createLight();
@@ -206,7 +206,7 @@ function initialize()
 	light2.position = vec3(-10,0,5);
 	light2.range = 50;
 	light2.power = 2;
-	light2.isEnabled = true;
+	light2.enabled = true;
 	printvar( light2 );
 	
 	_R.Light3 = light3 = _R.Scene.createLight();
@@ -218,7 +218,7 @@ function initialize()
 	light3.direction = vec3(0,-1,-1).normalized;
 	light3.updir = vec3(0,0,1);
 	light3.angle = 90;
-	light3.isEnabled = 1;
+	light3.enabled = 1;
 	light3.genSpotLightMatrices();
 	light3.cookieTexture = _R.SS3D.getTexture( "testdata/cookie1.png" );
 	light3.shadowTexture = _R.SS3D.createRT( 256, 256, SS3DRT_FORMAT_DEPTH );
@@ -234,7 +234,7 @@ function initialize()
 	light4.direction = vec3(0,1,-1).normalized;
 	light4.updir = vec3(0,0,1);
 	light4.angle = 90;
-	light4.isEnabled = 1;
+	light4.enabled = 1;
 	light4.genSpotLightMatrices();
 	light4.cookieTexture = _R.SS3D.getTexture( "testdata/cookie1.png" );
 	light4.shadowTexture = _R.SS3D.createRT( 256, 256, SS3DRT_FORMAT_DEPTH );
@@ -248,7 +248,7 @@ function initialize()
 		spl.color = vec3(1,1,1);
 		spl.range = 30;
 		spl.power = 2;
-		spl.isEnabled = true;
+		spl.enabled = true;
 		spls.push( spl );
 	}
 	
@@ -345,6 +345,7 @@ function update()
 	rb.f( 0, 0, 0 ).c4b( 0, 0, 1, 1 ).f( 0, 0, 10 ).c4b( 0, 0, 1, 1 );
 	rb.draw( null, SS_MakeVertexFormat( "pf3cb4" ), 0, 6, SS_PT_LINES );
 	
+	SS_SetViewport( 0, 0, Window.width, Window.height );
 	SS_SetCameraUI( 0, Window.width, 0, Window.height );
 	
 	if( 0 )

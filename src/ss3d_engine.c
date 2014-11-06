@@ -431,8 +431,8 @@ static int SS3D_MeshGen_Particles( SGS_CTX )
 		float extent = sizes[ i % size_count ] * 0.5f;
 		float angle = angles[ i % angle_count ];
 		const float* color = colors + ( i % color_count ) * 4;
-		float ang_sin = sin( angle ) * extent;
-		float ang_cos = cos( angle ) * extent;
+		float ang_sin = -sin( angle ) * extent;
+		float ang_cos = -cos( angle ) * extent;
 		
 		VEC3 vp00 = { +ang_sin -ang_cos, -ang_sin -ang_cos, 0 };
 		VEC3 vp10 = { +ang_sin +ang_cos, +ang_sin -ang_cos, 0 };
