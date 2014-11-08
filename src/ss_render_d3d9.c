@@ -318,7 +318,8 @@ static SS_Renderer* ss_ri_d3d9_create( SDL_Window* window, uint32_t flags )
 	
 	R->width = w;
 	R->height = h;
-
+	
+	R->cur_rtt = NULL;
 	R->bbwidth = 0;
 	R->bbheight = 0;
 	R->bbscale = 0;

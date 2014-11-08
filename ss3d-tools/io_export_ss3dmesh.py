@@ -87,6 +87,8 @@ def write_part( f, part ):
 
 def write_mesh( f, meshdata ):
 	is_transparent = meshdata["is_transparent"]
+	is_unlit = meshdata["is_unlit"]
+	is_nocull = meshdata["is_nocull"]
 	bbmin = meshdata["bbmin"]
 	bbmax = meshdata["bbmax"]
 	vertices = meshdata["vertices"]
@@ -101,6 +103,8 @@ def write_mesh( f, meshdata ):
 	
 	print( "--- MESH STATS ---" )
 	print( "Transparent: %s" % ( "true" if is_transparent else "false" ) )
+	print( "Unlit: %s" % ( "true" if is_unlit else "false" ) )
+	print( "No culling: %s" % ( "true" if is_nocull else "false" ) )
 	print( "Vertex count: %d" % ( len(vertices) ) )
 	print( "Index count: %d" % ( len(indices) ) )
 	print( "Format string: " + format )
@@ -109,7 +113,7 @@ def write_mesh( f, meshdata ):
 		print( "- part %d: voff=%d vcount=%d ioff=%d icount=%d texcount=%d shader='%s'" % ( part_id, part["voff"], part["vcount"], part["ioff"], part["icount"], len( part["textures"] ), part["shader"] ) )
 	
 	f.write( bytes( "SS3DMESH", "UTF-8" ) )
-	f.write( struct.pack( "L", (1 if is_i32 else 0) * 0x01 + (1 if is_transparent else 0) * 0x10 ) ) # flags
+	f.write( struct.pack( "L", (1 if is_i32 else 0) * 0x01 + (1 if is_transparent else 0) * 0x10 + (1 if is_unlit else 0) * 0x20 + (1 if is_nocull else 0) * 0x40 ) ) # flags
 	f.write( struct.pack( "6f", bbmin.x, bbmin.y, bbmin.z, bbmax.x, bbmax.y, bbmax.z ) )
 	
 	vdata = bytes()
@@ -355,7 +359,12 @@ def parse_geometry( MESH, materials ):
 		format += "cb4"
 	#
 	
-	return { "is_transparent": find_in_userdata( MESH, "transparent", False ) != False, "bbmin": bbmin, "bbmax": bbmax, "vertices": vertices, "indices": indices, "format": format, "parts": parts }
+	return {
+		"is_transparent": find_in_userdata( MESH, "transparent", False ) != False,
+		"is_unlit": find_in_userdata( MESH, "unlit", False ) != False,
+		"is_nocull": find_in_userdata( MESH, "nocull", False ) != False,
+		"bbmin": bbmin, "bbmax": bbmax, "vertices": vertices, "indices": indices, "format": format, "parts": parts
+	}
 #
 
 def write_ss3dmesh( ctx, filepath ):

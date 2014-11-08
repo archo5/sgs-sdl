@@ -1313,6 +1313,8 @@ static int meshd3d9_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "useI32" )           SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_INDEX_32 ) );
 		SGS_CASE( "isDynamic" )        SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_DYNAMIC ) );
 		SGS_CASE( "transparent" )      SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_TRANSPARENT ) );
+		SGS_CASE( "unlit" )            SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_UNLIT ) );
+		SGS_CASE( "nocull" )           SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_NOCULL ) );
 		SGS_CASE( "vertexCount" )      SGS_RETURN_INT( M->inh.vertexCount );
 		SGS_CASE( "vertexDataSize" )   SGS_RETURN_INT( M->inh.vertexDataSize );
 		SGS_CASE( "indexCount" )       SGS_RETURN_INT( M->inh.indexCount );
@@ -1347,6 +1349,16 @@ static int meshd3d9_setindex( SGS_ARGS_SETINDEXFUNC )
 		SGS_CASE( "transparent" )
 		{
 			M->inh.dataFlags = ( M->inh.dataFlags & ~SS3D_MDF_TRANSPARENT ) | ( SS3D_MDF_TRANSPARENT * sgs_GetBoolP( C, val ) );
+			return SGS_SUCCESS;
+		}
+		SGS_CASE( "unlit" )
+		{
+			M->inh.dataFlags = ( M->inh.dataFlags & ~SS3D_MDF_UNLIT ) | ( SS3D_MDF_UNLIT * sgs_GetBoolP( C, val ) );
+			return SGS_SUCCESS;
+		}
+		SGS_CASE( "nocull" )
+		{
+			M->inh.dataFlags = ( M->inh.dataFlags & ~SS3D_MDF_NOCULL ) | ( SS3D_MDF_NOCULL * sgs_GetBoolP( C, val ) );
 			return SGS_SUCCESS;
 		}
 		
@@ -1554,7 +1566,9 @@ static int rd3d9i_render( SGS_CTX )
 	for( inst_id = 0; inst_id < scene->meshInstances.size; ++inst_id )
 	{
 		SS3D_MeshInstance* MI = (SS3D_MeshInstance*) scene->meshInstances.vars[ inst_id ].val.data.O->data;
-		if( !MI->mesh || !MI->enabled )
+		MI->lightbuf_begin = NULL;
+		MI->lightbuf_end = NULL;
+		if( !MI->mesh || !MI->enabled || ((SS3D_Mesh_D3D9*) MI->mesh->data)->inh.dataFlags & SS3D_MDF_UNLIT )
 			continue;
 		MI->lightbuf_begin = (SS3D_MeshInstLight*) inst_light_buf.size;
 		// POINT LIGHTS
@@ -1576,7 +1590,7 @@ static int rd3d9i_render( SGS_CTX )
 	for( inst_id = 0; inst_id < scene->meshInstances.size; ++inst_id )
 	{
 		SS3D_MeshInstance* MI = (SS3D_MeshInstance*) scene->meshInstances.vars[ inst_id ].val.data.O->data;
-		if( !MI->mesh || !MI->enabled )
+		if( !MI->mesh || !MI->enabled || ((SS3D_Mesh_D3D9*) MI->mesh->data)->inh.dataFlags & SS3D_MDF_UNLIT )
 			continue;
 		MI->lightbuf_begin = (SS3D_MeshInstLight*)( (size_t) MI->lightbuf_begin + (size_t) inst_light_buf.ptr );
 		MI->lightbuf_end = (SS3D_MeshInstLight*)( (size_t) MI->lightbuf_end + (size_t) inst_light_buf.ptr );
@@ -1661,6 +1675,7 @@ static int rd3d9i_render( SGS_CTX )
 				SS3D_Mtx_Multiply( m_world_view, MI->matrix, L->viewMatrix );
 				vshc_set_mat4( R, 0, m_world_view );
 				
+				D3DCALL_( R->device, SetRenderState, D3DRS_CULLMODE, M->inh.dataFlags & SS3D_MDF_NOCULL ? D3DCULL_NONE : D3DCULL_CW );
 				D3DCALL_( R->device, SetVertexDeclaration, VD->VD );
 				D3DCALL_( R->device, SetStreamSource, 0, M->VB, 0, VD->info.size );
 				D3DCALL_( R->device, SetIndices, M->IB );
@@ -1817,6 +1832,8 @@ static int rd3d9i_render( SGS_CTX )
 				/* TODO dynamic meshes */
 				if( obj_type < 0 )
 					continue; /* DISABLE them for now... */
+				
+				D3DCALL_( R->device, SetRenderState, D3DRS_CULLMODE, M->inh.dataFlags & SS3D_MDF_NOCULL ? D3DCULL_NONE : D3DCULL_CW );
 				
 				if( pass->pointlight_count )
 				{
@@ -1976,6 +1993,7 @@ static int rd3d9i_render( SGS_CTX )
 			D3DCALL_( R->device, SetRenderTarget, 1, NULL );
 			D3DCALL_( R->device, SetRenderTarget, 2, NULL );
 			D3DCALL_( R->device, SetDepthStencilSurface, NULL );
+			D3DCALL_( R->device, SetRenderState, D3DRS_CULLMODE, D3DCULL_NONE );
 			
 			use_texture_int( R, 0, (IDirect3DBaseTexture9*) tx_depth, SS3DTEXTURE_USAGE_FULLSCREEN );
 			use_texture( R, 4, scene->skyTexture ? (SS3D_Texture_D3D9*) scene->skyTexture->data : NULL );
@@ -2013,6 +2031,7 @@ static int rd3d9i_render( SGS_CTX )
 	/* POST-PROCESS & RENDER TO BACKBUFFER */
 	D3DCALL_( R->device, SetRenderState, D3DRS_ALPHABLENDENABLE, 0 );
 	D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 0 );
+	D3DCALL_( R->device, SetRenderState, D3DRS_CULLMODE, D3DCULL_NONE );
 	
 	if( !R->inh.disablePostProcessing )
 	{

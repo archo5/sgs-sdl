@@ -113,8 +113,10 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 #define SS3D_MDF_TRIANGLESTRIP 0x02
 #define SS3D_MDF_DYNAMIC       0x04 /* dynamic buffer updating */
 #define SS3D_MDF_TRANSPARENT   0x10 /* mesh is required to be rendered transparent */
+#define SS3D_MDF_UNLIT         0x20 /* mesh doesn't require the lighting passes to be applied */
+#define SS3D_MDF_NOCULL        0x40 /* mesh has culling disabled */
 
-#define SS3D_MDF__PUBFLAGMASK (0x01|0x02|0x10)
+#define SS3D_MDF__PUBFLAGMASK (0x01|0x02|0x10|0x20|0x40)
 #define SS3D_MDF__PUBFLAGBASE  0
 
 /* render pass constants */

@@ -434,10 +434,10 @@ static int SS3D_MeshGen_Particles( SGS_CTX )
 		float ang_sin = -sin( angle ) * extent;
 		float ang_cos = -cos( angle ) * extent;
 		
-		VEC3 vp00 = { +ang_sin -ang_cos, -ang_sin -ang_cos, 0 };
-		VEC3 vp10 = { +ang_sin +ang_cos, +ang_sin -ang_cos, 0 };
-		VEC3 vp11 = { -ang_sin +ang_cos, +ang_sin +ang_cos, 0 };
-		VEC3 vp01 = { -ang_sin -ang_cos, -ang_sin +ang_cos, 0 };
+		VEC3 vp00 = { +ang_sin +ang_cos, +ang_sin -ang_cos, 0 };
+		VEC3 vp10 = { +ang_sin -ang_cos, -ang_sin -ang_cos, 0 };
+		VEC3 vp11 = { -ang_sin -ang_cos, -ang_sin +ang_cos, 0 };
+		VEC3 vp01 = { -ang_sin +ang_cos, +ang_sin +ang_cos, 0 };
 		
 		SS3D_Mtx_TransformPos( vp00, vp00, viewmatrix );
 		SS3D_Mtx_TransformPos( vp10, vp10, viewmatrix );
@@ -594,7 +594,7 @@ static void scene_poke_resource( SS3D_Scene* S, sgs_VHTable* which, sgs_VarObj* 
 {
 	sgs_Variable K;
 	
-	if( !S->renderer || S->destroying )
+	if( !S->renderer )
 		return;
 	
 	sgs_InitPtr( &K, obj );
@@ -2675,21 +2675,18 @@ static int scene_convert( SGS_CTX, sgs_VarObj* obj, int type )
 
 static int scene_destruct( SGS_CTX, sgs_VarObj* obj )
 {
-	sgs_SizeVal i;
 	SC_HDR;
 	if( S->renderer )
 	{
 		SS3D_Renderer_PokeResource( S->renderer, obj, 0 );
-		S->renderer = NULL;
-		S->destroying = 1;
-		for( i = 0; i < S->meshInstances.size; ++i )
+		while( S->meshInstances.size )
 		{
-			sgs_VarObj* tmpobj = (sgs_VarObj*) S->meshInstances.vars[ i ].val.data.P;
+			sgs_VarObj* tmpobj = (sgs_VarObj*) S->meshInstances.vars[ 0 ].val.data.P;
 			sgs_ObjCallDtor( C, tmpobj );
 		}
-		for( i = 0; i < S->lights.size; ++i )
+		while( S->lights.size )
 		{
-			sgs_VarObj* tmpobj = (sgs_VarObj*) S->lights.vars[ i ].val.data.P;
+			sgs_VarObj* tmpobj = (sgs_VarObj*) S->lights.vars[ 0 ].val.data.P;
 			sgs_ObjCallDtor( C, tmpobj );
 		}
 		sgs_vht_free( &S->meshInstances, C );
@@ -2704,6 +2701,7 @@ static int scene_destruct( SGS_CTX, sgs_VarObj* obj )
 			sgs_ObjRelease( C, S->skyTexture );
 			S->skyTexture = NULL;
 		}
+		S->renderer = NULL;
 	}
 	return SGS_SUCCESS;
 }
@@ -2824,11 +2822,9 @@ void SS3D_Renderer_Construct( SS3D_Renderer* R, SGS_CTX )
 
 void SS3D_Renderer_Destruct( SS3D_Renderer* R )
 {
-	sgs_SizeVal i;
-	R->destroying = 1;
-	for( i = 0; i < R->resources.size; ++i )
+	while( R->resources.size )
 	{
-		sgs_VarObj* obj = (sgs_VarObj*) R->resources.vars[ i ].val.data.P;
+		sgs_VarObj* obj = (sgs_VarObj*) R->resources.vars[ 0 ].val.data.P;
 		sgs_ObjCallDtor( R->C, obj );
 	}
 	sgs_vht_free( &R->resources, R->C );
@@ -2860,11 +2856,7 @@ void SS3D_Renderer_Resize( SS3D_Renderer* R, int w, int h )
 void SS3D_Renderer_PokeResource( SS3D_Renderer* R, sgs_VarObj* obj, int add )
 {
 	sgs_Variable K;
-	if( R->destroying )
-		return;
-	
-	K.type = SGS_VT_PTR;
-	K.data.P = obj;
+	sgs_InitPtr( &K, obj );
 	if( add )
 		sgs_vht_set( &R->resources, R->C, &K, &K );
 	else
@@ -2946,7 +2938,7 @@ static sgs_RegIntConst ss3d_iconsts[] =
 	CN( _VDECLTYPE_FLOAT1 ), CN( _VDECLTYPE_FLOAT2 ), CN( _VDECLTYPE_FLOAT3 ), CN( _VDECLTYPE_FLOAT4 ), CN( _VDECLTYPE_BCOL4 ),
 	CN( _VDECLUSAGE_POSITION ), CN( _VDECLUSAGE_COLOR ), CN( _VDECLUSAGE_NORMAL ), CN( _VDECLUSAGE_TANGENT ),
 	CN( _VDECLUSAGE_TEXTURE0 ), CN( _VDECLUSAGE_TEXTURE1 ), CN( _VDECLUSAGE_TEXTURE2 ), CN( _VDECLUSAGE_TEXTURE3 ),
-	CN( _MDF_INDEX_32 ), CN( _MDF_TRIANGLESTRIP ), CN( _MDF_TRANSPARENT ),
+	CN( _MDF_INDEX_32 ), CN( _MDF_TRIANGLESTRIP ), CN( _MDF_TRANSPARENT ), CN( _MDF_UNLIT ),
 };
 
 
