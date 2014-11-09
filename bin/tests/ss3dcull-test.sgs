@@ -223,7 +223,7 @@ function update()
 	img = SS_CreateImage( dmpw, dmph );
 	img.setData( dmpd );
 	tex = SS_CreateTexture( img, "nolerp" );
-	SS_DrawTexColorRect( 0, 0, Window.width, Window.height, tex, 1, 1, 1, 0.1 );
+	SS_DrawTexColorRect( 0, 0, Window.width, Window.height, tex, 1, 1, 1, 0.5 );
 	
 	if( 0 )
 	{

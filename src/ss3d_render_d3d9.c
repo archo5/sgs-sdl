@@ -866,29 +866,38 @@ static int meshd3d9_gcmark( SGS_CTX, sgs_VarObj* obj )
 static int mesh_ondevicelost( SGS_CTX, SS3D_Mesh_D3D9* M )
 {
 	void *src_data, *dst_data;
+	const char* reason = NULL;
 	if( M->inh.dataFlags & SS3D_MDF_DYNAMIC )
 	{
 		int i32 = M->inh.dataFlags & SS3D_MDF_INDEX_32;
 		IDirect3DVertexBuffer9* tmpVB = NULL;
 		IDirect3DIndexBuffer9* tmpIB = NULL;
 		
-		if( FAILED( D3DCALL_( ((SS3D_RD3D9*)M->inh.renderer)->device, CreateVertexBuffer, M->inh.vertexDataSize, D3DUSAGE_DYNAMIC, 0, D3DPOOL_SYSTEMMEM, &tmpVB, NULL ) ) ) goto fail;
-		src_data = dst_data = NULL;
-		if( FAILED( D3DCALL_( M->VB, Lock, 0, 0, &src_data, 0 ) ) ) goto fail;
-		if( FAILED( D3DCALL_( tmpVB, Lock, 0, 0, &dst_data, 0 ) ) ) goto fail;
-		memcpy( dst_data, src_data, M->inh.vertexDataSize );
-		if( FAILED( D3DCALL( tmpVB, Unlock ) ) ) goto fail;
-		if( FAILED( D3DCALL( M->VB, Unlock ) ) ) goto fail;
+		if( M->inh.vertexDataSize )
+		{
+			if( FAILED( D3DCALL_( ((SS3D_RD3D9*)M->inh.renderer)->device, CreateVertexBuffer, M->inh.vertexDataSize, D3DUSAGE_DYNAMIC, 0, D3DPOOL_SYSTEMMEM, &tmpVB, NULL ) ) )
+				{ reason = "failed to create temp. VB"; goto fail; }
+			src_data = dst_data = NULL;
+			if( FAILED( D3DCALL_( M->VB, Lock, 0, 0, &src_data, 0 ) ) ){ reason = "failed to lock orig. VB"; goto fail; }
+			if( FAILED( D3DCALL_( tmpVB, Lock, 0, 0, &dst_data, 0 ) ) ){ reason = "failed to lock temp. VB"; goto fail; }
+			memcpy( dst_data, src_data, M->inh.vertexDataSize );
+			if( FAILED( D3DCALL( tmpVB, Unlock ) ) ){ reason = "failed to unlock orig. VB"; goto fail; }
+			if( FAILED( D3DCALL( M->VB, Unlock ) ) ){ reason = "failed to unlock temp. VB"; goto fail; }
+		}
 		SAFE_RELEASE( M->VB );
 		M->VB = tmpVB;
 		
-		if( FAILED( D3DCALL_( ((SS3D_RD3D9*)M->inh.renderer)->device, CreateIndexBuffer, M->inh.indexDataSize, D3DUSAGE_DYNAMIC, i32 ? D3DFMT_INDEX32 : D3DFMT_INDEX16, D3DPOOL_SYSTEMMEM, &tmpIB, NULL ) ) ) goto fail;
-		src_data = dst_data = NULL;
-		if( FAILED( D3DCALL_( M->IB, Lock, 0, 0, &src_data, 0 ) ) ) goto fail;
-		if( FAILED( D3DCALL_( tmpIB, Lock, 0, 0, &dst_data, 0 ) ) ) goto fail;
-		memcpy( dst_data, src_data, M->inh.indexDataSize );
-		if( FAILED( D3DCALL( tmpIB, Unlock ) ) ) goto fail;
-		if( FAILED( D3DCALL( M->IB, Unlock ) ) ) goto fail;
+		if( M->inh.indexDataSize )
+		{
+			if( FAILED( D3DCALL_( ((SS3D_RD3D9*)M->inh.renderer)->device, CreateIndexBuffer, M->inh.indexDataSize, D3DUSAGE_DYNAMIC, i32 ? D3DFMT_INDEX32 : D3DFMT_INDEX16, D3DPOOL_SYSTEMMEM, &tmpIB, NULL ) ) )
+				{ reason = "failed to create temp. IB"; goto fail; }
+			src_data = dst_data = NULL;
+			if( FAILED( D3DCALL_( M->IB, Lock, 0, 0, &src_data, 0 ) ) ){ reason = "failed to lock orig. IB"; goto fail; }
+			if( FAILED( D3DCALL_( tmpIB, Lock, 0, 0, &dst_data, 0 ) ) ){ reason = "failed to lock temp. IB"; goto fail; }
+			memcpy( dst_data, src_data, M->inh.indexDataSize );
+			if( FAILED( D3DCALL( tmpIB, Unlock ) ) ){ reason = "failed to unlock orig. IB"; goto fail; }
+			if( FAILED( D3DCALL( M->IB, Unlock ) ) ){ reason = "failed to unlock temp. IB"; goto fail; }
+		}
 		SAFE_RELEASE( M->IB );
 		M->IB = tmpIB;
 	}
@@ -896,7 +905,7 @@ static int mesh_ondevicelost( SGS_CTX, SS3D_Mesh_D3D9* M )
 	return 1;
 	
 fail:
-	sgs_Msg( C, SGS_ERROR, "failed to handle lost device mesh" );
+	sgs_Msg( C, SGS_ERROR, "failed to handle lost device mesh: %s", reason ? reason : "<unknown reason>" );
 	return 0;
 }
 
@@ -909,23 +918,29 @@ static int mesh_ondevicereset( SGS_CTX, SS3D_Mesh_D3D9* M )
 		IDirect3DVertexBuffer9* tmpVB = NULL;
 		IDirect3DIndexBuffer9* tmpIB = NULL;
 		
-		if( FAILED( D3DCALL_( ((SS3D_RD3D9*)M->inh.renderer)->device, CreateVertexBuffer, M->inh.vertexDataSize, D3DUSAGE_DYNAMIC, 0, D3DPOOL_DEFAULT, &tmpVB, NULL ) ) ) goto fail;
-		src_data = dst_data = NULL;
-		if( FAILED( D3DCALL_( M->VB, Lock, 0, 0, &src_data, 0 ) ) ) goto fail;
-		if( FAILED( D3DCALL_( tmpVB, Lock, 0, 0, &dst_data, D3DLOCK_DISCARD ) ) ) goto fail;
-		memcpy( dst_data, src_data, M->inh.vertexDataSize );
-		if( FAILED( D3DCALL( tmpVB, Unlock ) ) ) goto fail;
-		if( FAILED( D3DCALL( M->VB, Unlock ) ) ) goto fail;
+		if( M->inh.vertexDataSize )
+		{
+			if( FAILED( D3DCALL_( ((SS3D_RD3D9*)M->inh.renderer)->device, CreateVertexBuffer, M->inh.vertexDataSize, D3DUSAGE_DYNAMIC, 0, D3DPOOL_DEFAULT, &tmpVB, NULL ) ) ) goto fail;
+			src_data = dst_data = NULL;
+			if( FAILED( D3DCALL_( M->VB, Lock, 0, 0, &src_data, 0 ) ) ) goto fail;
+			if( FAILED( D3DCALL_( tmpVB, Lock, 0, 0, &dst_data, D3DLOCK_DISCARD ) ) ) goto fail;
+			memcpy( dst_data, src_data, M->inh.vertexDataSize );
+			if( FAILED( D3DCALL( tmpVB, Unlock ) ) ) goto fail;
+			if( FAILED( D3DCALL( M->VB, Unlock ) ) ) goto fail;
+		}
 		SAFE_RELEASE( M->VB );
 		M->VB = tmpVB;
 		
-		if( FAILED( D3DCALL_( ((SS3D_RD3D9*)M->inh.renderer)->device, CreateIndexBuffer, M->inh.indexDataSize, D3DUSAGE_DYNAMIC, i32 ? D3DFMT_INDEX32 : D3DFMT_INDEX16, D3DPOOL_DEFAULT, &tmpIB, NULL ) ) ) goto fail;
-		src_data = dst_data = NULL;
-		if( FAILED( D3DCALL_( M->IB, Lock, 0, 0, &src_data, 0 ) ) ) goto fail;
-		if( FAILED( D3DCALL_( tmpIB, Lock, 0, 0, &dst_data, D3DLOCK_DISCARD ) ) ) goto fail;
-		memcpy( dst_data, src_data, M->inh.indexDataSize );
-		if( FAILED( D3DCALL( tmpIB, Unlock ) ) ) goto fail;
-		if( FAILED( D3DCALL( M->IB, Unlock ) ) ) goto fail;
+		if( M->inh.indexDataSize )
+		{
+			if( FAILED( D3DCALL_( ((SS3D_RD3D9*)M->inh.renderer)->device, CreateIndexBuffer, M->inh.indexDataSize, D3DUSAGE_DYNAMIC, i32 ? D3DFMT_INDEX32 : D3DFMT_INDEX16, D3DPOOL_DEFAULT, &tmpIB, NULL ) ) ) goto fail;
+			src_data = dst_data = NULL;
+			if( FAILED( D3DCALL_( M->IB, Lock, 0, 0, &src_data, 0 ) ) ) goto fail;
+			if( FAILED( D3DCALL_( tmpIB, Lock, 0, 0, &dst_data, D3DLOCK_DISCARD ) ) ) goto fail;
+			memcpy( dst_data, src_data, M->inh.indexDataSize );
+			if( FAILED( D3DCALL( tmpIB, Unlock ) ) ) goto fail;
+			if( FAILED( D3DCALL( M->IB, Unlock ) ) ) goto fail;
+		}
 		SAFE_RELEASE( M->IB );
 		M->IB = tmpIB;
 	}
@@ -1816,12 +1831,6 @@ static int rd3d9i_render( SGS_CTX )
 			{
 				SS3D_MeshInstance* MI = visible_meshes[ inst_id ];
 				
-				VEC4 lightdata[ 64 ];
-				float *pldata_it = lightdata[0], *sldata_ps_it = lightdata[32], *sldata_vs_it = lightdata[48];
-				int pl_count = 0, sl_count = 0;
-				
-				MAT4 m_world_view;
-				
 				SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) MI->mesh->data;
 				if( !M->inh.vertexDecl )
 					continue;
@@ -1837,153 +1846,167 @@ static int rd3d9i_render( SGS_CTX )
 				
 				D3DCALL_( R->device, SetRenderState, D3DRS_CULLMODE, M->inh.dataFlags & SS3D_MDF_NOCULL ? D3DCULL_NONE : D3DCULL_CW );
 				
-				if( pass->pointlight_count )
+				/* -------------------------------------- */
+				do
 				{
-					while( pl_count < pass->pointlight_count && MI->lightbuf_begin < MI->lightbuf_end )
+					/* WHILE THERE ARE LIGHTS IN A LIGHT OVERLAY PASS */
+					int pl_count = 0, sl_count = 0;
+					VEC4 lightdata[ 64 ];
+					float *pldata_it = lightdata[0], *sldata_ps_it = lightdata[32], *sldata_vs_it = lightdata[48];
+					
+					MAT4 m_world_view;
+					
+					if( pass->pointlight_count )
 					{
-						int found = 0;
-						SS3D_MeshInstLight* plt = MI->lightbuf_begin;
-						while( plt < MI->lightbuf_end )
+						while( pl_count < pass->pointlight_count && MI->lightbuf_begin < MI->lightbuf_end )
 						{
-							if( plt->L->type == SS3DLIGHT_POINT )
+							int found = 0;
+							SS3D_MeshInstLight* plt = MI->lightbuf_begin;
+							while( plt < MI->lightbuf_end )
 							{
-								SS3D_Light* light = plt->L;
-								
-								found = 1;
-								
-								// copy data
-								VEC3 viewpos;
-								SS3D_Mtx_TransformPos( viewpos, light->position, cam->mView );
-								VEC4 newdata[2] =
+								if( plt->L->type == SS3DLIGHT_POINT )
 								{
-									{ viewpos[0], viewpos[1], viewpos[2], light->range },
-									{ light->color[0], light->color[1], light->color[2], light->power }
-								};
-								memcpy( pldata_it, newdata, sizeof(VEC4)*2 );
-								pldata_it += 8;
-								pl_count++;
-								
-								// extract light from array
-								if( plt > MI->lightbuf_begin )
-									*plt = *MI->lightbuf_begin;
-								MI->lightbuf_begin++;
-								
-								break;
-							}
-							plt++;
-						}
-						if( !found )
-							break;
-					}
-					pshc_set_vec4array( R, 56, lightdata[0], 2 * pl_count );
-				}
-				if( pass->spotlight_count )
-				{
-					while( sl_count < pass->spotlight_count && MI->lightbuf_begin < MI->lightbuf_end )
-					{
-						int found = 0;
-						SS3D_MeshInstLight* plt = MI->lightbuf_begin;
-						while( plt < MI->lightbuf_end )
-						{
-							if( plt->L->type == SS3DLIGHT_SPOT )
-							{
-								SS3D_Light* light = plt->L;
-								
-								found = 1;
-								
-								// copy data
-								VEC3 viewpos, viewdir;
-								SS3D_Mtx_TransformPos( viewpos, light->position, cam->mView );
-								SS3D_Mtx_TransformNormal( viewdir, light->direction, cam->mView );
-								VEC3_Normalized( viewdir, viewdir );
-								float tszx = 1, tszy = 1;
-								if( light->shadowTexture )
-								{
-									SS3D_Texture_D3D9* tex = (SS3D_Texture_D3D9*) light->shadowTexture->data;
-									tszx = tex->inh.info.width;
-									tszy = tex->inh.info.height;
+									SS3D_Light* light = plt->L;
+									
+									found = 1;
+									
+									// copy data
+									VEC3 viewpos;
+									SS3D_Mtx_TransformPos( viewpos, light->position, cam->mView );
+									VEC4 newdata[2] =
+									{
+										{ viewpos[0], viewpos[1], viewpos[2], light->range },
+										{ light->color[0], light->color[1], light->color[2], light->power }
+									};
+									memcpy( pldata_it, newdata, sizeof(VEC4)*2 );
+									pldata_it += 8;
+									pl_count++;
+									
+									// extract light from array
+									if( plt > MI->lightbuf_begin )
+										*plt = *MI->lightbuf_begin;
+									MI->lightbuf_begin++;
+									
+									break;
 								}
-								VEC4 newdata[4] =
-								{
-									{ viewpos[0], viewpos[1], viewpos[2], light->range },
-									{ light->color[0], light->color[1], light->color[2], light->power },
-									{ viewdir[0], viewdir[1], viewdir[2], DEG2RAD( light->angle ) },
-									{ tszx, tszy, 1.0f / tszx, 1.0f / tszy },
-								};
-								memcpy( sldata_ps_it, newdata, sizeof(VEC4)*4 );
-								MAT4 tmp;
-								SS3D_Mtx_Multiply( tmp, MI->matrix, light->viewProjMatrix );
-								memcpy( sldata_vs_it, tmp, sizeof(MAT4) );
-								sldata_ps_it += 16;
-								sldata_vs_it += 16;
-								
-								use_texture( R, 8 + sl_count * 2, light->cookieTexture ? (SS3D_Texture_D3D9*) light->cookieTexture->data : NULL );
-								use_texture( R, 8 + sl_count * 2 + 1, light->shadowTexture ? (SS3D_Texture_D3D9*) light->shadowTexture->data : NULL );
-								sl_count++;
-								
-								// extract light from array
-								if( plt > MI->lightbuf_begin )
-									*plt = *MI->lightbuf_begin;
-								MI->lightbuf_begin++;
-								
-								break;
+								plt++;
 							}
-							plt++;
+							if( !found )
+								break;
 						}
-						if( !found )
-							break;
+						pshc_set_vec4array( R, 56, lightdata[0], 2 * pl_count );
 					}
-					vshc_set_vec4array( R, 24, lightdata[48], 4 * sl_count );
-					pshc_set_vec4array( R, 24, lightdata[32], 4 * sl_count );
-				}
-				
-				if( pass->flags & SS3D_RPF_LIGHTOVERLAY && pl_count + sl_count <= 0 )
-					continue;
-				
-				if( !( pass->flags & SS3D_RPF_LIGHTOVERLAY ) )
-				{
-					for( i = 0; i < SS3D_MAX_MI_TEXTURES; ++i )
-						use_texture( R, 8 + i, MI->textures[i] ? (SS3D_Texture_D3D9*) MI->textures[i]->data : NULL );
-					D3DCALL_( R->device, SetRenderState, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
-				}
-				else
-				{
-					D3DCALL_( R->device, SetRenderState, D3DRS_ALPHABLENDENABLE, TRUE );
-					D3DCALL_( R->device, SetRenderState, D3DRS_DESTBLEND, D3DBLEND_ONE );
-				}
-				
-				mi_apply_constants( R, MI );
-				
-				VEC4 lightcounts = { pl_count, sl_count, 0, 0 };
-				vshc_set_vec4array( R, 23, lightcounts, 1 );
-				pshc_set_vec4array( R, 23, lightcounts, 1 );
-				
-				SS3D_Mtx_Multiply( m_world_view, MI->matrix, cam->mView );
-				vshc_set_mat4( R, 0, m_world_view );
-				
-				D3DCALL_( R->device, SetVertexDeclaration, VD->VD );
-				D3DCALL_( R->device, SetStreamSource, 0, M->VB, 0, VD->info.size );
-				D3DCALL_( R->device, SetIndices, M->IB );
-				
-				for( part_id = 0; part_id < M->inh.numParts; ++part_id )
-				{
-					SS3D_MeshPart* MP = M->inh.parts + part_id;
+					if( pass->spotlight_count )
+					{
+						while( sl_count < pass->spotlight_count && MI->lightbuf_begin < MI->lightbuf_end )
+						{
+							int found = 0;
+							SS3D_MeshInstLight* plt = MI->lightbuf_begin;
+							while( plt < MI->lightbuf_end )
+							{
+								if( plt->L->type == SS3DLIGHT_SPOT )
+								{
+									SS3D_Light* light = plt->L;
+									
+									found = 1;
+									
+									// copy data
+									VEC3 viewpos, viewdir;
+									SS3D_Mtx_TransformPos( viewpos, light->position, cam->mView );
+									SS3D_Mtx_TransformNormal( viewdir, light->direction, cam->mView );
+									VEC3_Normalized( viewdir, viewdir );
+									float tszx = 1, tszy = 1;
+									if( light->shadowTexture )
+									{
+										SS3D_Texture_D3D9* tex = (SS3D_Texture_D3D9*) light->shadowTexture->data;
+										tszx = tex->inh.info.width;
+										tszy = tex->inh.info.height;
+									}
+									VEC4 newdata[4] =
+									{
+										{ viewpos[0], viewpos[1], viewpos[2], light->range },
+										{ light->color[0], light->color[1], light->color[2], light->power },
+										{ viewdir[0], viewdir[1], viewdir[2], DEG2RAD( light->angle ) },
+										{ tszx, tszy, 1.0f / tszx, 1.0f / tszy },
+									};
+									memcpy( sldata_ps_it, newdata, sizeof(VEC4)*4 );
+									MAT4 tmp;
+									SS3D_Mtx_Multiply( tmp, MI->matrix, light->viewProjMatrix );
+									memcpy( sldata_vs_it, tmp, sizeof(MAT4) );
+									sldata_ps_it += 16;
+									sldata_vs_it += 16;
+									
+									use_texture( R, 8 + sl_count * 2, light->cookieTexture ? (SS3D_Texture_D3D9*) light->cookieTexture->data : NULL );
+									use_texture( R, 8 + sl_count * 2 + 1, light->shadowTexture ? (SS3D_Texture_D3D9*) light->shadowTexture->data : NULL );
+									sl_count++;
+									
+									// extract light from array
+									if( plt > MI->lightbuf_begin )
+										*plt = *MI->lightbuf_begin;
+									MI->lightbuf_begin++;
+									
+									break;
+								}
+								plt++;
+							}
+							if( !found )
+								break;
+						}
+						vshc_set_vec4array( R, 24, lightdata[48], 4 * sl_count );
+						pshc_set_vec4array( R, 24, lightdata[32], 4 * sl_count );
+					}
 					
-					if( !MP->shaders[ pass_id ] )
-						continue;
+					if( pass->flags & SS3D_RPF_LIGHTOVERLAY && pl_count + sl_count <= 0 )
+						break;
 					
-					use_shader( R, (SS3D_Shader_D3D9*) MP->shaders[ pass_id ]->data );
-					for( tex_id = 0; tex_id < SS3D_NUM_MATERIAL_TEXTURES; ++tex_id )
-						use_texture( R, tex_id, MP->textures[ tex_id ] ? (SS3D_Texture_D3D9*) MP->textures[ tex_id ]->data : NULL );
+					if( !( pass->flags & SS3D_RPF_LIGHTOVERLAY ) )
+					{
+						for( i = 0; i < SS3D_MAX_MI_TEXTURES; ++i )
+							use_texture( R, 8 + i, MI->textures[i] ? (SS3D_Texture_D3D9*) MI->textures[i]->data : NULL );
+						D3DCALL_( R->device, SetRenderState, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
+					}
+					else
+					{
+						D3DCALL_( R->device, SetRenderState, D3DRS_ALPHABLENDENABLE, TRUE );
+						D3DCALL_( R->device, SetRenderState, D3DRS_DESTBLEND, D3DBLEND_ONE );
+					}
 					
-					if( MP->indexCount < 3 )
-						continue;
-					D3DCALL_( R->device, DrawIndexedPrimitive,
-						M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ? D3DPT_TRIANGLESTRIP : D3DPT_TRIANGLELIST,
-						MP->vertexOffset, 0, MP->vertexCount, MP->indexOffset, M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ? MP->indexCount - 2 : MP->indexCount / 3 );
-					R->inh.stat_numDrawCalls++;
-					R->inh.stat_numMDrawCalls++;
+					mi_apply_constants( R, MI );
+					
+					VEC4 lightcounts = { pl_count, sl_count, 0, 0 };
+					vshc_set_vec4array( R, 23, lightcounts, 1 );
+					pshc_set_vec4array( R, 23, lightcounts, 1 );
+					
+					SS3D_Mtx_Multiply( m_world_view, MI->matrix, cam->mView );
+					vshc_set_mat4( R, 0, m_world_view );
+					
+					D3DCALL_( R->device, SetVertexDeclaration, VD->VD );
+					D3DCALL_( R->device, SetStreamSource, 0, M->VB, 0, VD->info.size );
+					D3DCALL_( R->device, SetIndices, M->IB );
+					
+					for( part_id = 0; part_id < M->inh.numParts; ++part_id )
+					{
+						SS3D_MeshPart* MP = M->inh.parts + part_id;
+						
+						if( !MP->shaders[ pass_id ] )
+							continue;
+						
+						use_shader( R, (SS3D_Shader_D3D9*) MP->shaders[ pass_id ]->data );
+						for( tex_id = 0; tex_id < SS3D_NUM_MATERIAL_TEXTURES; ++tex_id )
+							use_texture( R, tex_id, MP->textures[ tex_id ] ? (SS3D_Texture_D3D9*) MP->textures[ tex_id ]->data : NULL );
+						
+						if( MP->indexCount < 3 )
+							continue;
+						D3DCALL_( R->device, DrawIndexedPrimitive,
+							M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ? D3DPT_TRIANGLESTRIP : D3DPT_TRIANGLELIST,
+							MP->vertexOffset, 0, MP->vertexCount, MP->indexOffset, M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ? MP->indexCount - 2 : MP->indexCount / 3 );
+						R->inh.stat_numDrawCalls++;
+						R->inh.stat_numMDrawCalls++;
+					}
+					
+					/* -------------------------------------- */
 				}
+				while( pass->flags & SS3D_RPF_LIGHTOVERLAY );
 			}
 		}
 		else if( pass->type == SS3D_RPT_SCREEN )

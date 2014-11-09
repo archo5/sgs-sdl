@@ -1,6 +1,7 @@
 
 #include <windows.h>
 #include <emmintrin.h>
+#include <float.h>
 
 #include "ss3dcull.hpp"
 
@@ -240,8 +241,8 @@ void OcclusionTest::Prepare()
 	m_transformedVerts.resize( m_vertices.size() );
 	for( size_t i = 0; i < m_vertices.size(); ++i )
 	{
-		Vec3 v = m_viewProjImgMatrix.TransformPosPerspXY( m_vertices[ i ] );
-		PPVertex ppv = { (int) v.x, (int) v.y, v.z };
+		Vec3 v = m_viewProjMatrix.TransformPosPerspXY( m_vertices[ i ] );
+		PPVertex ppv = { (int)( ( v.x * 0.5 + 0.5 ) * IMG_WIDTH ), (int)( ( v.y * -0.5 + 0.5 ) * IMG_HEIGHT ), v.z };
 		m_transformedVerts[ i ] = ppv;
 	}
 	m_time_xform = ftime() - t1;
@@ -284,17 +285,26 @@ uint32_t* OcclusionTest::Query()
 		uint32_t qout_quad = qid / 32;
 		uint32_t qout_bit = qid % 32;
 		
-		Vec3 bbmin = { (float) IMG_WIDTH - 1, (float) IMG_HEIGHT - 1, 999999.f }, bbmax = { 0, 0, -1 };
-		const Vec3 boundsmin = bbmax, boundsmax = bbmin; // flip'd
+		Vec3 bbmin = { FLT_MAX, FLT_MAX, FLT_MAX }, bbmax = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
+	//	Vec3 wbbmin = { FLT_MAX, FLT_MAX, FLT_MAX }, wbbmax = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
+		const Vec3 boundsmin = { -1, -1, 0 }, boundsmax = { 1, 1, 1 }; // flip'd
 		for( uint32_t j = query_begin; j < query_end; ++j )
 		{
-			Vec3 newpos = m_viewProjImgMatrix.TransformPosPerspXY( m_queryData[ j ] );
+			Vec3 newpos = m_viewProjMatrix.TransformPosPerspXY( m_queryData[ j ] );
+			newpos.y = -newpos.y;
 			if( bbmin.x > newpos.x ) bbmin.x = newpos.x;
 			if( bbmin.y > newpos.y ) bbmin.y = newpos.y;
 			if( bbmin.z > newpos.z ) bbmin.z = newpos.z;
 			if( bbmax.x < newpos.x ) bbmax.x = newpos.x;
 			if( bbmax.y < newpos.y ) bbmax.y = newpos.y;
 			if( bbmax.z < newpos.z ) bbmax.z = newpos.z;
+			
+	//		if( wbbmin.x > m_queryData[ j ].x ) wbbmin.x = m_queryData[ j ].x;
+	//		if( wbbmin.y > m_queryData[ j ].y ) wbbmin.y = m_queryData[ j ].y;
+	//		if( wbbmin.z > m_queryData[ j ].z ) wbbmin.z = m_queryData[ j ].z;
+	//		if( wbbmax.x < m_queryData[ j ].x ) wbbmax.x = m_queryData[ j ].x;
+	//		if( wbbmax.y < m_queryData[ j ].y ) wbbmax.y = m_queryData[ j ].y;
+	//		if( wbbmax.z < m_queryData[ j ].z ) wbbmax.z = m_queryData[ j ].z;
 		}
 	//	printf( "query #%d (%d - %d): (%g;%g;%g) -> (%g;%g;%g)\n",
 	//		i/2, query_begin, query_end, bbmin.x, bbmin.y, bbmin.z, bbmax.x, bbmax.y, bbmax.z );
@@ -304,15 +314,20 @@ uint32_t* OcclusionTest::Query()
 			bbmin.y < boundsmax.y && bbmax.y > boundsmin.y &&
 			bbmin.z < boundsmax.z && bbmax.z > boundsmin.z )
 		{
-			if( bbmin.z < -1 )
+	//		if( bbmin.y >= boundsmax.y || bbmax.y <= boundsmin.y )
+	//		{
+	//			printf( "%f >= %f || %f <= %f\n", bbmin.y , boundsmax.y , bbmax.y , boundsmin.y );
+	//			printf( "WBB %f %f %f => %f %f %f\n", wbbmin.x, wbbmin.y, wbbmin.z, wbbmax.x, wbbmax.y, wbbmax.z );
+	//		}
+			if( bbmin.z < 0 )
 			{
 				vis = 1;
 				goto quickexit;
 			}
-			int xfrom = floor( TMAX( bbmin.x, boundsmin.x ) );
-			int yfrom = floor( TMAX( bbmin.y, boundsmin.y ) );
-			int xto = floor( TMIN( bbmax.x, boundsmax.x ) );
-			int yto = floor( TMIN( bbmax.y, boundsmax.y ) );
+			int xfrom = floor( ( TMAX( bbmin.x, boundsmin.x ) * 0.5 + 0.5 ) * ( IMG_WIDTH - 1 ) );
+			int yfrom = floor( ( TMAX( bbmin.y, boundsmin.y ) * 0.5 + 0.5 ) * ( IMG_HEIGHT - 1 ) );
+			int xto = floor( ( TMIN( bbmax.x, boundsmax.x ) * 0.5 + 0.5 ) * ( IMG_WIDTH - 1 ) );
+			int yto = floor( ( TMIN( bbmax.y, boundsmax.y ) * 0.5 + 0.5 ) * ( IMG_HEIGHT - 1 ) );
 			for( int y = yfrom; y <= yto; ++y )
 			{
 				for( int x = xfrom; x <= xto; ++x )
@@ -445,7 +460,9 @@ sgsVariable SS3D_OcclusionTest::CreateCullScene()
 	CS->camera_pointlightlist = SS3D_OTCULL_Camera_PointLightList;
 	CS->camera_spotlightlist = SS3D_OTCULL_Camera_SpotLightList;
 	CS->data = this;
-	CS->store = sgsHandle<SS3D_OcclusionTest>( this ).get_variable().var;
+	sgsVariable V = sgsHandle<SS3D_OcclusionTest>( this ).get_variable();
+	V._acquire();
+	CS->store = V.var;
 	return sgsVariable( C, -1 );
 }
 

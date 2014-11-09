@@ -174,10 +174,8 @@ struct Mat4
 			v.x * m[0][2] + v.y * m[1][2] + v.z * m[2][2] + m[3][2],
 		};
 		float w = v.x * m[0][3] + v.y * m[1][3] + v.z * m[2][3] + m[3][3];
-		float q = w ? 1.0f / w : 1.0f;
-		out.x *= q;
-		out.y *= q;
-		out.z *= fabs( q );
+		float q = fabs( w ? 1.0f / w : 1.0f );
+		out *= q;
 		return out;
 	}
 	
@@ -257,6 +255,7 @@ struct OcclusionTest
 	Vec3Vector m_queryData;
 	U32Vector m_queryOffsetSize;
 	
+	Mat4 m_viewProjMatrix;
 	Mat4 m_viewProjImgMatrix;
 	
 	PPVVector m_transformedVerts;
@@ -283,6 +282,7 @@ inline void OcclusionTest::SetViewProjMatrix( const Mat4& matrix )
 	imgmtx.m[3][0] = m_width / 2.0f;
 	imgmtx.m[3][1] = m_height / 2.0f;
 	
+	m_viewProjMatrix = matrix;
 	m_viewProjImgMatrix.Multiply( matrix, imgmtx );
 }
 
