@@ -58,6 +58,8 @@ endif
 SGS_SDL_FLAGS = $(SS_CFLAGS) $(MODULEFLAGS) $(PF_LINK) -Lsgscript/bin -lSDL2main -lSDL2 -lsgscript -lsgsxgmath $(PF_DEPS)
 SGS_SDL_LAUNCHER_FLAGS = $(SS_CFLAGS) $(BINFLAGS) -L$(OUTDIR) -lsgs-sdl
 
+SGS_CXX_FLAGS = -fno-exceptions -fno-rtti -static-libstdc++ -static-libgcc -fno-unwind-tables -fvisibility=hidden
+
 
 # BUILD INFO
 ifneq ($(MAKECMDGOALS),clean)
@@ -81,11 +83,12 @@ endif
 
 # TARGETS
 ## the library (default target)
-.PHONY: launchers, make, ss3d, sgs-sdl
+.PHONY: launchers make ss3d ss3dcull sgs-sdl
 
 launchers: $(OUTDIR)/sgs-sdl-release$(BINEXT) $(OUTDIR)/sgs-sdl-debug$(BINEXT)
 sgs-sdl: $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT)
 ss3d: $(OUTDIR)/$(LIBPFX)ss3d$(LIBEXT)
+ss3dcull: $(OUTDIR)/$(LIBPFX)ss3dcull$(LIBEXT)
 
 $(OUTDIR)/sgs-sdl-release$(BINEXT): $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) src/ss_launcher.c
 	$(LINUXHACKPRE)
@@ -110,6 +113,12 @@ $(OUTDIR)/$(LIBPFX)ss3d$(LIBEXT): $(SS3D_OBJ) $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT
 	$(LINUXHACKPOST)
 	$(PF_POST)
 
+$(OUTDIR)/$(LIBPFX)ss3dcull$(LIBEXT): src/ss3dcull.cpp src/ss3dcull.hpp src/cppbc_ss3dcull.cpp $(OUTDIR)/$(LIBPFX)ss3d$(LIBEXT)
+	$(MAKE) -C sgscript xgmath
+	$(LINUXHACKPRE)
+	$(CXX) -o $@ src/ss3dcull.cpp src/cppbc_ss3dcull.cpp $(SGS_SDL_FLAGS) -msse2 $(SGS_CXX_FLAGS) -I. $(OUTDIR)/$(LIBPFX)ss3d$(LIBEXT)
+	$(LINUXHACKPOST)
+
 obj/ss_%.o: src/ss_%.c $(DEPS)
 	$(CC) -c -o $@ $< $(SS_CFLAGS)
 
@@ -120,6 +129,13 @@ obj/lodepng.o: src/lodepng.c src/lodepng.h
 obj/dds.o: src/dds.c src/dds.h
 	$(CC) -c -o $@ $< $(SS_CFLAGS)
 
+src/cppbc_ss3dcull.cpp: src/ss3dcull.hpp sgscript/bin/sgsvm$(BINEXT)
+	sgscript/bin/sgsvm -p sgscript/ext/cppbc/cppbc.sgs src/ss3dcull.hpp src/cppbc_ss3dcull.cpp
+
+
+# SGScript
+sgscript/bin/sgsvm$(BINEXT):
+	make -C sgscript vm
 
 
 # INPUT LIBRARIES

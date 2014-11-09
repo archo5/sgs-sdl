@@ -375,6 +375,7 @@ typedef struct _SS3D_CullSceneMesh
 }
 SS3D_CullSceneMesh;
 
+typedef void (*fpSS3D_CullScene_Camera_Prepare) ( void* /* data */, SS3D_CullSceneCamera* /* camera */ );
 typedef int (*fpSS3D_CullScene_Camera_MeshList) ( void* /* data */, uint32_t /* count */, SS3D_CullSceneCamera* /* camera */, SS3D_CullSceneMesh* /* meshes */, uint32_t* /* outbitfield */ );
 typedef int (*fpSS3D_CullScene_Camera_PointLightList) ( void* /* data */, uint32_t /* count */, SS3D_CullSceneCamera* /* camera */, SS3D_CullScenePointLight* /* lights */, uint32_t* /* outbitfield */ );
 typedef int (*fpSS3D_CullScene_Camera_SpotLightList) ( void* /* data */, uint32_t /* count */, SS3D_CullSceneCamera* /* camera */, SS3D_CullSceneFrustum* /* frusta */, MAT4* /* inv_matrices */, uint32_t* /* outbitfield */ );
@@ -383,6 +384,7 @@ typedef int (*fpSS3D_CullScene_Mesh_SpotLightList) ( void* /* data */, uint32_t 
 
 struct _SS3D_CullScene
 {
+	fpSS3D_CullScene_Camera_Prepare        camera_prepare;
 	fpSS3D_CullScene_Camera_MeshList       camera_meshlist;
 	fpSS3D_CullScene_Camera_PointLightList camera_pointlightlist;
 	fpSS3D_CullScene_Camera_SpotLightList  camera_spotlightlist;
@@ -393,6 +395,9 @@ struct _SS3D_CullScene
 	sgs_Variable store;
 };
 
+SS3D_CullScene* SS3D_PushCullScene( SGS_CTX );
+
+void SS3D_Scene_Cull_Camera_Prepare( SGS_CTX, SS3D_Scene* S );
 uint32_t SS3D_Scene_Cull_Camera_MeshList( SGS_CTX, sgs_MemBuf* MB, SS3D_Scene* S );
 uint32_t SS3D_Scene_Cull_Camera_PointLightList( SGS_CTX, sgs_MemBuf* MB, SS3D_Scene* S );
 uint32_t SS3D_Scene_Cull_Camera_SpotLightList( SGS_CTX, sgs_MemBuf* MB, SS3D_Scene* S );

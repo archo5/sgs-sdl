@@ -128,7 +128,9 @@ function SS3D_CreateCubeMesh( ss3d, extents, position, color )
 {
 	(vdata,idata,vcount,icount) = SS3D_MeshGen_Cube( extents, position, color );
 	mesh = ss3d.createMesh();
-	mesh.setVertexData( vdata, SS3D_GetVertexDecl( ss3d, cSS3D_GenMeshVertexFormat ), false );
+	vdecl = SS3D_GetVertexDecl( ss3d, cSS3D_GenMeshVertexFormat );
+	mesh.setVertexData( vdata, vdecl, false );
+	mesh.setAABBFromVertexData( vdata, vdecl );
 	mesh.setIndexData( idata, false );
 	mesh.numParts = 1;
 	mesh.setPartRanges( 0, 0, vcount, 0, icount );

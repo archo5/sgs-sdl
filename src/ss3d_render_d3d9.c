@@ -1540,6 +1540,8 @@ static int rd3d9i_render( SGS_CTX )
 	
 	
 	/* CULL */
+	SS3D_Scene_Cull_Camera_Prepare( C, scene );
+	
 	sgs_MemBuf visible_mesh_buf = sgs_membuf_create();
 	uint32_t visible_mesh_count = SS3D_Scene_Cull_Camera_MeshList( C, &visible_mesh_buf, scene );
 	SS3D_MeshInstance** visible_meshes = (SS3D_MeshInstance**) visible_mesh_buf.ptr;

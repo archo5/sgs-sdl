@@ -332,23 +332,23 @@ static int SS3D_MeshGen_Cube( SGS_CTX )
 	uint16_t indices[] =
 	{
 		// front
-		0, 1, 2,
-		2, 3, 0,
+		0, 2, 1,
+		2, 0, 3,
 		// top
-		4, 5, 6,
-		6, 7, 4,
+		4, 6, 5,
+		6, 4, 7,
 		// back
-		8, 9, 10,
-		10, 11, 8,
+		8, 10, 9,
+		10, 8, 11,
 		// bottom
-		12, 13, 14,
-		14, 15, 12,
+		12, 14, 13,
+		14, 12, 15,
 		// left
-		16, 17, 18,
-		18, 19, 16,
+		16, 18, 17,
+		18, 16, 19,
 		// right
-		20, 21, 22,
-		22, 23, 20,
+		20, 22, 21,
+		22, 20, 23,
 	};
 	
 	sgs_PushStringBuf( C, (char*) vertices, sizeof(vertices) );
@@ -1934,6 +1934,7 @@ static int cullscene_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	CS_HDR;
 	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "camera_prepare" ) SGS_RETURN_PTR( CS->camera_prepare );
 		SGS_CASE( "camera_meshlist" ) SGS_RETURN_PTR( CS->camera_meshlist );
 		SGS_CASE( "camera_pointlightlist" ) SGS_RETURN_PTR( CS->camera_pointlightlist );
 		SGS_CASE( "camera_spotlightlist" ) SGS_RETURN_PTR( CS->camera_spotlightlist );
@@ -1954,6 +1955,7 @@ static int cullscene_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	CS_HDR;
 	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "camera_prepare" ) SGS_PARSE_PTR( CS->camera_prepare )
 		SGS_CASE( "camera_meshlist" ) SGS_PARSE_PTR( CS->camera_meshlist )
 		SGS_CASE( "camera_pointlightlist" ) SGS_PARSE_PTR( CS->camera_pointlightlist )
 		SGS_CASE( "camera_spotlightlist" ) SGS_PARSE_PTR( CS->camera_spotlightlist )
@@ -1979,7 +1981,7 @@ sgs_ObjInterface SS3D_CullScene_iface[1] =
 	NULL, NULL,
 }};
 
-static SS3D_CullScene* push_cullscene( SGS_CTX )
+SS3D_CullScene* SS3D_PushCullScene( SGS_CTX )
 {
 	SS3D_CullScene* cs = (SS3D_CullScene*) sgs_PushObjectIPA( C, sizeof(*cs), SS3D_CullScene_iface );
 	memset( cs, 0, sizeof(*cs) );
@@ -1989,7 +1991,7 @@ static SS3D_CullScene* push_cullscene( SGS_CTX )
 
 static void push_default_cullscene( SGS_CTX )
 {
-	SS3D_CullScene* CS = push_cullscene( C );
+	SS3D_CullScene* CS = SS3D_PushCullScene( C );
 	CS->camera_meshlist = SS3D_ISCF_Camera_MeshList;
 	CS->camera_pointlightlist = SS3D_ISCF_Camera_PointLightList;
 	CS->camera_spotlightlist = SS3D_ISCF_Camera_SpotLightList;
@@ -1998,7 +2000,7 @@ static void push_default_cullscene( SGS_CTX )
 static int SS3D_CreateCullScene( SGS_CTX )
 {
 	SGSFN( "SS3D_CreateCullScene" );
-	push_cullscene( C );
+	SS3D_PushCullScene( C );
 	return 1;
 }
 
@@ -2352,6 +2354,33 @@ static void get_frustum_from_light( SS3D_Light* L, SS3D_CullSceneCamera* out )
 	memcpy( out->viewProjMatrix, L->viewProjMatrix, sizeof( L->viewProjMatrix ) );
 	SS3D_Mtx_Identity( out->invViewProjMatrix );
 	SS3D_Mtx_Invert( out->invViewProjMatrix, out->viewProjMatrix );
+}
+
+void SS3D_Scene_Cull_Camera_Prepare( SGS_CTX, SS3D_Scene* S )
+{
+	SS3D_Camera* CAM = (SS3D_Camera*) S->camera->data;
+	if( !CAM )
+		return;
+	
+	SS3D_CullSceneCamera camera_frustum;
+	get_frustum_from_camera( CAM, &camera_frustum );
+	
+	sgs_Variable arr, it, val;
+	sgs_InitObjectPtr( &arr, S->cullScenes );
+	sgs_GetIteratorP( C, &arr, &it );
+	while( sgs_IterAdvanceP( C, &it ) > 0 )
+	{
+		sgs_IterGetDataP( C, &it, NULL, &val );
+		if( sgs_IsObjectP( &val, SS3D_CullScene_iface ) )
+		{
+			SS3D_CullScene* CS = (SS3D_CullScene*) sgs_GetObjectDataP( &val );
+			
+			if( CS->camera_prepare )
+				CS->camera_prepare( CS->data, &camera_frustum );
+		}
+		sgs_Release( C, &val );
+	}
+	sgs_Release( C, &it );
 }
 
 uint32_t SS3D_Scene_Cull_Camera_MeshList( SGS_CTX, sgs_MemBuf* MB, SS3D_Scene* S )
