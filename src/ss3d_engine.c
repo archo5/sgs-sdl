@@ -445,22 +445,22 @@ static int SS3D_MeshGen_Particles( SGS_CTX )
 		SS3D_Mtx_TransformPos( vp01, vp01, viewmatrix );
 		
 		VEC3_Add( vdata->pos, position, vp00 );
-		vdata->u = 0; vdata->v = 0;
-		VEC4_Copy( vdata->color, color );
-		vdata++;
-		
-		VEC3_Add( vdata->pos, position, vp10 );
 		vdata->u = 1; vdata->v = 0;
 		VEC4_Copy( vdata->color, color );
 		vdata++;
 		
+		VEC3_Add( vdata->pos, position, vp10 );
+		vdata->u = 0; vdata->v = 0;
+		VEC4_Copy( vdata->color, color );
+		vdata++;
+		
 		VEC3_Add( vdata->pos, position, vp11 );
-		vdata->u = 1; vdata->v = 1;
+		vdata->u = 0; vdata->v = 1;
 		VEC4_Copy( vdata->color, color );
 		vdata++;
 		
 		VEC3_Add( vdata->pos, position, vp01 );
-		vdata->u = 0; vdata->v = 1;
+		vdata->u = 1; vdata->v = 1;
 		VEC4_Copy( vdata->color, color );
 		vdata++;
 	}
