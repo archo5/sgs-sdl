@@ -180,6 +180,7 @@ def parse_geometry( MESH, materials ):
 	Tlists = [ [] for tl in MESH.uv_layers ]
 	Clists = [ [] for cl in MESH.vertex_colors ]
 	genParts = [] # array of Part ( array of Face ( array of Vertex ( position index, normal index, texcoord indices, color indices ) ) )
+	foundMIDs = []
 	
 	if len( Tlists ) > 2:
 		print( "Too many UV layers" )
@@ -191,6 +192,7 @@ def parse_geometry( MESH, materials ):
 	for flist_id in flim:
 		genPart = []
 		flist = flim[ flist_id ]
+		m_id = 0
 		for face in flist:
 			m_id = face.material_index
 			if flist_id != m_id:
@@ -220,6 +222,7 @@ def parse_geometry( MESH, materials ):
 				genFace.append( genVertex )
 			genPart.append( genFace )
 		genParts.append( genPart )
+		foundMIDs.append( m_id )
 	#
 	
 	# VALIDATION
@@ -232,9 +235,10 @@ def parse_geometry( MESH, materials ):
 	indices = []
 	parts = []
 	
-	mtl_id = -1
+	mtl_num = -1
 	for part in genParts:
-		mtl_id += 1
+		mtl_num += 1
+		mtl_id = foundMIDs[ mtl_num ]
 		vroot = len(vertices)
 		outpart = { "voff": len(vertices), "vcount": 0, "ioff": len(indices), "icount": 0, "shader": materials[ mtl_id ]["shader"], "textures": materials[ mtl_id ]["textures"] }
 		
@@ -272,52 +276,56 @@ def parse_geometry( MESH, materials ):
 		tan1list = [ Vector([0,0,0]) for i in range(len(vertices)) ]
 		tan2list = [ Vector([0,0,0]) for i in range(len(vertices)) ]
 		
-		for i in range( 0, len( indices ), 3 ):
-			i1 = indices[ i + 0 ]
-			i2 = indices[ i + 1 ]
-			i3 = indices[ i + 2 ]
-			
-			Pdc1 = struct.unpack( "3f", vertices[ i1 ][ :12 ] )
-			Pdc2 = struct.unpack( "3f", vertices[ i2 ][ :12 ] )
-			Pdc3 = struct.unpack( "3f", vertices[ i3 ][ :12 ] )
-			
-			v1 = Vector([ Pdc1[0], Pdc1[1], Pdc1[2] ])
-			v2 = Vector([ Pdc2[0], Pdc2[1], Pdc2[2] ])
-			v3 = Vector([ Pdc3[0], Pdc3[1], Pdc3[2] ])
-			
-			Tdc1 = struct.unpack( "2f", vertices[ i1 ][ 24:32 ] )
-			Tdc2 = struct.unpack( "2f", vertices[ i2 ][ 24:32 ] )
-			Tdc3 = struct.unpack( "2f", vertices[ i3 ][ 24:32 ] )
-			
-			w1 = Vector([ Tdc1[0], Tdc1[1], 0 ])
-			w2 = Vector([ Tdc2[0], Tdc2[1], 0 ])
-			w3 = Vector([ Tdc3[0], Tdc3[1], 0 ])
-			
-			x1 = v2.x - v1.x;
-			x2 = v3.x - v1.x;
-			y1 = v2.y - v1.y;
-			y2 = v3.y - v1.y;
-			z1 = v2.z - v1.z;
-			z2 = v3.z - v1.z;
-			
-			s1 = w2.x - w1.x;
-			s2 = w3.x - w1.x;
-			t1 = w2.y - w1.y;
-			t2 = w3.y - w1.y;
-			
-			ir = s1 * t2 - s2 * t1
-			if abs( ir ) > 0.001:
-				r = 1.0 / ir
-				sdir = Vector([(t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r, (t2 * z1 - t1 * z2) * r])
-				tdir = Vector([(s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r, (s1 * z2 - s2 * z1) * r])
+		for part in parts:
+			voff = part["voff"]
+			ioff = part["ioff"]
+			for i in range( 0, part["icount"], 3 ):
+				i1 = indices[ ioff + i + 0 ] + voff
+				i2 = indices[ ioff + i + 1 ] + voff
+				i3 = indices[ ioff + i + 2 ] + voff
 				
-				tan1list[ i1 ] += sdir
-				tan1list[ i2 ] += sdir
-				tan1list[ i3 ] += sdir
+				Pdc1 = struct.unpack( "3f", vertices[ i1 ][ :12 ] )
+				Pdc2 = struct.unpack( "3f", vertices[ i2 ][ :12 ] )
+				Pdc3 = struct.unpack( "3f", vertices[ i3 ][ :12 ] )
 				
-				tan2list[ i1 ] += tdir
-				tan2list[ i2 ] += tdir
-				tan2list[ i3 ] += tdir
+				v1 = Vector([ Pdc1[0], Pdc1[1], Pdc1[2] ])
+				v2 = Vector([ Pdc2[0], Pdc2[1], Pdc2[2] ])
+				v3 = Vector([ Pdc3[0], Pdc3[1], Pdc3[2] ])
+				
+				Tdc1 = struct.unpack( "2f", vertices[ i1 ][ 24:32 ] )
+				Tdc2 = struct.unpack( "2f", vertices[ i2 ][ 24:32 ] )
+				Tdc3 = struct.unpack( "2f", vertices[ i3 ][ 24:32 ] )
+				
+				w1 = Vector([ Tdc1[0], Tdc1[1], 0 ])
+				w2 = Vector([ Tdc2[0], Tdc2[1], 0 ])
+				w3 = Vector([ Tdc3[0], Tdc3[1], 0 ])
+				
+				x1 = v2.x - v1.x;
+				x2 = v3.x - v1.x;
+				y1 = v2.y - v1.y;
+				y2 = v3.y - v1.y;
+				z1 = v2.z - v1.z;
+				z2 = v3.z - v1.z;
+				
+				s1 = w2.x - w1.x;
+				s2 = w3.x - w1.x;
+				t1 = w2.y - w1.y;
+				t2 = w3.y - w1.y;
+				
+				ir = s1 * t2 - s2 * t1
+				if abs( ir ) > 0.001:
+					r = 1.0 / ir
+					sdir = Vector([(t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r, (t2 * z1 - t1 * z2) * r])
+					tdir = Vector([(s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r, (s1 * z2 - s2 * z1) * r])
+					
+					tan1list[ i1 ] += sdir
+					tan1list[ i2 ] += sdir
+					tan1list[ i3 ] += sdir
+					
+					tan2list[ i1 ] += tdir
+					tan2list[ i2 ] += tdir
+					tan2list[ i3 ] += tdir
+				#
 			#
 		#
 		
