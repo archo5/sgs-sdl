@@ -795,7 +795,7 @@ success_genmips:
 		unsigned char* old = out, *cur;
 		
 		// calculate additional space required
-		while( w > 1 && h > 1 )
+		while( w > 1 || h > 1 )
 		{
 			addspace += w * h * 4;
 			w /= 2; if( w < 1 ) w = 1;
@@ -813,7 +813,7 @@ success_genmips:
 		
 		// do cascaded ds2x
 		cur = out;
-		while( w > 1 && h > 1 )
+		while( w > 1 || h > 1 )
 		{
 			unsigned char* dst = cur + w * h * 4;
 			unsigned pw = w, ph = h;

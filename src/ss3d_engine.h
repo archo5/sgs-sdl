@@ -89,7 +89,7 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 #define SS3DINDEX_32 1
 
 #define SS3D_NUM_MATERIAL_TEXTURES 8
-#define SS3D_MAX_MESH_PARTS 8
+#define SS3D_MAX_MESH_PARTS 16
 #define SS3D_VDECL_MAX_ITEMS 8
 
 #define SS3D_VDECLTYPE_FLOAT1 0
