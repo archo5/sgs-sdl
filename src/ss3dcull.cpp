@@ -165,8 +165,13 @@ void RasterizeTriangle2D_2( float* image, int width, int height, int pitch, cons
 	
 	if( maxX < 0 || minX >= width || maxY < 0 || minY >= height )
 		return;
+#if 1
 	if( p1.z <= 0 || p1.z >= 1 || p2.z <=0 || p2.z >= 1 || p3.z <= 0 || p3.z >= 1 )
 		return;
+#else
+	if( ( p1.z <= 0 && p2.z <= 0 && p3.z <= 0 ) || ( p1.z >= 1 && p2.z >= 1 && p3.z >= 1 ) )
+		return;
+#endif
 	if( maxX < 0 ) maxX = 0; else if( maxX >= width ) maxX = width - 1;
 	if( minX < 0 ) minX = 0; else if( minX >= width ) minX = width - 1;
 	if( maxY < 0 ) maxY = 0; else if( maxY >= height ) maxY = height - 1;
@@ -190,6 +195,10 @@ void RasterizeTriangle2D_2( float* image, int width, int height, int pitch, cons
 	__m128 p1z_x4 = _mm_set1_ps( p1.z );
 	__m128 p1p2z_x4 = _mm_set1_ps( p1p2z );
 	__m128 p1p3z_x4 = _mm_set1_ps( p1p3z );
+#if 0
+	__m128 f0_x4 = _mm_set1_ps( 0 );
+	__m128 f1_x4 = _mm_set1_ps( 1 );
+#endif
 	
 	for( p.y = minY; p.y <= maxY; p.y += Edge::stepYSize )
 	{
@@ -209,7 +218,14 @@ void RasterizeTriangle2D_2( float* image, int width, int height, int pitch, cons
 					_mm_mul_ps( p1p2z_x4, _mm_cvtepi32_ps( w1.data ) ),
 					_mm_mul_ps( p1p3z_x4, _mm_cvtepi32_ps( w2.data ) ) ) );
 				__m128 imgpx_x4 = _mm_loadu_ps( imgpos );
+#if 1
 				__m128 combmask = _mm_and_ps( _mm_castsi128_ps( mask.data ), _mm_cmpgt_ps( imgpx_x4, imgval_x4 ) );
+#else
+				__m128 combmask = _mm_and_ps(
+					_mm_and_ps( _mm_castsi128_ps( mask.data ), _mm_cmpgt_ps( imgpx_x4, imgval_x4 ) ),
+					_mm_and_ps( _mm_cmpgt_ps( imgval_x4, f0_x4 ), _mm_cmpgt_ps( f1_x4, imgval_x4 ) )
+				);
+#endif
 				__m128 output = _mm_or_ps( _mm_and_ps( combmask, imgval_x4 ), _mm_andnot_ps( combmask, imgpx_x4 ) );
 				_mm_storeu_ps( imgpos, output );
 			}
@@ -438,7 +454,7 @@ static int SS3D_OTCULL_Camera_SpotLightList( void* data, uint32_t count, SS3D_Cu
 		Mat4* mtx = (Mat4*) &inv_matrices[i];
 		Vec3 fpts[] =
 		{
-			Vec3::CreateFromPtr( frusta->position ),
+			Vec3::CreateFromPtr( frusta[i].position ),
 			mtx->TransformPos( Vec3::Create(-1,-1,1) ),
 			mtx->TransformPos( Vec3::Create( 1,-1,1) ),
 			mtx->TransformPos( Vec3::Create( 1, 1,1) ),
