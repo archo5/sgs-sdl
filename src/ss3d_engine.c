@@ -1940,6 +1940,8 @@ static int cullscene_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "camera_spotlightlist" ) SGS_RETURN_PTR( CS->camera_spotlightlist );
 		SGS_CASE( "mesh_pointlightlist" ) SGS_RETURN_PTR( CS->mesh_pointlightlist );
 		SGS_CASE( "mesh_spotlightlist" ) SGS_RETURN_PTR( CS->mesh_spotlightlist );
+		SGS_CASE( "spotlight_prepare" ) SGS_RETURN_PTR( CS->spotlight_prepare );
+		SGS_CASE( "spotlight_meshlist" ) SGS_RETURN_PTR( CS->spotlight_meshlist );
 		SGS_CASE( "data" ) SGS_RETURN_PTR( CS->data );
 		SGS_CASE( "store" ) { sgs_PushVariable( C, &CS->store ); return SGS_SUCCESS; }
 		
@@ -1948,6 +1950,7 @@ static int cullscene_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "enable_camera_spotlightlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_CAM_SLT );
 		SGS_CASE( "enable_mesh_pointlightlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_MESH_PLT );
 		SGS_CASE( "enable_mesh_spotlightlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_MESH_SLT );
+		SGS_CASE( "enable_spotlight_meshlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_SLT_MESH );
 	SGS_END_INDEXFUNC;
 }
 
@@ -1961,6 +1964,8 @@ static int cullscene_setindex( SGS_ARGS_SETINDEXFUNC )
 		SGS_CASE( "camera_spotlightlist" ) SGS_PARSE_PTR( CS->camera_spotlightlist )
 		SGS_CASE( "mesh_pointlightlist" ) SGS_PARSE_PTR( CS->mesh_pointlightlist )
 		SGS_CASE( "mesh_spotlightlist" ) SGS_PARSE_PTR( CS->mesh_spotlightlist )
+		SGS_CASE( "spotlight_prepare" ) SGS_PARSE_PTR( CS->spotlight_prepare )
+		SGS_CASE( "spotlight_meshlist" ) SGS_PARSE_PTR( CS->spotlight_meshlist )
 		SGS_CASE( "data" ) SGS_PARSE_PTR( CS->data )
 		SGS_CASE( "store" ) { sgs_Assign( C, &CS->store, val ); return SGS_SUCCESS; }
 		
@@ -1969,6 +1974,7 @@ static int cullscene_setindex( SGS_ARGS_SETINDEXFUNC )
 		SGS_CASE( "enable_camera_spotlightlist" ) { sgs_Bool v; if( sgs_ParseBoolP( C, val, &v ) ){ CS->flags = ( CS->flags & ~SS3D_CF_ENABLE_CAM_SLT ) | ( v * SS3D_CF_ENABLE_CAM_SLT ); return SGS_SUCCESS; } return SGS_EINVAL; }
 		SGS_CASE( "enable_mesh_pointlightlist" ) { sgs_Bool v; if( sgs_ParseBoolP( C, val, &v ) ){ CS->flags = ( CS->flags & ~SS3D_CF_ENABLE_MESH_PLT ) | ( v * SS3D_CF_ENABLE_MESH_PLT ); return SGS_SUCCESS; } return SGS_EINVAL; }
 		SGS_CASE( "enable_mesh_spotlightlist" ) { sgs_Bool v; if( sgs_ParseBoolP( C, val, &v ) ){ CS->flags = ( CS->flags & ~SS3D_CF_ENABLE_MESH_SLT ) | ( v * SS3D_CF_ENABLE_MESH_SLT ); return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "enable_spotlight_meshlist" ) { sgs_Bool v; if( sgs_ParseBoolP( C, val, &v ) ){ CS->flags = ( CS->flags & ~SS3D_CF_ENABLE_SLT_MESH ) | ( v * SS3D_CF_ENABLE_SLT_MESH ); return SGS_SUCCESS; } return SGS_EINVAL; }
 	SGS_END_INDEXFUNC;
 }
 
@@ -1985,7 +1991,7 @@ SS3D_CullScene* SS3D_PushCullScene( SGS_CTX )
 {
 	SS3D_CullScene* cs = (SS3D_CullScene*) sgs_PushObjectIPA( C, sizeof(*cs), SS3D_CullScene_iface );
 	memset( cs, 0, sizeof(*cs) );
-	cs->flags = SS3D_CF_ENABLE_ALL;
+	cs->flags = SS3D_CF_ENABLE_ALL | SS3D_CF_SUBST_SLT;
 	return cs;
 }
 
@@ -2609,6 +2615,106 @@ uint32_t SS3D_Scene_Cull_Camera_SpotLightList( SGS_CTX, sgs_MemBuf* MB, SS3D_Sce
 	sgs_Dealloc( light_visiblity );
 	
 	sgs_membuf_resize( MB, C, mbsize + sizeof(SS3D_Light*) * data_size );
+	return data_size;
+}
+
+void SS3D_Scene_Cull_Spotlight_Prepare( SGS_CTX, SS3D_Scene* S, SS3D_Light* L )
+{
+	SS3D_CullSceneCamera light_frustum;
+	get_frustum_from_light( L, &light_frustum );
+	
+	sgs_Variable arr, it, val;
+	sgs_InitObjectPtr( &arr, S->cullScenes );
+	sgs_GetIteratorP( C, &arr, &it );
+	while( sgs_IterAdvanceP( C, &it ) > 0 )
+	{
+		sgs_IterGetDataP( C, &it, NULL, &val );
+		if( sgs_IsObjectP( &val, SS3D_CullScene_iface ) )
+		{
+			SS3D_CullScene* CS = (SS3D_CullScene*) sgs_GetObjectDataP( &val );
+			
+			if( CS->spotlight_prepare )
+				CS->spotlight_prepare( CS->data, &light_frustum );
+			else if( CS->camera_prepare && ( CS->flags & SS3D_CF_SUBST_SLT ) != 0 )
+				CS->camera_prepare( CS->data, &light_frustum );
+		}
+		sgs_Release( C, &val );
+	}
+	sgs_Release( C, &it );
+}
+
+uint32_t SS3D_Scene_Cull_Spotlight_MeshList( SGS_CTX, sgs_MemBuf* MB, SS3D_Scene* S, SS3D_Light* L )
+{
+	uint32_t i, data_size = 0;
+	size_t mbsize = MB->size;
+	
+	SS3D_CullSceneCamera light_frustum;
+	get_frustum_from_light( L, &light_frustum );
+	
+	sgs_membuf_resize( MB, C, mbsize + sizeof(SS3D_MeshInstance*) * S->meshInstances.size );
+	SS3D_MeshInstance** mesh_instances = (SS3D_MeshInstance**) ( MB->ptr + mbsize );
+	SS3D_CullSceneMesh* mesh_bounds = sgs_Alloc_n( SS3D_CullSceneMesh, S->meshInstances.size );
+	uint32_t* mesh_visiblity = sgs_Alloc_n( uint32_t, divideup( S->meshInstances.size, 32 ) );
+	
+	/* fill in instance data */
+	sgs_SizeVal inst_id;
+	for( inst_id = 0; inst_id < S->meshInstances.size; ++inst_id )
+	{
+		SS3D_MeshInstance* MI = (SS3D_MeshInstance*) S->meshInstances.vars[ inst_id ].val.data.O->data;
+		if( !MI->mesh || !MI->enabled )
+			continue;
+		SS3D_Mesh* M = (SS3D_Mesh*) MI->mesh->data;
+		
+		mesh_instances[ data_size ] = MI;
+		memcpy( mesh_bounds[ data_size ].transform, MI->matrix, sizeof( MAT4 ) );
+		memcpy( mesh_bounds[ data_size ].min, M->boundsMin, sizeof( VEC3 ) );
+		memcpy( mesh_bounds[ data_size ].max, M->boundsMax, sizeof( VEC3 ) );
+		data_size++;
+	}
+	
+	/* iterate all cullscenes */
+	sgs_Variable arr, it, val;
+	sgs_InitObjectPtr( &arr, S->cullScenes );
+	sgs_GetIteratorP( C, &arr, &it );
+	while( sgs_IterAdvanceP( C, &it ) > 0 )
+	{
+		sgs_IterGetDataP( C, &it, NULL, &val );
+		if( sgs_IsObjectP( &val, SS3D_CullScene_iface ) )
+		{
+			int res;
+			SS3D_CullScene* CS = (SS3D_CullScene*) sgs_GetObjectDataP( &val );
+			
+			if( CS->spotlight_meshlist && ( CS->flags & SS3D_CF_ENABLE_SLT_MESH ) != 0 )
+				res = CS->spotlight_meshlist( CS->data, data_size, &light_frustum, mesh_bounds, mesh_visiblity );
+			else if( CS->camera_meshlist && ( CS->flags & SS3D_CF_ENABLE_CAM_MESH ) != 0 && ( CS->flags & SS3D_CF_SUBST_SLT ) != 0 )
+				res = CS->camera_meshlist( CS->data, data_size, &light_frustum, mesh_bounds, mesh_visiblity );
+			
+			if( res )
+			{
+				uint32_t outpos = 0;
+				for( i = 0; i < data_size; ++i )
+				{
+					if( mesh_visiblity[ i / 32 ] & ( 1 << ( i % 32 ) ) )
+					{
+						if( i > outpos )
+						{
+							mesh_instances[ outpos ] = mesh_instances[ i ];
+							memcpy( &mesh_bounds[ outpos ], &mesh_bounds[ i ], sizeof( mesh_bounds[0] ) );
+						}
+						outpos++;
+					}
+				}
+				data_size = outpos;
+			}
+		}
+		sgs_Release( C, &val );
+	}
+	sgs_Release( C, &it );
+	
+	sgs_Dealloc( mesh_bounds );
+	sgs_Dealloc( mesh_visiblity );
+	
+	sgs_membuf_resize( MB, C, mbsize + sizeof(SS3D_MeshInstance*) * data_size );
 	return data_size;
 }
 /********** SCENE CULLING END ***********/

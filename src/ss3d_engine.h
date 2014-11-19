@@ -144,7 +144,9 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 #define SS3D_CF_ENABLE_CAM_SLT  0x04
 #define SS3D_CF_ENABLE_MESH_PLT 0x08
 #define SS3D_CF_ENABLE_MESH_SLT 0x10
-#define SS3D_CF_ENABLE_ALL      0x1f
+#define SS3D_CF_ENABLE_SLT_MESH 0x20
+#define SS3D_CF_ENABLE_ALL      0xff
+#define SS3D_CF_SUBST_SLT       0x100
 
 
 sgs_ObjInterface SS3D_Camera_iface[1];
@@ -390,6 +392,8 @@ struct _SS3D_CullScene
 	fpSS3D_CullScene_Camera_SpotLightList  camera_spotlightlist;
 	fpSS3D_CullScene_Mesh_PointLightList   mesh_pointlightlist;
 	fpSS3D_CullScene_Mesh_SpotLightList    mesh_spotlightlist;
+	fpSS3D_CullScene_Camera_Prepare        spotlight_prepare;
+	fpSS3D_CullScene_Camera_MeshList       spotlight_meshlist;
 	void* data;
 	uint32_t flags;
 	sgs_Variable store;
@@ -401,6 +405,8 @@ void SS3D_Scene_Cull_Camera_Prepare( SGS_CTX, SS3D_Scene* S );
 uint32_t SS3D_Scene_Cull_Camera_MeshList( SGS_CTX, sgs_MemBuf* MB, SS3D_Scene* S );
 uint32_t SS3D_Scene_Cull_Camera_PointLightList( SGS_CTX, sgs_MemBuf* MB, SS3D_Scene* S );
 uint32_t SS3D_Scene_Cull_Camera_SpotLightList( SGS_CTX, sgs_MemBuf* MB, SS3D_Scene* S );
+void SS3D_Scene_Cull_Spotlight_Prepare( SGS_CTX, SS3D_Scene* S, SS3D_Light* L );
+uint32_t SS3D_Scene_Cull_Spotlight_MeshList( SGS_CTX, sgs_MemBuf* MB, SS3D_Scene* S, SS3D_Light* L );
 
 
 struct _SS3D_Camera

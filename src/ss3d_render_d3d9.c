@@ -1657,6 +1657,14 @@ static int rd3d9i_render( SGS_CTX )
 			if( !L->enabled || !L->shadowTexture )
 				continue;
 			
+			/* CULL */
+			SS3D_Scene_Cull_Spotlight_Prepare( C, scene, L );
+			
+			sgs_MemBuf lt_visible_mesh_buf = sgs_membuf_create();
+			uint32_t lt_visible_mesh_count = SS3D_Scene_Cull_Spotlight_MeshList( C, &lt_visible_mesh_buf, scene, L );
+			SS3D_MeshInstance** lt_visible_meshes = (SS3D_MeshInstance**) lt_visible_mesh_buf.ptr;
+			
+			
 			SS3D_RenderTexture_D3D9* RT = (SS3D_RenderTexture_D3D9*) L->shadowTexture->data;
 			
 			D3DCALL_( R->device, SetRenderTarget, 0, RT->CS );
@@ -1669,11 +1677,16 @@ static int rd3d9i_render( SGS_CTX )
 			pshc_set_mat4( R, 0, m_inv_view );
 			pshc_set_mat4( R, 4, L->projMatrix );
 			
-			pmil = L->mibuf_begin;
-			pmilend = L->mibuf_end;
-			for( ; pmil < pmilend; ++pmil )
+		//	pmil = L->mibuf_begin;
+		//	pmilend = L->mibuf_end;
+		//	for( ; pmil < pmilend; ++pmil )
+		//	{
+		//		SS3D_MeshInstance* MI = pmil->MI;
+			uint32_t miid;
+			for( miid = 0; miid < lt_visible_mesh_count; ++miid )
 			{
-				SS3D_MeshInstance* MI = pmil->MI;
+				SS3D_MeshInstance* MI = lt_visible_meshes[ miid ];
+				
 				if( !MI->mesh || !MI->enabled )
 					continue; /* mesh not added / instance not enabled */
 				
@@ -1714,6 +1727,9 @@ static int rd3d9i_render( SGS_CTX )
 					R->inh.stat_numSDrawCalls++;
 				}
 			}
+			
+			
+			sgs_membuf_destroy( &lt_visible_mesh_buf, C );
 		}
 	}
 	
