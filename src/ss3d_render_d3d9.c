@@ -776,13 +776,15 @@ static int vdeclusage_to_elusage[] =
 	D3DDECLUSAGE_COLOR,
 	D3DDECLUSAGE_NORMAL,
 	D3DDECLUSAGE_TANGENT,
+	D3DDECLUSAGE_BLENDWEIGHT,
+	D3DDECLUSAGE_BLENDINDICES,
 	D3DDECLUSAGE_TEXCOORD,
 	D3DDECLUSAGE_TEXCOORD,
 	D3DDECLUSAGE_TEXCOORD,
 	D3DDECLUSAGE_TEXCOORD,
 };
 
-static int vdeclusage_to_elusageindex[] = { 0, 0, 0, 0, 0, 1, 2, 3 };
+static int vdeclusage_to_elusageindex[] = { 0, 0, 0, 0, 0, 0, 0, 1, 2, 3 };
 
 static int init_vdecl( SS3D_RD3D9* R, SS3D_VDecl_D3D9* VD )
 {
@@ -796,6 +798,8 @@ static int init_vdecl( SS3D_RD3D9* R, SS3D_VDecl_D3D9* VD )
 		elements[ i ].Method = D3DDECLMETHOD_DEFAULT;
 		elements[ i ].Usage = vdeclusage_to_elusage[ VD->info.usages[ i ] ];
 		elements[ i ].UsageIndex = vdeclusage_to_elusageindex[ VD->info.usages[ i ] ];
+		if( VD->info.usages[ i ] == SS3D_VDECLUSAGE_BLENDIDX && VD->info.types[ i ] == SS3D_VDECLTYPE_BCOL4 )
+			elements[ i ].Type = D3DDECLTYPE_UBYTE4;
 	}
 	memcpy( elements + VD->info.count, end, sizeof(*end) );
 	if( FAILED( D3DCALL_( R->device, CreateVertexDeclaration, elements, &VD->VD ) ) )
@@ -826,60 +830,6 @@ SGS_DECLARE sgs_ObjInterface SS3D_Mesh_D3D9_iface[1];
 #define M_HDR SS3D_Mesh_D3D9* M = (SS3D_Mesh_D3D9*) obj->data;
 #define M_IHDR( funcname ) SS3D_Mesh_D3D9* M; \
 	if( !SGS_PARSE_METHOD( C, SS3D_Mesh_D3D9_iface, M, SS3D_Mesh_D3D9, funcname ) ) return 0;
-
-static void meshd3d9_free( SS3D_Mesh_D3D9* M, SGS_CTX )
-{
-	int i, j;
-	SAFE_RELEASE( M->VB );
-	SAFE_RELEASE( M->IB );
-	for( i = 0; i < M->inh.numParts; ++i )
-	{
-		for( j = 0; j < SS3D_NUM_MATERIAL_TEXTURES; ++j )
-			if( M->inh.parts[ i ].textures[ j ] )
-				sgs_ObjRelease( C, M->inh.parts[ i ].textures[ j ] );
-		for( j = 0; j < SS3D_MAX_NUM_PASSES; ++j )
-		{
-			if( M->inh.parts[ i ].shaders[ j ] )
-				sgs_ObjRelease( C, M->inh.parts[ i ].shaders[ j ] );
-			if( M->inh.parts[ i ].shaders_skin[ j ] )
-				sgs_ObjRelease( C, M->inh.parts[ i ].shaders_skin[ j ] );
-		}
-	}
-}
-
-static int meshd3d9_destruct( SGS_CTX, sgs_VarObj* obj )
-{
-	M_HDR;
-	if( M->inh.renderer )
-	{
-		SS3D_Renderer_PokeResource( M->inh.renderer, obj, 0 );
-		M->inh.renderer = NULL;
-		meshd3d9_free( M, C );
-	}
-	return SGS_SUCCESS;
-}
-
-static int meshd3d9_gcmark( SGS_CTX, sgs_VarObj* obj )
-{
-	int i, j;
-	M_HDR;
-	if( M->inh.vertexDecl )
-		sgs_ObjGCMark( C, M->inh.vertexDecl );
-	for( i = 0; i < M->inh.numParts; ++i )
-	{
-		for( j = 0; j < SS3D_NUM_MATERIAL_TEXTURES; ++j )
-			if( M->inh.parts[ i ].textures[ j ] )
-				sgs_ObjGCMark( C, M->inh.parts[ i ].textures[ j ] );
-		for( j = 0; j < SS3D_MAX_NUM_PASSES; ++j )
-		{
-			if( M->inh.parts[ i ].shaders[ j ] )
-				sgs_ObjGCMark( C, M->inh.parts[ i ].shaders[ j ] );
-			if( M->inh.parts[ i ].shaders_skin[ j ] )
-				sgs_ObjGCMark( C, M->inh.parts[ i ].shaders_skin[ j ] );
-		}
-	}
-	return SGS_SUCCESS;
-}
 
 static int mesh_ondevicelost( SGS_CTX, SS3D_Mesh_D3D9* M )
 {
@@ -1028,13 +978,33 @@ static void mesh_set_num_parts( SGS_CTX, SS3D_Mesh_D3D9* M, int num )
 			if( M->inh.parts[ cnp ].textures[ j ] )
 				sgs_ObjRelease( C, M->inh.parts[ cnp ].textures[ j ] );
 		for( j = 0; j < SS3D_MAX_NUM_PASSES; ++j )
+		{
 			if( M->inh.parts[ cnp ].shaders[ j ] )
 				sgs_ObjRelease( C, M->inh.parts[ cnp ].shaders[ j ] );
+			if( M->inh.parts[ cnp ].shaders_skin[ j ] )
+				sgs_ObjRelease( C, M->inh.parts[ cnp ].shaders_skin[ j ] );
+		}
 		
 		memset( M->inh.parts + cnp, 0, sizeof( SS3D_MeshPart ) );
 		cnp--;
 	}
 	M->inh.numParts = num;
+}
+static void mesh_set_num_bones( SGS_CTX, SS3D_Mesh_D3D9* M, int num )
+{
+	int cnb = M->inh.numBones;
+	while( cnb > num )
+	{
+		if( M->inh.bones[ cnb ].name )
+		{
+			sgs_Variable V; V.type = SGS_VT_STRING; V.data.S = M->inh.bones[ cnb ].name;
+			sgs_Release( C, &V );
+		}
+		
+		memset( M->inh.bones + cnb, 0, sizeof( SS3D_MeshBone ) );
+		cnb--;
+	}
+	M->inh.numBones = num;
 }
 
 static int meshd3d9i_setVertexData( SGS_CTX )
@@ -1348,6 +1318,7 @@ static int meshd3d9_getindex( SGS_ARGS_GETINDEXFUNC )
 	M_HDR;
 	SGS_BEGIN_INDEXFUNC
 		SGS_CASE( "numParts" )         SGS_RETURN_INT( M->inh.numParts );
+		SGS_CASE( "numBones" )         SGS_RETURN_INT( M->inh.numBones );
 		SGS_CASE( "useTriStrips" )     SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_TRIANGLESTRIP ) );
 		SGS_CASE( "useI32" )           SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_INDEX_32 ) );
 		SGS_CASE( "isDynamic" )        SGS_RETURN_BOOL( !!( M->inh.dataFlags & SS3D_MDF_DYNAMIC ) );
@@ -1385,6 +1356,11 @@ static int meshd3d9_setindex( SGS_ARGS_SETINDEXFUNC )
 			mesh_set_num_parts( C, M, (int) sgs_GetIntP( C, val ) );
 			return SGS_SUCCESS;
 		}
+		SGS_CASE( "numBones" )
+		{
+			mesh_set_num_bones( C, M, (int) sgs_GetIntP( C, val ) );
+			return SGS_SUCCESS;
+		}
 		SGS_CASE( "transparent" )
 		{
 			M->inh.dataFlags = ( M->inh.dataFlags & ~SS3D_MDF_TRANSPARENT ) | ( SS3D_MDF_TRANSPARENT * sgs_GetBoolP( C, val ) );
@@ -1404,6 +1380,48 @@ static int meshd3d9_setindex( SGS_ARGS_SETINDEXFUNC )
 		SGS_CASE( "boundsMin" ) SGS_PARSE_VEC3( M->inh.boundsMin, 0 )
 		SGS_CASE( "boundsMax" ) SGS_PARSE_VEC3( M->inh.boundsMax, 0 )
 	SGS_END_INDEXFUNC;
+}
+
+static void meshd3d9_free( SS3D_Mesh_D3D9* M, SGS_CTX )
+{
+	SAFE_RELEASE( M->VB );
+	SAFE_RELEASE( M->IB );
+	mesh_set_num_parts( C, M, 0 );
+	mesh_set_num_bones( C, M, 0 );
+}
+
+static int meshd3d9_destruct( SGS_CTX, sgs_VarObj* obj )
+{
+	M_HDR;
+	if( M->inh.renderer )
+	{
+		SS3D_Renderer_PokeResource( M->inh.renderer, obj, 0 );
+		M->inh.renderer = NULL;
+		meshd3d9_free( M, C );
+	}
+	return SGS_SUCCESS;
+}
+
+static int meshd3d9_gcmark( SGS_CTX, sgs_VarObj* obj )
+{
+	int i, j;
+	M_HDR;
+	if( M->inh.vertexDecl )
+		sgs_ObjGCMark( C, M->inh.vertexDecl );
+	for( i = 0; i < M->inh.numParts; ++i )
+	{
+		for( j = 0; j < SS3D_NUM_MATERIAL_TEXTURES; ++j )
+			if( M->inh.parts[ i ].textures[ j ] )
+				sgs_ObjGCMark( C, M->inh.parts[ i ].textures[ j ] );
+		for( j = 0; j < SS3D_MAX_NUM_PASSES; ++j )
+		{
+			if( M->inh.parts[ i ].shaders[ j ] )
+				sgs_ObjGCMark( C, M->inh.parts[ i ].shaders[ j ] );
+			if( M->inh.parts[ i ].shaders_skin[ j ] )
+				sgs_ObjGCMark( C, M->inh.parts[ i ].shaders_skin[ j ] );
+		}
+	}
+	return SGS_SUCCESS;
 }
 
 static sgs_ObjInterface SS3D_Mesh_D3D9_iface[1] =
@@ -1534,6 +1552,8 @@ static int sort_meshinstlight_by_light( const void* p1, const void* p2 )
 
 static void mi_apply_constants( SS3D_RD3D9* R, SS3D_MeshInstance* MI )
 {
+	if( MI->skin_matrices )
+		vshc_set_vec4array( R, 40, *MI->skin_matrices[0], MI->skin_matrix_count * 4 );
 	pshc_set_vec4array( R, 100, MI->constants[0], 16 );
 }
 
@@ -1738,7 +1758,9 @@ static int rd3d9i_render( SGS_CTX )
 				{
 					SS3D_MeshPart* MP = M->inh.parts + part_id;
 					
-					use_shader( R, (SS3D_Shader_D3D9*) MP->shaders[ pass_id ]->data );
+					sgs_VarObj** shlist = MI->skin_matrices ? MP->shaders_skin : MP->shaders;
+					
+					use_shader( R, (SS3D_Shader_D3D9*) shlist[ pass_id ]->data );
 					for( tex_id = 0; tex_id < SS3D_NUM_MATERIAL_TEXTURES; ++tex_id )
 						use_texture( R, tex_id, MP->textures[ tex_id ] ? (SS3D_Texture_D3D9*) MP->textures[ tex_id ]->data : NULL );
 					
@@ -2028,10 +2050,11 @@ static int rd3d9i_render( SGS_CTX )
 					{
 						SS3D_MeshPart* MP = M->inh.parts + part_id;
 						
-						if( !MP->shaders[ pass_id ] )
+						sgs_VarObj** shlist = MI->skin_matrices ? MP->shaders_skin : MP->shaders;
+						if( !shlist[ pass_id ] )
 							continue;
 						
-						use_shader( R, (SS3D_Shader_D3D9*) MP->shaders[ pass_id ]->data );
+						use_shader( R, (SS3D_Shader_D3D9*) shlist[ pass_id ]->data );
 						for( tex_id = 0; tex_id < SS3D_NUM_MATERIAL_TEXTURES; ++tex_id )
 							use_texture( R, tex_id, MP->textures[ tex_id ] ? (SS3D_Texture_D3D9*) MP->textures[ tex_id ]->data : NULL );
 						

@@ -90,7 +90,8 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 
 #define SS3D_NUM_MATERIAL_TEXTURES 8
 #define SS3D_MAX_MESH_PARTS 16
-#define SS3D_VDECL_MAX_ITEMS 8
+#define SS3D_MAX_MESH_BONES 32
+#define SS3D_VDECL_MAX_ITEMS 10
 
 #define SS3D_VDECLTYPE_FLOAT1 0
 #define SS3D_VDECLTYPE_FLOAT2 1
@@ -100,13 +101,15 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 
 /* usage type | expected data type */
 #define SS3D_VDECLUSAGE_POSITION 0 /* float3 */
-#define SS3D_VDECLUSAGE_COLOR    1 /* float3/float4/ubyte4 */
+#define SS3D_VDECLUSAGE_COLOR    1 /* float3/float4/bcol4 */
 #define SS3D_VDECLUSAGE_NORMAL   2 /* float3 */
 #define SS3D_VDECLUSAGE_TANGENT  3 /* float4 */
-#define SS3D_VDECLUSAGE_TEXTURE0 4 /* any .. */
-#define SS3D_VDECLUSAGE_TEXTURE1 5
-#define SS3D_VDECLUSAGE_TEXTURE2 6
-#define SS3D_VDECLUSAGE_TEXTURE3 7
+#define SS3D_VDECLUSAGE_BLENDWT  4 /* preferably bcol4 */
+#define SS3D_VDECLUSAGE_BLENDIDX 5 /* preferably bcol4 (will be passed as ubyte4, not float4) */
+#define SS3D_VDECLUSAGE_TEXTURE0 6 /* any .. */
+#define SS3D_VDECLUSAGE_TEXTURE1 7
+#define SS3D_VDECLUSAGE_TEXTURE2 8
+#define SS3D_VDECLUSAGE_TEXTURE3 9
 
 /* mesh data flags */
 #define SS3D_MDF_INDEX_32      0x01
@@ -115,8 +118,9 @@ void SS3D_Mtx_Perspective( MAT4 out, float angle, float aspect, float aamix, flo
 #define SS3D_MDF_TRANSPARENT   0x10 /* mesh is required to be rendered transparent */
 #define SS3D_MDF_UNLIT         0x20 /* mesh doesn't require the lighting passes to be applied */
 #define SS3D_MDF_NOCULL        0x40 /* mesh has culling disabled */
+#define SS3D_MDF_SKINNED       0x80 /* mesh has bone data (name, offset, parent id) */
 
-#define SS3D_MDF__PUBFLAGMASK (0x01|0x02|0x10|0x20|0x40)
+#define SS3D_MDF__PUBFLAGMASK (0x01|0x02|0x10|0x20|0x40|0x80)
 #define SS3D_MDF__PUBFLAGBASE  0
 
 /* render pass constants */
@@ -158,6 +162,7 @@ sgs_ObjInterface SS3D_Scene_iface[1];
 typedef struct _SS3D_Light SS3D_Light;
 typedef struct _SS3D_Material SS3D_Material;
 typedef struct _SS3D_MeshPart SS3D_MeshPart;
+typedef struct _SS3D_MeshBone SS3D_MeshBone;
 typedef struct _SS3D_Mesh SS3D_Mesh;
 typedef struct _SS3D_MeshInstance SS3D_MeshInstance;
 typedef struct _SS3D_CullScene SS3D_CullScene;
@@ -215,8 +220,18 @@ typedef struct _SS3D_MeshFilePartData
 	uint8_t materialTextureCount; /* 0 - 8 */
 	uint8_t materialStringSizes[ SS3D_NUM_MATERIAL_TEXTURES + 1 ];
 	char* materialStrings[ SS3D_NUM_MATERIAL_TEXTURES + 1 ];
+	/* size w/o padding = 28+[36/72] = 64/100 */
 }
-SS3D_MeshFilePartData; /* size w/o padding = 28+[36/72] = 64/100 */
+SS3D_MeshFilePartData;
+
+typedef struct _SS3D_MeshFileBoneData
+{
+	char* boneName;
+	uint8_t boneNameSize;
+	MAT4 boneOffset;
+	/* size w/o padding = 65+[4/8] = 69/73 */
+}
+SS3D_MeshFileBoneData;
 
 typedef struct _SS3D_MeshFileData
 {
@@ -231,12 +246,16 @@ typedef struct _SS3D_MeshFileData
 	VEC3 boundsMax;
 	
 	uint8_t numParts;
+	uint8_t numBones;
 	uint8_t formatSize;
-	/* size w/o padding at this point = 38+[12/24] = 50/62 */
+	/* size w/o padding = 39+[12/24] = 51/63 */
 	
 	SS3D_MeshFilePartData parts[ SS3D_MAX_MESH_PARTS ];
+	/* size w/o padding = 51/63 + 64/100 x16 = 1075/1663 */
+	SS3D_MeshFileBoneData bones[ SS3D_MAX_MESH_BONES ];
+	/* size w/o padding = 1075/1663 + 69/73 x32 = 3283/3999 */
 }
-SS3D_MeshFileData; /* size w/o padding = 50/62 + 64/100 x8 = 562/862 */
+SS3D_MeshFileData;
 
 const char* SS3D_MeshData_Parse( char* buf, size_t size, SS3D_MeshFileData* out );
 
@@ -308,6 +327,14 @@ struct _SS3D_MeshPart
 	char shader_name[ SS3D_SHADER_NAME_LENGTH ];
 };
 
+struct _SS3D_MeshBone
+{
+	sgs_iStr* name;
+	MAT4 boneOffset;
+	MAT4 invSkinOffset;
+	int parent_id;
+};
+
 struct _SS3D_Mesh
 {
 	SS3D_Renderer* renderer;
@@ -320,7 +347,9 @@ struct _SS3D_Mesh
 	uint32_t indexCount;
 	uint32_t indexDataSize;
 	SS3D_MeshPart parts[ SS3D_MAX_MESH_PARTS ];
+	SS3D_MeshBone bones[ SS3D_MAX_MESH_BONES ];
 	int numParts;
+	int numBones;
 	
 	/* collision detection */
 	VEC3 boundsMin;
@@ -337,9 +366,13 @@ struct _SS3D_MeshInstance
 	MAT4 matrix;
 	VEC4 color;
 	bitfield_t enabled : 1;
+	bitfield_t cpuskin : 1; /* TODO */
 	
 	sgs_VarObj* textures[ SS3D_MAX_MI_TEXTURES ];
 	VEC4 constants[ SS3D_MAX_MI_CONSTANTS ];
+	
+	MAT4* skin_matrices;
+	int skin_matrix_count;
 	
 	/* frame cache */
 	SS3D_MeshInstLight* lightbuf_begin;

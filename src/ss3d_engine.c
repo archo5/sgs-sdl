@@ -932,7 +932,7 @@ static int md_parse_smallbuf( char* buf, size_t size, char** outptr, uint8_t* ou
 
 const char* SS3D_MeshData_Parse( char* buf, size_t size, SS3D_MeshFileData* out )
 {
-	uint8_t p, t;
+	uint8_t p, t, b;
 	size_t off = 0;
 	if( size < 46 || memcmp( buf, "SS3DMESH", 8 ) != 0 )
 		return "file too small or not SS3DMESH";
@@ -970,6 +970,26 @@ const char* SS3D_MeshData_Parse( char* buf, size_t size, SS3D_MeshFileData* out 
 			if( !md_parse_smallbuf( buf + off, size - off, &pout->materialStrings[t], &pout->materialStringSizes[t] ) )
 				return "failed to parse material string buffer";
 			off += 1 + pout->materialStringSizes[t];
+		}
+	}
+	if( out->dataFlags & SS3D_MDF_SKINNED )
+	{
+		if( off >= size )
+			return "mesh incomplete (missing bone data)";
+		out->numBones = (uint8_t) buf[ off++ ];
+		if( out->numBones > SS3D_MAX_MESH_BONES )
+			return "invalid bone count";
+		for( b = 0; b < out->numBones; ++b )
+		{
+			SS3D_MeshFileBoneData* bout = out->bones + b;
+			memset( bout, 0, sizeof(*bout) );
+			if( !md_parse_smallbuf( buf + off, size - off, &bout->boneName, &bout->boneNameSize ) )
+				return "failed to parse bone name string buffer";
+			off += 1 + bout->boneNameSize;
+			if( off + 64 > size )
+				return "mesh bone data incomplete";
+			memcpy( bout->boneOffset, buf + off, sizeof(MAT4) /* 64 */ );
+			off += 64;
 		}
 	}
 	return NULL;
@@ -1198,6 +1218,8 @@ const char* SS3D_VDeclInfo_Parse( SS3D_VDeclInfo* info, const char* text )
 		else if( chr_usage == 'c' ) usage = SS3D_VDECLUSAGE_COLOR;
 		else if( chr_usage == 'n' ) usage = SS3D_VDECLUSAGE_NORMAL;
 		else if( chr_usage == 't' ) usage = SS3D_VDECLUSAGE_TANGENT;
+		else if( chr_usage == 'w' ) usage = SS3D_VDECLUSAGE_BLENDWT;
+		else if( chr_usage == 'i' ) usage = SS3D_VDECLUSAGE_BLENDIDX;
 		else if( chr_usage == '0' ) usage = SS3D_VDECLUSAGE_TEXTURE0;
 		else if( chr_usage == '1' ) usage = SS3D_VDECLUSAGE_TEXTURE1;
 		else if( chr_usage == '2' ) usage = SS3D_VDECLUSAGE_TEXTURE2;
@@ -1352,6 +1374,8 @@ void SS3D_Mesh_Init( SS3D_Mesh* mesh )
 	mesh->indexDataSize = 0;
 	memset( mesh->parts, 0, sizeof( mesh->parts ) );
 	mesh->numParts = 0;
+	memset( mesh->bones, 0, sizeof( mesh->bones ) );
+	mesh->numBones = 0;
 	
 	VEC3_Set( mesh->boundsMin, 0, 0, 0 );
 	VEC3_Set( mesh->boundsMax, 0, 0, 0 );
@@ -1448,9 +1472,60 @@ static int meshinsti_setTexture( SGS_CTX )
 	if( !sgs_LoadArgs( C, "l?x", &pos, MI->scene->renderer->ifTexture ) )
 		return 0;
 	if( pos < 0 || pos >= SS3D_MAX_MI_TEXTURES )
-		return sgs_Msg( C, SGS_WARNING, "invalid texture slot: %d (must be between 0 and %d)", pos, SS3D_MAX_MI_TEXTURES - 1 );
+		return sgs_Msg( C, SGS_WARNING, "invalid texture slot: %d (must be between 0 and %d)", (int) pos, SS3D_MAX_MI_TEXTURES - 1 );
 	
 	sgs_ObjAssign( C, &MI->textures[ pos ], sgs_GetObjectStruct( C, 1 ) );
+	return 0;
+}
+
+static int meshinsti_resizeSkinMatrixArray( SGS_CTX )
+{
+	int32_t i, count;
+	MI_IHDR( resizeSkinMatrixArray );
+	if( !sgs_LoadArgs( C, "l", &count ) )
+		return 0;
+	if( count < 0 || count > 255 )
+		return sgs_Msg( C, SGS_WARNING, "invalid skin matrix array size: %d (must be between 0 and 255)", (int) count );
+	if( count == MI->skin_matrix_count )
+		return 0;
+	if( MI->skin_matrices )
+		sgs_Dealloc( MI->skin_matrices );
+	if( count )
+	{
+		MI->skin_matrices = sgs_Alloc_n( MAT4, count );
+		MI->skin_matrix_count = count;
+	}
+	else
+	{
+		MI->skin_matrices = NULL;
+		MI->skin_matrix_count = 0;
+	}
+	for( i = 0; i < MI->skin_matrix_count; ++i )
+		SS3D_Mtx_Identity( MI->skin_matrices[ i ] );
+	return 0;
+}
+
+static int meshinsti_resetSkinMatrices( SGS_CTX )
+{
+	int i;
+	MI_IHDR( resetSkinMatrices );
+	for( i = 0; i < MI->skin_matrix_count; ++i )
+		SS3D_Mtx_Identity( MI->skin_matrices[ i ] );
+	return 0;
+}
+
+static int meshinsti_setSkinMatrix( SGS_CTX )
+{
+	int32_t pos;
+	MAT4 val;
+	
+	MI_IHDR( setSkinMatrix );
+	if( !sgs_LoadArgs( C, "lx", &pos, sgs_ArgCheck_Mat4, val ) )
+		return 0;
+	if( pos < 0 || pos >= MI->skin_matrix_count )
+		return sgs_Msg( C, SGS_WARNING, "invalid skin matrix slot: %d (must be between 0 and %d)", pos, MI->skin_matrix_count );
+	
+	memcpy( MI->skin_matrices[ pos ], val, sizeof(MAT4) );
 	return 0;
 }
 
@@ -1465,6 +1540,8 @@ static int meshinst_destruct( SGS_CTX, sgs_VarObj* obj )
 		sgs_ObjAssign( C, &MI->mesh, NULL );
 		for( i = 0; i < SS3D_MAX_MI_TEXTURES; ++i )
 			sgs_ObjAssign( C, &MI->textures[ i ], NULL );
+		if( MI->skin_matrices )
+			sgs_Dealloc( MI->skin_matrices );
 	}
 	return SGS_SUCCESS;
 }
@@ -1487,6 +1564,7 @@ static int meshinst_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "matrix" )  SGS_RETURN_MAT4( *MI->matrix );
 		SGS_CASE( "color" )   SGS_RETURN_COLORP( MI->color );
 		SGS_CASE( "enabled" ) SGS_RETURN_BOOL( MI->enabled );
+		SGS_CASE( "cpuskin" ) SGS_RETURN_BOOL( MI->cpuskin );
 		
 		SGS_CASE( "setConstF" ) SGS_RETURN_CFUNC( meshinsti_setConstF );
 		SGS_CASE( "setConstV2" ) SGS_RETURN_CFUNC( meshinsti_setConstV2 );
@@ -1494,6 +1572,9 @@ static int meshinst_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "setConstV4" ) SGS_RETURN_CFUNC( meshinsti_setConstV4 );
 		SGS_CASE( "setConstM4" ) SGS_RETURN_CFUNC( meshinsti_setConstM4 );
 		SGS_CASE( "setTexture" ) SGS_RETURN_CFUNC( meshinsti_setTexture );
+		SGS_CASE( "resizeSkinMatrixArray" ) SGS_RETURN_CFUNC( meshinsti_resizeSkinMatrixArray );
+		SGS_CASE( "resetSkinMatrices" ) SGS_RETURN_CFUNC( meshinsti_resetSkinMatrices );
+		SGS_CASE( "setSkinMatrix" ) SGS_RETURN_CFUNC( meshinsti_setSkinMatrix );
 		
 		SGS_CASE( "texture0" ) SGS_RETURN_OBJECT( MI->textures[0] );
 		SGS_CASE( "texture1" ) SGS_RETURN_OBJECT( MI->textures[1] );
@@ -1510,6 +1591,7 @@ static int meshinst_setindex( SGS_ARGS_SETINDEXFUNC )
 		SGS_CASE( "matrix" )  SGS_PARSE_MAT4( *MI->matrix )
 		SGS_CASE( "color" )   SGS_PARSE_COLOR( MI->color, 0 )
 		SGS_CASE( "enabled" ) SGS_PARSE_BOOL( MI->enabled )
+		SGS_CASE( "cpuskin" ) SGS_PARSE_BOOL( MI->cpuskin )
 		
 		SGS_CASE( "texture0" ) { if( !MI->scene || !MI->scene->renderer ) return SGS_EINPROC; SGS_PARSE_OBJECT( MI->scene->renderer->ifTexture, MI->textures[0], 0 ) }
 		SGS_CASE( "texture1" ) { if( !MI->scene || !MI->scene->renderer ) return SGS_EINPROC; SGS_PARSE_OBJECT( MI->scene->renderer->ifTexture, MI->textures[1], 0 ) }
@@ -2293,6 +2375,8 @@ static int scenei_createMeshInstance( SGS_CTX )
 	}
 	for( i = 0; i < SS3D_MAX_MI_TEXTURES; ++i )
 		MI->textures[ i ] = NULL;
+	MI->skin_matrices = NULL;
+	MI->skin_matrix_count = 0;
 	
 	scene_poke_resource( S, &S->meshInstances, sgs_GetObjectStruct( C, -1 ), 1 );
 	return 1;
