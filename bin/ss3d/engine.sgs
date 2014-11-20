@@ -71,11 +71,17 @@ function _SS3D_Shader_LoadCodeInternal( renderer, name )
 	if( string_part( name, 0, 4 ) == "mtl:" )
 	{
 		info = string_explode( name, ":" );
-		if( info.size != 3 )
+		prepend = "";
+		if( info.size < 3 )
 			return WARNING( "invalid material name, expected mtl:<name>:<type>" );
+		
+		// additional modifiers
+		for( i = 3; i < info.size; ++i )
+			prepend $= "#define " $ info[ i ] $ "\n";
+		
 		return string_replace
 		(
-			_SS3D_Shader_LoadFile( renderer, "tpl_" $ info[2] ),
+			prepend $ _SS3D_Shader_LoadFile( renderer, "tpl_" $ info[2] ),
 			"__CODE__",
 			_SS3D_Shader_LoadFile( renderer, "mtl_" $ info[1] )
 		);

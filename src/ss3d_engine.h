@@ -303,6 +303,7 @@ struct _SS3D_MeshPart
 	uint32_t indexCount;
 	
 	sgs_VarObj* shaders[ SS3D_MAX_NUM_PASSES ];
+	sgs_VarObj* shaders_skin[ SS3D_MAX_NUM_PASSES ];
 	sgs_VarObj* textures[ SS3D_NUM_MATERIAL_TEXTURES ];
 	char shader_name[ SS3D_SHADER_NAME_LENGTH ];
 };

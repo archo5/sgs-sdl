@@ -7,6 +7,10 @@ float4x4 mProj : register(c4);
 float4 gLightCounts : register(c23);
 float4x4 gSLightMatrices[4] : register(c24); /* :c39 */
 
+#ifdef SKIN
+float4x4 mSkin[32] : register(c40); /* :c167 */
+#endif
+
 void main
 (
 	float4 ipos : POSITION0,

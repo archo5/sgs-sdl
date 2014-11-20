@@ -4,6 +4,10 @@
 float4x4 mWorldView : register(c0);
 float4x4 mProj : register(c4);
 
+#ifdef SKIN
+float4x4 mSkin[32] : register(c40); /* :c167 */
+#endif
+
 void main
 (
 	float4 ipos : POSITION0,

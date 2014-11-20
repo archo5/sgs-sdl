@@ -827,10 +827,24 @@ SGS_DECLARE sgs_ObjInterface SS3D_Mesh_D3D9_iface[1];
 #define M_IHDR( funcname ) SS3D_Mesh_D3D9* M; \
 	if( !SGS_PARSE_METHOD( C, SS3D_Mesh_D3D9_iface, M, SS3D_Mesh_D3D9, funcname ) ) return 0;
 
-static void meshd3d9_free( SS3D_Mesh_D3D9* M )
+static void meshd3d9_free( SS3D_Mesh_D3D9* M, SGS_CTX )
 {
+	int i, j;
 	SAFE_RELEASE( M->VB );
 	SAFE_RELEASE( M->IB );
+	for( i = 0; i < M->inh.numParts; ++i )
+	{
+		for( j = 0; j < SS3D_NUM_MATERIAL_TEXTURES; ++j )
+			if( M->inh.parts[ i ].textures[ j ] )
+				sgs_ObjRelease( C, M->inh.parts[ i ].textures[ j ] );
+		for( j = 0; j < SS3D_MAX_NUM_PASSES; ++j )
+		{
+			if( M->inh.parts[ i ].shaders[ j ] )
+				sgs_ObjRelease( C, M->inh.parts[ i ].shaders[ j ] );
+			if( M->inh.parts[ i ].shaders_skin[ j ] )
+				sgs_ObjRelease( C, M->inh.parts[ i ].shaders_skin[ j ] );
+		}
+	}
 }
 
 static int meshd3d9_destruct( SGS_CTX, sgs_VarObj* obj )
@@ -840,7 +854,7 @@ static int meshd3d9_destruct( SGS_CTX, sgs_VarObj* obj )
 	{
 		SS3D_Renderer_PokeResource( M->inh.renderer, obj, 0 );
 		M->inh.renderer = NULL;
-		meshd3d9_free( M );
+		meshd3d9_free( M, C );
 	}
 	return SGS_SUCCESS;
 }
@@ -857,8 +871,12 @@ static int meshd3d9_gcmark( SGS_CTX, sgs_VarObj* obj )
 			if( M->inh.parts[ i ].textures[ j ] )
 				sgs_ObjGCMark( C, M->inh.parts[ i ].textures[ j ] );
 		for( j = 0; j < SS3D_MAX_NUM_PASSES; ++j )
+		{
 			if( M->inh.parts[ i ].shaders[ j ] )
 				sgs_ObjGCMark( C, M->inh.parts[ i ].shaders[ j ] );
+			if( M->inh.parts[ i ].shaders_skin[ j ] )
+				sgs_ObjGCMark( C, M->inh.parts[ i ].shaders_skin[ j ] );
+		}
 	}
 	return SGS_SUCCESS;
 }
@@ -1182,7 +1200,10 @@ static void mesh_set_part_shader( SS3D_Mesh_D3D9* M, int pid, char* shader )
 	SGS_CTX = M->inh.renderer->C;
 	
 	for( i = 0; i < SS3D_MAX_NUM_PASSES; ++i )
+	{
 		sgs_ObjAssign( C, &M->inh.parts[ pid ].shaders[ i ], NULL );
+		sgs_ObjAssign( C, &M->inh.parts[ pid ].shaders_skin[ i ], NULL );
+	}
 	
 	strcpy( M->inh.parts[ pid ].shader_name, shader );
 	
@@ -1199,6 +1220,9 @@ static void mesh_set_part_shader( SS3D_Mesh_D3D9* M, int pid, char* shader )
 		strcat( buf, M->inh.renderer->passes[ i ].shname );
 		
 		sgs_ObjAssign( C, &M->inh.parts[ pid ].shaders[ i ], get_shader_obj( (SS3D_RD3D9*) M->inh.renderer, buf ) );
+		
+		strcat( buf, ":SKIN" );
+		sgs_ObjAssign( C, &M->inh.parts[ pid ].shaders_skin[ i ], get_shader_obj( (SS3D_RD3D9*) M->inh.renderer, buf ) );
 	}
 }
 
