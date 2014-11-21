@@ -85,10 +85,11 @@ def write_part( f, part ):
 		write_smallbuf( f, tex )
 #
 
-def write_mesh( f, meshdata ):
+def write_mesh( f, meshdata, armdata ):
 	is_transparent = meshdata["is_transparent"]
 	is_unlit = meshdata["is_unlit"]
 	is_nocull = meshdata["is_nocull"]
+	is_skinned = armdata != None
 	bbmin = meshdata["bbmin"]
 	bbmax = meshdata["bbmax"]
 	vertices = meshdata["vertices"]
@@ -113,7 +114,7 @@ def write_mesh( f, meshdata ):
 		print( "- part %d: voff=%d vcount=%d ioff=%d icount=%d texcount=%d shader='%s'" % ( part_id, part["voff"], part["vcount"], part["ioff"], part["icount"], len( part["textures"] ), part["shader"] ) )
 	
 	f.write( bytes( "SS3DMESH", "UTF-8" ) )
-	f.write( struct.pack( "L", (1 if is_i32 else 0) * 0x01 + (1 if is_transparent else 0) * 0x10 + (1 if is_unlit else 0) * 0x20 + (1 if is_nocull else 0) * 0x40 ) ) # flags
+	f.write( struct.pack( "L", (1 if is_i32 else 0) * 0x01 + (1 if is_transparent else 0) * 0x10 + (1 if is_unlit else 0) * 0x20 + (1 if is_nocull else 0) * 0x40 + (1 if is_skinned else 0) * 0x80 ) ) # flags
 	f.write( struct.pack( "6f", bbmin.x, bbmin.y, bbmin.z, bbmax.x, bbmax.y, bbmax.z ) )
 	
 	vdata = bytes()
@@ -134,6 +135,27 @@ def write_mesh( f, meshdata ):
 	f.write( struct.pack( "B", len(parts) ) )
 	for part in parts:
 		write_part( f, part )
+	
+	if is_skinned:
+		f.write( struct.pack( "B", len(armdata.bones) ) )
+		for bone in armdata.bones:
+			write_smallbuf( f, bone.name )
+			m = bone.matrix_local
+			pid = 255
+			if bone.parent == None:
+				m = m * Matrix.Rotation( -math.pi/2, 4, "X" )
+			else:
+				for bpid, pbone in armdata.bones:
+					if bone == pbone:
+						pid = bpid
+						break
+			#
+			f.write( struct.pack( "4f", m[0][0], m[0][1], m[0][2], m[0][3] ) )
+			f.write( struct.pack( "4f", m[1][0], m[1][1], m[1][2], m[1][3] ) )
+			f.write( struct.pack( "4f", m[2][0], m[2][1], m[2][2], m[2][3] ) )
+			f.write( struct.pack( "4f", m[3][0], m[3][1], m[3][2], m[3][3] ) )
+		#
+	#
 	
 	return
 #
@@ -375,6 +397,13 @@ def parse_geometry( MESH, materials ):
 	}
 #
 
+def parse_armature( node ):
+	for mod in node.modifiers:
+		if mod.type == "ARMATURE":
+			return mod.object
+	return None
+#
+
 def write_ss3dmesh( ctx, filepath ):
 	print( "\n\\\\\n>>> SS3DMESH Exporter v0.4!\n//\n\n" )
 	print( "Exporting..." )
@@ -420,9 +449,11 @@ def write_ss3dmesh( ctx, filepath ):
 	meshdata = parse_geometry( geom_node.data, materials )
 	print( "OK!" )
 	
+	armdata = parse_armature( geom_node )
+	
 	print( "Writing everything... " )
 	f = open( filepath, 'wb' )
-	write_mesh( f, meshdata )
+	write_mesh( f, meshdata, armdata )
 	f.close()
 	
 	print( "\n\\\\\n>>> Done!\n//\n\n" )

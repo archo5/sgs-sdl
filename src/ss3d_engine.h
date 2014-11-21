@@ -228,8 +228,9 @@ typedef struct _SS3D_MeshFileBoneData
 {
 	char* boneName;
 	uint8_t boneNameSize;
+	uint8_t parent_id;
 	MAT4 boneOffset;
-	/* size w/o padding = 65+[4/8] = 69/73 */
+	/* size w/o padding = 66+[4/8] = 70/74 */
 }
 SS3D_MeshFileBoneData;
 
@@ -253,7 +254,7 @@ typedef struct _SS3D_MeshFileData
 	SS3D_MeshFilePartData parts[ SS3D_MAX_MESH_PARTS ];
 	/* size w/o padding = 51/63 + 64/100 x16 = 1075/1663 */
 	SS3D_MeshFileBoneData bones[ SS3D_MAX_MESH_BONES ];
-	/* size w/o padding = 1075/1663 + 69/73 x32 = 3283/3999 */
+	/* size w/o padding = 1075/1663 + 70/74 x32 = 3315/4031 */
 }
 SS3D_MeshFileData;
 

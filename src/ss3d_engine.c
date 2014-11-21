@@ -986,6 +986,9 @@ const char* SS3D_MeshData_Parse( char* buf, size_t size, SS3D_MeshFileData* out 
 			if( !md_parse_smallbuf( buf + off, size - off, &bout->boneName, &bout->boneNameSize ) )
 				return "failed to parse bone name string buffer";
 			off += 1 + bout->boneNameSize;
+			if( off >= size )
+				return "mesh bone data incomplete";
+			bout->parent_id = buf[ off++ ];
 			if( off + 64 > size )
 				return "mesh bone data incomplete";
 			memcpy( bout->boneOffset, buf + off, sizeof(MAT4) /* 64 */ );

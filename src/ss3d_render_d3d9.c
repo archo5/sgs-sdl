@@ -1231,9 +1231,73 @@ static int meshd3d9i_setPartTexture( SGS_CTX )
 	SGS_RETURN_BOOL( 1 )
 }
 
+
+static void mesh_set_bone_data( SS3D_Mesh_D3D9* M, int bid, int nameidx, MAT4 boneoff, int parent_id )
+{
+	SGS_CTX = M->inh.renderer->C;
+	sgs_Variable Vstr;
+	if( M->inh.bones[ bid ].name )
+	{
+		Vstr.type = SGS_VT_STRING;
+		Vstr.data.S = M->inh.bones[ bid ].name;
+		sgs_Release( C, &Vstr );
+	}
+	sgs_GetStackItem( C, 2, &Vstr );
+	M->inh.bones[ bid ].name = Vstr.data.S;
+	memcpy( M->inh.bones[ bid ].boneOffset, boneoff, sizeof(MAT4) );
+	SS3D_Mtx_Identity( M->inh.bones[ bid ].invSkinOffset );
+	M->inh.bones[ bid ].parent_id = parent_id;
+}
+
+static int meshd3d9i_setBoneData( SGS_CTX )
+{
+	MAT4 boneoff;
+	sgs_Int bid, parent_id;
+	M_IHDR( setBoneData );
+	if( !sgs_LoadArgs( C, "ii!?sx", &bid, &parent_id, sgs_ArgCheck_Mat4, boneoff ) )
+		return 0;
+	if( bid < 0 || bid >= M->inh.numBones )
+		return sgs_Msg( C, SGS_WARNING, "bone %d is not made available", (int) bid );
+	
+	mesh_set_bone_data( M, (int) bid, 2, boneoff, (int) parent_id );
+	SGS_RETURN_BOOL( 1 )
+}
+
+static int meshd3d9i_recalcBoneMatrices( SGS_CTX )
+{
+	int b;
+	
+	M_IHDR( recalcBoneMatrices );
+	if( !M->inh.numBones )
+	{
+		SGS_RETURN_BOOL( 1 )
+	}
+	
+	for( b = 0; b < M->inh.numBones; ++b )
+	{
+		if( M->inh.bones[ b ].parent_id < -1 || M->inh.bones[ b ].parent_id >= b )
+			return sgs_Msg( C, SGS_WARNING, "each parent_id must point to a previous bone or no bone (-1) [error in bone %d]", b );
+	}
+	
+	MAT4 skinOffsets[ SS3D_MAX_MESH_BONES ];
+	for( b = 0; b < M->inh.numBones; ++b )
+	{
+		if( M->inh.bones[ b ].parent_id >= 0 )
+			SS3D_Mtx_Multiply( skinOffsets[ b ], M->inh.bones[ b ].boneOffset, skinOffsets[ M->inh.bones[ b ].parent_id ] );
+		else
+			memcpy( skinOffsets[ b ], M->inh.bones[ b ].boneOffset, sizeof(MAT4) );
+	}
+	for( b = 0; b < M->inh.numBones; ++b )
+	{
+		SS3D_Mtx_Invert( M->inh.bones[ b ].invSkinOffset, skinOffsets[ b ] );
+	}
+	
+	SGS_RETURN_BOOL( 1 )
+}
+
 static int meshd3d9i_loadFromBuffer( SGS_CTX )
 {
-	int p, t;
+	int p, t, b;
 	char* buf;
 	const char* err;
 	sgs_SizeVal size;
@@ -1307,6 +1371,17 @@ static int meshd3d9i_loadFromBuffer( SGS_CTX )
 		M->inh.parts[ p ].indexCount = mfdp->indexCount;
 	}
 	
+	/* load bone data */
+	mesh_set_num_bones( C, M, mfd.numBones );
+	for( b = 0; b < M->inh.numBones; ++b )
+	{
+		SS3D_MeshFileBoneData* mfdb = mfd.bones + b;
+		
+		sgs_PushStringBuf( C, mfdb->boneName, mfdb->boneNameSize );
+		mesh_set_bone_data( M, b, -1, mfdb->boneOffset, mfdb->parent_id == 255 ? -1 : mfdb->parent_id );
+		sgs_Pop( C, 1 );
+	}
+	
 	memcpy( &M->inh.boundsMin, &mfd.boundsMin, sizeof(mfd.boundsMin) );
 	memcpy( &M->inh.boundsMax, &mfd.boundsMax, sizeof(mfd.boundsMax) );
 	
@@ -1343,6 +1418,8 @@ static int meshd3d9_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "setPartRanges" )    SGS_RETURN_CFUNC( meshd3d9i_setPartRanges );
 		SGS_CASE( "setPartShader" )    SGS_RETURN_CFUNC( meshd3d9i_setPartShader );
 		SGS_CASE( "setPartTexture" )   SGS_RETURN_CFUNC( meshd3d9i_setPartTexture );
+		SGS_CASE( "setBoneData" )      SGS_RETURN_CFUNC( meshd3d9i_setBoneData );
+		SGS_CASE( "recalcBoneMatrices" ) SGS_RETURN_CFUNC( meshd3d9i_recalcBoneMatrices );
 		SGS_CASE( "loadFromBuffer" )   SGS_RETURN_CFUNC( meshd3d9i_loadFromBuffer );
 	SGS_END_INDEXFUNC;
 }
