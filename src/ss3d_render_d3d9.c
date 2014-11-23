@@ -800,6 +800,8 @@ static int init_vdecl( SS3D_RD3D9* R, SS3D_VDecl_D3D9* VD )
 		elements[ i ].UsageIndex = vdeclusage_to_elusageindex[ VD->info.usages[ i ] ];
 		if( VD->info.usages[ i ] == SS3D_VDECLUSAGE_BLENDIDX && VD->info.types[ i ] == SS3D_VDECLTYPE_BCOL4 )
 			elements[ i ].Type = D3DDECLTYPE_UBYTE4;
+		if( VD->info.usages[ i ] == SS3D_VDECLUSAGE_BLENDWT && VD->info.types[ i ] == SS3D_VDECLTYPE_BCOL4 )
+			elements[ i ].Type = D3DDECLTYPE_UBYTE4N;
 	}
 	memcpy( elements + VD->info.count, end, sizeof(*end) );
 	if( FAILED( D3DCALL_( R->device, CreateVertexDeclaration, elements, &VD->VD ) ) )
@@ -995,6 +997,7 @@ static void mesh_set_num_bones( SGS_CTX, SS3D_Mesh_D3D9* M, int num )
 	int cnb = M->inh.numBones;
 	while( cnb > num )
 	{
+		cnb--;
 		if( M->inh.bones[ cnb ].name )
 		{
 			sgs_Variable V; V.type = SGS_VT_STRING; V.data.S = M->inh.bones[ cnb ].name;
@@ -1002,8 +1005,9 @@ static void mesh_set_num_bones( SGS_CTX, SS3D_Mesh_D3D9* M, int num )
 		}
 		
 		memset( M->inh.bones + cnb, 0, sizeof( SS3D_MeshBone ) );
-		cnb--;
 	}
+	if( cnb < num )
+		memset( M->inh.bones + cnb, 0, sizeof( SS3D_MeshBone ) * ( num - cnb ) );
 	M->inh.numBones = num;
 }
 
@@ -1242,7 +1246,7 @@ static void mesh_set_bone_data( SS3D_Mesh_D3D9* M, int bid, int nameidx, MAT4 bo
 		Vstr.data.S = M->inh.bones[ bid ].name;
 		sgs_Release( C, &Vstr );
 	}
-	sgs_GetStackItem( C, 2, &Vstr );
+	sgs_GetStackItem( C, nameidx, &Vstr );
 	M->inh.bones[ bid ].name = Vstr.data.S;
 	memcpy( M->inh.bones[ bid ].boneOffset, boneoff, sizeof(MAT4) );
 	SS3D_Mtx_Identity( M->inh.bones[ bid ].invSkinOffset );
@@ -1263,14 +1267,15 @@ static int meshd3d9i_setBoneData( SGS_CTX )
 	SGS_RETURN_BOOL( 1 )
 }
 
-static int meshd3d9i_recalcBoneMatrices( SGS_CTX )
+
+static int mesh_recalc_bone_matrices( SS3D_Mesh_D3D9* M )
 {
 	int b;
+	SGS_CTX = M->inh.renderer->C;
 	
-	M_IHDR( recalcBoneMatrices );
 	if( !M->inh.numBones )
 	{
-		SGS_RETURN_BOOL( 1 )
+		return 1;
 	}
 	
 	for( b = 0; b < M->inh.numBones; ++b )
@@ -1291,7 +1296,14 @@ static int meshd3d9i_recalcBoneMatrices( SGS_CTX )
 	{
 		SS3D_Mtx_Invert( M->inh.bones[ b ].invSkinOffset, skinOffsets[ b ] );
 	}
-	
+	return 1;
+}
+
+static int meshd3d9i_recalcBoneMatrices( SGS_CTX )
+{
+	M_IHDR( recalcBoneMatrices );
+	if( !mesh_recalc_bone_matrices( M ) )
+		return 0;
 	SGS_RETURN_BOOL( 1 )
 }
 
@@ -1381,11 +1393,42 @@ static int meshd3d9i_loadFromBuffer( SGS_CTX )
 		mesh_set_bone_data( M, b, -1, mfdb->boneOffset, mfdb->parent_id == 255 ? -1 : mfdb->parent_id );
 		sgs_Pop( C, 1 );
 	}
+	mesh_recalc_bone_matrices( M );
 	
 	memcpy( &M->inh.boundsMin, &mfd.boundsMin, sizeof(mfd.boundsMin) );
 	memcpy( &M->inh.boundsMax, &mfd.boundsMax, sizeof(mfd.boundsMax) );
 	
 	return 1;
+}
+
+static int meshd3d9p_boneData_read( SS3D_Mesh_D3D9* M )
+{
+	int b;
+	sgs_Variable Vstr;
+	SGS_CTX = M->inh.renderer->C;
+	
+	for( b = 0; b < M->inh.numBones; ++b )
+	{
+		SS3D_MeshBone* mb = M->inh.bones + b;
+		
+		sgs_PushInt( C, b );
+		
+		sgs_PushString( C, "name" );
+		Vstr.type = SGS_VT_STRING;
+		Vstr.data.S = mb->name;
+		sgs_PushVariable( C, &Vstr );
+		
+		sgs_PushString( C, "parent_id" );
+		sgs_PushInt( C, mb->parent_id );
+		sgs_PushString( C, "bone_offset" );
+		sgs_PushMat4( C, mb->boneOffset[0], 0 );
+		sgs_PushString( C, "inv_skin_offset" );
+		sgs_PushMat4( C, mb->invSkinOffset[0], 0 );
+		
+		sgs_PushDict( C, 8 );
+	}
+	sgs_PushMap( C, b * 2 );
+	return SGS_SUCCESS;
 }
 
 static int meshd3d9_getindex( SGS_ARGS_GETINDEXFUNC )
@@ -1404,6 +1447,7 @@ static int meshd3d9_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "vertexDataSize" )   SGS_RETURN_INT( M->inh.vertexDataSize );
 		SGS_CASE( "indexCount" )       SGS_RETURN_INT( M->inh.indexCount );
 		SGS_CASE( "indexDataSize" )    SGS_RETURN_INT( M->inh.indexDataSize );
+		SGS_CASE( "boneData" )         return meshd3d9p_boneData_read( M );
 		
 		SGS_CASE( "boundsMin" )        SGS_RETURN_VEC3P( M->inh.boundsMin );
 		SGS_CASE( "boundsMax" )        SGS_RETURN_VEC3P( M->inh.boundsMax );

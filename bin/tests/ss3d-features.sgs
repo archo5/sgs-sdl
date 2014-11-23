@@ -70,6 +70,10 @@ function initialize()
 		mesh = io_file_read( "testdata/extest0.ssm" );
 		SS3D_MeshData_GetVertexIndexArrays( mesh );
 		_R.Mesh.loadFromBuffer( mesh );
+		
+		_R.AnimMesh = _R.SS3D.createMesh();
+		mesh = io_file_read( "testdata/animtest.ssm" );
+		_R.AnimMesh.loadFromBuffer( mesh );
 	}
 	
 	// TERRAIN
@@ -85,6 +89,24 @@ function initialize()
 	_R.MI = _R.Scene.createMeshInstance();
 	_R.MI.mesh = _R.Mesh;
 	_R.MI.texture0 = reflect_cubemap;
+	
+	_R.AnimMI = animmi = _R.Scene.createMeshInstance();
+	_R.AnimMI.mesh = _R.AnimMesh;
+	_R.AnimMI.texture0 = reflect_cubemap;
+	_R.AnimMI.matrix = mat4().translate(4,4,0);
+	boneData = _R.AnimMesh.boneData;
+	printvar(boneData);
+	animmi.resizeSkinMatrixArray( map_size( boneData ) );
+	i0 = boneData[0].inv_skin_offset;
+	i1 = boneData[1].inv_skin_offset;
+	o0 = boneData[0].bone_offset;
+	o1 = boneData[1].bone_offset;
+	r0 = mat4().rotateX(deg2rad(30));
+	r1 = mat4().rotateX(deg2rad(60));
+	f0 = mat4().multiply2( mat4().multiply2( i0, r0 ), o0 );
+	f1 = mat4().multiply2( mat4().multiply2( mat4().multiply2( i1, r1 ), o1 ), f0 );
+	animmi.setSkinMatrix( 0, f0 );
+	animmi.setSkinMatrix( 1, f1 );
 	
 	_R.Light = light = _R.Scene.createLight();
 	light.type = SS3DLIGHT_POINT;

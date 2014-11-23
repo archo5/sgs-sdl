@@ -85,7 +85,7 @@ def write_part( f, part ):
 		write_smallbuf( f, tex )
 #
 
-def write_mesh( f, meshdata, armdata ):
+def write_mesh( f, meshdata, armdata, boneorder ):
 	is_transparent = meshdata["is_transparent"]
 	is_unlit = meshdata["is_unlit"]
 	is_nocull = meshdata["is_nocull"]
@@ -137,23 +137,26 @@ def write_mesh( f, meshdata, armdata ):
 		write_part( f, part )
 	
 	if is_skinned:
-		f.write( struct.pack( "B", len(armdata.bones) ) )
-		for bone in armdata.bones:
+		f.write( struct.pack( "B", len(boneorder) ) )
+		for bonename in boneorder:
+			bone = armdata.bones[ bonename ]
+			print( "Bone found: " + bone.name )
 			write_smallbuf( f, bone.name )
 			m = bone.matrix_local
 			pid = 255
 			if bone.parent == None:
 				m = m * Matrix.Rotation( -math.pi/2, 4, "X" )
 			else:
-				for bpid, pbone in armdata.bones:
-					if bone == pbone:
+				for bpid, pbone in enumerate(boneorder):
+					if bone.parent.name == pbone:
 						pid = bpid
 						break
 			#
-			f.write( struct.pack( "4f", m[0][0], m[0][1], m[0][2], m[0][3] ) )
-			f.write( struct.pack( "4f", m[1][0], m[1][1], m[1][2], m[1][3] ) )
-			f.write( struct.pack( "4f", m[2][0], m[2][1], m[2][2], m[2][3] ) )
-			f.write( struct.pack( "4f", m[3][0], m[3][1], m[3][2], m[3][3] ) )
+			f.write( struct.pack( "B", pid ) )
+			f.write( struct.pack( "4f", m[0][0], m[1][0], m[2][0], m[3][0] ) )
+			f.write( struct.pack( "4f", m[0][1], m[1][1], m[2][1], m[3][1] ) )
+			f.write( struct.pack( "4f", m[0][2], m[1][2], m[2][2], m[3][2] ) )
+			f.write( struct.pack( "4f", m[0][3], m[1][3], m[2][3], m[3][3] ) )
 		#
 	#
 	
@@ -176,7 +179,7 @@ def find_in_userdata( obj, key, default = None ):
 	return default
 #
 
-def parse_geometry( MESH, materials ):
+def parse_geometry( MESH, materials, opt_vgroups, opt_boneorder ):
 	# SORT BY MATERIAL
 	flim = {}
 	ficm = {}
@@ -241,6 +244,55 @@ def parse_geometry( MESH, materials ):
 					col_id = addCached( Clists[ si ], MESH.vertex_colors[ si ].data[ l_id ].color )
 					genVertex.append( col_id )
 				
+				if opt_vgroups != None and opt_boneorder != None:
+					groupweights = []
+					for vg in MESH.vertices[ v_id ].groups:
+						for grp in opt_vgroups:
+							if vg.group == grp.index:
+								groupweights.append([ opt_boneorder.index( grp.name ), grp.weight( v_id ) ])
+								break
+							#
+						#
+					#
+					# sort by importance
+					groupweights.sort( key=lambda x: x[1], reverse = True )
+					# trim useless
+					for gwoff, gw in enumerate(groupweights):
+						if gw[1] < 1.0/256.0:
+							del groupweights[ gwoff: ]
+							break
+					# check if more than 4, warn / trim if so
+					if len(groupweights) > 4:
+						print( "Too many weights (%d > 4) for vertex %d at %s" % ( len(groupweights), v_id, MESH.vertices[ v_id ].co ) )
+						del groupweights[ 4: ]
+					if len(groupweights) == 0:
+						groupweights.append([ 0, 1.0 ])
+					# renormalize
+					wsum = 0.0
+					for gw in groupweights:
+						wsum += gw[1]
+					wsum /= 255.0
+					for gw in groupweights:
+						gw[1] = round( gw[1] / wsum )
+					# finish quantization to bytes
+					wsum = 0.0
+					for gw in groupweights:
+						wsum += gw[1]
+					gwoff = 0
+					while wsum != 255:
+						sgnadd = -1 if wsum > 255 else 1
+						groupweights[ gwoff ][1] += sgnadd
+						wsum += sgnadd
+					# compress
+					while len(groupweights) < 4:
+						groupweights.append([ 0, 0 ])
+					gw_groups = struct.pack( "4B", groupweights[0][0], groupweights[1][0], groupweights[2][0], groupweights[3][0] )
+					gw_weights = struct.pack( "4B", groupweights[0][1], groupweights[1][1], groupweights[2][1], groupweights[3][1] )
+					
+					genVertex.append( gw_groups )
+					genVertex.append( gw_weights )
+				#
+				
 				genFace.append( genVertex )
 			genPart.append( genFace )
 		genParts.append( genPart )
@@ -279,6 +331,11 @@ def parse_geometry( MESH, materials ):
 					C = Clists[ si ][ vertex[ vip ] ]
 					vip += 1
 					vertexdata += struct.pack( "4B", int(C.r * 255), int(C.g * 255), int(C.b * 255), 255 )
+				if opt_vgroups != None and opt_boneorder != None:
+					vertexdata += vertex[ vip ] # indices (groups)
+					vip += 1
+					vertexdata += vertex[ vip ] # weights
+					vip += 1
 				tmpidcs.append( addCached( vertices, vertexdata, vroot ) )
 			#
 			for i in range( 2, len( tmpidcs ) ):
@@ -382,11 +439,15 @@ def parse_geometry( MESH, materials ):
 	#
 	
 	# FORMAT STRING
-	format = "pf3nf3tf4"
+	format = "pf3nf3"
+	if len( Tlists ) > 0:
+		format += "tf4"
 	for si in range( len( Tlists ) ):
 		format += "%df2" % ( si )
 	for si in range( len( Clists ) ): # only one expected
 		format += "cb4"
+	if opt_vgroups != None and opt_boneorder != None:
+		format += "ib4wb4"
 	#
 	
 	return {
@@ -400,8 +461,26 @@ def parse_geometry( MESH, materials ):
 def parse_armature( node ):
 	for mod in node.modifiers:
 		if mod.type == "ARMATURE":
-			return mod.object
+			return mod.object.data
 	return None
+#
+
+def generate_bone_order( armdata ):
+	if armdata == None:
+		return None
+	bonelist = []
+	bonequeue = []
+	for bone in armdata.bones:
+		if bone.parent == None:
+			bonequeue.append( bone )
+	#
+	while len(bonequeue) != 0:
+		bone = bonequeue.pop(0)
+		bonelist.append( bone.name )
+		for bone in bone.children:
+			bonequeue.append( bone )
+	#
+	return bonelist
 #
 
 def write_ss3dmesh( ctx, filepath ):
@@ -445,15 +524,16 @@ def write_ss3dmesh( ctx, filepath ):
 		materials.append( outmtl )
 	print( "OK!" )
 	
-	print( "Generating geometry... ", end="" )
-	meshdata = parse_geometry( geom_node.data, materials )
-	print( "OK!" )
-	
 	armdata = parse_armature( geom_node )
+	boneorder = generate_bone_order( armdata )
+	
+	print( "Generating geometry... ", end="" )
+	meshdata = parse_geometry( geom_node.data, materials, geom_node.vertex_groups if len(geom_node.vertex_groups) else None, boneorder )
+	print( "OK!" )
 	
 	print( "Writing everything... " )
 	f = open( filepath, 'wb' )
-	write_mesh( f, meshdata, armdata )
+	write_mesh( f, meshdata, armdata, boneorder )
 	f.close()
 	
 	print( "\n\\\\\n>>> Done!\n//\n\n" )

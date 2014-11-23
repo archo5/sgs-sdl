@@ -987,14 +987,17 @@ const char* SS3D_MeshData_Parse( char* buf, size_t size, SS3D_MeshFileData* out 
 				return "failed to parse bone name string buffer";
 			off += 1 + bout->boneNameSize;
 			if( off >= size )
-				return "mesh bone data incomplete";
+				return "mesh bone data incomplete [parent id]";
 			bout->parent_id = buf[ off++ ];
+			// printf( "pid = %d, namesize = %d, name = %.*s\n", (int)bout->parent_id, (int)bout->boneNameSize, (int)bout->boneNameSize, bout->boneName );
 			if( off + 64 > size )
-				return "mesh bone data incomplete";
+				return "mesh bone data incomplete [matrix]";
 			memcpy( bout->boneOffset, buf + off, sizeof(MAT4) /* 64 */ );
 			off += 64;
 		}
 	}
+	else
+		out->numBones = 0;
 	return NULL;
 }
 
