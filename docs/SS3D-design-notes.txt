@@ -1,5 +1,51 @@
 SGS3D
 
+ANIMATION SYSTEM
+
+each node is a generator of skinned matrices for a specific mesh:
+- contains array of output matrices
+- can be repurposed for a different mesh at any time
+- can generate matrices for current time and advance time forward (maybe backwards too, in the future)
+- can generate factors for blending/using only specific parts of the matrix
+each node may or may not accept any amount and type of child nodes:
+- each child node is triggered on repurposing/advancing/generation
+
+interface AnimNode
+{
+	- Setup( bonenamelist ) => resize output
+	- Advance( t ) => do nothing by default
+	- Generate() => fill output with identity matrices by default and set all factors to 0
+	
+	+ Mat4[] output
+	+ float[] factors
+}
+
+class MixerNode : AnimNode
+{
+	- Setup( bonenamelist ) => <inherited>, resize inputs
+	- Advance( t ) => advance inputs
+	- Generate() => generate inputs, mix to output
+	
+	- AddInput( node, mode, mult ) => InsertInput( 0, .. )
+	- InsertInput( pos, node, mode, mult ) => validate index, create/insert input
+	- RemoveInputs( from, to ) => ...
+	
+	+ { AnimNode, blend mode, factor multiplier }[] inputs
+}
+
+class PlayerNode : AnimNode
+{
+	- Setup( bonenamelist ) => <inherited>, store this data
+	- Advance( t ) => add to time, handle wrapping
+	- Generate() => sample animation at current time
+	
+	.. TODO ..
+	
+	+ float time
+	+ string[] bones
+}
+
+
 PER-INSTANCE RENDER DATA
 
 - 4 textures (8-11)
