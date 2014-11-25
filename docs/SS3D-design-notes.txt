@@ -1,5 +1,6 @@
 SGS3D
 
+-----------------------------
 ANIMATION SYSTEM
 
 each node is a generator of skinned matrices for a specific mesh:
@@ -9,6 +10,30 @@ each node is a generator of skinned matrices for a specific mesh:
 - can generate factors for blending/using only specific parts of the matrix
 each node may or may not accept any amount and type of child nodes:
 - each child node is triggered on repurposing/advancing/generation
+
+
+class ValueTrack<T>
+{
+	+ { T, time }[] values // sorted by time
+}
+class Vec3Track : ValueTrack<Vec3>
+class QuatTrack : ValueTrack<Quat>
+
+class AnimTrack
+{
+	- GetState( time, loop ) => (pos,rot,scale)
+	
+	+ Vec3Track? pos
+	+ QuatTrack? rot
+	+ Vec3Track? scale
+}
+
+class Animation
+{
+	+ string name
+	+ float length
+	+ { AnimTrack }[ name ] tracks
+}
 
 interface AnimNode
 {
@@ -36,14 +61,57 @@ class MixerNode : AnimNode
 class PlayerNode : AnimNode
 {
 	- Setup( bonenamelist ) => <inherited>, store this data
-	- Advance( t ) => add to time, handle wrapping
+	- Advance( t ) => add to animation times, handle wrapping
 	- Generate() => sample animation at current time
 	
-	.. TODO ..
+	- Load( name, path, track, fadeoutlen/istmp )
+	- Unload( name )
+	- Play( name )
+	- Stop( name )
 	
-	+ float time
+	+ float default_fadeoutlen
+	+ { animspeed }[ track ] trackspeeds
 	+ string[] bones
+	+ { Animation, track, fadeoutlen }[ name ] animlist
+	+ { name, time, fadeoutlen }[] curanims
+	
+	// loop = fadeoutlen == 0
+	// istmp = fadeoutlen != 0
 }
+
+
+ANIMATION FORMAT:
+
+- smallbuf: int8 size, char[size]
+
+magic (8): "SS3DANIM"
+int8 num_tracks
+smallbuf name
+Track[num_tracks]
+{
+	smallbuf name
+	int8 num_pos
+	int8 num_rot
+	int8 num_scale
+}
+
+ANIMATION PACKAGE FORMAT:
+
+magic (8): "SS3DANPK"
+int32 count
+AnimItem[count]
+{
+	int32 size
+	[--SS3DANIM--]
+}
+
+
+POTENTIAL PERFORMANCE ISSUES?
+
+- track interpolation? expecting to run possibly even more than 10000 tracks at the same time
+-- should have absolutely no allocations inside that code path
+
+-----------------------------
 
 
 PER-INSTANCE RENDER DATA
