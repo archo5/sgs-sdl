@@ -2142,11 +2142,11 @@ static int SS_SetCulling( SGS_CTX )
 
 static int SS_SetBlending( SGS_CTX )
 {
-	sgs_Int func = 0, src, dst;
+	sgs_Int func = 0, src, dst, srca = SS_BLEND_ONE, dsta = SS_BLEND_ZERO;
 	SGSFN( "SS_SetBlending" );
 	SCRFN_NEEDS_RENDER_CONTEXT;
 	
-	if( !sgs_LoadArgs( C, "iii", &func, &src, &dst ) )
+	if( !sgs_LoadArgs( C, "iii|ii", &func, &src, &dst, &srca, &dsta ) )
 		return 0;
 	
 	if( func < 0 || func >= SS_BLENDOP__COUNT )
@@ -2155,8 +2155,12 @@ static int SS_SetBlending( SGS_CTX )
 		return sgs_Msg( C, SGS_WARNING, "wrong source blend factor" );
 	if( dst < 0 || dst >= SS_BLEND__COUNT )
 		return sgs_Msg( C, SGS_WARNING, "wrong destination blend factor" );
+	if( srca < 0 || srca >= SS_BLEND__COUNT )
+		return sgs_Msg( C, SGS_WARNING, "wrong source alpha blend factor" );
+	if( dsta < 0 || dsta >= SS_BLEND__COUNT )
+		return sgs_Msg( C, SGS_WARNING, "wrong destination alpha blend factor" );
 	
-	GCurRI->set_render_state( GCurRr, SS_RS_BLENDFACTORS, src, dst, 0,0 );
+	GCurRI->set_render_state( GCurRr, SS_RS_BLENDFACTORS, src, dst, srca, dsta );
 	GCurRI->set_render_state( GCurRr, SS_RS_BLENDOP, func, 0,0,0 );
 	return 0;
 }

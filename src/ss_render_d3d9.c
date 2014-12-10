@@ -35,6 +35,7 @@ static void _ss_reset_states( IDirect3DDevice9* dev, int w, int h )
 	IDirect3DDevice9_SetRenderState( dev, D3DRS_CULLMODE, D3DCULL_NONE );
 	IDirect3DDevice9_SetRenderState( dev, D3DRS_ZENABLE, 0 );
 	IDirect3DDevice9_SetRenderState( dev, D3DRS_ALPHABLENDENABLE, 1 );
+	IDirect3DDevice9_SetRenderState( dev, D3DRS_SEPARATEALPHABLENDENABLE, 1 );
 	IDirect3DDevice9_SetRenderState( dev, D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
 	IDirect3DDevice9_SetRenderState( dev, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
 	{
@@ -544,8 +545,12 @@ static void ss_ri_d3d9_set_render_state( SS_Renderer* R, int which, int arg0, in
 		};
 		if( arg0 < 0 || arg0 >= SS_BLEND__COUNT ) arg0 = SS_BLEND_SRCALPHA;
 		if( arg1 < 0 || arg1 >= SS_BLEND__COUNT ) arg1 = SS_BLEND_INVSRCALPHA;
+		if( arg2 < 0 || arg2 >= SS_BLEND__COUNT ) arg2 = SS_BLEND_ONE;
+		if( arg3 < 0 || arg3 >= SS_BLEND__COUNT ) arg3 = SS_BLEND_ZERO;
 		IDirect3DDevice9_SetRenderState( R->d3ddev, D3DRS_SRCBLEND, blendfactors[ arg0 ] );
 		IDirect3DDevice9_SetRenderState( R->d3ddev, D3DRS_DESTBLEND, blendfactors[ arg1 ] );
+		IDirect3DDevice9_SetRenderState( R->d3ddev, D3DRS_SRCBLENDALPHA, blendfactors[ arg2 ] );
+		IDirect3DDevice9_SetRenderState( R->d3ddev, D3DRS_DESTBLENDALPHA, blendfactors[ arg3 ] );
 	}
 	else if( which == SS_RS_BLENDOP )
 	{
