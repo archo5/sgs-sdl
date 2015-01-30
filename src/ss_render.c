@@ -364,10 +364,11 @@ static float* floatbuf_get_ptr( floatbuf* buf )
 static const char* _parse_floatvec( SGS_CTX, int stkitem, float* out, int numcomp )
 {
 	int pnp = -1;
-	if( sgs_ParseVec2( C, stkitem, out, 0 ) ) pnp = 2;
-	else if( sgs_ParseVec3( C, stkitem, out, 0 ) ) pnp = 3;
-	else if( sgs_ParseVec4( C, stkitem, out, 0 ) ) pnp = 4;
-	else if( sgs_ParseColor( C, stkitem, out, 0 ) ) pnp = 4;
+	sgs_Real R;
+	if( sgs_ParseVec2( C, stkitem, out, 1 ) ) pnp = 2;
+	else if( sgs_ParseVec3( C, stkitem, out, 1 ) ) pnp = 3;
+	else if( sgs_ParseVec4( C, stkitem, out, 1 ) ) pnp = 4;
+	else if( sgs_ParseColor( C, stkitem, out, 1 ) ) pnp = 4;
 	else if( sgs_ParseMat4( C, stkitem, out ) ) pnp = 16;
 	else if( sgs_ArraySize( C, stkitem ) >= 0 )
 	{
@@ -395,6 +396,7 @@ static const char* _parse_floatvec( SGS_CTX, int stkitem, float* out, int numcom
 		
 		pnp = asz;
 	}
+	else if( sgs_ParseReal( C, stkitem, &R ) ){ *out = R; pnp = 1; }
 	
 	if( pnp >= 0 )
 		return NULL;
