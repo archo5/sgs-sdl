@@ -1,0 +1,71 @@
+
+function draw_ticking_text()
+{
+	str = "Gradually appearing text...";
+	i = 0;
+	subthread_create( function() use( i ){ for(;;){ i++; yield( 0.2 ); } } );
+	for(;;)
+	{
+		tx = string_part( str, 0, i % str.length );
+		SS_DrawTextLine( tx, Font, 20, 20, color(1,1,1) );
+		yield();
+	}
+}
+
+function draw_moveline( from, to )
+{
+	from = clone( from );
+	to = clone( to );
+	
+	yield();
+	fade = 1.0;
+	subthread_create( function() use( fade ){ for(;;){ fade -= 1/60; yield( 1/60 ); } } );
+	while( fade > 0 )
+	{
+		SS_DrawColorLine( from.x, from.y, to.x, to.y, 1, 0, 0, fade );
+		yield();
+	}
+}
+
+function initialize()
+{
+	global mpos = vec2( 0, 0 );
+	global opos = vec2( 0, 0 );
+	global W = 1024, H = 576;
+	global Window = SS_CreateWindow( "SGS-SDL Game Framework", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 576, SDL_WINDOW_OPENGLMAYBE );
+	Window.initRenderer( SS_RENDERER_DONTCARE, 0&SS_RENDERER_VSYNC );
+	global Font = SS_CreateFont( "fonts/lato-regular.ttf", 12 );
+	SS_InitDrawFunctions();
+	
+	thread_create( draw_ticking_text );
+}
+
+global prevTime = ftime();
+function update()
+{
+	SS_Clear( color(0.25,0.3,0.4) );
+	SS_SetCameraUI( 0, W, 0, H );
+	curTime = ftime();
+	deltaTime = curTime - prevTime;
+	global prevTime = curTime;
+	if( deltaTime > 1/15 )
+		deltaTime = 1/15;
+	process_threads( deltaTime );
+	SS_Present();
+}
+
+function on_event( e )
+{
+	if( e.type == SDL_QUIT )
+		global sys_exit = true;
+	if( e.type == SDL_MOUSEMOTION )
+	{
+		npos = vec2( e.x, e.y );
+		if( ( opos - npos ).length > 2 )
+		{
+			thread_create( draw_moveline, null, opos, npos );
+			global opos = npos;
+		}
+		global mpos = npos;
+	}
+}
