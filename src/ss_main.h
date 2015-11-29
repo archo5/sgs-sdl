@@ -65,7 +65,7 @@ typedef struct _SS_Image
 	int16_t height;
 }
 SS_Image;
-int ss_InitImage( SGS_CTX );
+void ss_InitImage( SGS_CTX );
 int ss_IsImageVar( sgs_Variable* var );
 int ss_ParseImage( SGS_CTX, int pos, SS_Image** out );
 int ss_CreateImageHelper( SGS_CTX, int16_t w, int16_t h, const void* bits );
@@ -75,13 +75,13 @@ void ss_DeleteImage( SS_Image* img, SGS_CTX );
 
 
 /* SGScript - SDL */
-int ss_InitSDL( SGS_CTX );
+void ss_InitSDL( SGS_CTX );
 void ss_CreateSDLEvent( SGS_CTX, SDL_Event* event );
 void ss_FreeGraphics( SGS_CTX );
 
 
 /* SGScript - Graphics */
-int ss_InitGraphics( SGS_CTX );
+void ss_InitGraphics( SGS_CTX );
 
 void SS_Mat4Multiply( float src1[4][4], float src2[4][4], float dest[4][4] );
 

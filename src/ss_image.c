@@ -18,7 +18,7 @@
 
 
 SGS_DECLARE sgs_ObjInterface image_iface[1];
-#define IMGHDR SS_Image* img = (SS_Image*) data->data
+#define IMGHDR SS_Image* img = (SS_Image*) obj->data
 
 #define IMG_IHDR( funcname ) SS_Image* ii; \
 	if( !SGS_PARSE_METHOD( C, image_iface, ii, SS_Image, funcname ) ) return 0;
@@ -33,11 +33,11 @@ static int _make_image( SGS_CTX, int16_t w, int16_t h, const void* src )
 		memset( ii->data, 0, sizeof( uint32_t ) * w * h );
 	else
 		memcpy( ii->data, src, sizeof( uint32_t ) * w * h );
-	sgs_PushObject( C, ii, image_iface );
+	sgs_CreateObject( C, NULL, ii, image_iface );
 	return SGS_SUCCESS;
 }
 
-static int ss_image_destruct( SGS_CTX, sgs_VarObj* data )
+static int ss_image_destruct( SGS_CTX, sgs_VarObj* obj )
 {
 	IMGHDR;
 	sgs_Dealloc( img->data );
@@ -143,25 +143,24 @@ static int ss_image_setData( SGS_CTX )
 	return 1;
 }
 
-static int ss_image_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isprop )
+static int ss_image_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
 	sgs_SizeVal size;
 	IMGHDR;
-	UNUSED( isprop );
-	if( sgs_ParseStringP( C, key, &str, &size ) )
+	if( sgs_ParseString( C, 0, &str, &size ) )
 	{
 		if( !strcmp( str, "width" ) ){ sgs_PushInt( C, img->width ); return SGS_SUCCESS; }
 		if( !strcmp( str, "height" ) ){ sgs_PushInt( C, img->height ); return SGS_SUCCESS; }
-		if( !strcmp( str, "resize" ) ){ sgs_PushCFunction( C, ss_image_resize ); return SGS_SUCCESS; }
-		if( !strcmp( str, "clear" ) ){ sgs_PushCFunction( C, ss_image_clear ); return SGS_SUCCESS; }
-		if( !strcmp( str, "getData" ) ){ sgs_PushCFunction( C, ss_image_getData ); return SGS_SUCCESS; }
-		if( !strcmp( str, "setData" ) ){ sgs_PushCFunction( C, ss_image_setData ); return SGS_SUCCESS; }
+		if( !strcmp( str, "resize" ) ){ sgs_PushCFunc( C, ss_image_resize ); return SGS_SUCCESS; }
+		if( !strcmp( str, "clear" ) ){ sgs_PushCFunc( C, ss_image_clear ); return SGS_SUCCESS; }
+		if( !strcmp( str, "getData" ) ){ sgs_PushCFunc( C, ss_image_getData ); return SGS_SUCCESS; }
+		if( !strcmp( str, "setData" ) ){ sgs_PushCFunc( C, ss_image_setData ); return SGS_SUCCESS; }
 	}
 	return SGS_ENOTFND;
 }
 
-static int ss_image_convert( SGS_CTX, sgs_VarObj* data, int type )
+static int ss_image_convert( SGS_CTX, sgs_VarObj* obj, int type )
 {
 	if( type == SGS_CONVOP_CLONE )
 	{
@@ -553,15 +552,10 @@ static sgs_RegFuncConst img_funcs[] =
 	FNP( ss_load_image_dds ),
 };
 
-int ss_InitImage( SGS_CTX )
+void ss_InitImage( SGS_CTX )
 {
-	int ret;
-	ret = sgs_RegIntConsts( C, img_ints, ARRAY_SIZE( img_ints ) );
-	if( ret != SGS_SUCCESS ) return ret;
-	ret = sgs_RegFuncConsts( C, img_funcs, ARRAY_SIZE( img_funcs ) );
-	if( ret != SGS_SUCCESS ) return ret;
-	
-	return SGS_SUCCESS;
+	sgs_RegIntConsts( C, img_ints, ARRAY_SIZE( img_ints ) );
+	sgs_RegFuncConsts( C, img_funcs, ARRAY_SIZE( img_funcs ) );
 }
 
 int ss_IsImageVar( sgs_Variable* var )

@@ -120,7 +120,7 @@ function initialize()
 	println();
 	global image = SS_CreateTexture( "images/crosshair.png", "mipmaps" );
 	println( image );
-	printvar( _R.textures );
+	printvar( _RND.textures );
 	println();
 	
 	global Font = SS_CreateFont( "fonts/lato-regular.ttf", 12 );

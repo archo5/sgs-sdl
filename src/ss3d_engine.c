@@ -2975,7 +2975,7 @@ void SS3D_Renderer_Construct( SS3D_Renderer* R, SGS_CTX )
 	R->stat_numMDrawCalls = 0;
 	R->stat_numPDrawCalls = 0;
 	
-	sgs_InitDict( C, &storeVar, 0 );
+	sgs_CreateDict( C, &storeVar, 0 );
 	R->store = sgs_GetObjectStructP( &storeVar );
 	
 	/* default pass info */

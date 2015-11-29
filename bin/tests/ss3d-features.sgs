@@ -17,28 +17,28 @@ function initialize()
 	global Font = SS_CreateFont( "fonts/lato-regular.ttf", 12 );
 	
 	printvar( Window.renderingAPI, Window.rendererPtr );
-	_R.SS3D = SS3D_CreateRenderer( Window.renderingAPI, Window.rendererPtr );
+	_RND.SS3D = SS3D_CreateRenderer( Window.renderingAPI, Window.rendererPtr );
 	
-	reflect_cubemap = _R.SS3D.getTexture( "testdata/cubemap_beach_reflect.dds" );
+	reflect_cubemap = _RND.SS3D.getTexture( "testdata/cubemap_beach_reflect.dds" );
 	
-	_R.Scene = _R.SS3D.createScene();
-	_R.Scene.fogColor = vec3(0.48,0.50,0.55);
-	_R.Scene.fogDensity = 0.001;
-	_R.Scene.fogHeightDensity = 0.003;
-	_R.Scene.fogStartHeight = 0;
-	_R.Scene.fogHeightFactor = 1;//0.5;
-	_R.Scene.ambientLightColor = vec3(0.01);
-	_R.Scene.dirLightColor = vec3(0.4,0.3,0.2);
-	_R.Scene.dirLightDir = vec3(-4,-4,-1);
-	_R.Scene.skyTexture = _R.SS3D.getTexture( "testdata/cubemap_beach_skybox.dds" );
-	_R.SS3D.currentScene = _R.Scene;
+	_RND.Scene = _RND.SS3D.createScene();
+	_RND.Scene.fogColor = vec3(0.48,0.50,0.55);
+	_RND.Scene.fogDensity = 0.001;
+	_RND.Scene.fogHeightDensity = 0.003;
+	_RND.Scene.fogStartHeight = 0;
+	_RND.Scene.fogHeightFactor = 1;//0.5;
+	_RND.Scene.ambientLightColor = vec3(0.01);
+	_RND.Scene.dirLightColor = vec3(0.4,0.3,0.2);
+	_RND.Scene.dirLightDir = vec3(-4,-4,-1);
+	_RND.Scene.skyTexture = _RND.SS3D.getTexture( "testdata/cubemap_beach_skybox.dds" );
+	_RND.SS3D.currentScene = _RND.Scene;
 	
-	_R.VD1 = _R.SS3D.createVertexDecl( "pf3nf3tf40f2" );
-	_R.VD1_anim = _R.SS3D.createVertexDecl( "pf3nf3tf40f2wb4ib4" );
+	_RND.VD1 = _RND.SS3D.createVertexDecl( "pf3nf3tf40f2" );
+	_RND.VD1_anim = _RND.SS3D.createVertexDecl( "pf3nf3tf40f2wb4ib4" );
 	
-	_R.Mesh = _R.SS3D.createMesh();
+	_RND.Mesh = _RND.SS3D.createMesh();
 	{
-		_R.PlaneMesh = _R.SS3D.createMesh();
+		_RND.PlaneMesh = _RND.SS3D.createMesh();
 	//	vdata = fmt_pack( "12f 12f 12f 12f",
 	//		-50, -50, 0,  0, 0, 1,  1, 0, 0, 1,  0, 0,
 	//		 50, -50, 0,  0, 0, 1,  1, 0, 0, 1,  2, 0,
@@ -49,52 +49,52 @@ function initialize()
 			 50, -50, 0,  0, 0, 1,  1, 0, 0, 1,  2, 0,  127,255,0,0,0,1,0,0,
 			 50,  50, 0,  0, 0, 1,  1, 0, 0, 1,  2, 2,  0,255,0,0,0,1,0,0,
 			-50,  50, 0,  0, 0, 1,  1, 0, 0, 1,  0, 2,  127,255,0,0,0,1,0,0 );
-		_R.PlaneMesh.setVertexData( vdata, _R.VD1_anim, false );
-		_R.PlaneMesh.setAABBFromVertexData( vdata, _R.VD1_anim );
-		_R.PlaneMesh.setIndexData( fmt_pack( "6w", 0, 1, 2, 2, 3, 0 ), false );
-		_R.PlaneMesh.numParts = 1;
-		_R.PlaneMesh.setPartRanges( 0, 0, 4, 0, 6 );
-	//	_R.PlaneMesh.transparent = true;
-		_R.PlaneMesh.setPartShader( 0, "mirror" );//"testFRrender" );
-		_R.PlaneMesh.setPartTexture( 0, 0, _R.SS3D.getTexture( "testdata/concretewall5.dds" ) );
-		_R.PlaneMesh.setPartTexture( 0, 1, _R.SS3D.getTexture( "testdata/concretewall5normal.png" ) );
-		_R.PlaneMeshMI = _R.Scene.createMeshInstance();
-		_R.PlaneMeshMI.mesh = _R.PlaneMesh;
-		_R.PlaneMeshMI.texture0 = reflect_cubemap;
-		_R.PlaneMeshMI.resizeSkinMatrixArray( 2 );
-		_R.PlaneMeshMI.setSkinMatrix( 1, mat4().rotateZ( deg2rad( 45 ) ) );
+		_RND.PlaneMesh.setVertexData( vdata, _RND.VD1_anim, false );
+		_RND.PlaneMesh.setAABBFromVertexData( vdata, _RND.VD1_anim );
+		_RND.PlaneMesh.setIndexData( fmt_pack( "6w", 0, 1, 2, 2, 3, 0 ), false );
+		_RND.PlaneMesh.numParts = 1;
+		_RND.PlaneMesh.setPartRanges( 0, 0, 4, 0, 6 );
+	//	_RND.PlaneMesh.transparent = true;
+		_RND.PlaneMesh.setPartShader( 0, "mirror" );//"testFRrender" );
+		_RND.PlaneMesh.setPartTexture( 0, 0, _RND.SS3D.getTexture( "testdata/concretewall5.dds" ) );
+		_RND.PlaneMesh.setPartTexture( 0, 1, _RND.SS3D.getTexture( "testdata/concretewall5normal.png" ) );
+		_RND.PlaneMeshMI = _RND.Scene.createMeshInstance();
+		_RND.PlaneMeshMI.mesh = _RND.PlaneMesh;
+		_RND.PlaneMeshMI.texture0 = reflect_cubemap;
+		_RND.PlaneMeshMI.resizeSkinMatrixArray( 2 );
+		_RND.PlaneMeshMI.setSkinMatrix( 1, mat4().rotateZ( deg2rad( 45 ) ) );
 	}
 	
 	{
 	//	mesh = io_file_read( "testdata/bunny.real.ssm" );
 		mesh = io_file_read( "testdata/extest0.ssm" );
 		SS3D_MeshData_GetVertexIndexArrays( mesh );
-		_R.Mesh.loadFromBuffer( mesh );
+		_RND.Mesh.loadFromBuffer( mesh );
 		
-		_R.AnimMesh = _R.SS3D.createMesh();
+		_RND.AnimMesh = _RND.SS3D.createMesh();
 		mesh = io_file_read( "testdata/animtest.ssm" );
-		_R.AnimMesh.loadFromBuffer( mesh );
+		_RND.AnimMesh.loadFromBuffer( mesh );
 	}
 	
 	// TERRAIN
-	_R.TerrainMesh = SS3D_CreateTerrainMeshFromImage( _R.SS3D, "testdata/heightmap.png", vec3( -500, -500, -200 ), vec3( 500, 500, 50 ) );
-	_R.TerrainMesh.setPartShader( 0, "testFRrender3" );
-	_R.TerrainMesh.setPartTexture( 0, 0, _R.SS3D.getTexture( "testdata/moss.png" ) );
-	_R.TerrainMeshMI = _R.Scene.createMeshInstance();
-	_R.TerrainMeshMI.mesh = _R.TerrainMesh;
-	_R.TerrainMeshMI.texture0 = reflect_cubemap;
-	_R.TerrainMeshMI.matrix = mat4().translate( 0, 0, 49 );
+	_RND.TerrainMesh = SS3D_CreateTerrainMeshFromImage( _RND.SS3D, "testdata/heightmap.png", vec3( -500, -500, -200 ), vec3( 500, 500, 50 ) );
+	_RND.TerrainMesh.setPartShader( 0, "testFRrender3" );
+	_RND.TerrainMesh.setPartTexture( 0, 0, _RND.SS3D.getTexture( "testdata/moss.png" ) );
+	_RND.TerrainMeshMI = _RND.Scene.createMeshInstance();
+	_RND.TerrainMeshMI.mesh = _RND.TerrainMesh;
+	_RND.TerrainMeshMI.texture0 = reflect_cubemap;
+	_RND.TerrainMeshMI.matrix = mat4().translate( 0, 0, 49 );
 	
 	
-	_R.MI = _R.Scene.createMeshInstance();
-	_R.MI.mesh = _R.Mesh;
-	_R.MI.texture0 = reflect_cubemap;
+	_RND.MI = _RND.Scene.createMeshInstance();
+	_RND.MI.mesh = _RND.Mesh;
+	_RND.MI.texture0 = reflect_cubemap;
 	
-	_R.AnimMI = animmi = _R.Scene.createMeshInstance();
-	_R.AnimMI.mesh = _R.AnimMesh;
-	_R.AnimMI.texture0 = reflect_cubemap;
-	_R.AnimMI.matrix = mat4().translate(4,4,0);
-	boneData = _R.AnimMesh.boneData;
+	_RND.AnimMI = animmi = _RND.Scene.createMeshInstance();
+	_RND.AnimMI.mesh = _RND.AnimMesh;
+	_RND.AnimMI.texture0 = reflect_cubemap;
+	_RND.AnimMI.matrix = mat4().translate(4,4,0);
+	boneData = _RND.AnimMesh.boneData;
 	printvar(boneData);
 	animmi.resizeSkinMatrixArray( map_size( boneData ) );
 	i0 = boneData[0].inv_skin_offset;
@@ -108,7 +108,7 @@ function initialize()
 	animmi.setSkinMatrix( 0, f0 );
 	animmi.setSkinMatrix( 1, f1 );
 	
-	_R.Light = light = _R.Scene.createLight();
+	_RND.Light = light = _RND.Scene.createLight();
 	light.type = SS3DLIGHT_POINT;
 	light.color = vec3(0.9,0.7,0.5)*2;
 	light.position = vec3(10,0,5);
@@ -116,7 +116,7 @@ function initialize()
 	light.power = 2;
 	light.enabled = true;
 	
-	_R.Light2 = light2 = _R.Scene.createLight();
+	_RND.Light2 = light2 = _RND.Scene.createLight();
 	light2.type = SS3DLIGHT_POINT;
 	light2.color = vec3(0.5,0.7,0.9)*2;
 	light2.position = vec3(-10,0,5);
@@ -124,7 +124,7 @@ function initialize()
 	light2.power = 2;
 	light2.enabled = true;
 	
-	_R.Light3 = light3 = _R.Scene.createLight();
+	_RND.Light3 = light3 = _RND.Scene.createLight();
 	light3.type = SS3DLIGHT_SPOT;
 	light3.color = vec3(0.5,0.5,0.5)*2;
 	light3.position = vec3(0,10,10);
@@ -135,16 +135,16 @@ function initialize()
 	light3.angle = 90;
 	light3.enabled = 1;
 	light3.genSpotLightMatrices();
-	light3.cookieTexture = _R.SS3D.getTexture( "testdata/cookie1.png" );
-	light3.shadowTexture = _R.SS3D.createRT( 64, 64, SS3DRT_FORMAT_DEPTH );
+	light3.cookieTexture = _RND.SS3D.getTexture( "testdata/cookie1.png" );
+	light3.shadowTexture = _RND.SS3D.createRT( 64, 64, SS3DRT_FORMAT_DEPTH );
 	
-	global camera = _R.Camera = SS3D_CreateCamera();
+	global camera = _RND.Camera = SS3D_CreateCamera();
 	camera.position = vec3(10,10,10);
 	camera.direction = vec3(-1,-1,-1);
 	camera.aspect = 16/9;
 	camera.angle = 100;
 	
-	_R.Scene.camera = camera;
+	_RND.Scene.camera = camera;
 }
 
 function update()
@@ -158,7 +158,7 @@ function update()
 	a = M_PI*0.5;//-t;
 	ca = cos( a );
 	sa = sin( a );
-	_R.MI.matrix = mat4
+	_RND.MI.matrix = mat4
 	(
 		ca, -sa, 0, 0,
 		sa, ca, 0, 0,
@@ -174,12 +174,12 @@ function update()
 //		testplane = vec4( 0, 0, 1, 0.5 );
 //		(idst,pdst) = ray_plane_intersect( crpos, crdir, testplane );
 //		if( idst > 0 )
-//			_R.Light.position = crpos + crdir * idst;
+//			_RND.Light.position = crpos + crdir * idst;
 //	}
 	
-	_R.PlaneMeshMI.setSkinMatrix( 1, mat4().rotateX( deg2rad( 15 * sin( t * 1.8 ) ) ) );
+	_RND.PlaneMeshMI.setSkinMatrix( 1, mat4().rotateX( deg2rad( 15 * sin( t * 1.8 ) ) ) );
 	
-	_R.SS3D.render();
+	_RND.SS3D.render();
 	
 	point = camera.worldToScreen( vec3(-5,0,10) );
 	
@@ -197,12 +197,12 @@ function update()
 	}
 	
 	statinfo = "--- Last render stats ---\n"
-		$"Number of meshes visible by main camera: " $ _R.SS3D.stat_numVisMeshes $ "\n"
-		$"Number of draw calls (total): " $ _R.SS3D.stat_numDrawCalls $ "\n"
-		$"Number of draw calls (shadow): " $ _R.SS3D.stat_numSDrawCalls $ "\n"
-		$"Number of draw calls (main): " $ _R.SS3D.stat_numMDrawCalls $ "\n"
-		$"Number of draw calls (screen): " $ _R.SS3D.stat_numPDrawCalls $ "\n"
-		$"Number of lights visible by main camera: " $ _R.SS3D.stat_numVisPLights $ " point, " $ _R.SS3D.stat_numVisSLights $ " spot\n"
+		$"Number of meshes visible by main camera: " $ _RND.SS3D.stat_numVisMeshes $ "\n"
+		$"Number of draw calls (total): " $ _RND.SS3D.stat_numDrawCalls $ "\n"
+		$"Number of draw calls (shadow): " $ _RND.SS3D.stat_numSDrawCalls $ "\n"
+		$"Number of draw calls (main): " $ _RND.SS3D.stat_numMDrawCalls $ "\n"
+		$"Number of draw calls (screen): " $ _RND.SS3D.stat_numPDrawCalls $ "\n"
+		$"Number of lights visible by main camera: " $ _RND.SS3D.stat_numVisPLights $ " point, " $ _RND.SS3D.stat_numVisSLights $ " spot\n"
 	;
 	SS_DrawTextRect( statinfo, Font, color(1), DT_LEFT | DT_TOP, 16, 3200, 16, 3200 );
 	
@@ -215,5 +215,5 @@ function on_event( e )
 		global sys_exit = true;
 	if( e.type == SDL_MOUSEMOTION )
 		global gCursorPos = vec2( e.x, e.y );
-	SS3D_Event( _R.SS3D, e );
+	SS3D_Event( _RND.SS3D, e );
 }

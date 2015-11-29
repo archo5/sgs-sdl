@@ -102,7 +102,7 @@ static int SS_GetTouchDevices( SGS_CTX )
 	numdevs = SDL_GetNumTouchDevices();
 	for( i = 0; i < numdevs; ++i )
 		sgs_PushInt( C, SDL_GetTouchDevice( i ) );
-	sgs_PushArray( C, numdevs );
+	sgs_CreateArray( C, NULL, numdevs );
 	return 1;
 }
 
@@ -131,7 +131,7 @@ static void _SS_PushFinger( SGS_CTX, SDL_Finger* finger )
 	sgs_PushReal( C, finger->y );
 	sgs_PushString( C, "pressure" );
 	sgs_PushReal( C, finger->pressure );
-	sgs_PushDict( C, 8 );
+	sgs_CreateDict( C, NULL, 8 );
 }
 
 static int SS_GetTouchFinger( SGS_CTX )
@@ -154,7 +154,7 @@ static int SS_GetTouchFingers( SGS_CTX )
 	count = SDL_GetNumTouchFingers( touchID );
 	for( i = 0; i < count; ++i )
 		_SS_PushFinger( C, SDL_GetTouchFinger( touchID, i ) );
-	sgs_PushArray( C, count );
+	sgs_CreateArray( C, NULL, count );
 	return 1;
 }
 
@@ -244,7 +244,7 @@ static int _SS_PeepEvents_PG( SGS_CTX, int get )
 		{
 			ss_CreateSDLEvent( C, &events[ i ] );
 		}
-		sgs_PushArray( C, outevents );
+		sgs_CreateArray( C, NULL, outevents );
 		return 1;
 	}
 }
@@ -293,7 +293,7 @@ static int SS_GetPlatformInfo( SGS_CTX )
 	sgs_PushString( C, "has_sse3" ); sgs_PushBool( C, SDL_HasSSE3() );
 	sgs_PushString( C, "has_sse41" ); sgs_PushBool( C, SDL_HasSSE41() );
 	sgs_PushString( C, "has_sse42" ); sgs_PushBool( C, SDL_HasSSE42() );
-	sgs_PushDict( C, sgs_StackSize( C ) );
+	sgs_CreateDict( C, NULL, sgs_StackSize( C ) );
 	return 1;
 }
 
@@ -305,7 +305,7 @@ static int SS_GetPowerInfo( SGS_CTX )
 	sgs_PushString( C, "state" ); sgs_PushInt( C, SDL_GetPowerInfo( &secs, &pct ) );
 	sgs_PushString( C, "seconds" ); sgs_PushInt( C, secs );
 	sgs_PushString( C, "percentage" ); sgs_PushInt( C, pct );
-	sgs_PushDict( C, sgs_StackSize( C ) );
+	sgs_CreateDict( C, NULL, sgs_StackSize( C ) );
 	return 1;
 }
 
@@ -367,21 +367,20 @@ static int SS_GetVideoDrivers( SGS_CTX )
 	num = SDL_GetNumVideoDrivers();
 	for( i = 0; i < num; ++i )
 		sgs_PushString( C, SDL_GetVideoDriver( i ) );
-	sgs_PushArray( C, num );
+	sgs_CreateArray( C, NULL, num );
 	return 1;
 }
 
 
 
-#define DM_HDR SDL_DisplayMode* DM = (SDL_DisplayMode*) data->data
+#define DM_HDR SDL_DisplayMode* DM = (SDL_DisplayMode*) obj->data
 
-static int ss_displaymode_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isprop )
+static int ss_displaymode_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
 	DM_HDR;
-	UNUSED( isprop );
 	
-	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
 		if( !strcmp( str, "format" ) ){ sgs_PushInt( C, DM->format ); return SGS_SUCCESS; }
 		if( !strcmp( str, "w" ) ){ sgs_PushInt( C, DM->w ); return SGS_SUCCESS; }
@@ -393,29 +392,28 @@ static int ss_displaymode_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key
 	return SGS_ENOTFND;
 }
 
-static int ss_displaymode_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* val, int isprop )
+static int ss_displaymode_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	char* str;
 	DM_HDR;
-	UNUSED( isprop );
 	
-	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
-		if( !strcmp( str, "format" ) ){ sgs_Int V; if( sgs_ParseIntP( C, val, &V ) ){ DM->format = V; return SGS_SUCCESS; } return SGS_EINVAL; }
-		if( !strcmp( str, "w" ) ){ sgs_Int V; if( sgs_ParseIntP( C, val, &V ) ){ DM->w = V; return SGS_SUCCESS; } return SGS_EINVAL; }
-		if( !strcmp( str, "h" ) ){ sgs_Int V; if( sgs_ParseIntP( C, val, &V ) ){ DM->h = V; return SGS_SUCCESS; } return SGS_EINVAL; }
-		if( !strcmp( str, "refresh_rate" ) ){ sgs_Int V; if( sgs_ParseIntP( C, val, &V ) ){ DM->refresh_rate = V; return SGS_SUCCESS; } return SGS_EINVAL; }
-		if( !strcmp( str, "driverdata" ) ){ void* V; if( sgs_ParsePtrP( C, val, &V ) ){ DM->driverdata = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		if( !strcmp( str, "format" ) ){ sgs_Int V; if( sgs_ParseInt( C, 1, &V ) ){ DM->format = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		if( !strcmp( str, "w" ) ){ sgs_Int V; if( sgs_ParseInt( C, 1, &V ) ){ DM->w = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		if( !strcmp( str, "h" ) ){ sgs_Int V; if( sgs_ParseInt( C, 1, &V ) ){ DM->h = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		if( !strcmp( str, "refresh_rate" ) ){ sgs_Int V; if( sgs_ParseInt( C, 1, &V ) ){ DM->refresh_rate = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		if( !strcmp( str, "driverdata" ) ){ void* V; if( sgs_ParsePtr( C, 1, &V ) ){ DM->driverdata = V; return SGS_SUCCESS; } return SGS_EINVAL; }
 	}
 	
 	return SGS_ENOTFND;
 }
 
-static int ss_displaymode_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
+static int ss_displaymode_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 {
 	char bfr[ 256 ];
 	DM_HDR;
-	UNUSED( maxdepth );
+	SGS_UNUSED( maxdepth );
 	
 	sprintf( bfr, "SDL_DisplayMode(format=%u, w=%d, h=%d, refresh_rate=%d, driverdata=%p)", (unsigned) DM->format, DM->w, DM->h, DM->refresh_rate, DM->driverdata );
 	sgs_PushString( C, bfr );
@@ -423,11 +421,11 @@ static int ss_displaymode_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
 }
 
 static void ss_PushDisplayMode( SGS_CTX, SDL_DisplayMode* dm );
-static int ss_displaymode_convert( SGS_CTX, sgs_VarObj* data, int type )
+static int ss_displaymode_convert( SGS_CTX, sgs_VarObj* obj, int type )
 {
 	if( type == SGS_VT_STRING )
 	{
-		return ss_displaymode_dump( C, data, 1 );
+		return ss_displaymode_dump( C, obj, 1 );
 	}
 	else if( type == SGS_CONVOP_CLONE )
 	{
@@ -449,7 +447,7 @@ static sgs_ObjInterface ss_displaymode_iface[1] =
 
 static void ss_PushDisplayMode( SGS_CTX, SDL_DisplayMode* dm )
 {
-	SDL_DisplayMode* mode = (SDL_DisplayMode*) sgs_PushObjectIPA( C, sizeof(SDL_DisplayMode), ss_displaymode_iface );
+	SDL_DisplayMode* mode = (SDL_DisplayMode*) sgs_CreateObjectIPA( C, NULL, sizeof(SDL_DisplayMode), ss_displaymode_iface );
 	memcpy( mode, dm, sizeof(SDL_DisplayMode) );
 }
 /* UNUSED
@@ -550,7 +548,7 @@ static int SS_GetDisplayModes( SGS_CTX )
 			return sgs_Msg( C, SGS_WARNING, "failed to get display mode #%d for display #%d: %s", i, (int) did, SDL_GetError() );
 		ss_PushDisplayMode( C, &mode );
 	}
-	sgs_PushArray( C, num );
+	sgs_CreateArray( C, NULL, num );
 	return 1;
 }
 static int SS_GetDisplayBounds( SGS_CTX )
@@ -572,7 +570,7 @@ static int SS_GetDisplayBounds( SGS_CTX )
 	sgs_PushInt( C, rect.w );
 	sgs_PushString( C, "h" );
 	sgs_PushInt( C, rect.h );
-	sgs_PushDict( C, 8 );
+	sgs_CreateDict( C, NULL, 8 );
 	return 1;
 }
 static int SS_GetClosestDisplayMode( SGS_CTX )
@@ -620,7 +618,7 @@ static int SS_GetDesktopDisplayMode( SGS_CTX )
 
 
 
-#define WND_HDR SS_Window* W = (SS_Window*) data->data;
+#define WND_HDR SS_Window* W = (SS_Window*) obj->data;
 #define WND_IHDR( funcname ) SS_Window* W; \
 	if( !SGS_PARSE_METHOD( C, SS_Window_iface, W, SS_Window, funcname ) ) return 0;
 
@@ -791,29 +789,28 @@ static int SS_WindowI_setBufferScale( SGS_CTX )
 }
 
 
-static int SS_Window_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isprop )
+static int SS_Window_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
 	WND_HDR;
-	UNUSED( isprop );
 	
-	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
 		/* function properties */
-		if( !strcmp( str, "show" ) ){ sgs_PushCFunction( C, SS_WindowI_show ); return SGS_SUCCESS; }
-		if( !strcmp( str, "hide" ) ){ sgs_PushCFunction( C, SS_WindowI_hide ); return SGS_SUCCESS; }
-		if( !strcmp( str, "minimize" ) ){ sgs_PushCFunction( C, SS_WindowI_minimize ); return SGS_SUCCESS; }
-		if( !strcmp( str, "maximize" ) ){ sgs_PushCFunction( C, SS_WindowI_maximize ); return SGS_SUCCESS; }
-		if( !strcmp( str, "restore" ) ){ sgs_PushCFunction( C, SS_WindowI_restore ); return SGS_SUCCESS; }
-		if( !strcmp( str, "raise" ) ){ sgs_PushCFunction( C, SS_WindowI_raise ); return SGS_SUCCESS; }
-		if( !strcmp( str, "setPosition" ) ){ sgs_PushCFunction( C, SS_WindowI_setPosition ); return SGS_SUCCESS; }
-		if( !strcmp( str, "setSize" ) ){ sgs_PushCFunction( C, SS_WindowI_setSize ); return SGS_SUCCESS; }
-		if( !strcmp( str, "setMaxSize" ) ){ sgs_PushCFunction( C, SS_WindowI_setMaxSize ); return SGS_SUCCESS; }
-		if( !strcmp( str, "setMinSize" ) ){ sgs_PushCFunction( C, SS_WindowI_setMinSize ); return SGS_SUCCESS; }
-		if( !strcmp( str, "warpMouse" ) ){ sgs_PushCFunction( C, SS_WindowI_warpMouse ); return SGS_SUCCESS; }
-		if( !strcmp( str, "initRenderer" ) ){ sgs_PushCFunction( C, SS_WindowI_initRenderer ); return SGS_SUCCESS; }
-		if( !strcmp( str, "makeCurrent" ) ){ sgs_PushCFunction( C, SS_WindowI_makeCurrent ); return SGS_SUCCESS; }
-		if( !strcmp( str, "setBufferScale" ) ){ sgs_PushCFunction( C, SS_WindowI_setBufferScale ); return SGS_SUCCESS; }
+		if( !strcmp( str, "show" ) ){ sgs_PushCFunc( C, SS_WindowI_show ); return SGS_SUCCESS; }
+		if( !strcmp( str, "hide" ) ){ sgs_PushCFunc( C, SS_WindowI_hide ); return SGS_SUCCESS; }
+		if( !strcmp( str, "minimize" ) ){ sgs_PushCFunc( C, SS_WindowI_minimize ); return SGS_SUCCESS; }
+		if( !strcmp( str, "maximize" ) ){ sgs_PushCFunc( C, SS_WindowI_maximize ); return SGS_SUCCESS; }
+		if( !strcmp( str, "restore" ) ){ sgs_PushCFunc( C, SS_WindowI_restore ); return SGS_SUCCESS; }
+		if( !strcmp( str, "raise" ) ){ sgs_PushCFunc( C, SS_WindowI_raise ); return SGS_SUCCESS; }
+		if( !strcmp( str, "setPosition" ) ){ sgs_PushCFunc( C, SS_WindowI_setPosition ); return SGS_SUCCESS; }
+		if( !strcmp( str, "setSize" ) ){ sgs_PushCFunc( C, SS_WindowI_setSize ); return SGS_SUCCESS; }
+		if( !strcmp( str, "setMaxSize" ) ){ sgs_PushCFunc( C, SS_WindowI_setMaxSize ); return SGS_SUCCESS; }
+		if( !strcmp( str, "setMinSize" ) ){ sgs_PushCFunc( C, SS_WindowI_setMinSize ); return SGS_SUCCESS; }
+		if( !strcmp( str, "warpMouse" ) ){ sgs_PushCFunc( C, SS_WindowI_warpMouse ); return SGS_SUCCESS; }
+		if( !strcmp( str, "initRenderer" ) ){ sgs_PushCFunc( C, SS_WindowI_initRenderer ); return SGS_SUCCESS; }
+		if( !strcmp( str, "makeCurrent" ) ){ sgs_PushCFunc( C, SS_WindowI_makeCurrent ); return SGS_SUCCESS; }
+		if( !strcmp( str, "setBufferScale" ) ){ sgs_PushCFunc( C, SS_WindowI_setBufferScale ); return SGS_SUCCESS; }
 		
 		/* data properties */
 		if( !strcmp( str, "borderless" ) ){ sgs_PushBool( C, ( SDL_GetWindowFlags( W->window ) & SDL_WINDOW_BORDERLESS ) != 0 ); return SGS_SUCCESS; }
@@ -844,7 +841,7 @@ static int SS_Window_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int
 			SDL_GetWindowMaximumSize( W->window, &w, &h );
 			sgs_PushInt( C, w );
 			sgs_PushInt( C, h );
-			sgs_PushArray( C, 2 );
+			sgs_CreateArray( C, NULL, 2 );
 			return SGS_SUCCESS;
 		}
 		if( !strcmp( str, "maxWidth" ) ){ int w, h; SDL_GetWindowMaximumSize( W->window, &w, &h ); sgs_PushInt( C, w ); return SGS_SUCCESS; }
@@ -855,7 +852,7 @@ static int SS_Window_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int
 			SDL_GetWindowMinimumSize( W->window, &w, &h );
 			sgs_PushInt( C, w );
 			sgs_PushInt( C, h );
-			sgs_PushArray( C, 2 );
+			sgs_CreateArray( C, NULL, 2 );
 			return SGS_SUCCESS;
 		}
 		if( !strcmp( str, "minWidth" ) ){ int w, h; SDL_GetWindowMinimumSize( W->window, &w, &h ); sgs_PushInt( C, w ); return SGS_SUCCESS; }
@@ -867,7 +864,7 @@ static int SS_Window_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int
 			SDL_GetWindowPosition( W->window, &x, &y );
 			sgs_PushInt( C, x );
 			sgs_PushInt( C, y );
-			sgs_PushArray( C, 2 );
+			sgs_CreateArray( C, NULL, 2 );
 			return SGS_SUCCESS;
 		}
 		if( !strcmp( str, "x" ) ){ int x, y; SDL_GetWindowPosition( W->window, &x, &y ); sgs_PushInt( C, x ); return SGS_SUCCESS; }
@@ -878,7 +875,7 @@ static int SS_Window_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int
 			SDL_GetWindowSize( W->window, &w, &h );
 			sgs_PushInt( C, w );
 			sgs_PushInt( C, h );
-			sgs_PushArray( C, 2 );
+			sgs_CreateArray( C, NULL, 2 );
 			return SGS_SUCCESS;
 		}
 		if( !strcmp( str, "width" ) ){ int w, h; SDL_GetWindowSize( W->window, &w, &h ); sgs_PushInt( C, w ); return SGS_SUCCESS; }
@@ -922,18 +919,17 @@ static int SS_Window_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int
 	return SGS_ENOTFND;
 }
 
-static int SS_Window_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* val, int isprop )
+static int SS_Window_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	char* str;
 	WND_HDR;
-	UNUSED( isprop );
 	
-	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
 		if( !strcmp( str, "borderless" ) )
 		{
 			sgs_Bool V;
-			if( sgs_ParseBoolP( C, val, &V ) )
+			if( sgs_ParseBool( C, 1, &V ) )
 			{
 				SDL_SetWindowBordered( W->window, !V );
 				return SGS_SUCCESS;
@@ -943,7 +939,7 @@ static int SS_Window_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs
 		if( !strcmp( str, "brightness" ) )
 		{
 			sgs_Real V;
-			if( sgs_ParseRealP( C, val, &V ) )
+			if( sgs_ParseReal( C, 1, &V ) )
 			{
 				if( 0 != SDL_SetWindowBrightness( W->window, V ) )
 					sgs_Msg( C, SGS_WARNING, "failed to set brightness: %s\n", SDL_GetError() );
@@ -954,7 +950,7 @@ static int SS_Window_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs
 		if( !strcmp( str, "fullscreen" ) )
 		{
 			sgs_Int V;
-			if( sgs_ParseIntP( C, val, &V ) )
+			if( sgs_ParseInt( C, 1, &V ) )
 			{
 				if( 0 != SDL_SetWindowFullscreen( W->window, V ) )
 					sgs_Msg( C, SGS_WARNING, "failed to set fullscreen: %s\n", SDL_GetError() );
@@ -965,7 +961,7 @@ static int SS_Window_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs
 		if( !strcmp( str, "grab" ) )
 		{
 			sgs_Bool V;
-			if( sgs_ParseBoolP( C, val, &V ) )
+			if( sgs_ParseBool( C, 1, &V ) )
 			{
 				SDL_SetWindowGrab( W->window, V );
 				return SGS_SUCCESS;
@@ -975,7 +971,7 @@ static int SS_Window_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs
 		if( !strcmp( str, "title" ) )
 		{
 			char* V;
-			if( sgs_ParseStringP( C, val, &V, NULL ) )
+			if( sgs_ParseString( C, 1, &V, NULL ) )
 			{
 				SDL_SetWindowTitle( W->window, V );
 				return SGS_SUCCESS;
@@ -986,7 +982,7 @@ static int SS_Window_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs
 	return SGS_ENOTFND;
 }
 
-static int SS_Window_destruct( SGS_CTX, sgs_VarObj* data )
+static int SS_Window_destruct( SGS_CTX, sgs_VarObj* obj )
 {
 	WND_HDR;
 	if( W->renderer )
@@ -997,8 +993,7 @@ static int SS_Window_destruct( SGS_CTX, sgs_VarObj* data )
 		{
 			// destroyed current
 			ss_MakeCurrent( NULL, NULL );
-			sgs_PushNull( C );
-			sgs_StoreGlobal( C, "_R" );
+			sgs_SetGlobalByName( C, "_RND", sgs_MakeNull() );
 		}
 		else
 		{
@@ -1029,7 +1024,7 @@ static int SS_CreateWindow( SGS_CTX )
 		return 0;
 	
 //	f |= SDL_WINDOW_OPENGL;
-	W = (SS_Window*) sgs_PushObjectIPA( C, sizeof(SS_Window), SS_Window_iface );
+	W = (SS_Window*) sgs_CreateObjectIPA( C, NULL, sizeof(SS_Window), SS_Window_iface );
 	W->window = SDL_CreateWindow( str, x, y, w, h, f );
 	W->renderer = NULL;
 	W->riface = NULL;
@@ -1098,7 +1093,7 @@ static int SS_MessageBox( SGS_CTX )
 	SGSFN( "SS_MessageBox" );
 	if( sgs_LoadArgs( C, "iss|x", &flags, &title, &message, ss_acf_Window, &W ) )
 		return 0;
-	SGS_RETURN_BOOL( 0 == SDL_ShowSimpleMessageBox( flags, title, message, W ? W->window : NULL ) );
+	return sgs_PushBool( C, 0 == SDL_ShowSimpleMessageBox( flags, title, message, W ? W->window : NULL ) );
 }
 
 
@@ -1108,8 +1103,7 @@ static int SS_GetKeyFromName( SGS_CTX )
 	SGSFN( "SS_GetKeyFromName" );
 	if( !sgs_LoadArgs( C, "s", &str ) )
 		return 0;
-	sgs_PushInt( C, SDL_GetKeyFromName( str ) );
-	return 1;
+	return sgs_PushInt( C, SDL_GetKeyFromName( str ) );
 }
 
 static int SS_GetScancodeFromName( SGS_CTX )
@@ -1118,8 +1112,7 @@ static int SS_GetScancodeFromName( SGS_CTX )
 	SGSFN( "SS_GetScancodeFromName" );
 	if( !sgs_LoadArgs( C, "s", &str ) )
 		return 0;
-	sgs_PushInt( C, SDL_GetScancodeFromName( str ) );
-	return 1;
+	return sgs_PushInt( C, SDL_GetScancodeFromName( str ) );
 }
 
 static int SS_GetKeyFromScancode( SGS_CTX )
@@ -1128,8 +1121,7 @@ static int SS_GetKeyFromScancode( SGS_CTX )
 	SGSFN( "SS_GetKeyFromScancode" );
 	if( !sgs_LoadArgs( C, "i", &sc ) )
 		return 0;
-	sgs_PushInt( C, SDL_GetKeyFromScancode( sc ) );
-	return 1;
+	return sgs_PushInt( C, SDL_GetKeyFromScancode( sc ) );
 }
 
 static int SS_GetScancodeFromKey( SGS_CTX )
@@ -1138,8 +1130,7 @@ static int SS_GetScancodeFromKey( SGS_CTX )
 	SGSFN( "SS_GetScancodeFromKey" );
 	if( !sgs_LoadArgs( C, "i", &key ) )
 		return 0;
-	sgs_PushInt( C, SDL_GetScancodeFromKey( key ) );
-	return 1;
+	return sgs_PushInt( C, SDL_GetScancodeFromKey( key ) );
 }
 
 static int SS_GetKeyName( SGS_CTX )
@@ -1148,8 +1139,7 @@ static int SS_GetKeyName( SGS_CTX )
 	SGSFN( "SS_GetKeyName" );
 	if( !sgs_LoadArgs( C, "i", &key ) )
 		return 0;
-	sgs_PushString( C, SDL_GetKeyName( key ) );
-	return 1;
+	return sgs_PushString( C, SDL_GetKeyName( key ) );
 }
 
 static int SS_GetScancodeName( SGS_CTX )
@@ -1158,8 +1148,7 @@ static int SS_GetScancodeName( SGS_CTX )
 	SGSFN( "SS_GetScancodeName" );
 	if( !sgs_LoadArgs( C, "i", &key ) )
 		return 0;
-	sgs_PushString( C, SDL_GetScancodeName( key ) );
-	return 1;
+	return sgs_PushString( C, SDL_GetScancodeName( key ) );
 }
 
 static int SS_GetKeyboardFocus( SGS_CTX )
@@ -1449,15 +1438,15 @@ static int SS_Joystick_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	JS_HDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "open" ) SGS_RETURN_CFUNC( SS_JoystickI_open );
-		SGS_CASE( "close" ) SGS_RETURN_CFUNC( SS_JoystickI_close );
-		SGS_CASE( "getAxis" ) SGS_RETURN_CFUNC( SS_JoystickI_getAxis );
-		SGS_CASE( "getBall" ) SGS_RETURN_CFUNC( SS_JoystickI_getBall );
-		SGS_CASE( "getButton" ) SGS_RETURN_CFUNC( SS_JoystickI_getButton );
-		SGS_CASE( "getHat" ) SGS_RETURN_CFUNC( SS_JoystickI_getHat );
+		SGS_CASE( "open" ) return sgs_PushCFunc( C, SS_JoystickI_open );
+		SGS_CASE( "close" ) return sgs_PushCFunc( C, SS_JoystickI_close );
+		SGS_CASE( "getAxis" ) return sgs_PushCFunc( C, SS_JoystickI_getAxis );
+		SGS_CASE( "getBall" ) return sgs_PushCFunc( C, SS_JoystickI_getBall );
+		SGS_CASE( "getButton" ) return sgs_PushCFunc( C, SS_JoystickI_getButton );
+		SGS_CASE( "getHat" ) return sgs_PushCFunc( C, SS_JoystickI_getHat );
 		
-		SGS_CASE( "attached" ) SGS_RETURN_BOOL( SDL_JoystickGetAttached( JS ) );
-		SGS_CASE( "instanceID" ) SGS_RETURN_INT( SDL_JoystickInstanceID( JS ) );
+		SGS_CASE( "attached" ) return sgs_PushBool( C, SDL_JoystickGetAttached( JS ) );
+		SGS_CASE( "instanceID" ) return sgs_PushInt( C, SDL_JoystickInstanceID( JS ) );
 		SGS_CASE( "guid" )
 		{
 			static const Uint8 nullguid[16] = {0};
@@ -1481,10 +1470,10 @@ static int SS_Joystick_getindex( SGS_ARGS_GETINDEXFUNC )
 				sgs_PushNull( C );
 			return SGS_SUCCESS;
 		}
-		SGS_CASE( "numAxes" ) SGS_RETURN_INT( SDL_JoystickNumAxes( JS ) );
-		SGS_CASE( "numBalls" ) SGS_RETURN_INT( SDL_JoystickNumBalls( JS ) );
-		SGS_CASE( "numButtons" ) SGS_RETURN_INT( SDL_JoystickNumButtons( JS ) );
-		SGS_CASE( "numHats" ) SGS_RETURN_INT( SDL_JoystickNumHats( JS ) );
+		SGS_CASE( "numAxes" ) return sgs_PushInt( C, SDL_JoystickNumAxes( JS ) );
+		SGS_CASE( "numBalls" ) return sgs_PushInt( C, SDL_JoystickNumBalls( JS ) );
+		SGS_CASE( "numButtons" ) return sgs_PushInt( C, SDL_JoystickNumButtons( JS ) );
+		SGS_CASE( "numHats" ) return sgs_PushInt( C, SDL_JoystickNumHats( JS ) );
 	SGS_END_INDEXFUNC;
 }
 
@@ -1506,7 +1495,7 @@ static int SS_GetJoystick( SGS_CTX )
 		return 0;
 	
 	sgs_SetStackSize( C, 0 );
-	sgs_PushObject( C, NULL, SS_Joystick_iface );
+	sgs_CreateObject( C, NULL, NULL, SS_Joystick_iface );
 	if( sgs_StackSize( C ) >= 1 )
 	{
 		JS = SDL_JoystickOpen( which );
@@ -1563,7 +1552,7 @@ static int SS_GetJoystickNames( SGS_CTX )
 		else
 			sgs_PushNull( C );
 	}
-	sgs_PushArray( C, count );
+	sgs_CreateArray( C, NULL, count );
 	return 1;
 }
 
@@ -1686,7 +1675,7 @@ static int _SS_PushGCBind( SGS_CTX, SDL_GameControllerButtonBind* bind )
 		sgs_PushInt( C, bind->value.hat.hat_mask );
 		break;
 	}
-	sgs_PushDict( C, sgs_StackSize( C ) - ssz );
+	sgs_CreateDict( C, NULL, sgs_StackSize( C ) - ssz );
 	return 1;
 }
 
@@ -1724,15 +1713,15 @@ static int SS_GameController_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	GC_HDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "open" ) SGS_RETURN_CFUNC( SS_GameControllerI_open );
-		SGS_CASE( "close" ) SGS_RETURN_CFUNC( SS_GameControllerI_close );
-		SGS_CASE( "getAxis" ) SGS_RETURN_CFUNC( SS_GameControllerI_getAxis );
-		SGS_CASE( "getButton" ) SGS_RETURN_CFUNC( SS_GameControllerI_getButton );
-		SGS_CASE( "getBindForAxis" ) SGS_RETURN_CFUNC( SS_GameControllerI_getBindForAxis );
-		SGS_CASE( "getBindForButton" ) SGS_RETURN_CFUNC( SS_GameControllerI_getBindForButton );
+		SGS_CASE( "open" ) return sgs_PushCFunc( C, SS_GameControllerI_open );
+		SGS_CASE( "close" ) return sgs_PushCFunc( C, SS_GameControllerI_close );
+		SGS_CASE( "getAxis" ) return sgs_PushCFunc( C, SS_GameControllerI_getAxis );
+		SGS_CASE( "getButton" ) return sgs_PushCFunc( C, SS_GameControllerI_getButton );
+		SGS_CASE( "getBindForAxis" ) return sgs_PushCFunc( C, SS_GameControllerI_getBindForAxis );
+		SGS_CASE( "getBindForButton" ) return sgs_PushCFunc( C, SS_GameControllerI_getBindForButton );
 		
-		SGS_CASE( "attached" ) SGS_RETURN_BOOL( SDL_GameControllerGetAttached( GC ) );
-		SGS_CASE( "joystick" ) { sgs_PushObject( C, SDL_GameControllerGetJoystick( GC ), SS_Joystick_iface ); return SGS_SUCCESS; }
+		SGS_CASE( "attached" ) return sgs_PushBool( C, SDL_GameControllerGetAttached( GC ) );
+		SGS_CASE( "joystick" ) { sgs_CreateObject( C, NULL, SDL_GameControllerGetJoystick( GC ), SS_Joystick_iface ); return SGS_SUCCESS; }
 		SGS_CASE( "name" )
 		{
 			const char* nm = SDL_GameControllerName( GC );
@@ -1763,7 +1752,7 @@ static int SS_GetGameController( SGS_CTX )
 		return 0;
 	
 	sgs_SetStackSize( C, 0 );
-	sgs_PushObject( C, NULL, SS_GameController_iface );
+	sgs_CreateObject( C, NULL, NULL, SS_GameController_iface );
 	if( sgs_StackSize( C ) >= 1 )
 	{
 		GC = SDL_GameControllerOpen( which );
@@ -1884,7 +1873,7 @@ static int SS_GetGameControllerNames( SGS_CTX )
 			rcnt++;
 		}
 	}
-	sgs_PushArray( C, rcnt );
+	sgs_CreateArray( C, NULL, rcnt );
 	return 1;
 }
 
@@ -2863,17 +2852,12 @@ static sgs_RegFuncConst sdl_funcs[] =
 	FN( Clear ), FN( Present ),
 };
 
-int ss_InitSDL( SGS_CTX )
+void ss_InitSDL( SGS_CTX )
 {
-	int ret;
-	ret = sgs_RegIntConsts( C, sdl_ints, ARRAY_SIZE( sdl_ints ) );
-	if( ret != SGS_SUCCESS ) return ret;
-	ret = sgs_RegFuncConsts( C, sdl_funcs, ARRAY_SIZE( sdl_funcs ) );
-	if( ret != SGS_SUCCESS ) return ret;
+	sgs_RegIntConsts( C, sdl_ints, ARRAY_SIZE( sdl_ints ) );
+	sgs_RegFuncConsts( C, sdl_funcs, ARRAY_SIZE( sdl_funcs ) );
 	
 	ri_init();
-	
-	return SGS_SUCCESS;
 }
 
 
@@ -2939,7 +2923,7 @@ static void ss_calc_cursor_pos( int* rcp_x, int* rcp_y, int x, int y, Uint32 wid
 
 void ss_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 {
-	int osz, ret, rcp_x, rcp_y;
+	int osz, rcp_x, rcp_y;
 	
 	osz = sgs_StackSize( C );
 	
@@ -3214,6 +3198,5 @@ void ss_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 		
 	}
 	
-	ret = sgs_PushDict( C, sgs_StackSize( C ) - osz );
-	sgs_BreakIf( ret != SGS_SUCCESS );
+	sgs_CreateDict( C, NULL, sgs_StackSize( C ) - osz );
 }

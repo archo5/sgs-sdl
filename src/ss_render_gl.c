@@ -237,15 +237,15 @@ static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t flags )
 	sgs_vht_init( &R->rsrc_table, C, 64, 64 );
 	R->destructing = 0;
 	
-	sgs_InitDict( C, &R->textures, 0 );
-	sgs_InitDict( C, &R->fonts, 0 );
-	sgs_InitDict( C, &R->rsdict, 0 );
+	sgs_CreateDict( C, &R->textures, 0 );
+	sgs_CreateDict( C, &R->fonts, 0 );
+	sgs_CreateDict( C, &R->rsdict, 0 );
 	
 	sgs_PushString( C, "textures" );
-	sgs_SetIndexPIP( C, &R->rsdict, -1, &R->textures, 0 );
+	sgs_SetIndex( C, R->rsdict, sgs_StackItem( C, -1 ), R->textures, 0 );
 	sgs_Pop( C, 1 );
 	sgs_PushString( C, "fonts" );
-	sgs_SetIndexPIP( C, &R->rsdict, -1, &R->fonts, 0 );
+	sgs_SetIndex( C, R->rsdict, sgs_StackItem( C, -1 ), R->fonts, 0 );
 	sgs_Pop( C, 1 );
 	
 	return R;
@@ -277,7 +277,7 @@ static void ss_ri_gl_destroy( SS_Renderer* R )
 
 static void* ss_ri_gl_get_pointer( SS_Renderer* R, int which )
 {
-	UNUSED( which );
+	SGS_UNUSED( which );
 	return NULL;
 }
 
@@ -309,8 +309,7 @@ static void ss_ri_gl_set_buffer_scale( SS_Renderer* R, int enable, int width, in
 static void ss_ri_gl_set_current( SS_Renderer* R )
 {
 	SGS_CTX = ss_GetContext();
-	sgs_PushVariable( C, &R->rsdict );
-	sgs_StoreGlobal( C, "_R" );
+	sgs_SetGlobalByName( C, "_RND", R->rsdict );
 	
 	SDL_GL_MakeCurrent( R->window, R->ctx );
 }
@@ -318,12 +317,11 @@ static void ss_ri_gl_set_current( SS_Renderer* R )
 static void ss_ri_gl_poke_resource( SS_Renderer* R, sgs_VarObj* obj, int add )
 {
 	SGS_CTX = ss_GetContext();
-	sgs_Variable K;
+	sgs_Variable K = sgs_MakePtr( obj );
 	
 	if( R->destructing )
 		return;
 	
-	sgs_InitPtr( &K, obj );
 	if( add )
 		sgs_vht_set( &R->rsrc_table, C, &K, &K );
 	else

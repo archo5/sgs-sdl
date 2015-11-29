@@ -30,8 +30,7 @@ void ss_MakeCurrent( SS_RenderInterface* ri, SS_Renderer* rr )
 	GCurRI = ri;
 	GCurRr = rr;
 	
-	sgs_PushBool( C, ri ? ( ri->flags & SS_RI_COLOR_BGRA ) : 0 );
-	sgs_StoreGlobal( C, "sys_rctx_flip_colors" );
+	sgs_SetGlobalByName( C, "sys_rctx_flip_colors", sgs_MakeBool( ri ? ( ri->flags & SS_RI_COLOR_BGRA ) : 0 ) );
 }
 
 SS_TmpCtx ss_TmpMakeCurrent( SS_RenderInterface* ri, SS_Renderer* rr )
@@ -81,9 +80,9 @@ static void _mtx_identity( float* m )
 }
 
 
-#define TEXHDR SS_Texture* T = (SS_Texture*) data->data
+#define TEXHDR SS_Texture* T = (SS_Texture*) obj->data
 
-static int sstex_destruct( SGS_CTX, sgs_VarObj* data )
+static int sstex_destruct( SGS_CTX, sgs_VarObj* obj )
 {
 	TEXHDR;
 	if( T->renderer )
@@ -92,13 +91,13 @@ static int sstex_destruct( SGS_CTX, sgs_VarObj* data )
 		SS_TmpCtx ctx = ss_TmpMakeCurrent( RI, T->renderer );
 		RI->destroy_texture( T->renderer, T );
 		T->renderer = NULL;
-		GCurRI->poke_resource( GCurRr, data, 0 );
+		GCurRI->poke_resource( GCurRr, obj, 0 );
 		ss_TmpRestoreCurrent( &ctx );
 	}
 	return SGS_SUCCESS;
 }
 
-static int sstex_convert( SGS_CTX, sgs_VarObj* data, int type )
+static int sstex_convert( SGS_CTX, sgs_VarObj* obj, int type )
 {
 	if( type == SGS_VT_STRING )
 	{
@@ -111,13 +110,12 @@ static int sstex_convert( SGS_CTX, sgs_VarObj* data, int type )
 	return SGS_ENOTSUP;
 }
 
-static int sstex_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isprop )
+static int sstex_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
 	sgs_SizeVal size;
 	TEXHDR;
-	UNUSED( isprop );
-	if( sgs_ParseStringP( C, key, &str, &size ) )
+	if( sgs_ParseString( C, 0, &str, &size ) )
 	{
 		if( !strcmp( str, "width" ) ) return sgs_PushInt( C, T->width );
 		if( !strcmp( str, "height" ) ) return sgs_PushInt( C, T->height );
@@ -192,7 +190,7 @@ static int SS_CreateTexture( SGS_CTX )
 		sgs_PushInt( C, flags ); /* NAME [FLAGS...] NAME "|" INT_FLAGS */
 		sgs_StringConcat( C, 3 ); /* NAME [FLAGS...] KEY */
 		
-		if( sgs_PushIndexPI( C, &GCurRr->textures, -1, 0 ) == SGS_SUCCESS )
+		if( sgs_PushIndex( C, GCurRr->textures, sgs_StackItem( C, -1 ), SGS_FALSE ) )
 		{
 			/* found it! */
 			return 1;
@@ -205,7 +203,8 @@ static int SS_CreateTexture( SGS_CTX )
 		/* NAME [FLAGS...] KEY IMAGE */
 		
 		/* insert return value as argument #0 */
-		sgs_StoreItem( C, 0 );
+		sgs_SetStackItem( C, 0, sgs_StackItem( C, -1 ) );
+		sgs_Pop( C, 1 );
 		/* IMAGE [FLAGS...] KEY */
 		
 		/* texture key must stay at position -1 */
@@ -217,7 +216,7 @@ static int SS_CreateTexture( SGS_CTX )
 		_WARN( "unexpected arguments; function expects 1-2 arguments: (image|string)[, string]" )
 	
 	{
-		SS_Texture* T = (SS_Texture*) sgs_PushObjectIPA( C, sizeof(SS_Texture), SS_Texture_iface );
+		SS_Texture* T = (SS_Texture*) sgs_CreateObjectIPA( C, NULL, sizeof(SS_Texture), SS_Texture_iface );
 		memset( T, 0, sizeof(*T) );
 		
 		if( !GCurRI->create_texture_argb8( GCurRr, T, ii, flags ) )
@@ -232,7 +231,7 @@ static int SS_CreateTexture( SGS_CTX )
 	if( bystr )
 	{
 		/* save texture in cache */
-		sgs_SetIndexPII( C, &GCurRr->textures, -2, -1, 0 );
+		sgs_SetIndex( C, GCurRr->textures, sgs_StackItem( C, -2 ), sgs_StackItem( C, -1 ), SGS_FALSE );
 	}
 	
 	return 1;
@@ -251,7 +250,7 @@ static int SS_CreateRenderTexture( SGS_CTX )
 		flags = ss_GetFlagString( C, 2, ss_tex_flagitems );
 	
 	{
-		SS_Texture* T = (SS_Texture*) sgs_PushObjectIPA( C, sizeof(SS_Texture), SS_Texture_iface );
+		SS_Texture* T = (SS_Texture*) sgs_CreateObjectIPA( C, NULL, sizeof(SS_Texture), SS_Texture_iface );
 		memset( T, 0, sizeof(*T) );
 		
 		if( !GCurRI->create_texture_rnd( GCurRr, T, w, h, flags ) )
@@ -363,6 +362,7 @@ static float* floatbuf_get_ptr( floatbuf* buf )
 	
 static const char* _parse_floatvec( SGS_CTX, int stkitem, float* out, int numcomp )
 {
+	int32_t i, asz;
 	int pnp = -1;
 	sgs_Real R;
 	if( sgs_ParseVec2( C, stkitem, out, 1 ) ) pnp = 2;
@@ -370,16 +370,15 @@ static const char* _parse_floatvec( SGS_CTX, int stkitem, float* out, int numcom
 	else if( sgs_ParseVec4( C, stkitem, out, 1 ) ) pnp = 4;
 	else if( sgs_ParseColor( C, stkitem, out, 1 ) ) pnp = 4;
 	else if( sgs_ParseMat4( C, stkitem, out ) ) pnp = 16;
-	else if( sgs_ArraySize( C, stkitem ) >= 0 )
+	else if( ( asz = sgs_ArraySize( C, sgs_StackItem( C, stkitem ) ) ) >= 0 )
 	{
-		int32_t i, asz = sgs_ArraySize( C, stkitem );
 		if( asz > numcomp )
 			asz = numcomp;
 		
 		for( i = 0; i < asz; ++i )
 		{
 			sgs_Real real;
-			if( sgs_PushNumIndex( C, stkitem, i ) )
+			if( sgs_PushNumIndex( C, sgs_StackItem( C, stkitem ), i ) )
 			{
 				return "could not read from array";
 			}
@@ -408,9 +407,10 @@ static const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, i
 {
 	float* off;
 	int32_t i, asz;
+	sgs_Variable arrvar;
 	
 	sgs_SizeVal ssz = sgs_StackSize( C );
-	sgs_PushVariable( C, var );
+	sgs_PushVariable( C, *var );
 	if( !arr )
 	{
 		const char* res;
@@ -424,7 +424,8 @@ static const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, i
 		return res;
 	}
 	
-	asz = sgs_ArraySize( C, -1 );
+	arrvar = sgs_StackItem( C, -1 );
+	asz = sgs_ArraySize( C, arrvar );
 	if( asz < 0 )
 	{
 		sgs_Pop( C, 1 );
@@ -440,7 +441,7 @@ static const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, i
 	for( i = 0; i < asz; ++i )
 	{
 		const char* subres;
-		if( sgs_PushNumIndex( C, -1, i ) || sgs_ItemType( C, -1 ) != SGS_VT_OBJECT )
+		if( sgs_PushNumIndex( C, arrvar, i ) || sgs_ItemType( C, -1 ) != SGS_VT_OBJECT )
 		{
 			sgs_Pop( C, sgs_StackSize( C ) - ssz );
 			return "element was not an object";
@@ -496,7 +497,7 @@ static int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vco
 		int ret = 0;
 		char* str;
 		sgs_SizeVal size;
-		sgs_PushVariable( C, gi[0].var );
+		sgs_PushVariable( C, *gi[0].var );
 		if( !sgs_ParseString( C, -1, &str, &size ) )
 		{
 			sgs_Pop( C, 1 );
@@ -555,7 +556,7 @@ static int _draw_load_geom( SGS_CTX, int* outmode, floatbuf* vert, floatbuf* vco
 			goto cleanup;
 		}
 		
-		sgs_PushVariable( C, gi[1].var );
+		sgs_PushVariable( C, *gi[1].var );
 		if( !sgs_ParseInt( C, -1, &imode ) )
 		{
 			sgs_Pop( C, 1 );
@@ -1022,7 +1023,7 @@ static int SS_MakeVertexFormat( SGS_CTX )
 		if( aligned )
 			F.size = ( ( F.size - 1 ) / 32 + 1 ) * 32;
 		
-		ef = (SS_VertexFormat*) sgs_PushObjectIPA( C, sizeof(F), vertex_format_iface );
+		ef = (SS_VertexFormat*) sgs_CreateObjectIPA( C, NULL, sizeof(F), vertex_format_iface );
 		memcpy( ef, &F, sizeof(F) );
 		ef->renderer = GCurRr;
 		if( GCurRI->init_vertex_format( GCurRr, ef ) )
@@ -1184,7 +1185,7 @@ static int ss_renderbuf_f( SGS_CTX )
 		if( argc > 64 )
 			argc = 64;
 		for( i = 0; i < argc; ++i )
-			f[ i ] = sgs_ToReal( C, i );
+			f[ i ] = sgs_GetReal( C, i );
 		
 		sgs_membuf_appbuf( &rb->B, C, f, sizeof(*f)*argc );
 	}
@@ -1205,7 +1206,7 @@ static int ss_renderbuf_b( SGS_CTX )
 		if( argc > 64 )
 			argc = 64;
 		for( i = 0; i < argc; ++i )
-			b[ i ] = (uint8_t) sgs_ToInt( C, i );
+			b[ i ] = (uint8_t) sgs_GetInt( C, i );
 		
 		sgs_membuf_appbuf( &rb->B, C, b, sizeof(*b)*argc );
 	}
@@ -1226,7 +1227,7 @@ static int ss_renderbuf_dw( SGS_CTX )
 		if( argc > 64 )
 			argc = 64;
 		for( i = 0; i < argc; ++i )
-			dw[ i ] = (uint32_t) sgs_ToInt( C, i );
+			dw[ i ] = (uint32_t) sgs_GetInt( C, i );
 		
 		sgs_membuf_appbuf( &rb->B, C, dw, sizeof(*dw)*argc );
 	}
@@ -1248,7 +1249,7 @@ static int ss_renderbuf_cf2b( SGS_CTX )
 			argc = 64;
 		for( i = 0; i < argc; ++i )
 		{
-			float f = sgs_ToReal( C, i );
+			float f = sgs_GetReal( C, i );
 			if( f < 0 ) f = 0;
 			if( f > 1 ) f = 1;
 			b[ i ] = f * 255;
@@ -1274,7 +1275,7 @@ static int ss_renderbuf_c4b( SGS_CTX )
 	
 	for( i = 0; i < argc; ++i )
 	{
-		float f = sgs_ToReal( C, i );
+		float f = sgs_GetReal( C, i );
 		if( f < 0 ) f = 0;
 		if( f > 1 ) f = 1;
 		b[ i ] = f * 255;
@@ -1460,22 +1461,22 @@ static int ss_renderbuf_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	RBHDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "begin" )   SGS_RETURN_CFUNC( ss_renderbuf_begin )
-		SGS_CASE( "reserve" ) SGS_RETURN_CFUNC( ss_renderbuf_reserve )
-		SGS_CASE( "copy" )    SGS_RETURN_CFUNC( ss_renderbuf_copy )
-		SGS_CASE( "erase" )   SGS_RETURN_CFUNC( ss_renderbuf_erase )
-		SGS_CASE( "f" )       SGS_RETURN_CFUNC( ss_renderbuf_f )
-		SGS_CASE( "b" )       SGS_RETURN_CFUNC( ss_renderbuf_b )
-		SGS_CASE( "dw" )      SGS_RETURN_CFUNC( ss_renderbuf_dw )
-		SGS_CASE( "cf2b" )    SGS_RETURN_CFUNC( ss_renderbuf_cf2b )
-		SGS_CASE( "c4b" )     SGS_RETURN_CFUNC( ss_renderbuf_c4b )
-		SGS_CASE( "pad" )     SGS_RETURN_CFUNC( ss_renderbuf_pad )
-		SGS_CASE( "interlace" ) SGS_RETURN_CFUNC( ss_renderbuf_interlace )
-		SGS_CASE( "quadsToTris" ) SGS_RETURN_CFUNC( ss_renderbuf_quadsToTris )
-		SGS_CASE( "draw" )    SGS_RETURN_CFUNC( ss_renderbuf_draw )
+		SGS_CASE( "begin" )   return sgs_PushCFunc( C, ss_renderbuf_begin );
+		SGS_CASE( "reserve" ) return sgs_PushCFunc( C, ss_renderbuf_reserve );
+		SGS_CASE( "copy" )    return sgs_PushCFunc( C, ss_renderbuf_copy );
+		SGS_CASE( "erase" )   return sgs_PushCFunc( C, ss_renderbuf_erase );
+		SGS_CASE( "f" )       return sgs_PushCFunc( C, ss_renderbuf_f );
+		SGS_CASE( "b" )       return sgs_PushCFunc( C, ss_renderbuf_b );
+		SGS_CASE( "dw" )      return sgs_PushCFunc( C, ss_renderbuf_dw );
+		SGS_CASE( "cf2b" )    return sgs_PushCFunc( C, ss_renderbuf_cf2b );
+		SGS_CASE( "c4b" )     return sgs_PushCFunc( C, ss_renderbuf_c4b );
+		SGS_CASE( "pad" )     return sgs_PushCFunc( C, ss_renderbuf_pad );
+		SGS_CASE( "interlace" ) return sgs_PushCFunc( C, ss_renderbuf_interlace );
+		SGS_CASE( "quadsToTris" ) return sgs_PushCFunc( C, ss_renderbuf_quadsToTris );
+		SGS_CASE( "draw" )    return sgs_PushCFunc( C, ss_renderbuf_draw );
 		
-		SGS_CASE( "size" )    SGS_RETURN_INT( rb->B.size )
-		SGS_CASE( "capacity" ) SGS_RETURN_INT( rb->B.mem )
+		SGS_CASE( "size" )    return sgs_PushInt( C, rb->B.size );
+		SGS_CASE( "capacity" ) return sgs_PushInt( C, rb->B.mem );
 	SGS_END_INDEXFUNC;
 }
 
@@ -1492,7 +1493,7 @@ static int SS_CreateRenderBuffer( SGS_CTX )
 {
 	ss_renderbuf* rb;
 	SGSFN( "SS_CreateRenderBuffer" );
-	rb = (ss_renderbuf*) sgs_PushObjectIPA( C, sizeof(ss_renderbuf), renderbuf_iface );
+	rb = (ss_renderbuf*) sgs_CreateObjectIPA( C, NULL, sizeof(ss_renderbuf), renderbuf_iface );
 	rb->B = sgs_membuf_create();
 	return 1;
 }
@@ -1675,9 +1676,9 @@ static void ss_font_free( ss_font* font, SGS_CTX )
 	font->loaded = 0;
 }
 
-#define FONTHDR ss_font* font = (ss_font*) data->data
+#define FONTHDR ss_font* font = (ss_font*) obj->data
 
-static int ss_font_destruct( SGS_CTX, sgs_VarObj* data )
+static int ss_font_destruct( SGS_CTX, sgs_VarObj* obj )
 {
 	FONTHDR;
 	if( font->riface )
@@ -1686,7 +1687,7 @@ static int ss_font_destruct( SGS_CTX, sgs_VarObj* data )
 		ss_font_free( font, C );
 		font->riface = NULL;
 		font->renderer = NULL;
-		GCurRI->poke_resource( GCurRr, data, 0 );
+		GCurRI->poke_resource( GCurRr, obj, 0 );
 		ss_TmpRestoreCurrent( &ctx );
 	}
 	return SGS_SUCCESS;
@@ -1766,12 +1767,11 @@ static int ss_fontI_get_text_length( SGS_CTX )
 	return 1;
 }
 
-static int ss_font_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isprop )
+static int ss_font_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
 	FONTHDR;
-	UNUSED( isprop );
-	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
 		if( 0 == strcmp( str, "size" ) ){ sgs_PushInt( C, font->size ); return SGS_SUCCESS; }
 		if( 0 == strcmp( str, "x_ppem" ) ){ sgs_PushInt( C, font->face->size->metrics.x_ppem ); return SGS_SUCCESS; }
@@ -1781,8 +1781,8 @@ static int ss_font_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int i
 		if( 0 == strcmp( str, "height" ) ){ sgs_PushInt( C, font->face->size->metrics.height >> 6 ); return SGS_SUCCESS; }
 		if( 0 == strcmp( str, "max_advance" ) ){ sgs_PushInt( C, font->face->size->metrics.max_advance >> 6 ); return SGS_SUCCESS; }
 		
-		if( 0 == strcmp( str, "getAdvance" ) ){ sgs_PushCFunction( C, ss_fontI_get_advance ); return SGS_SUCCESS; }
-		if( 0 == strcmp( str, "getTextLength" ) ){ sgs_PushCFunction( C, ss_fontI_get_text_length ); return SGS_SUCCESS; }
+		if( 0 == strcmp( str, "getAdvance" ) ){ sgs_PushCFunc( C, ss_fontI_get_advance ); return SGS_SUCCESS; }
+		if( 0 == strcmp( str, "getTextLength" ) ){ sgs_PushCFunc( C, ss_fontI_get_text_length ); return SGS_SUCCESS; }
 	}
 	return SGS_ENOTFND;
 }
@@ -1817,18 +1817,18 @@ static int SS_CreateFont( SGS_CTX )
 	sgs_StringConcat( C, 3 );
 
 	/* check if dict has the font */
-	if( sgs_PushIndexPI( C, &GCurRr->fonts, -1, 0 ) == SGS_SUCCESS )
+	if( sgs_PushIndex( C, GCurRr->fonts, sgs_StackItem( C, -1 ), 0 ) )
 		return 1;
 
 	/* attempt to load font with different base paths */
 	{
 		char* paths = NULL;
 		sgs_MemBuf fpath = sgs_membuf_create();
-		ss_font* fn = (ss_font*) sgs_PushObjectIPA( C, sizeof(ss_font), font_iface );
+		ss_font* fn = (ss_font*) sgs_CreateObjectIPA( C, NULL, sizeof(ss_font), font_iface );
 		sgs_VarObj* obj = sgs_GetObjectStruct( C, -1 );
 		fn->loaded = 0;
 
-		if( sgs_PushGlobal( C, "ss_font_search_paths" ) ||
+		if( !sgs_PushGlobalByName( C, "ss_font_search_paths" ) ||
 			!sgs_ParseString( C, -1, &paths, NULL ) )
 			_WARN( "could not load search paths" )
 		sgs_Pop( C, 1 );
@@ -1862,7 +1862,7 @@ static int SS_CreateFont( SGS_CTX )
 	}
 
 	/* save and return the font object */
-	sgs_SetIndexPII( C, &GCurRr->fonts, -2, -1, 0 );
+	sgs_SetIndex( C, GCurRr->fonts, sgs_StackItem( C, -2 ), sgs_StackItem( C, -1 ), 0 );
 	return 1;
 }
 
@@ -2211,24 +2211,20 @@ static sgs_RegFuncConst gl_funcs[] =
 	FN( SetDepthTest ), FN( SetCulling ), FN( SetBlending ),
 };
 
-int ss_InitGraphics( SGS_CTX )
+void ss_InitGraphics( SGS_CTX )
 {
-	int ret, mid;
+	int mid;
 	
 	for( mid = 0; mid < SS_MATRIX_STACK_SIZE; ++mid )
 	{
 		_mtx_identity( (float*) GRWorldMatrices[ mid ] );
 	}
-
+	
 	FT_Init_FreeType( &g_ftlib );
-
-	ret = sgs_RegIntConsts( C, gl_ints, ARRAY_SIZE( gl_ints ) );
-	if( ret != SGS_SUCCESS ) return ret;
-	ret = sgs_RegFuncConsts( C, gl_funcs, ARRAY_SIZE( gl_funcs ) );
-	if( ret != SGS_SUCCESS ) return ret;
+	
+	sgs_RegIntConsts( C, gl_ints, ARRAY_SIZE( gl_ints ) );
+	sgs_RegFuncConsts( C, gl_funcs, ARRAY_SIZE( gl_funcs ) );
 	
 	sgs_RegisterType( C, "SS_Texture", SS_Texture_iface );
-	
-	return SGS_SUCCESS;
 }
 

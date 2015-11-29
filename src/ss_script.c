@@ -36,7 +36,7 @@ uint32_t ss_GetFlagString( SGS_CTX, int pos, flag_string_item_t* items )
 uint32_t ss_GlobalFlagString( SGS_CTX, const char* name, flag_string_item_t* items )
 {
 	uint32_t flags = 0;
-	if( sgs_PushGlobal( C, name ) != SGS_SUCCESS )
+	if( sgs_PushGlobalByName( C, name ) == SGS_FALSE )
 		return 0;
 	flags = ss_GetFlagString( C, -1, items );
 	sgs_Pop( C, 1 );
@@ -46,8 +46,9 @@ uint32_t ss_GlobalFlagString( SGS_CTX, const char* name, flag_string_item_t* ite
 int ss_UnpackDict( SGS_CTX, int pos, dict_unpack_item_t* items )
 {
 	int ret = 0;
+	sgs_Variable obj = sgs_StackItem( C, pos );
 	
-	if( sgs_ItemType( C, pos ) != SGS_VT_OBJECT )
+	if( obj.type != SGS_VT_OBJECT )
 		return ret;
 	
 	while( items->name )
@@ -56,7 +57,7 @@ int ss_UnpackDict( SGS_CTX, int pos, dict_unpack_item_t* items )
 		sgs_PushString( C, items->name );
 		
 		assert( items->var != NULL );
-		if( sgs_PushIndexII( C, pos, -1, 0 ) || !sgs_GetStackItem( C, -1, items->var ) )
+		if( sgs_GetIndex( C, obj, sgs_StackItem( C, -1 ), items->var, SGS_FALSE ) == SGS_FALSE )
 			items->var = NULL;
 		else
 			ret++;
@@ -82,7 +83,8 @@ void ss_UnpackFree( SGS_CTX, dict_unpack_item_t* items )
 */
 int ss_ParseColor( SGS_CTX, int pos, float* v4f )
 {
-	int32_t size = sgs_ArraySize( C, pos );
+	sgs_Variable objvar = sgs_StackItem( C, pos );
+	int32_t size = sgs_ArraySize( C, objvar );
 	if( size >= 0 )
 	{
 		int i;
@@ -91,7 +93,7 @@ int ss_ParseColor( SGS_CTX, int pos, float* v4f )
 		for( i = 0; i < size; ++i )
 		{
 			sgs_Real tmp;
-			if( sgs_PushNumIndex( C, pos, i ) )
+			if( sgs_PushNumIndex( C, objvar, i ) )
 				return 0;
 			if( !sgs_ParseReal( C, -1, &tmp ) )
 			{

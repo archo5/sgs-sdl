@@ -43,8 +43,7 @@ static int SS_EnableProfiler( SGS_CTX )
 
 static int ss_InitDebug( SGS_CTX )
 {
-	sgs_PushCFunction( C, SS_EnableProfiler );
-	sgs_StoreGlobal( C, "SS_EnableProfiler" );
+	sgs_SetGlobalByName( C, "SS_EnableProfiler", sgs_MakeCFunc( SS_EnableProfiler ) );
 	return SGS_SUCCESS;
 }
 
@@ -132,13 +131,13 @@ int ss_Initialize( int argc, char* argv[], int debug )
 		{
 			sgs_PushString( C, argv[ i ] );
 		}
-		sgs_PushArray( C, argc );
-		sgs_StoreGlobal( C, "sys_args" );
+		sgs_CreateArray( C, NULL, argc );
+		sgs_SetGlobalByName( C, "sys_args", sgs_StackItem( C, -1 ) );
+		sgs_Pop( C, 1 );
 	}
 	
 	/* push some system info */
-	sgs_PushPtr( C, C );
-	sgs_StoreGlobal( C, "sys_scripting_engine" );
+	sgs_SetGlobalByName( C, "sys_scripting_engine", sgs_MakePtr( C ) );
 	
 #if SS_STARTUP_PROFILING
 	printf( "system info pushed: %f\n", sgs_GetTime() );
@@ -222,18 +221,10 @@ int ss_Initialize( int argc, char* argv[], int debug )
 #endif
 	
 	/* initialize script-space SDL API */
-	if( ss_InitSDL( C ) )
-	{
-		sgs_Msg( C, SGS_ERROR, "Couldn't initialize SDL API" );
-		return -6;
-	}
+	ss_InitSDL( C );
 	
 	/* initialize script-space rendering API */
-	if( ss_InitGraphics( C ) )
-	{
-		sgs_Msg( C, SGS_ERROR, "Couldn't initialize rendering API" );
-		return -7;
-	}
+	ss_InitGraphics( C );
 	
 #if SS_STARTUP_PROFILING
 	printf( "initialized SDL/Graphics subsystems: %f\n", sgs_GetTime() );
