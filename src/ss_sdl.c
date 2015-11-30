@@ -993,7 +993,8 @@ static int SS_Window_destruct( SGS_CTX, sgs_VarObj* obj )
 		{
 			// destroyed current
 			ss_MakeCurrent( NULL, NULL );
-			sgs_SetGlobalByName( C, "_RND", sgs_MakeNull() );
+		//	sgs_SetGlobalByName( C, "_RND", sgs_MakeNull() ); // TODO think of something
+			// cannot touch other objects in dtor... maybe take ownership?
 		}
 		else
 		{

@@ -51,6 +51,8 @@ function update()
 	if( deltaTime > 1/15 )
 		deltaTime = 1/15;
 	process_threads( deltaTime );
+	
+	SS_DrawTextLine( "thread count: " $ sys_stat(1), Font, 900, 32, color(1,1,1) );
 	SS_Present();
 }
 
