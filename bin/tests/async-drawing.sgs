@@ -3,7 +3,7 @@ function draw_ticking_text()
 {
 	str = "Gradually appearing text...";
 	i = 0;
-	subthread_create( function() use( i ){ for(;;){ i++; yield( 0.2 ); } } );
+	subthread (function() use( i ){ for(;;){ i++; yield( 0.2 ); } })();
 	for(;;)
 	{
 		tx = string_part( str, 0, i % str.length );
@@ -19,7 +19,7 @@ function draw_moveline( from, to )
 	
 	yield();
 	fade = 1.0;
-	subthread_create( function() use( fade ){ for(;;){ fade -= 1/60; yield( 1/60 ); } } );
+	subthread (function() use( fade ){ for(;;){ fade -= 1/60; yield( 1/60 ); } })();
 	while( fade > 0 )
 	{
 		SS_DrawColorLine( from.x, from.y, to.x, to.y, 1, 0, 0, fade );
@@ -37,7 +37,7 @@ function initialize()
 	global Font = SS_CreateFont( "fonts/lato-regular.ttf", 12 );
 	SS_InitDrawFunctions();
 	
-	thread_create( draw_ticking_text );
+	thread draw_ticking_text();
 }
 
 global prevTime = ftime();
@@ -65,7 +65,7 @@ function on_event( e )
 		npos = vec2( e.x, e.y );
 		if( ( opos - npos ).length > 2 )
 		{
-			thread_create( draw_moveline, null, opos, npos );
+			thread draw_moveline( opos, npos );
 			global opos = npos;
 		}
 		global mpos = npos;
