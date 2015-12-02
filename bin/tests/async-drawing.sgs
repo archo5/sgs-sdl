@@ -27,6 +27,44 @@ function draw_moveline( from, to )
 	}
 }
 
+function draw_racing()
+{
+	for(;;)
+	{
+		pos_walk = 0;
+		pos_drive = 0;
+		done = false;
+		
+		race_walk = subthread (function() use( pos_walk ){ for(;;){ pos_walk += 60/60; if( pos_walk > 400 ) return; yield( 1/60 ); } })();
+		race_drive = subthread (function() use( pos_drive ){ for(;;){ pos_drive += 110/60; if( pos_drive > 400 ) return; yield( 1/60 ); } })();
+		draw = subthread (function() use( pos_walk, pos_drive, done )
+		{
+			for(;;)
+			{
+				yield();
+				offx = 32;
+				offy = 96;
+				len = 400;
+				SS_DrawColorLine( offx, offy, offx, offy + 60, 0, 0, 1, 1 );
+				SS_DrawColorLine( offx + len, offy, offx + len, offy + 60, 0, 0, 1, 1 );
+				SS_DrawColorRect_WH( offx, offy + 12, pos_walk, 12, 1, 0, 0, 1 );
+				SS_DrawColorRect_WH( offx, offy + 36, pos_drive, 12, 0, 1, 0, 1 );
+				SS_DrawTextLine( "walk", Font, offx + pos_walk, offy + 12, color(1,0,0) );
+				SS_DrawTextLine( "drive", Font, offx + pos_drive, offy + 36, color(0,1,0) );
+				if( done )
+				{
+					SS_DrawTextLine( "DONE", Font, offx, offy - 12, color(1,1,1) );
+				}
+			}
+		})();
+		
+		race( race_walk, race_drive );
+		altdone = subthread (function() use( done ){ for(;;){ done = !done; yield( 1/8 ); } })();
+		yield( 1 );
+		abort( draw, altdone );
+	}
+}
+
 function initialize()
 {
 	global mpos = vec2( 0, 0 );
@@ -38,6 +76,7 @@ function initialize()
 	SS_InitDrawFunctions();
 	
 	thread draw_ticking_text();
+	thread draw_racing();
 }
 
 global prevTime = ftime();
