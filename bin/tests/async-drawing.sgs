@@ -82,6 +82,7 @@ function initialize()
 global prevTime = ftime();
 function update()
 {
+	numallocs = sys_stat(4);
 	SS_Clear( color(0.25,0.3,0.4) );
 	SS_SetCameraUI( 0, W, 0, H );
 	curTime = ftime();
@@ -92,6 +93,7 @@ function update()
 	process_threads( deltaTime );
 	
 	SS_DrawTextLine( "thread count: " $ sys_stat(1), Font, 900, 32, color(1,1,1) );
+	SS_DrawTextLine( "allocs per frame: " $ (sys_stat(4) - numallocs), Font, 900, 4, color(1,1,1) );
 	SS_Present();
 }
 
