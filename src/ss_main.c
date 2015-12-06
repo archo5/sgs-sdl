@@ -305,8 +305,8 @@ int ss_Free()
 	
 	if( GEnabledProfiler )
 	{
-		sgs_ProfDump( &P );
-		sgs_ProfClose( &P );
+		sgs_ProfDump( C, &P );
+		sgs_ProfClose( C, &P );
 	}
 	
 	if( GEnabledDebugging )

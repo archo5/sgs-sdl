@@ -65,18 +65,72 @@ function draw_racing()
 	}
 }
 
+function draw_question( question, answers )
+{
+	x = 64;
+	y = 400;
+	sel = null;
+	for(;;)
+	{
+		height = 64 + dict_size( answers ) * 24;
+		SS_DrawColorRect_WH( x, y, 400, height, 0, 0, 0, 0.5 );
+		SS_DrawTextLine( question, Font, x, y, color(1,1,1) );
+		
+		i = 0;
+		mon = null;
+		selfunc = null;
+		foreach( func, name : answers )
+		{
+			ay = y + 64 + i * 24;
+			mouseon = mpos.x >= x && mpos.x < x + 400 && mpos.y >= ay && mpos.y < ay + 24;
+			if( mouseon )
+				mon = i;
+			issel = i === sel;
+			if( issel )
+				selfunc = func;
+			SS_DrawColorRect_WH( x, ay, 400, 24, mouseon - issel * 0.5, 0, 0, 0.5 );
+			SS_DrawTextLine_VC( name, Font, x, ay + 12, color(1) );
+			i++;
+		}
+		
+		if( curclick && !prevclick )
+			sel = mon;
+		else if( !curclick && prevclick )
+		{
+			if( sel !== null && mon === sel )
+			{
+				thread _G[ "q_" $ selfunc ]();
+				return;
+			}
+			sel = null;
+		}
+		
+		yield;
+	}
+}
+
+function q_step0(){ draw_question( "why not?", { "step1" = "Well, let me think about it", "step0" = "No reason" } ); }
+function q_step1(){ draw_question( "shall we proceed?", { "step2" = "Yes", "step0" = "No", "info" = "Tell me more" } ); }
+function q_info(){ draw_question( "This is a test dialog", { "step1" = "Ok, got it" } ); }
+function q_step2(){ draw_question( "what should we do?", { "action1" = "Let's do the action 1", "action2" = "Let's do the action 2", "step1" = "Let's take a step back" } ); }
+function q_action1(){ draw_question( "Action 1 done!", { "step2" = "Ok!" } ); }
+function q_action2(){ draw_question( "Action 2 done!", { "step2" = "Ok!" } ); }
+
 function initialize()
 {
 	global mpos = vec2( 0, 0 );
 	global opos = vec2( 0, 0 );
+	global curclick = false;
+	global prevclick = false;
 	global W = 1024, H = 576;
 	global Window = SS_CreateWindow( "SGS-SDL Game Framework", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 576, SDL_WINDOW_OPENGLMAYBE );
-	Window.initRenderer( SS_RENDERER_DONTCARE, 0&SS_RENDERER_VSYNC );
+	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
 	global Font = SS_CreateFont( "fonts/lato-regular.ttf", 12 );
 	SS_InitDrawFunctions();
 	
 	thread draw_ticking_text();
 	thread draw_racing();
+	thread q_step1();
 }
 
 global prevTime = ftime();
@@ -95,6 +149,8 @@ function update()
 	SS_DrawTextLine( "thread count: " $ sys_stat(1), Font, 900, 32, color(1,1,1) );
 	SS_DrawTextLine( "allocs per frame: " $ (sys_stat(4) - numallocs), Font, 900, 4, color(1,1,1) );
 	SS_Present();
+	
+	global prevclick = curclick;
 }
 
 function on_event( e )
@@ -111,4 +167,8 @@ function on_event( e )
 		}
 		global mpos = npos;
 	}
+	else if( e.type == SDL_MOUSEBUTTONDOWN )
+		global curclick = true;
+	else if( e.type == SDL_MOUSEBUTTONUP )
+		global curclick = false;
 }
