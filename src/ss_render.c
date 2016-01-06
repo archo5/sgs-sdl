@@ -370,7 +370,7 @@ static const char* _parse_floatvec( SGS_CTX, int stkitem, float* out, int numcom
 	else if( sgs_ParseVec4( C, stkitem, out, 1 ) ) pnp = 4;
 	else if( sgs_ParseColor( C, stkitem, out, 1 ) ) pnp = 4;
 	else if( sgs_ParseMat4( C, stkitem, out ) ) pnp = 16;
-	else if( ( asz = sgs_ArraySize( C, sgs_StackItem( C, stkitem ) ) ) >= 0 )
+	else if( ( asz = sgs_ArraySize( sgs_StackItem( C, stkitem ) ) ) >= 0 )
 	{
 		if( asz > numcomp )
 			asz = numcomp;
@@ -425,7 +425,7 @@ static const char* _parse_floatbuf( SGS_CTX, sgs_Variable* var, floatbuf* out, i
 	}
 	
 	arrvar = sgs_StackItem( C, -1 );
-	asz = sgs_ArraySize( C, arrvar );
+	asz = sgs_ArraySize( arrvar );
 	if( asz < 0 )
 	{
 		sgs_Pop( C, 1 );

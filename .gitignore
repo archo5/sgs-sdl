@@ -3,6 +3,8 @@
 /bin/*.exe
 /bin/*.dll
 /bin/*.so
+/bin/*.so.dSYM
+/bin/*.dylib
 /bin/sgs*
 /obj/*
 /lib/*

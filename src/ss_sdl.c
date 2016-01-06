@@ -1,7 +1,7 @@
 
 #include <math.h>
 
-#include <SDL2/SDL_syswm.h>
+#include <SDL_syswm.h>
 
 #include "ss_main.h"
 

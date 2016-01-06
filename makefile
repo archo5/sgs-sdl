@@ -7,7 +7,21 @@ include sgscript/core.mk
 # SGS-SDL FLAGS
 ifneq ($(target_os),windows)
 	video=nod3d
+	SDL2_CFLAGS = $(shell sdl2-config --cflags)
+	SDL2_LIBS = $(shell sdl2-config --libs)
+	XGM_LIBS = sgscript/bin/sgsxgmath.so
+	ifneq ($(shell uname -s),Darwin)
+		LINUXHACKPRE = -ln -s sgscript/bin/sgsxgmath.so sgsxgmath.so
+		LINUXHACKPOST = -unlink sgsxgmath.so
+	endif
+else
+	SDL2_CFLAGS = -Iext/include/SDL2
+	SDL2_LIBS = -lSDL2main -lSDL2
+	XGM_LIBS = -lsgsxgmath
 endif
+
+SGS_SDL_INSTALL_TOOL = $(call fnIF_OS,osx,install_name_tool \
+	-change $(OUTDIR)/libsgs-sdl.so @rpath/libsgs-sdl.so $1,)
 
 SS_OUTFILE=$(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT)
 SS_OUTFLAGS=-L$(OUTDIR) -lsgs-sdl
@@ -16,11 +30,11 @@ CFLAGS=-Wall -Wshadow -Wpointer-arith -Wcast-align \
 	$(call fnIF_ARCH,x86,-m32,$(call fnIF_ARCH,x64,-m64,)) -Isrc \
 	$(call fnIF_OS,windows,,-fPIC -D_FILE_OFFSET_BITS=64) \
 	$(call fnIF_OS,android,-DSGS_PF_ANDROID,)
-SS_CFLAGS=$(CFLAGS) -Isgscript/src -Isgscript/ext -Iext/include -Iext/include/freetype -Wno-comment
+SS_CFLAGS=$(CFLAGS) -Isgscript/src -Isgscript/ext $(SDL2_CFLAGS) $(FT2_CFLAGS) -Iext/include/freetype -Wno-comment
 BINFLAGS=$(CFLAGS) $(OUTFLAGS) -lm \
 	$(call fnIF_OS,android,-ldl -Wl$(comma)-rpath$(comma)'$$ORIGIN' -Wl$(comma)-z$(comma)origin,) \
 	$(call fnIF_OS,windows,-lkernel32,) \
-	$(call fnIF_OS,osx,-ldl -Wl$(comma)-rpath$(comma)'@executable_path/.',) \
+	$(call fnIF_OS,osx,-framework OpenGL -ldl -Wl$(comma)-rpath$(comma)'@executable_path/.',) \
 	$(call fnIF_OS,linux,-ldl -lrt -Wl$(comma)-rpath$(comma)'$$ORIGIN' -Wl$(comma)-z$(comma)origin,)
 MODULEFLAGS=$(BINFLAGS) -shared
 EXEFLAGS=$(BINFLAGS)
@@ -45,17 +59,21 @@ SS3D_DEPS = $(patsubst %,src/%,$(_SS3D_DEPS))
 SS3D_OBJ = $(patsubst %,obj/%,$(_SS3D_OBJ))
 
 ifeq ($(target_os),windows)
-	SS_PF_DEPS = obj/libjpg.a obj/libpng.a obj/zlib.a obj/freetype.a
 	PF_LINK = -Lext/lib-win32 -lOpenGL32 obj/libjpg.a obj/libpng.a obj/zlib.a obj/freetype.a
 	PF_POST = $(fnCOPY_FILE) $(call fnFIX_PATH,ext/bin-win32/SDL2.dll bin) & \
 	           $(fnCOPY_FILE) $(call fnFIX_PATH,sgscript/bin/sgscript.dll bin) & \
 	           $(fnCOPY_FILE) $(call fnFIX_PATH,sgscript/bin/sgsxgmath.dll bin)
 else
-	SS_PF_DEPS = $(OUTDIR)/$(LIBPFX)jpg$(LIBEXT) $(OUTDIR)/$(LIBPFX)png$(LIBEXT) $(OUTDIR)/$(LIBPFX)zlib$(LIBEXT)
-	PF_LINK = $(OUTDIR)/$(LIBPFX)jpg$(LIBEXT) $(OUTDIR)/$(LIBPFX)png$(LIBEXT) $(OUTDIR)/$(LIBPFX)zlib$(LIBEXT)
+	PF_LINK = $(OUTDIR)/$(LIBPFX)jpg$(LIBEXT) \
+				$(OUTDIR)/$(LIBPFX)png$(LIBEXT) \
+				$(OUTDIR)/$(LIBPFX)zlib$(LIBEXT) \
+				$(OUTDIR)/$(LIBPFX)freetype$(LIBEXT)
+	PF_POST = $(call fnIF_OS,osx,$(fnCOPY_FILE) /usr/local/lib/libSDL2.dylib bin &,) \
+				$(fnCOPY_FILE) sgscript/bin/libsgscript.so bin & \
+				$(fnCOPY_FILE) sgscript/bin/sgsxgmath.so bin
 endif
 
-SGS_SDL_FLAGS = $(SS_CFLAGS) $(MODULEFLAGS) $(PF_LINK) -Lsgscript/bin -lSDL2main -lSDL2 -lsgscript -lsgsxgmath $(PF_DEPS)
+SGS_SDL_FLAGS = $(SS_CFLAGS) $(MODULEFLAGS) $(PF_LINK) -Lsgscript/bin $(SDL2_LIBS) $(FT2_LIBS) -lsgscript $(XGM_LIBS) $(PF_DEPS)
 SGS_SDL_LAUNCHER_FLAGS = $(SS_CFLAGS) $(BINFLAGS) -L$(OUTDIR) -lsgs-sdl
 
 SGS_CXX_FLAGS = -fno-exceptions -fno-rtti -static-libstdc++ -static-libgcc -fno-unwind-tables -fvisibility=hidden
@@ -94,17 +112,25 @@ $(OUTDIR)/sgs-sdl-release$(BINEXT): $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) src/ss_l
 	$(LINUXHACKPRE)
 	gcc -o $@ src/ss_launcher.c $(call fnIF_OS,windows,-mwindows,) $(SGS_SDL_LAUNCHER_FLAGS) -DSS_RELEASE -s
 	$(LINUXHACKPOST)
+	$(call SGS_SDL_INSTALL_TOOL,$@)
 $(OUTDIR)/sgs-sdl-debug$(BINEXT): $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) src/ss_launcher.c
 	$(LINUXHACKPRE)
 	gcc -o $@ src/ss_launcher.c $(SGS_SDL_LAUNCHER_FLAGS) -s
 	$(LINUXHACKPOST)
+	$(call SGS_SDL_INSTALL_TOOL,$@)
 
-$(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT): $(OBJ) $(SS_PF_DEPS)
+$(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT): $(OBJ) sgs-sdl-deps
 	$(MAKE) -C sgscript xgmath
 	$(LINUXHACKPRE)
 	gcc -o $@ $(OBJ) $(SGS_SDL_FLAGS)
 	$(LINUXHACKPOST)
 	$(PF_POST)
+	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libjpg.so @rpath/libjpg.so $@,)
+	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libpng.so @rpath/libpng.so $@,)
+	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libzlib.so @rpath/libzlib.so $@,)
+	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libfreetype.so @rpath/libfreetype.so $@,)
+	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libsgscript.so @rpath/libsgscript.so $@,)
+	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/sgsxgmath.so @rpath/sgsxgmath.so $@,)
 
 $(OUTDIR)/$(LIBPFX)ss3d$(LIBEXT): $(SS3D_OBJ) $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT)
 	$(MAKE) -C sgscript xgmath
@@ -172,6 +198,7 @@ $(OUTDIR)/$(LIBPFX)zlib$(LIBEXT):
 libpng: $(OUTDIR)/$(LIBPFX)png$(LIBEXT)
 $(OUTDIR)/$(LIBPFX)png$(LIBEXT): $(OUTDIR)/$(LIBPFX)zlib$(LIBEXT)
 	gcc -o $@ $(CFLAGS) -shared ext/src/libpng1.c -Iext/src/zlib $^
+	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libzlib.so @rpath/libzlib.so $@,)
 freetype: $(OUTDIR)/$(LIBPFX)freetype$(LIBEXT)
 $(OUTDIR)/$(LIBPFX)freetype$(LIBEXT):
 	gcc -o $@ $(CFLAGS) -shared ext/src/freetype1.c -Iext/include/freetype
@@ -182,7 +209,7 @@ endif
 clean:
 	$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/ss*.o bin/sgs*)
 clean_deps:
-	$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/*lib*.o obj/*lib*.a obj/freetype*.o obj/freetype*.a)
+	$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/*lib*.o bin/*.dylib bin/*.so bin/*.so.dSYM obj/*lib*.a obj/freetype*.o obj/freetype*.a)
 clean_all: clean clean_deps
 	$(MAKE) -C sgscript clean
 

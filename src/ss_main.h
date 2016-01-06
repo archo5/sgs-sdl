@@ -12,7 +12,7 @@
 #include "ss_cfg.h"
 
 #include <stdio.h>
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 #define SDL_VIDEODEVICELOST SDL_USEREVENT + 1
 #define SDL_VIDEODEVICERESET SDL_USEREVENT + 2

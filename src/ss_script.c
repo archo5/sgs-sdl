@@ -84,7 +84,7 @@ void ss_UnpackFree( SGS_CTX, dict_unpack_item_t* items )
 int ss_ParseColor( SGS_CTX, int pos, float* v4f )
 {
 	sgs_Variable objvar = sgs_StackItem( C, pos );
-	int32_t size = sgs_ArraySize( C, objvar );
+	int32_t size = sgs_ArraySize( objvar );
 	if( size >= 0 )
 	{
 		int i;

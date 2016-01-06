@@ -7,6 +7,9 @@
 #  undef __glext_h_
 #  undef GL_GLEXT_VERSION
 #  undef GL_VERSION_1_2
+#  define PFNGLBLENDFUNCSEPARATEPROC PFNGLBLENDFUNCSEPARATEIPROC
+#  define glBlendFuncSeparate(sc,sa,dc,da) glBlendFuncSeparate(0,sc,sa,dc,da)
+#  undef GL_DRAW_FRAMEBUFFER_BINDING
 #else
 #  include <GL/gl.h>
 #endif
