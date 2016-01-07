@@ -53,7 +53,7 @@ function initialize()
 	options = [];
 	foreach( real, item : io_dir("tests") )
 	{
-		if( real )
+		if( real && string_part( item, 0, 1 ) != "." )
 		{
 			fn = function( item ){ os_command( sys_args[0] $ " -mainfile tests/" $ item.id ); };
 			options.push({ id = item, text = string_part( item, 0, -4 ), action = fn });

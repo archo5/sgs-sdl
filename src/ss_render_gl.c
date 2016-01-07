@@ -7,8 +7,6 @@
 #  undef __glext_h_
 #  undef GL_GLEXT_VERSION
 #  undef GL_VERSION_1_2
-#  define PFNGLBLENDFUNCSEPARATEPROC PFNGLBLENDFUNCSEPARATEIPROC
-#  define glBlendFuncSeparate(sc,sa,dc,da) glBlendFuncSeparate(0,sc,sa,dc,da)
 #  undef GL_DRAW_FRAMEBUFFER_BINDING
 #else
 #  include <GL/gl.h>
@@ -46,7 +44,9 @@ struct _SS_Renderer
 	SS_RENDERER_DATA
 	SDL_GLContext* ctx;
 	PFNGLBLENDEQUATIONPROC glBlendEquation;
+#if !__APPLE__
 	PFNGLBLENDFUNCSEPARATEPROC glBlendFuncSeparate;
+#endif
 	PFNGLGENRENDERBUFFERSPROC glGenRenderbuffers;
 	PFNGLBINDRENDERBUFFERPROC glBindRenderbuffer;
 	PFNGLRENDERBUFFERSTORAGEPROC glRenderbufferStorage;
@@ -180,7 +180,9 @@ static SS_Renderer* ss_ri_gl_create( SDL_Window* window, uint32_t flags )
 	R->window = window;
 	R->ctx = ctx;
 	R->glBlendEquation = (PFNGLBLENDEQUATIONPROC) SDL_GL_GetProcAddress( "glBlendEquation" );
+#if !__APPLE__
 	R->glBlendFuncSeparate = (PFNGLBLENDFUNCSEPARATEPROC) SDL_GL_GetProcAddress( "glBlendFuncSeparate" );
+#endif
 	R->glGenRenderbuffers = (PFNGLGENRENDERBUFFERSPROC) mglGetProcAddress( "glGenRenderbuffersEXT\0glGenRenderbuffers\0" );
 	R->glBindRenderbuffer = (PFNGLBINDRENDERBUFFERPROC) mglGetProcAddress( "glBindRenderbufferEXT\0glBindRenderbuffer\0" );
 	R->glRenderbufferStorage = (PFNGLRENDERBUFFERSTORAGEPROC) mglGetProcAddress( "glRenderbufferStorageEXT\0glRenderbufferStorage\0" );
@@ -450,10 +452,14 @@ static void ss_ri_gl_set_render_state( SS_Renderer* R, int which, int arg0, int 
 		if( arg1 < 0 || arg1 >= SS_BLEND__COUNT ) arg1 = SS_BLEND_INVSRCALPHA;
 		if( arg2 < 0 || arg2 >= SS_BLEND__COUNT ) arg2 = SS_BLEND_ONE;
 		if( arg3 < 0 || arg3 >= SS_BLEND__COUNT ) arg3 = SS_BLEND_ZERO;
+#if __APPLE__
+		glBlendFuncSeparate( blendfactors[ arg0 ], blendfactors[ arg1 ], blendfactors[ arg2 ], blendfactors[ arg3 ] );
+#else
 		if( !R->glBlendFuncSeparate )
 			glBlendFunc( blendfactors[ arg0 ], blendfactors[ arg1 ] );
 		else
 			R->glBlendFuncSeparate( blendfactors[ arg0 ], blendfactors[ arg1 ], blendfactors[ arg2 ], blendfactors[ arg3 ] );
+#endif
 	}
 	else if( which == SS_RS_BLENDOP )
 	{
