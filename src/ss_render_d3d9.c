@@ -7,7 +7,7 @@
 #define SAFE_RELEASE( x ) if( x ){ D3DCALL( x, Release ); x = NULL; }
 
 
-#include <SDL2/SDL_syswm.h>
+#include <SDL_syswm.h>
 
 
 #define SS_TEXTURE_HANDLE_DATA IDirect3DBaseTexture9* base; IDirect3DTexture9* tex2d;
