@@ -259,6 +259,7 @@ function initialize()
 	camera.direction = vec3(-1,-1,-1);
 	camera.aspect = 16/9;
 	camera.angle = 100;
+	camera.genProjMatrix();
 	printvar( camera );
 	
 	_RND.Scene.camera = camera;

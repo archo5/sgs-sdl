@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "../sgscript/ext/cppbc/sgs_cppbc.h"
+#include "../sgscript/ext/sgs_cppbc.h"
 #include "../sgscript/ext/sgsxgmath.h"
 
 #include <math.h>
@@ -414,14 +414,12 @@ inline int32_t OcclusionTest::AddQueryPointList( const Vec3* pts, size_t count )
 
 
 // Vec3 interface
-template<> inline void sgs_PushVar<Vec3>( SGS_CTX, const Vec3& v ){ sgs_PushVec3( C, v.x, v.y, v.z ); }
+template<> inline void sgs_PushVar<Vec3>( SGS_CTX, const Vec3& v ){ sgs_CreateVec3( C, NULL, v.x, v.y, v.z ); }
 template<> struct sgs_GetVar<Vec3> { Vec3 operator () ( SGS_CTX, sgs_StkIdx item ){ Vec3 v; sgs_ParseVec3( C, item, &v.x, 0 ); return v; }};
-template<> struct sgs_GetVarP<Vec3> { Vec3 operator () ( SGS_CTX, sgs_Variable* val ){ Vec3 v; sgs_ParseVec3P( C, val, &v.x, 0 ); return v; }};
 
 // Mat4 interface
-template<> inline void sgs_PushVar<Mat4>( SGS_CTX, const Mat4& v ){ sgs_PushMat4( C, v.a, 0 ); }
+template<> inline void sgs_PushVar<Mat4>( SGS_CTX, const Mat4& v ){ sgs_CreateMat4( C, NULL, v.a, 0 ); }
 template<> struct sgs_GetVar<Mat4> { Mat4 operator () ( SGS_CTX, sgs_StkIdx item ){ Mat4 v; sgs_ParseMat4( C, item, v.a ); return v; }};
-template<> struct sgs_GetVarP<Mat4> { Mat4 operator () ( SGS_CTX, sgs_Variable* val ){ Mat4 v; sgs_ParseMat4P( C, val, v.a ); return v; }};
 
 
 struct SS3D_OcclusionTest : OcclusionTest

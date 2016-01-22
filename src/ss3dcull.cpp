@@ -521,7 +521,7 @@ static int SS3DCull_Create( SGS_CTX )
 	SGSFN( "SS3DCull_Create" );
 	if( !sgs_LoadArgs( C, "ll", &w, &h ) )
 		return 0;
-	SGS_PUSHCLASS( C, SS3D_OcclusionTest, ( w, h ) );
+	SGS_CREATECLASS( C, NULL, SS3D_OcclusionTest, ( w, h ) );
 	return 1;
 }
 

@@ -156,7 +156,7 @@ obj/dds.o: src/dds.c src/dds.h
 	$(CC) -c -o $@ $< $(SS_CFLAGS)
 
 src/cppbc_ss3dcull.cpp: src/ss3dcull.hpp sgscript/bin/sgsvm$(BINEXT)
-	sgscript/bin/sgsvm -p sgscript/ext/cppbc/cppbc.sgs src/ss3dcull.hpp src/cppbc_ss3dcull.cpp
+	sgscript/bin/sgsvm -p sgscript/ext/cppbc.sgs src/ss3dcull.hpp -o src/cppbc_ss3dcull.cpp
 
 
 # SGScript

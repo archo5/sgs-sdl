@@ -597,7 +597,7 @@ static void scene_poke_resource( SS3D_Scene* S, sgs_VHTable* which, sgs_VarObj* 
 	if( !S->renderer )
 		return;
 	
-	sgs_InitPtr( &K, obj );
+	K = sgs_MakePtr( obj );
 	if( add )
 		sgs_vht_set( which, S->renderer->C, &K, &K );
 	else
@@ -827,7 +827,7 @@ success:
 	
 	TD->data = out;
 	
-	sgs_PushVariable( C, vFile );
+	sgs_PushVariable( C, *vFile );
 	if( SGS_SUCCEEDED( sgs_GlobalCall( C, "_SS3D_Texture_GetType", 1, 1 ) ) )
 	{
 		TD->info.usage = (int) sgs_GetInt( C, -1 );
@@ -1073,9 +1073,9 @@ static int SS3D_MeshData_GetVertexIndexArrays( SGS_CTX )
 		{
 			VEC3 vout;
 			_ss3dmesh_extract_vertex( &mfd, &vdinfo, part, i, vout );
-			sgs_PushVec3p( C, vout );
+			sgs_CreateVec3p( C, NULL, vout );
 		}
-		sgs_PushArray( C, part->vertexCount );
+		sgs_CreateArray( C, NULL, part->vertexCount );
 		sgs_PushString( C, "indices" );
 		if( mfd.dataFlags & SS3D_MDF_TRIANGLESTRIP )
 		{
@@ -1097,17 +1097,17 @@ static int SS3D_MeshData_GetVertexIndexArrays( SGS_CTX )
 				}
 				sgs_PushInt( C, mfd.dataFlags & SS3D_MDF_INDEX_32 ? *(((uint32_t*)mfd.indexData) + part->indexOffset + i) : *(((uint16_t*)mfd.indexData) + part->indexOffset + i) );
 			}
-			sgs_PushArray( C, nic );
+			sgs_CreateArray( C, NULL, nic );
 		}
 		else
 		{
 			for( i = 0; i < part->indexCount; ++i )
 				sgs_PushInt( C, mfd.dataFlags & SS3D_MDF_INDEX_32 ? *(((uint32_t*)mfd.indexData) + part->indexOffset + i) : *(((uint16_t*)mfd.indexData) + part->indexOffset + i) );
-			sgs_PushArray( C, part->indexCount );
+			sgs_CreateArray( C, NULL, part->indexCount );
 		}
-		sgs_PushDict( C, 4 );
+		sgs_CreateDict( C, NULL, 4 );
 	}
-	sgs_PushArray( C, mfd.numParts );
+	sgs_CreateArray( C, NULL, mfd.numParts );
 	return 1;
 }
 
@@ -1123,12 +1123,12 @@ static void SS3D_PushVDeclInfo( SGS_CTX, SS3D_VDeclInfo* vdinfo )
 		sgs_PushInt( C, vdinfo->types[ i ] );
 		sgs_PushString( C, "usage" );
 		sgs_PushInt( C, vdinfo->usages[ i ] );
-		sgs_PushDict( C, 6 );
+		sgs_CreateDict( C, NULL, 6 );
 	}
-	sgs_PushArray( C, vdinfo->count );
+	sgs_CreateArray( C, NULL, vdinfo->count );
 	sgs_PushString( C, "size" );
 	sgs_PushInt( C, vdinfo->size );
-	sgs_PushDict( C, 4 );
+	sgs_CreateDict( C, NULL, 4 );
 }
 
 static int SS3D_MeshData_ParseToSGS( SGS_CTX )
@@ -1161,9 +1161,9 @@ static int SS3D_MeshData_ParseToSGS( SGS_CTX )
 	sgs_PushString( C, "flags" );
 	sgs_PushInt( C, mfd.dataFlags );
 	sgs_PushString( C, "boundsMin" );
-	sgs_PushVec3p( C, mfd.boundsMin );
+	sgs_CreateVec3p( C, NULL, mfd.boundsMin );
 	sgs_PushString( C, "boundsMax" );
-	sgs_PushVec3p( C, mfd.boundsMax );
+	sgs_CreateVec3p( C, NULL, mfd.boundsMax );
 	sgs_PushString( C, "vdata" );
 	sgs_PushStringBuf( C, mfd.vertexData, mfd.vertexDataSize );
 	sgs_PushString( C, "idata" );
@@ -1191,11 +1191,11 @@ static int SS3D_MeshData_ParseToSGS( SGS_CTX )
 		{
 			sgs_PushStringBuf( C, part->materialStrings[i], part->materialStringSizes[i] );
 		}
-		sgs_PushArray( C, part->materialTextureCount );
-		sgs_PushDict( C, 12 );
+		sgs_CreateArray( C, NULL, part->materialTextureCount );
+		sgs_CreateDict( C, NULL, 12 );
 	}
-	sgs_PushArray( C, mfd.numParts );
-	sgs_PushDict( C, 16 );
+	sgs_CreateArray( C, NULL, mfd.numParts );
+	sgs_CreateDict( C, NULL, 16 );
 	return 1;
 }
 
@@ -1566,26 +1566,26 @@ static int meshinst_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	MI_HDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "mesh" )    SGS_RETURN_OBJECT( MI->mesh );
-		SGS_CASE( "matrix" )  SGS_RETURN_MAT4( *MI->matrix );
-		SGS_CASE( "color" )   SGS_RETURN_COLORP( MI->color );
-		SGS_CASE( "enabled" ) SGS_RETURN_BOOL( MI->enabled );
-		SGS_CASE( "cpuskin" ) SGS_RETURN_BOOL( MI->cpuskin );
+		SGS_CASE( "mesh" )    return sgs_PushObjectPtr( C, MI->mesh );
+		SGS_CASE( "matrix" )  return sgs_CreateMat4( C, NULL, *MI->matrix, 0 );
+		SGS_CASE( "color" )   return sgs_CreateColorp( C, NULL, MI->color );
+		SGS_CASE( "enabled" ) return sgs_PushBool( C, MI->enabled );
+		SGS_CASE( "cpuskin" ) return sgs_PushBool( C, MI->cpuskin );
 		
-		SGS_CASE( "setConstF" ) SGS_RETURN_CFUNC( meshinsti_setConstF );
-		SGS_CASE( "setConstV2" ) SGS_RETURN_CFUNC( meshinsti_setConstV2 );
-		SGS_CASE( "setConstV3" ) SGS_RETURN_CFUNC( meshinsti_setConstV3 );
-		SGS_CASE( "setConstV4" ) SGS_RETURN_CFUNC( meshinsti_setConstV4 );
-		SGS_CASE( "setConstM4" ) SGS_RETURN_CFUNC( meshinsti_setConstM4 );
-		SGS_CASE( "setTexture" ) SGS_RETURN_CFUNC( meshinsti_setTexture );
-		SGS_CASE( "resizeSkinMatrixArray" ) SGS_RETURN_CFUNC( meshinsti_resizeSkinMatrixArray );
-		SGS_CASE( "resetSkinMatrices" ) SGS_RETURN_CFUNC( meshinsti_resetSkinMatrices );
-		SGS_CASE( "setSkinMatrix" ) SGS_RETURN_CFUNC( meshinsti_setSkinMatrix );
+		SGS_CASE( "setConstF" ) return sgs_PushCFunc( C, meshinsti_setConstF );
+		SGS_CASE( "setConstV2" ) return sgs_PushCFunc( C, meshinsti_setConstV2 );
+		SGS_CASE( "setConstV3" ) return sgs_PushCFunc( C, meshinsti_setConstV3 );
+		SGS_CASE( "setConstV4" ) return sgs_PushCFunc( C, meshinsti_setConstV4 );
+		SGS_CASE( "setConstM4" ) return sgs_PushCFunc( C, meshinsti_setConstM4 );
+		SGS_CASE( "setTexture" ) return sgs_PushCFunc( C, meshinsti_setTexture );
+		SGS_CASE( "resizeSkinMatrixArray" ) return sgs_PushCFunc( C, meshinsti_resizeSkinMatrixArray );
+		SGS_CASE( "resetSkinMatrices" ) return sgs_PushCFunc( C, meshinsti_resetSkinMatrices );
+		SGS_CASE( "setSkinMatrix" ) return sgs_PushCFunc( C, meshinsti_setSkinMatrix );
 		
-		SGS_CASE( "texture0" ) SGS_RETURN_OBJECT( MI->textures[0] );
-		SGS_CASE( "texture1" ) SGS_RETURN_OBJECT( MI->textures[1] );
-		SGS_CASE( "texture2" ) SGS_RETURN_OBJECT( MI->textures[2] );
-		SGS_CASE( "texture3" ) SGS_RETURN_OBJECT( MI->textures[3] );
+		SGS_CASE( "texture0" ) return sgs_PushObjectPtr( C, MI->textures[0] );
+		SGS_CASE( "texture1" ) return sgs_PushObjectPtr( C, MI->textures[1] );
+		SGS_CASE( "texture2" ) return sgs_PushObjectPtr( C, MI->textures[2] );
+		SGS_CASE( "texture3" ) return sgs_PushObjectPtr( C, MI->textures[3] );
 	SGS_END_INDEXFUNC;
 }
 
@@ -1593,16 +1593,16 @@ static int meshinst_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	MI_HDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "mesh" )    { if( !MI->scene || !MI->scene->renderer ) return SGS_EINPROC; SGS_PARSE_OBJECT( MI->scene->renderer->ifMesh, MI->mesh, 0 ) }
-		SGS_CASE( "matrix" )  SGS_PARSE_MAT4( *MI->matrix )
-		SGS_CASE( "color" )   SGS_PARSE_COLOR( MI->color, 0 )
-		SGS_CASE( "enabled" ) SGS_PARSE_BOOL( MI->enabled )
-		SGS_CASE( "cpuskin" ) SGS_PARSE_BOOL( MI->cpuskin )
+		SGS_CASE( "mesh" )    { if( !MI->scene || !MI->scene->renderer ) return SGS_EINPROC; return sgs_ParseObjectPtr( C, 1, MI->scene->renderer->ifMesh, &MI->mesh, 0 ) ? SGS_SUCCESS : SGS_EINVAL; }
+		SGS_CASE( "matrix" )  return sgs_ParseMat4( C, 1, *MI->matrix ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "color" )   return sgs_ParseColor( C, 1, MI->color, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "enabled" ) { sgs_Bool tmp; if( sgs_ParseBool( C, 1, &tmp ) ){ MI->enabled = tmp; return SGS_SUCCESS; } else return SGS_EINVAL; }
+		SGS_CASE( "cpuskin" ) { sgs_Bool tmp; if( sgs_ParseBool( C, 1, &tmp ) ){ MI->cpuskin = tmp; return SGS_SUCCESS; } else return SGS_EINVAL; }
 		
-		SGS_CASE( "texture0" ) { if( !MI->scene || !MI->scene->renderer ) return SGS_EINPROC; SGS_PARSE_OBJECT( MI->scene->renderer->ifTexture, MI->textures[0], 0 ) }
-		SGS_CASE( "texture1" ) { if( !MI->scene || !MI->scene->renderer ) return SGS_EINPROC; SGS_PARSE_OBJECT( MI->scene->renderer->ifTexture, MI->textures[1], 0 ) }
-		SGS_CASE( "texture2" ) { if( !MI->scene || !MI->scene->renderer ) return SGS_EINPROC; SGS_PARSE_OBJECT( MI->scene->renderer->ifTexture, MI->textures[2], 0 ) }
-		SGS_CASE( "texture3" ) { if( !MI->scene || !MI->scene->renderer ) return SGS_EINPROC; SGS_PARSE_OBJECT( MI->scene->renderer->ifTexture, MI->textures[3], 0 ) }
+		SGS_CASE( "texture0" ) { if( !MI->scene || !MI->scene->renderer ) return SGS_EINPROC; return sgs_ParseObjectPtr( C, 1, MI->scene->renderer->ifTexture, &MI->textures[0], 0 ) ? SGS_SUCCESS : SGS_EINVAL; }
+		SGS_CASE( "texture1" ) { if( !MI->scene || !MI->scene->renderer ) return SGS_EINPROC; return sgs_ParseObjectPtr( C, 1, MI->scene->renderer->ifTexture, &MI->textures[1], 0 ) ? SGS_SUCCESS : SGS_EINVAL; }
+		SGS_CASE( "texture2" ) { if( !MI->scene || !MI->scene->renderer ) return SGS_EINPROC; return sgs_ParseObjectPtr( C, 1, MI->scene->renderer->ifTexture, &MI->textures[2], 0 ) ? SGS_SUCCESS : SGS_EINVAL; }
+		SGS_CASE( "texture3" ) { if( !MI->scene || !MI->scene->renderer ) return SGS_EINPROC; return sgs_ParseObjectPtr( C, 1, MI->scene->renderer->ifTexture, &MI->textures[3], 0 ) ? SGS_SUCCESS : SGS_EINVAL; }
 	SGS_END_INDEXFUNC;
 }
 
@@ -1638,22 +1638,22 @@ static int light_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	L_HDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "type" )          SGS_RETURN_INT( L->type );
-		SGS_CASE( "enabled" )       SGS_RETURN_BOOL( L->enabled );
-		SGS_CASE( "position" )      SGS_RETURN_VEC3P( L->position );
-		SGS_CASE( "direction" )     SGS_RETURN_VEC3P( L->direction );
-		SGS_CASE( "updir" )         SGS_RETURN_VEC3P( L->updir );
-		SGS_CASE( "color" )         SGS_RETURN_VEC3P( L->color );
-		SGS_CASE( "range" )         SGS_RETURN_REAL( L->range );
-		SGS_CASE( "power" )         SGS_RETURN_REAL( L->power );
-		SGS_CASE( "angle" )         SGS_RETURN_REAL( L->angle );
-		SGS_CASE( "aspect" )        SGS_RETURN_REAL( L->aspect );
-		SGS_CASE( "cookieTexture" ) SGS_RETURN_OBJECT( L->cookieTexture );
-		SGS_CASE( "shadowTexture" ) SGS_RETURN_OBJECT( L->shadowTexture );
-		SGS_CASE( "projMatrix" )    SGS_RETURN_MAT4( *L->projMatrix );
-		SGS_CASE( "hasShadows" )    SGS_RETURN_BOOL( L->hasShadows );
+		SGS_CASE( "type" )          return sgs_PushInt( C, L->type );
+		SGS_CASE( "enabled" )       return sgs_PushBool( C, L->enabled );
+		SGS_CASE( "position" )      return sgs_CreateVec3p( C, NULL, L->position );
+		SGS_CASE( "direction" )     return sgs_CreateVec3p( C, NULL, L->direction );
+		SGS_CASE( "updir" )         return sgs_CreateVec3p( C, NULL, L->updir );
+		SGS_CASE( "color" )         return sgs_CreateVec3p( C, NULL, L->color );
+		SGS_CASE( "range" )         return sgs_PushReal( C, L->range );
+		SGS_CASE( "power" )         return sgs_PushReal( C, L->power );
+		SGS_CASE( "angle" )         return sgs_PushReal( C, L->angle );
+		SGS_CASE( "aspect" )        return sgs_PushReal( C, L->aspect );
+		SGS_CASE( "cookieTexture" ) return sgs_PushObjectPtr( C, L->cookieTexture );
+		SGS_CASE( "shadowTexture" ) return sgs_PushObjectPtr( C, L->shadowTexture );
+		SGS_CASE( "projMatrix" )    return sgs_CreateMat4( C, NULL, *L->projMatrix, 0 );
+		SGS_CASE( "hasShadows" )    return sgs_PushBool( C, L->hasShadows );
 		
-		SGS_CASE( "genSpotLightMatrices" ) SGS_RETURN_CFUNC( lighti_genSpotLightMatrices );
+		SGS_CASE( "genSpotLightMatrices" ) return sgs_PushCFunc( C, lighti_genSpotLightMatrices );
 	SGS_END_INDEXFUNC;
 }
 
@@ -1661,30 +1661,30 @@ static int light_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	L_HDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "type" )          SGS_PARSE_INT( L->type )
-		SGS_CASE( "enabled" )       SGS_PARSE_BOOL( L->enabled )
-		SGS_CASE( "position" )      SGS_PARSE_VEC3( L->position, 0 )
-		SGS_CASE( "direction" )     SGS_PARSE_VEC3( L->direction, 0 )
-		SGS_CASE( "updir" )         SGS_PARSE_VEC3( L->updir, 0 )
-		SGS_CASE( "color" )         SGS_PARSE_VEC3( L->color, 0 )
-		SGS_CASE( "range" )         SGS_PARSE_REAL( L->range )
-		SGS_CASE( "power" )         SGS_PARSE_REAL( L->power )
-		SGS_CASE( "angle" )         SGS_PARSE_REAL( L->angle )
-		SGS_CASE( "aspect" )        SGS_PARSE_REAL( L->aspect )
+		SGS_CASE( "type" )          { sgs_Int V; if( sgs_ParseInt( C, 1, &V ) ){ L->type = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "enabled" )       { sgs_Bool tmp; if( sgs_ParseBool( C, 1, &tmp ) ){ L->enabled = tmp; return SGS_SUCCESS; } else return SGS_EINVAL; }
+		SGS_CASE( "position" )      return sgs_ParseVec3( C, 1, L->position, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "direction" )     return sgs_ParseVec3( C, 1, L->direction, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "updir" )         return sgs_ParseVec3( C, 1, L->updir, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "color" )         return sgs_ParseVec3( C, 1, L->color, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "range" )         { sgs_Real V; if( sgs_ParseReal( C, 1, &V ) ){ L->range = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "power" )         { sgs_Real V; if( sgs_ParseReal( C, 1, &V ) ){ L->power = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "angle" )         { sgs_Real V; if( sgs_ParseReal( C, 1, &V ) ){ L->angle = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "aspect" )        { sgs_Real V; if( sgs_ParseReal( C, 1, &V ) ){ L->aspect = V; return SGS_SUCCESS; } return SGS_EINVAL; }
 		SGS_CASE( "cookieTexture" )
 		{
 			if( !L->scene || !L->scene->renderer ) return SGS_EINPROC;
-			if( val->type == SGS_VT_NULL )
+			if( sgs_ItemType( C, 1 ) == SGS_VT_NULL )
 				sgs_ObjAssign( C, &L->cookieTexture, NULL );
-			else if( sgs_IsObjectP( val, L->scene->renderer->ifTexture ) || sgs_IsObjectP( val, L->scene->renderer->ifRT ) )
-				sgs_ObjAssign( C, &L->cookieTexture, sgs_GetObjectStructP( val ) );
+			else if( sgs_IsObject( C, 1, L->scene->renderer->ifTexture ) || sgs_IsObject( C, 1, L->scene->renderer->ifRT ) )
+				sgs_ObjAssign( C, &L->cookieTexture, sgs_GetObjectStruct( C, 1 ) );
 			else
 				return SGS_EINVAL;
 			return SGS_SUCCESS;
 		}
-		SGS_CASE( "shadowTexture" ) { if( !L->scene || !L->scene->renderer ) return SGS_EINPROC; SGS_PARSE_OBJECT( L->scene->renderer->ifRT, L->shadowTexture, 0 ) }
-		SGS_CASE( "projMatrix" )    SGS_PARSE_MAT4( *L->projMatrix )
-		SGS_CASE( "hasShadows" )    SGS_PARSE_BOOL( L->hasShadows )
+		SGS_CASE( "shadowTexture" ) { if( !L->scene || !L->scene->renderer ) return SGS_EINPROC; return sgs_ParseObjectPtr( C, 1, L->scene->renderer->ifRT, &L->shadowTexture, 0 ) ? SGS_SUCCESS : SGS_EINVAL; }
+		SGS_CASE( "projMatrix" )    return sgs_ParseMat4( C, 1, *L->projMatrix ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "hasShadows" )    { sgs_Bool tmp; if( sgs_ParseBool( C, 1, &tmp ) ){ L->hasShadows = tmp; return SGS_SUCCESS; } else return SGS_EINVAL; }
 	SGS_END_INDEXFUNC;
 }
 
@@ -1705,7 +1705,7 @@ static int light_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 {
 	char bfr[ 2048 ];
 	L_HDR;
-	UNUSED( maxdepth );
+	SGS_UNUSED( maxdepth );
 	
 	sprintf( bfr,
 		"\ntype=%d"
@@ -2022,23 +2022,23 @@ static int cullscene_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	CS_HDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "camera_prepare" ) SGS_RETURN_PTR( CS->camera_prepare );
-		SGS_CASE( "camera_meshlist" ) SGS_RETURN_PTR( CS->camera_meshlist );
-		SGS_CASE( "camera_pointlightlist" ) SGS_RETURN_PTR( CS->camera_pointlightlist );
-		SGS_CASE( "camera_spotlightlist" ) SGS_RETURN_PTR( CS->camera_spotlightlist );
-		SGS_CASE( "mesh_pointlightlist" ) SGS_RETURN_PTR( CS->mesh_pointlightlist );
-		SGS_CASE( "mesh_spotlightlist" ) SGS_RETURN_PTR( CS->mesh_spotlightlist );
-		SGS_CASE( "spotlight_prepare" ) SGS_RETURN_PTR( CS->spotlight_prepare );
-		SGS_CASE( "spotlight_meshlist" ) SGS_RETURN_PTR( CS->spotlight_meshlist );
-		SGS_CASE( "data" ) SGS_RETURN_PTR( CS->data );
-		SGS_CASE( "store" ) { sgs_PushVariable( C, &CS->store ); return SGS_SUCCESS; }
+		SGS_CASE( "camera_prepare" ) return sgs_PushPtr( C, CS->camera_prepare );
+		SGS_CASE( "camera_meshlist" ) return sgs_PushPtr( C, CS->camera_meshlist );
+		SGS_CASE( "camera_pointlightlist" ) return sgs_PushPtr( C, CS->camera_pointlightlist );
+		SGS_CASE( "camera_spotlightlist" ) return sgs_PushPtr( C, CS->camera_spotlightlist );
+		SGS_CASE( "mesh_pointlightlist" ) return sgs_PushPtr( C, CS->mesh_pointlightlist );
+		SGS_CASE( "mesh_spotlightlist" ) return sgs_PushPtr( C, CS->mesh_spotlightlist );
+		SGS_CASE( "spotlight_prepare" ) return sgs_PushPtr( C, CS->spotlight_prepare );
+		SGS_CASE( "spotlight_meshlist" ) return sgs_PushPtr( C, CS->spotlight_meshlist );
+		SGS_CASE( "data" ) return sgs_PushPtr( C, CS->data );
+		SGS_CASE( "store" ) { sgs_PushVariable( C, CS->store ); return SGS_SUCCESS; }
 		
-		SGS_CASE( "enable_camera_meshlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_CAM_MESH );
-		SGS_CASE( "enable_camera_pointlightlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_CAM_PLT );
-		SGS_CASE( "enable_camera_spotlightlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_CAM_SLT );
-		SGS_CASE( "enable_mesh_pointlightlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_MESH_PLT );
-		SGS_CASE( "enable_mesh_spotlightlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_MESH_SLT );
-		SGS_CASE( "enable_spotlight_meshlist" ) SGS_RETURN_BOOL( CS->flags & SS3D_CF_ENABLE_SLT_MESH );
+		SGS_CASE( "enable_camera_meshlist" ) return sgs_PushBool( C, CS->flags & SS3D_CF_ENABLE_CAM_MESH );
+		SGS_CASE( "enable_camera_pointlightlist" ) return sgs_PushBool( C, CS->flags & SS3D_CF_ENABLE_CAM_PLT );
+		SGS_CASE( "enable_camera_spotlightlist" ) return sgs_PushBool( C, CS->flags & SS3D_CF_ENABLE_CAM_SLT );
+		SGS_CASE( "enable_mesh_pointlightlist" ) return sgs_PushBool( C, CS->flags & SS3D_CF_ENABLE_MESH_PLT );
+		SGS_CASE( "enable_mesh_spotlightlist" ) return sgs_PushBool( C, CS->flags & SS3D_CF_ENABLE_MESH_SLT );
+		SGS_CASE( "enable_spotlight_meshlist" ) return sgs_PushBool( C, CS->flags & SS3D_CF_ENABLE_SLT_MESH );
 	SGS_END_INDEXFUNC;
 }
 
@@ -2046,23 +2046,23 @@ static int cullscene_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	CS_HDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "camera_prepare" ) SGS_PARSE_PTR( CS->camera_prepare )
-		SGS_CASE( "camera_meshlist" ) SGS_PARSE_PTR( CS->camera_meshlist )
-		SGS_CASE( "camera_pointlightlist" ) SGS_PARSE_PTR( CS->camera_pointlightlist )
-		SGS_CASE( "camera_spotlightlist" ) SGS_PARSE_PTR( CS->camera_spotlightlist )
-		SGS_CASE( "mesh_pointlightlist" ) SGS_PARSE_PTR( CS->mesh_pointlightlist )
-		SGS_CASE( "mesh_spotlightlist" ) SGS_PARSE_PTR( CS->mesh_spotlightlist )
-		SGS_CASE( "spotlight_prepare" ) SGS_PARSE_PTR( CS->spotlight_prepare )
-		SGS_CASE( "spotlight_meshlist" ) SGS_PARSE_PTR( CS->spotlight_meshlist )
-		SGS_CASE( "data" ) SGS_PARSE_PTR( CS->data )
-		SGS_CASE( "store" ) { sgs_Assign( C, &CS->store, val ); return SGS_SUCCESS; }
+		SGS_CASE( "camera_prepare" ) return sgs_ParsePtr( C, 1, (void**) &CS->camera_prepare ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "camera_meshlist" ) return sgs_ParsePtr( C, 1, (void**) &CS->camera_meshlist ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "camera_pointlightlist" ) return sgs_ParsePtr( C, 1, (void**) &CS->camera_pointlightlist ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "camera_spotlightlist" ) return sgs_ParsePtr( C, 1, (void**) &CS->camera_spotlightlist ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "mesh_pointlightlist" ) return sgs_ParsePtr( C, 1, (void**) &CS->mesh_pointlightlist ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "mesh_spotlightlist" ) return sgs_ParsePtr( C, 1, (void**) &CS->mesh_spotlightlist ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "spotlight_prepare" ) return sgs_ParsePtr( C, 1, (void**) &CS->spotlight_prepare ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "spotlight_meshlist" ) return sgs_ParsePtr( C, 1, (void**) &CS->spotlight_meshlist ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "data" ) return sgs_ParsePtr( C, 1, (void**) &CS->data ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "store" ) { sgs_GetStackItem( C, 1, &CS->store ); return SGS_SUCCESS; }
 		
-		SGS_CASE( "enable_camera_meshlist" ) { sgs_Bool v; if( sgs_ParseBoolP( C, val, &v ) ){ CS->flags = ( CS->flags & ~SS3D_CF_ENABLE_CAM_MESH ) | ( v * SS3D_CF_ENABLE_CAM_MESH ); return SGS_SUCCESS; } return SGS_EINVAL; }
-		SGS_CASE( "enable_camera_pointlightlist" ) { sgs_Bool v; if( sgs_ParseBoolP( C, val, &v ) ){ CS->flags = ( CS->flags & ~SS3D_CF_ENABLE_CAM_PLT ) | ( v * SS3D_CF_ENABLE_CAM_PLT ); return SGS_SUCCESS; } return SGS_EINVAL; }
-		SGS_CASE( "enable_camera_spotlightlist" ) { sgs_Bool v; if( sgs_ParseBoolP( C, val, &v ) ){ CS->flags = ( CS->flags & ~SS3D_CF_ENABLE_CAM_SLT ) | ( v * SS3D_CF_ENABLE_CAM_SLT ); return SGS_SUCCESS; } return SGS_EINVAL; }
-		SGS_CASE( "enable_mesh_pointlightlist" ) { sgs_Bool v; if( sgs_ParseBoolP( C, val, &v ) ){ CS->flags = ( CS->flags & ~SS3D_CF_ENABLE_MESH_PLT ) | ( v * SS3D_CF_ENABLE_MESH_PLT ); return SGS_SUCCESS; } return SGS_EINVAL; }
-		SGS_CASE( "enable_mesh_spotlightlist" ) { sgs_Bool v; if( sgs_ParseBoolP( C, val, &v ) ){ CS->flags = ( CS->flags & ~SS3D_CF_ENABLE_MESH_SLT ) | ( v * SS3D_CF_ENABLE_MESH_SLT ); return SGS_SUCCESS; } return SGS_EINVAL; }
-		SGS_CASE( "enable_spotlight_meshlist" ) { sgs_Bool v; if( sgs_ParseBoolP( C, val, &v ) ){ CS->flags = ( CS->flags & ~SS3D_CF_ENABLE_SLT_MESH ) | ( v * SS3D_CF_ENABLE_SLT_MESH ); return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "enable_camera_meshlist" ) { sgs_Bool v; if( sgs_ParseBool( C, 1, &v ) ){ CS->flags = ( CS->flags & ~SS3D_CF_ENABLE_CAM_MESH ) | ( v * SS3D_CF_ENABLE_CAM_MESH ); return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "enable_camera_pointlightlist" ) { sgs_Bool v; if( sgs_ParseBool( C, 1, &v ) ){ CS->flags = ( CS->flags & ~SS3D_CF_ENABLE_CAM_PLT ) | ( v * SS3D_CF_ENABLE_CAM_PLT ); return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "enable_camera_spotlightlist" ) { sgs_Bool v; if( sgs_ParseBool( C, 1, &v ) ){ CS->flags = ( CS->flags & ~SS3D_CF_ENABLE_CAM_SLT ) | ( v * SS3D_CF_ENABLE_CAM_SLT ); return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "enable_mesh_pointlightlist" ) { sgs_Bool v; if( sgs_ParseBool( C, 1, &v ) ){ CS->flags = ( CS->flags & ~SS3D_CF_ENABLE_MESH_PLT ) | ( v * SS3D_CF_ENABLE_MESH_PLT ); return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "enable_mesh_spotlightlist" ) { sgs_Bool v; if( sgs_ParseBool( C, 1, &v ) ){ CS->flags = ( CS->flags & ~SS3D_CF_ENABLE_MESH_SLT ) | ( v * SS3D_CF_ENABLE_MESH_SLT ); return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "enable_spotlight_meshlist" ) { sgs_Bool v; if( sgs_ParseBool( C, 1, &v ) ){ CS->flags = ( CS->flags & ~SS3D_CF_ENABLE_SLT_MESH ) | ( v * SS3D_CF_ENABLE_SLT_MESH ); return SGS_SUCCESS; } return SGS_EINVAL; }
 	SGS_END_INDEXFUNC;
 }
 
@@ -2077,7 +2077,7 @@ sgs_ObjInterface SS3D_CullScene_iface[1] =
 
 SS3D_CullScene* SS3D_PushCullScene( SGS_CTX )
 {
-	SS3D_CullScene* cs = (SS3D_CullScene*) sgs_PushObjectIPA( C, sizeof(*cs), SS3D_CullScene_iface );
+	SS3D_CullScene* cs = (SS3D_CullScene*) sgs_CreateObjectIPA( C, NULL, sizeof(*cs), SS3D_CullScene_iface );
 	memset( cs, 0, sizeof(*cs) );
 	cs->flags = SS3D_CF_ENABLE_ALL | SS3D_CF_SUBST_SLT;
 	return cs;
@@ -2143,7 +2143,7 @@ static int camerai_worldToScreen( SGS_CTX )
 	SS3D_Mtx_TransformPos( pos, pos, CAM->mProj );
 	pos[0] = pos[0] * 0.5f + 0.5f;
 	pos[1] = pos[1] * -0.5f + 0.5f;
-	sgs_PushVec3p( C, pos );
+	sgs_CreateVec3p( C, NULL, pos );
 	return 1;
 }
 
@@ -2169,8 +2169,8 @@ static int camerai_getCursorRay( SGS_CTX )
 	VEC3_Sub( dir, tgt, pos );
 	VEC3_Normalized( dir, dir );
 	
-	sgs_PushVec3p( C, pos );
-	sgs_PushVec3p( C, dir );
+	sgs_CreateVec3p( C, NULL, pos );
+	sgs_CreateVec3p( C, NULL, dir );
 	return 2;
 }
 
@@ -2178,23 +2178,23 @@ static int camera_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	CAM_HDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "position" )  SGS_RETURN_VEC3P( CAM->position );
-		SGS_CASE( "direction" ) SGS_RETURN_VEC3P( CAM->direction );
-		SGS_CASE( "up" )        SGS_RETURN_VEC3P( CAM->up );
-		SGS_CASE( "angle" )     SGS_RETURN_REAL( CAM->angle );
-		SGS_CASE( "aspect" )    SGS_RETURN_REAL( CAM->aspect );
-		SGS_CASE( "aamix" )     SGS_RETURN_REAL( CAM->aamix );
-		SGS_CASE( "znear" )     SGS_RETURN_REAL( CAM->znear );
-		SGS_CASE( "zfar" )      SGS_RETURN_REAL( CAM->zfar );
+		SGS_CASE( "position" )  return sgs_CreateVec3p( C, NULL, CAM->position );
+		SGS_CASE( "direction" ) return sgs_CreateVec3p( C, NULL, CAM->direction );
+		SGS_CASE( "up" )        return sgs_CreateVec3p( C, NULL, CAM->up );
+		SGS_CASE( "angle" )     return sgs_PushReal( C, CAM->angle );
+		SGS_CASE( "aspect" )    return sgs_PushReal( C, CAM->aspect );
+		SGS_CASE( "aamix" )     return sgs_PushReal( C, CAM->aamix );
+		SGS_CASE( "znear" )     return sgs_PushReal( C, CAM->znear );
+		SGS_CASE( "zfar" )      return sgs_PushReal( C, CAM->zfar );
 		
-		SGS_CASE( "viewMatrix" ) SGS_RETURN_MAT4( *CAM->mView );
-		SGS_CASE( "invViewMatrix" ) SGS_RETURN_MAT4( *CAM->mInvView );
-		SGS_CASE( "projMatrix" ) SGS_RETURN_MAT4( *CAM->mProj );
+		SGS_CASE( "viewMatrix" ) return sgs_CreateMat4( C, NULL, *CAM->mView, 0 );
+		SGS_CASE( "invViewMatrix" ) return sgs_CreateMat4( C, NULL, *CAM->mInvView, 0 );
+		SGS_CASE( "projMatrix" ) return sgs_CreateMat4( C, NULL, *CAM->mProj, 0 );
 		
-		SGS_CASE( "genViewMatrix" ) SGS_RETURN_CFUNC( camerai_genViewMatrix );
-		SGS_CASE( "genProjMatrix" ) SGS_RETURN_CFUNC( camerai_genProjMatrix );
-		SGS_CASE( "worldToScreen" ) SGS_RETURN_CFUNC( camerai_worldToScreen );
-		SGS_CASE( "getCursorRay" ) SGS_RETURN_CFUNC( camerai_getCursorRay );
+		SGS_CASE( "genViewMatrix" ) return sgs_PushCFunc( C, camerai_genViewMatrix );
+		SGS_CASE( "genProjMatrix" ) return sgs_PushCFunc( C, camerai_genProjMatrix );
+		SGS_CASE( "worldToScreen" ) return sgs_PushCFunc( C, camerai_worldToScreen );
+		SGS_CASE( "getCursorRay" ) return sgs_PushCFunc( C, camerai_getCursorRay );
 	SGS_END_INDEXFUNC;
 }
 
@@ -2202,21 +2202,21 @@ static int camera_setindex_( SGS_ARGS_SETINDEXFUNC )
 {
 	CAM_HDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "position" )  { return sgs_ParseVec3P( C, val, CAM->position, 0 ) ? 1 : SGS_EINVAL; }
-		SGS_CASE( "direction" ) { return sgs_ParseVec3P( C, val, CAM->direction, 0 ) ? 1 : SGS_EINVAL; }
-		SGS_CASE( "up" )        { return sgs_ParseVec3P( C, val, CAM->up, 0 ) ? 1 : SGS_EINVAL; }
-		SGS_CASE( "angle" )     { sgs_Real V; if( sgs_ParseRealP( C, val, &V ) ){ CAM->angle = V; return 2; } return SGS_EINVAL; }
-		SGS_CASE( "aspect" )    { sgs_Real V; if( sgs_ParseRealP( C, val, &V ) ){ CAM->aspect = V; return 2; } return SGS_EINVAL; }
-		SGS_CASE( "aamix" )     { sgs_Real V; if( sgs_ParseRealP( C, val, &V ) ){ CAM->aamix = V; return 2; } return SGS_EINVAL; }
-		SGS_CASE( "znear" )     { sgs_Real V; if( sgs_ParseRealP( C, val, &V ) ){ CAM->znear = V; return 2; } return SGS_EINVAL; }
-		SGS_CASE( "zfar" )      { sgs_Real V; if( sgs_ParseRealP( C, val, &V ) ){ CAM->zfar = V; return 2; } return SGS_EINVAL; }
+		SGS_CASE( "position" )  { return sgs_ParseVec3( C, 1, CAM->position, 0 ) ? 1 : SGS_EINVAL; }
+		SGS_CASE( "direction" ) { return sgs_ParseVec3( C, 1, CAM->direction, 0 ) ? 1 : SGS_EINVAL; }
+		SGS_CASE( "up" )        { return sgs_ParseVec3( C, 1, CAM->up, 0 ) ? 1 : SGS_EINVAL; }
+		SGS_CASE( "angle" )     { sgs_Real V; if( sgs_ParseReal( C, 1, &V ) ){ CAM->angle = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "aspect" )    { sgs_Real V; if( sgs_ParseReal( C, 1, &V ) ){ CAM->aspect = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "aamix" )     { sgs_Real V; if( sgs_ParseReal( C, 1, &V ) ){ CAM->aamix = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "znear" )     { sgs_Real V; if( sgs_ParseReal( C, 1, &V ) ){ CAM->znear = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "zfar" )      { sgs_Real V; if( sgs_ParseReal( C, 1, &V ) ){ CAM->zfar = V; return SGS_SUCCESS; } return SGS_EINVAL; }
 	SGS_END_INDEXFUNC;
 }
 
 static int camera_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	CAM_HDR;
-	int ret = camera_setindex_( C, obj, key, val, isprop );
+	int ret = camera_setindex_( C, obj );
 	if( ret < 0 )
 		return ret;
 	if( ret == 1 ) camera_recalc_viewmtx( CAM );
@@ -2228,7 +2228,7 @@ static int camera_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 {
 	char bfr[ 2048 ];
 	CAM_HDR;
-	UNUSED( maxdepth );
+	SGS_UNUSED( maxdepth );
 	
 	sprintf( bfr,
 		"\nposition=(%g;%g;%g)"
@@ -2267,7 +2267,7 @@ sgs_ObjInterface SS3D_Camera_iface[1] =
 
 static int SS3D_CreateCamera( SGS_CTX )
 {
-	SS3D_Camera* CAM = (SS3D_Camera*) sgs_PushObjectIPA( C, sizeof(*CAM), SS3D_Camera_iface );
+	SS3D_Camera* CAM = (SS3D_Camera*) sgs_CreateObjectIPA( C, NULL, sizeof(*CAM), SS3D_Camera_iface );
 	VEC3_Set( CAM->position, 0, 0, 0 );
 	VEC3_Set( CAM->direction, 0, 1, 0 );
 	VEC3_Set( CAM->up, 0, 0, 1 );
@@ -2293,10 +2293,10 @@ static int viewport_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	VP_HDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "x1" )  SGS_RETURN_INT( VP->x1 )
-		SGS_CASE( "y1" )  SGS_RETURN_INT( VP->y1 )
-		SGS_CASE( "x2" )  SGS_RETURN_INT( VP->x2 )
-		SGS_CASE( "y2" )  SGS_RETURN_INT( VP->y2 )
+		SGS_CASE( "x1" )  return sgs_PushInt( C, VP->x1 );
+		SGS_CASE( "y1" )  return sgs_PushInt( C, VP->y1 );
+		SGS_CASE( "x2" )  return sgs_PushInt( C, VP->x2 );
+		SGS_CASE( "y2" )  return sgs_PushInt( C, VP->y2 );
 	SGS_END_INDEXFUNC;
 }
 
@@ -2304,10 +2304,10 @@ static int viewport_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	VP_HDR;
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "x1" )  SGS_PARSE_INT( VP->x1 )
-		SGS_CASE( "y1" )  SGS_PARSE_INT( VP->y1 )
-		SGS_CASE( "x2" )  SGS_PARSE_INT( VP->x2 )
-		SGS_CASE( "y2" )  SGS_PARSE_INT( VP->y2 )
+		SGS_CASE( "x1" )  { sgs_Int V; if( sgs_ParseInt( C, 1, &V ) ){ VP->x1 = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "y1" )  { sgs_Int V; if( sgs_ParseInt( C, 1, &V ) ){ VP->y1 = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "x2" )  { sgs_Int V; if( sgs_ParseInt( C, 1, &V ) ){ VP->x2 = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "y2" )  { sgs_Int V; if( sgs_ParseInt( C, 1, &V ) ){ VP->y2 = V; return SGS_SUCCESS; } return SGS_EINVAL; }
 	SGS_END_INDEXFUNC;
 }
 
@@ -2315,7 +2315,7 @@ static int viewport_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 {
 	char bfr[ 2048 ];
 	VP_HDR;
-	UNUSED( maxdepth );
+	SGS_UNUSED( maxdepth );
 	
 	sprintf( bfr,
 		"\nx1=%d"
@@ -2346,7 +2346,7 @@ sgs_ObjInterface SS3D_Viewport_iface[1] =
 
 static int SS3D_CreateViewport( SGS_CTX )
 {
-	SS3D_Viewport* VP = (SS3D_Viewport*) sgs_PushObjectIPA( C, sizeof(*VP), SS3D_Viewport_iface );
+	SS3D_Viewport* VP = (SS3D_Viewport*) sgs_CreateObjectIPA( C, NULL, sizeof(*VP), SS3D_Viewport_iface );
 	VP->x1 = 0;
 	VP->y1 = 0;
 	VP->x2 = 100;
@@ -2368,7 +2368,7 @@ static int scenei_createMeshInstance( SGS_CTX )
 	int i;
 	SS3D_MeshInstance* MI;
 	SC_IHDR( createMeshInstance );
-	MI = (SS3D_MeshInstance*) sgs_PushObjectIPA( C, sizeof(*MI), SS3D_MeshInstance_iface );
+	MI = (SS3D_MeshInstance*) sgs_CreateObjectIPA( C, NULL, sizeof(*MI), SS3D_MeshInstance_iface );
 	
 	MI->scene = S;
 	MI->mesh = NULL;
@@ -2402,7 +2402,7 @@ static int scenei_createLight( SGS_CTX )
 {
 	SS3D_Light* L;
 	SC_IHDR( createLight );
-	L = (SS3D_Light*) sgs_PushObjectIPA( C, sizeof(*L), SS3D_Light_iface );
+	L = (SS3D_Light*) sgs_CreateObjectIPA( C, NULL, sizeof(*L), SS3D_Light_iface );
 	
 	memset( L, 0, sizeof(*L) );
 	L->scene = S;
@@ -2463,10 +2463,10 @@ void SS3D_Scene_Cull_Camera_Prepare( SGS_CTX, SS3D_Scene* S )
 	
 	sgs_Variable arr, it, val;
 	sgs_InitObjectPtr( &arr, S->cullScenes );
-	sgs_GetIteratorP( C, &arr, &it );
-	while( sgs_IterAdvanceP( C, &it ) > 0 )
+	sgs_GetIterator( C, arr, &it );
+	while( sgs_IterAdvance( C, it ) > 0 )
 	{
-		sgs_IterGetDataP( C, &it, NULL, &val );
+		sgs_IterGetData( C, it, NULL, &val );
 		if( sgs_IsObjectP( &val, SS3D_CullScene_iface ) )
 		{
 			SS3D_CullScene* CS = (SS3D_CullScene*) sgs_GetObjectDataP( &val );
@@ -2515,10 +2515,10 @@ uint32_t SS3D_Scene_Cull_Camera_MeshList( SGS_CTX, sgs_MemBuf* MB, SS3D_Scene* S
 	/* iterate all cullscenes */
 	sgs_Variable arr, it, val;
 	sgs_InitObjectPtr( &arr, S->cullScenes );
-	sgs_GetIteratorP( C, &arr, &it );
-	while( sgs_IterAdvanceP( C, &it ) > 0 )
+	sgs_GetIterator( C, arr, &it );
+	while( sgs_IterAdvance( C, it ) > 0 )
 	{
-		sgs_IterGetDataP( C, &it, NULL, &val );
+		sgs_IterGetData( C, it, NULL, &val );
 		if( sgs_IsObjectP( &val, SS3D_CullScene_iface ) )
 		{
 			SS3D_CullScene* CS = (SS3D_CullScene*) sgs_GetObjectDataP( &val );
@@ -2589,10 +2589,10 @@ uint32_t SS3D_Scene_Cull_Camera_PointLightList( SGS_CTX, sgs_MemBuf* MB, SS3D_Sc
 	/* iterate all cullscenes */
 	sgs_Variable arr, it, val;
 	sgs_InitObjectPtr( &arr, S->cullScenes );
-	sgs_GetIteratorP( C, &arr, &it );
-	while( sgs_IterAdvanceP( C, &it ) > 0 )
+	sgs_GetIterator( C, arr, &it );
+	while( sgs_IterAdvance( C, it ) > 0 )
 	{
-		sgs_IterGetDataP( C, &it, NULL, &val );
+		sgs_IterGetData( C, it, NULL, &val );
 		if( sgs_IsObjectP( &val, SS3D_CullScene_iface ) )
 		{
 			SS3D_CullScene* CS = (SS3D_CullScene*) sgs_GetObjectDataP( &val );
@@ -2666,10 +2666,10 @@ uint32_t SS3D_Scene_Cull_Camera_SpotLightList( SGS_CTX, sgs_MemBuf* MB, SS3D_Sce
 	/* iterate all cullscenes */
 	sgs_Variable arr, it, val;
 	sgs_InitObjectPtr( &arr, S->cullScenes );
-	sgs_GetIteratorP( C, &arr, &it );
-	while( sgs_IterAdvanceP( C, &it ) > 0 )
+	sgs_GetIterator( C, arr, &it );
+	while( sgs_IterAdvance( C, it ) > 0 )
 	{
-		sgs_IterGetDataP( C, &it, NULL, &val );
+		sgs_IterGetData( C, it, NULL, &val );
 		if( sgs_IsObjectP( &val, SS3D_CullScene_iface ) )
 		{
 			SS3D_CullScene* CS = (SS3D_CullScene*) sgs_GetObjectDataP( &val );
@@ -2715,10 +2715,10 @@ void SS3D_Scene_Cull_Spotlight_Prepare( SGS_CTX, SS3D_Scene* S, SS3D_Light* L )
 	
 	sgs_Variable arr, it, val;
 	sgs_InitObjectPtr( &arr, S->cullScenes );
-	sgs_GetIteratorP( C, &arr, &it );
-	while( sgs_IterAdvanceP( C, &it ) > 0 )
+	sgs_GetIterator( C, arr, &it );
+	while( sgs_IterAdvance( C, it ) > 0 )
 	{
-		sgs_IterGetDataP( C, &it, NULL, &val );
+		sgs_IterGetData( C, it, NULL, &val );
 		if( sgs_IsObjectP( &val, SS3D_CullScene_iface ) )
 		{
 			SS3D_CullScene* CS = (SS3D_CullScene*) sgs_GetObjectDataP( &val );
@@ -2765,10 +2765,10 @@ uint32_t SS3D_Scene_Cull_Spotlight_MeshList( SGS_CTX, sgs_MemBuf* MB, SS3D_Scene
 	/* iterate all cullscenes */
 	sgs_Variable arr, it, val;
 	sgs_InitObjectPtr( &arr, S->cullScenes );
-	sgs_GetIteratorP( C, &arr, &it );
-	while( sgs_IterAdvanceP( C, &it ) > 0 )
+	sgs_GetIterator( C, arr, &it );
+	while( sgs_IterAdvance( C, it ) > 0 )
 	{
-		sgs_IterGetDataP( C, &it, NULL, &val );
+		sgs_IterGetData( C, it, NULL, &val );
 		if( sgs_IsObjectP( &val, SS3D_CullScene_iface ) )
 		{
 			int res;
@@ -2814,27 +2814,27 @@ static int scene_getindex( SGS_ARGS_GETINDEXFUNC )
 	SC_HDR;
 	SGS_BEGIN_INDEXFUNC
 		// methods
-		SGS_CASE( "createMeshInstance" )  SGS_RETURN_CFUNC( scenei_createMeshInstance );
-		SGS_CASE( "destroyMeshInstance" ) SGS_RETURN_CFUNC( scenei_destroyMeshInstance );
-		SGS_CASE( "createLight" )         SGS_RETURN_CFUNC( scenei_createLight );
-		SGS_CASE( "destroyLight" )        SGS_RETURN_CFUNC( scenei_destroyLight );
+		SGS_CASE( "createMeshInstance" )  return sgs_PushCFunc( C, scenei_createMeshInstance );
+		SGS_CASE( "destroyMeshInstance" ) return sgs_PushCFunc( C, scenei_destroyMeshInstance );
+		SGS_CASE( "createLight" )         return sgs_PushCFunc( C, scenei_createLight );
+		SGS_CASE( "destroyLight" )        return sgs_PushCFunc( C, scenei_destroyLight );
 		
 		// properties
-		SGS_CASE( "cullScenes" ) SGS_RETURN_OBJECT( S->cullScenes );
-		SGS_CASE( "camera" )    SGS_RETURN_OBJECT( S->camera );
+		SGS_CASE( "cullScenes" ) return sgs_PushObjectPtr( C, S->cullScenes );
+		SGS_CASE( "camera" )    return sgs_PushObjectPtr( C, S->camera );
 		
-		SGS_CASE( "fogColor" )         SGS_RETURN_VEC3P( S->fogColor );
-		SGS_CASE( "fogHeightFactor" )  SGS_RETURN_REAL( S->fogHeightFactor );
-		SGS_CASE( "fogDensity" )       SGS_RETURN_REAL( S->fogDensity );
-		SGS_CASE( "fogHeightDensity" ) SGS_RETURN_REAL( S->fogHeightDensity );
-		SGS_CASE( "fogStartHeight" )   SGS_RETURN_REAL( S->fogStartHeight );
-		SGS_CASE( "fogMinDist" )       SGS_RETURN_REAL( S->fogMinDist );
+		SGS_CASE( "fogColor" )         return sgs_CreateVec3p( C, NULL, S->fogColor );
+		SGS_CASE( "fogHeightFactor" )  return sgs_PushReal( C, S->fogHeightFactor );
+		SGS_CASE( "fogDensity" )       return sgs_PushReal( C, S->fogDensity );
+		SGS_CASE( "fogHeightDensity" ) return sgs_PushReal( C, S->fogHeightDensity );
+		SGS_CASE( "fogStartHeight" )   return sgs_PushReal( C, S->fogStartHeight );
+		SGS_CASE( "fogMinDist" )       return sgs_PushReal( C, S->fogMinDist );
 		
-		SGS_CASE( "ambientLightColor" ) SGS_RETURN_VEC3P( S->ambientLightColor );
-		SGS_CASE( "dirLightColor" )     SGS_RETURN_VEC3P( S->dirLightColor );
-		SGS_CASE( "dirLightDir" )       SGS_RETURN_VEC3P( S->dirLightDir );
+		SGS_CASE( "ambientLightColor" ) return sgs_CreateVec3p( C, NULL, S->ambientLightColor );
+		SGS_CASE( "dirLightColor" )     return sgs_CreateVec3p( C, NULL, S->dirLightColor );
+		SGS_CASE( "dirLightDir" )       return sgs_CreateVec3p( C, NULL, S->dirLightDir );
 		
-		SGS_CASE( "skyTexture" )       SGS_RETURN_OBJECT( S->skyTexture );
+		SGS_CASE( "skyTexture" )       return sgs_PushObjectPtr( C, S->skyTexture );
 	SGS_END_INDEXFUNC;
 }
 
@@ -2844,40 +2844,40 @@ static int scene_setindex( SGS_ARGS_SETINDEXFUNC )
 	SGS_BEGIN_INDEXFUNC
 		SGS_CASE( "camera" )
 		{
-			if( val->type == SGS_VT_NULL )
+			if( sgs_ItemType( C, 1 ) == SGS_VT_NULL )
 			{
 				sgs_ObjAssign( C, &S->camera, NULL );
 				return SGS_SUCCESS;
 			}
-			else if( sgs_IsObjectP( val, SS3D_Camera_iface ) )
+			else if( sgs_IsObject( C, 1, SS3D_Camera_iface ) )
 			{
-				sgs_ObjAssign( C, &S->camera, sgs_GetObjectStructP( val ) );
+				sgs_ObjAssign( C, &S->camera, sgs_GetObjectStruct( C, 1 ) );
 				return SGS_SUCCESS;
 			}
 			return SGS_EINVAL;
 		}
 		
-		SGS_CASE( "fogColor" )         SGS_PARSE_VEC3( S->fogColor, 0 )
-		SGS_CASE( "fogHeightFactor" )  SGS_PARSE_REAL( S->fogHeightFactor )
-		SGS_CASE( "fogDensity" )       SGS_PARSE_REAL( S->fogDensity )
-		SGS_CASE( "fogHeightDensity" ) SGS_PARSE_REAL( S->fogHeightDensity )
-		SGS_CASE( "fogStartHeight" )   SGS_PARSE_REAL( S->fogStartHeight )
-		SGS_CASE( "fogMinDist" )       SGS_PARSE_REAL( S->fogMinDist )
+		SGS_CASE( "fogColor" )         return sgs_ParseVec3( C, 1, S->fogColor, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "fogHeightFactor" )  { sgs_Real V; if( sgs_ParseReal( C, 1, &V ) ){ S->fogHeightFactor = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "fogDensity" )       { sgs_Real V; if( sgs_ParseReal( C, 1, &V ) ){ S->fogDensity = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "fogHeightDensity" ) { sgs_Real V; if( sgs_ParseReal( C, 1, &V ) ){ S->fogHeightDensity = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "fogStartHeight" )   { sgs_Real V; if( sgs_ParseReal( C, 1, &V ) ){ S->fogStartHeight = V; return SGS_SUCCESS; } return SGS_EINVAL; }
+		SGS_CASE( "fogMinDist" )       { sgs_Real V; if( sgs_ParseReal( C, 1, &V ) ){ S->fogMinDist = V; return SGS_SUCCESS; } return SGS_EINVAL; }
 		
-		SGS_CASE( "ambientLightColor" ) SGS_PARSE_VEC3( S->ambientLightColor, 0 )
-		SGS_CASE( "dirLightColor" )     SGS_PARSE_VEC3( S->dirLightColor, 0 )
-		SGS_CASE( "dirLightDir" )       SGS_PARSE_VEC3( S->dirLightDir, 0 )
+		SGS_CASE( "ambientLightColor" ) return sgs_ParseVec3( C, 1, S->ambientLightColor, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "dirLightColor" )     return sgs_ParseVec3( C, 1, S->dirLightColor, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "dirLightDir" )       return sgs_ParseVec3( C, 1, S->dirLightDir, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
 		
 		SGS_CASE( "skyTexture" )
 		{
-			if( val->type == SGS_VT_NULL )
+			if( sgs_ItemType( C, 1 ) == SGS_VT_NULL )
 			{
 				sgs_ObjAssign( C, &S->skyTexture, NULL );
 				return SGS_SUCCESS;
 			}
-			else if( sgs_IsObjectP( val, S->renderer->ifTexture ) )
+			else if( sgs_IsObject( C, 1, S->renderer->ifTexture ) )
 			{
-				sgs_ObjAssign( C, &S->skyTexture, sgs_GetObjectStructP( val ) );
+				sgs_ObjAssign( C, &S->skyTexture, sgs_GetObjectStruct( C, 1 ) );
 				return SGS_SUCCESS;
 			}
 			return SGS_EINVAL;
@@ -2959,7 +2959,7 @@ void SS3D_Renderer_Construct( SS3D_Renderer* R, SGS_CTX )
 	R->currentRT = NULL;
 	R->viewport = NULL;
 	
-	sgs_InitNull( &R->debugDraw );
+	R->debugDraw = sgs_MakeNull();
 	VEC4_Set( R->debugDrawColor, 1, 1, 1, 1 );
 	
 	R->disablePostProcessing = 0;
@@ -3080,8 +3080,7 @@ void SS3D_Renderer_Resize( SS3D_Renderer* R, int w, int h )
 
 void SS3D_Renderer_PokeResource( SS3D_Renderer* R, sgs_VarObj* obj, int add )
 {
-	sgs_Variable K;
-	sgs_InitPtr( &K, obj );
+	sgs_Variable K = sgs_MakePtr( obj );
 	if( add )
 		sgs_vht_set( &R->resources, R->C, &K, &K );
 	else
@@ -3090,7 +3089,7 @@ void SS3D_Renderer_PokeResource( SS3D_Renderer* R, sgs_VarObj* obj, int add )
 
 void SS3D_Renderer_PushScene( SS3D_Renderer* R )
 {
-	SS3D_Scene* S = (SS3D_Scene*) sgs_PushObjectIPA( R->C, sizeof(*S), SS3D_Scene_iface );
+	SS3D_Scene* S = (SS3D_Scene*) sgs_CreateObjectIPA( R->C, NULL, sizeof(*S), SS3D_Scene_iface );
 	S->renderer = R;
 	S->destroying = 0;
 	sgs_vht_init( &S->meshInstances, R->C, 128, 128 );
@@ -3099,7 +3098,7 @@ void SS3D_Renderer_PushScene( SS3D_Renderer* R )
 	
 	sgs_Variable cullScenes;
 	push_default_cullscene( R->C );
-	sgs_InitArray( R->C, &cullScenes, 1 );
+	sgs_CreateArray( R->C, &cullScenes, 1 );
 	S->cullScenes = sgs_GetObjectStructP( &cullScenes );
 	
 	VEC3_Set( S->fogColor, 0, 0, 0 );
@@ -3170,12 +3169,11 @@ static sgs_RegIntConst ss3d_iconsts[] =
 SGS_APIFUNC int sgscript_main( SGS_CTX )
 {
 	push_default_cullscene( C );
-	sgs_StoreGlobal( C, "SS3D_MainCullScene" );
+	sgs_SetGlobalByName( C, "SS3D_MainCullScene", sgs_StackItem( C, -1 ) );
+	sgs_Pop( C, 1 );
 	
-	sgs_PushPtr( C, SS3D_ISCF_Camera_MeshList );
-	sgs_StoreGlobal( C, "SS3D_ISCF_Camera_MeshList" );
-	sgs_PushPtr( C, SS3D_ISCF_Camera_PointLightList );
-	sgs_StoreGlobal( C, "SS3D_ISCF_Camera_PointLightList" );
+	sgs_SetGlobalByName( C, "SS3D_ISCF_Camera_MeshList", sgs_MakePtr( SS3D_ISCF_Camera_MeshList ) );
+	sgs_SetGlobalByName( C, "SS3D_ISCF_Camera_PointLightList", sgs_MakePtr( SS3D_ISCF_Camera_PointLightList ) );
 	
 	sgs_RegFuncConsts( C, ss3d_fconsts, sizeof(ss3d_fconsts) / sizeof(ss3d_fconsts[0]) );
 	sgs_RegIntConsts( C, ss3d_iconsts, sizeof(ss3d_iconsts) / sizeof(ss3d_iconsts[0]) );

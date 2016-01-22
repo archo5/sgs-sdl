@@ -1076,7 +1076,7 @@ static int SS_DrawPacked( SGS_CTX )
 			_WARN( "not enough data to draw with given start/count values" )
 	}
 	
-	sgs_PeekStackItem( C, 0, &texvar );
+	texvar = sgs_StackItem( C, 0 );
 	if( !ss_ApplyTexture( &texvar ) )
 		sgs_Msg( C, SGS_WARNING, "could not use texture" );
 	
@@ -1430,7 +1430,7 @@ static int ss_renderbuf_draw( SGS_CTX )
 		if( !sgs_IsObject( C, 0, SS_Texture_iface ) )
 			return sgs_ArgErrorExt( C, 0, 0, "texture or null", "" );
 	}
-	sgs_PeekStackItem( C, 0, &texvar );
+	texvar = sgs_StackItem( C, 0 );
 	data = rb->B.ptr;
 	
 	if( F->size * (start+count) > rb->B.size )
