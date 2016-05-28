@@ -1,0 +1,36 @@
+
+#include "bullet/src/BulletDynamics/Character/btKinematicCharacterController.cpp"
+
+#include "bullet/src/BulletDynamics/ConstraintSolver/btConeTwistConstraint.cpp"
+#include "bullet/src/BulletDynamics/ConstraintSolver/btContactConstraint.cpp"
+#include "bullet/src/BulletDynamics/ConstraintSolver/btFixedConstraint.cpp"
+#include "bullet/src/BulletDynamics/ConstraintSolver/btGearConstraint.cpp"
+#include "bullet/src/BulletDynamics/ConstraintSolver/btGeneric6DofConstraint.cpp"
+#include "bullet/src/BulletDynamics/ConstraintSolver/btGeneric6DofSpringConstraint.cpp"
+#include "bullet/src/BulletDynamics/ConstraintSolver/btHinge2Constraint.cpp"
+#include "bullet/src/BulletDynamics/ConstraintSolver/btHingeConstraint.cpp"
+#include "bullet/src/BulletDynamics/ConstraintSolver/btPoint2PointConstraint.cpp"
+#include "bullet/src/BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolver.cpp"
+#include "bullet/src/BulletDynamics/ConstraintSolver/btSliderConstraint.cpp"
+#include "bullet/src/BulletDynamics/ConstraintSolver/btSolve2LinearConstraint.cpp"
+#include "bullet/src/BulletDynamics/ConstraintSolver/btTypedConstraint.cpp"
+#include "bullet/src/BulletDynamics/ConstraintSolver/btUniversalConstraint.cpp"
+
+#include "bullet/src/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.cpp"
+#include "bullet/src/BulletDynamics/Dynamics/btRigidBody.cpp"
+#include "bullet/src/BulletDynamics/Dynamics/btSimpleDynamicsWorld.cpp"
+#include "bullet/src/BulletDynamics/Dynamics/Bullet-C-API.cpp"
+
+#include "bullet/src/BulletDynamics/Featherstone/btMultiBody.cpp"
+#include "bullet/src/BulletDynamics/Featherstone/btMultiBodyConstraint.cpp"
+#include "bullet/src/BulletDynamics/Featherstone/btMultiBodyConstraintSolver.cpp"
+#include "bullet/src/BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.cpp"
+#include "bullet/src/BulletDynamics/Featherstone/btMultiBodyJointLimitConstraint.cpp"
+#include "bullet/src/BulletDynamics/Featherstone/btMultiBodyJointMotor.cpp"
+#include "bullet/src/BulletDynamics/Featherstone/btMultiBodyPoint2Point.cpp"
+
+#include "bullet/src/BulletDynamics/MLCPSolvers/btDantzigLCP.cpp"
+#include "bullet/src/BulletDynamics/MLCPSolvers/btMLCPSolver.cpp"
+
+#include "bullet/src/BulletDynamics/Vehicle/btRaycastVehicle.cpp"
+#include "bullet/src/BulletDynamics/Vehicle/btWheelInfo.cpp"

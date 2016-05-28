@@ -101,15 +101,16 @@ endif
 
 # TARGETS
 ## the library (default target)
-.PHONY: tools make launchers ss3d ss3dcull sgs-sdl
+.PHONY: tools make launchers ss3d ss3dcull sgs-sdl box2d bullet
 
-tools: launchers box2d
+tools: launchers box2d bullet
 make: tools
 launchers: $(OUTDIR)/sgs-sdl-release$(BINEXT) $(OUTDIR)/sgs-sdl-debug$(BINEXT)
 sgs-sdl: $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT)
 ss3d: $(OUTDIR)/$(LIBPFX)ss3d$(LIBEXT)
 ss3dcull: $(OUTDIR)/$(LIBPFX)ss3dcull$(LIBEXT)
 box2d: $(OUTDIR)/sgsbox2d$(LIBEXT)
+bullet: $(OUTDIR)/sgsbullet$(LIBEXT)
 
 
 # SGScript
@@ -152,9 +153,18 @@ $(OUTDIR)/$(LIBPFX)png$(LIBEXT): $(OUTDIR)/$(LIBPFX)zlib$(LIBEXT)
 $(OUTDIR)/$(LIBPFX)freetype$(LIBEXT):
 	$(CC) -o $@ $(CFLAGS) -shared ext/src/freetype1.c -Iext/include/freetype
 endif
+# - Box2D
 obj/libbox2d.a:
 	$(CXX) -o obj/libbox2d.o -c $(CFLAGS) $(SGS_CXX_FLAGS) -Wno-shadow ext/src/box2d1.cpp -Iext/src/box2d/Box2D
-	ar -rcs obj/libbox2d.a obj/libbox2d.o
+	ar -rcs $@ obj/libbox2d.o
+# - Bullet
+_BLTOBJ = bullet_LinearMath.o bullet_BulletCollision.o bullet_BulletDynamics.o
+BLTOBJ = $(patsubst %,obj/%,$(_BLTOBJ))
+obj/bullet_%.o: ext/src/bullet_%.cpp
+	$(CXX) -o $@ -c $(CFLAGS) $(SGS_CXX_FLAGS) -Iext/src/bullet/src -Wno-unused-variable $<
+obj/libbullet.a: $(BLTOBJ)
+	ar -rcs $@ $^
+obj/bullet_%.o: ext/src/bullet_%.cpp $(DEPS)
 
 
 # MAIN LIBRARIES
@@ -197,6 +207,11 @@ $(OUTDIR)/sgsbox2d$(LIBEXT): src/box2d.cpp src/box2d.hpp src/cppbc_box2d.cpp sgs
 	$(CXX) -o $@ src/box2d.cpp src/cppbc_box2d.cpp $(SGS_SDL_FLAGS) $(SGS_CXX_FLAGS) -Wno-shadow -Iext/src/box2d/Box2D -Lobj -lbox2d
 	$(LINUXHACKPOST)
 
+$(OUTDIR)/sgsbullet$(LIBEXT): src/bullet.cpp src/bullet.hpp src/cppbc_bullet.cpp $(OUTDIR)/$(LIBPFX)sgscript$(LIBEXT) $(OUTDIR)/sgsxgmath$(LIBEXT) obj/libbullet.a
+	$(LINUXHACKPRE)
+	$(CXX) -o $@ src/bullet.cpp src/cppbc_bullet.cpp $(SGS_SDL_FLAGS) $(SGS_CXX_FLAGS) -Iext/src/bullet/src -Lobj -lbullet -Wno-unused-variable
+	$(LINUXHACKPOST)
+
 obj/ss_%.o: src/ss_%.c $(DEPS)
 	$(CC) -c -o $@ $< $(SS_CFLAGS)
 
@@ -208,9 +223,11 @@ obj/dds.o: src/dds.c src/dds.h
 	$(CC) -c -o $@ $< $(SS_CFLAGS)
 
 src/cppbc_ss3dcull.cpp: src/ss3dcull.hpp sgscript/bin/sgsvm$(BINEXT)
-	sgscript/bin/sgsvm -p sgscript/ext/cppbc.sgs src/ss3dcull.hpp -o src/cppbc_ss3dcull.cpp
+	sgscript/bin/sgsvm -p sgscript/ext/cppbc.sgs src/ss3dcull.hpp -o $@ -iname ss3dcull.hpp
 src/cppbc_box2d.cpp: src/box2d.hpp sgscript/bin/sgsvm$(BINEXT)
-	sgscript/bin/sgsvm -p sgscript/ext/cppbc.sgs src/box2d.hpp -o src/cppbc_box2d.cpp -iname box2d.hpp
+	sgscript/bin/sgsvm -p sgscript/ext/cppbc.sgs src/box2d.hpp -o $@ -iname box2d.hpp
+src/cppbc_bullet.cpp: src/bullet.hpp sgscript/bin/sgsvm$(BINEXT)
+	sgscript/bin/sgsvm -p sgscript/ext/cppbc.sgs src/bullet.hpp -o $@ -iname bullet.hpp
 
 # UTILITY TARGETS
 .PHONY: clean clean_deps clean_all, test, binarch
@@ -220,7 +237,7 @@ clean_deps:
 	-$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/*lib*.o bin/*.dylib bin/*.so bin/*.so.dSYM obj/*lib*.a obj/freetype*.o obj/freetype*.a)
 clean_all: clean clean_deps
 	$(MAKE) -C sgscript clean
-test: sgscript/bin/sgstest$(BINEXT) $(OUTDIR)/sgsbox2d$(LIBEXT)
+test: sgscript/bin/sgstest$(BINEXT) $(OUTDIR)/sgsbox2d$(LIBEXT) $(OUTDIR)/sgsbullet$(LIBEXT)
 	sgscript/bin/sgstest
 binarch: sgscript/bin/sgsvm$(BINEXT)
 	sgsvm build/prep.sgs

@@ -1,0 +1,88 @@
+
+global ERRORS;
+ERRORS = "";
+
+include "../bin/sgsxgmath", "../bin/sgsbullet";
+
+
+testEqual( typeof(Bullet_CreateWorld), "cfunc", "sgs-bullet successfully loaded" );
+
+world = Bullet_CreateWorld();
+testEqual( typeof(world), "BulletDynamicsWorld", "created world" );
+
+sh_sphere = Bullet_CreateSphereShape( 5 );
+testEqual( typeof(sh_sphere), "BulletSphereShape", "created sphere shape" );
+testEqual( sh_sphere.radius, 5.0, "sphere shape radius" );
+
+rbci = Bullet_CreateRigidBodyCreationInfo();
+testEqual( typeof(rbci), "BulletRigidBodyCreationInfo", "created body creation info" );
+
+rbci.collisionShape = sh_sphere;
+rbci.position = vec3(5,10,0);
+testEqual( typeof(rbci.position), "vec3", "rbci.position type = vec3" );
+testEqual( ''$rbci.position, "vec3(5;10;0)", "rbci.position value" );
+
+body1 = Bullet_CreateRigidBody( rbci );
+testEqual( typeof(body1), "BulletRigidBody", "created body" );
+
+world.addRigidBody( body1 );
+testEqual( world.numCollisionObjects, 1, "added body to world" );
+world.removeRigidBody( body1 );
+testEqual( world.numCollisionObjects, 0, "removed body from world" );
+world.addRigidBody( body1 );
+testEqual( world.numCollisionObjects, 1, "added body to world again" );
+
+(rc1dt,rc1obj,rc1normal,rc1pos) = world.rayTestClosest(vec3(5,10,-10),vec3(5,10,0));
+testEqual( rc1dt > 0.49 && rc1dt < 0.51, true, "ray hit delta is ~correct" );
+testEqual( rc1obj, body1, "ray hit collision object is correct" );
+
+testEqual( world.rayTestClosest(vec3(-5,10,-10),vec3(-5,10,0)), null, "ray miss" );
+
+testEqual( ERRORS, "", "No errors before crash test" );
+
+// crash test
+sh_sphere = null;
+printvar(body1.collisionShape);
+sh_sphere = body1.collisionShape;
+// ---
+
+testEqual( typeof(Bullet_CreateTransform), "cfunc", "Bullet_CreateTransform exists" );
+(rc2dt,rc2obj,rc2normal,rc2pos) = world.convexSweepTestClosest( sh_sphere, Bullet_CreateTransform( vec3(5,10,-15) ), Bullet_CreateTransform( vec3(5,10,-5) ) );
+testEqual( rc2dt > 0.49 && rc2dt < 0.51, true, "convex hit delta is ~correct" );
+testEqual( rc2obj, body1, "convex hit collision object is correct" );
+
+sh_capsuleX = Bullet_CreateCapsuleShapeX( 1, 2 );
+testEqual( typeof(sh_capsuleX), "BulletCapsuleShapeX", "created capsule (X) shape" );
+
+sh_capsuleY = Bullet_CreateCapsuleShapeY( 1, 2 );
+testEqual( typeof(sh_capsuleY), "BulletCapsuleShapeY", "created capsule (Y) shape" );
+
+sh_capsuleZ = Bullet_CreateCapsuleShapeZ( 1, 2 );
+testEqual( typeof(sh_capsuleZ), "BulletCapsuleShapeZ", "created capsule (Z) shape" );
+
+sh_box = Bullet_CreateBoxShape( 3, 4, 5 );
+testEqual( typeof(sh_box), "BulletBoxShape", "created box shape" );
+
+trimesh = Bullet_CreateTriangleMesh( false );
+testEqual( typeof(trimesh), "BulletTriangleMesh", "created triangle mesh" );
+trimesh.addTriangle( vec3(-2,-2,0), vec3(2,-2,0), vec3(2,2,0), true );
+trimesh.addTriangle( vec3(2,2,0), vec3(-2,2,0), vec3(-2,-2,0), true );
+testEqual( trimesh.numTriangles, 2, "added 2 triangles" );
+testEqual( trimesh.numVertices, 4, "... (4 vertices)" );
+testEqual( trimesh.numIndices, 6, "... (6 indices)" );
+
+sh_trimesh = Bullet_CreateBVHTriangleMeshShape( trimesh );
+testEqual( typeof(sh_trimesh), "BulletBVHTriangleMeshShape", "created trimesh shape" );
+
+// raycasts #2
+body1.collisionShape = sh_trimesh;
+testEqual( body1.collisionShape, sh_trimesh, "changed shape to trimesh" );
+
+(rc1dt,rc1obj,rc1normal,rc1pos) = world.rayTestClosest(vec3(5,10,-10),vec3(5,10,10));
+testEqual( rc1dt > 0.49 && rc1dt < 0.51, true, "ray hit delta is ~correct" );
+testEqual( rc1obj, body1, "ray hit collision object is correct" );
+
+testEqual( world.rayTestClosest(vec3(-5,10,-10),vec3(-5,10,10)), null, "ray miss" );
+
+testEqual( ERRORS, "", "No errors @ step 2" );
+
