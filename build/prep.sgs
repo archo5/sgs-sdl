@@ -1,0 +1,10 @@
+
+function get_make_cmd( os ){ return "clean_all make"; }
+function get_clean_cmd( os ){ return "clean_all"; }
+function get_version_text(){ return "0.9.5"; }
+function get_buildstrip_cmd( dir, flags )
+{
+	return string_implode( multiply_path_ext_lists( dir, "/", "*sgscript*;*sgsxgmath*" ), " " );
+}
+
+include "../sgscript/build/prep.sgs";

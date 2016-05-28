@@ -101,9 +101,10 @@ endif
 
 # TARGETS
 ## the library (default target)
-.PHONY: tools launchers ss3d ss3dcull sgs-sdl
+.PHONY: tools make launchers ss3d ss3dcull sgs-sdl
 
 tools: launchers box2d
+make: tools
 launchers: $(OUTDIR)/sgs-sdl-release$(BINEXT) $(OUTDIR)/sgs-sdl-debug$(BINEXT)
 sgs-sdl: $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT)
 ss3d: $(OUTDIR)/$(LIBPFX)ss3d$(LIBEXT)
@@ -212,15 +213,17 @@ src/cppbc_box2d.cpp: src/box2d.hpp sgscript/bin/sgsvm$(BINEXT)
 	sgscript/bin/sgsvm -p sgscript/ext/cppbc.sgs src/box2d.hpp -o src/cppbc_box2d.cpp -iname box2d.hpp
 
 # UTILITY TARGETS
-.PHONY: clean clean_deps clean_all, test
+.PHONY: clean clean_deps clean_all, test, binarch
 clean:
-	$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/ss*.o bin/sgs*)
+	-$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/ss*.o bin/sgs*)
 clean_deps:
-	$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/*lib*.o bin/*.dylib bin/*.so bin/*.so.dSYM obj/*lib*.a obj/freetype*.o obj/freetype*.a)
+	-$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/*lib*.o bin/*.dylib bin/*.so bin/*.so.dSYM obj/*lib*.a obj/freetype*.o obj/freetype*.a)
 clean_all: clean clean_deps
 	$(MAKE) -C sgscript clean
 test: sgscript/bin/sgstest$(BINEXT) $(OUTDIR)/sgsbox2d$(LIBEXT)
 	sgscript/bin/sgstest
+binarch: sgscript/bin/sgsvm$(BINEXT)
+	sgsvm build/prep.sgs
 
 
 
