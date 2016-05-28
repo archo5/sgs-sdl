@@ -62,12 +62,6 @@ int SS3D_OcclusionTest::_sgs_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	_sgsTmpChanger<sgs_Context*> _tmpchg( static_cast<SS3D_OcclusionTest*>( obj->data )->C, C );
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "ClearWorld" ){ sgs_PushCFunc( C, _sgs_method__SS3D_OcclusionTest__ClearWorld ); return SGS_SUCCESS; }
-		SGS_CASE( "AddWorldBox" ){ sgs_PushCFunc( C, _sgs_method__SS3D_OcclusionTest__AddWorldBox ); return SGS_SUCCESS; }
-		SGS_CASE( "AddWorldTriangle" ){ sgs_PushCFunc( C, _sgs_method__SS3D_OcclusionTest__AddWorldTriangle ); return SGS_SUCCESS; }
-		SGS_CASE( "CreateCullScene" ){ sgs_PushCFunc( C, _sgs_method__SS3D_OcclusionTest__CreateCullScene ); return SGS_SUCCESS; }
-		SGS_CASE( "DumpBuffer" ){ sgs_PushCFunc( C, _sgs_method__SS3D_OcclusionTest__DumpBuffer ); return SGS_SUCCESS; }
-		SGS_CASE( "DumpImage" ){ sgs_PushCFunc( C, _sgs_method__SS3D_OcclusionTest__DumpImage ); return SGS_SUCCESS; }
 	SGS_END_INDEXFUNC;
 }
 
@@ -94,10 +88,30 @@ int SS3D_OcclusionTest::_sgs_dump( SGS_CTX, sgs_VarObj* obj, int depth )
 	return SGS_SUCCESS;
 }
 
+static sgs_RegFuncConst SS3D_OcclusionTest__sgs_funcs[] =
+{
+	{ "ClearWorld", _sgs_method__SS3D_OcclusionTest__ClearWorld },
+	{ "AddWorldBox", _sgs_method__SS3D_OcclusionTest__AddWorldBox },
+	{ "AddWorldTriangle", _sgs_method__SS3D_OcclusionTest__AddWorldTriangle },
+	{ "CreateCullScene", _sgs_method__SS3D_OcclusionTest__CreateCullScene },
+	{ "DumpBuffer", _sgs_method__SS3D_OcclusionTest__DumpBuffer },
+	{ "DumpImage", _sgs_method__SS3D_OcclusionTest__DumpImage },
+	{ NULL, NULL },
+};
+
+static int SS3D_OcclusionTest__sgs_ifn( SGS_CTX )
+{
+	sgs_CreateDict( C, NULL, 0 );
+	sgs_StoreFuncConsts( C, sgs_StackItem( C, -1 ),
+		SS3D_OcclusionTest__sgs_funcs,
+		-1, "SS3D_OcclusionTest." );
+	return 1;
+}
+
 static sgs_ObjInterface SS3D_OcclusionTest__sgs_interface =
 {
 	"SS3D_OcclusionTest",
 	SS3D_OcclusionTest::_sgs_destruct, SS3D_OcclusionTest::_sgs_gcmark, SS3D_OcclusionTest::_sgs_getindex, SS3D_OcclusionTest::_sgs_setindex, NULL, NULL, SS3D_OcclusionTest::_sgs_dump, NULL, NULL, NULL, 
 };
-_sgsInterface SS3D_OcclusionTest::_sgs_interface(SS3D_OcclusionTest__sgs_interface);
+_sgsInterface SS3D_OcclusionTest::_sgs_interface(SS3D_OcclusionTest__sgs_interface, SS3D_OcclusionTest__sgs_ifn);
 

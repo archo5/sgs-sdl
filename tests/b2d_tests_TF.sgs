@@ -1,0 +1,85 @@
+
+include "../bin/sgsxgmath", "../bin/sgsbox2d";
+
+testEqual( typeof(@Box2D_CreateWorld), "cfunc", "loaded Box2D library" );
+
+println( "--- TEST 1 ---" );
+(function()
+{
+	world = Box2D_CreateWorld( vec2( 0, 0.1 ) );
+	bodydef = Box2D_CreateBodyDef();
+	bodydef.type = Box2D_BodyType_Dynamic;
+	body = world.CreateBody( bodydef );
+	world.Step( 1 ); println( "Iteration 1 ... ", body.position );
+	world.Step( 1 ); println( "Iteration 2 ... ", body.position );
+	world.Step( 1 ); println( "Iteration 3 ... ", body.position );
+	world.Step( 1 ); println( "Iteration 4 ... ", body.position );
+	
+	world = null;
+}
+());
+
+println( "--- TEST 2 ---" );
+(function()
+{
+	world = Box2D_CreateWorld( vec2( 0, 10 ) );
+	
+	shapedef1 = Box2D_CreateCircleShape();
+	shapedef1.radius = 2;
+	bodydef1 = Box2D_CreateBodyDef();
+	bodydef1.type = Box2D_BodyType_Dynamic;
+	body1 = world.CreateBody( bodydef1 );
+	fxdef1 = Box2D_CreateFixtureDef();
+	fxdef1.shape = shapedef1;
+	fxdef1.restitution = 0.8;
+	fxdef1.friction = 0.05;
+	fx1 = body1.CreateFixture( fxdef1 );
+	body1.ApplyLinearImpulseToCenter( vec2(0.5,2) );
+	
+	shapedef2 = Box2D_CreateEdgeShape();
+	shapedef2.SetEdge( vec2(-10,10), vec2(10,10) );
+	bodydef2 = Box2D_CreateBodyDef();
+	bodydef2.type = Box2D_BodyType_Static;
+	body2 = world.CreateBody( bodydef2 );
+	fx2 = body2.CreateFixtureFromShape( shapedef2 );
+	
+	for( i = 1; i <= 100; ++i )
+	{
+		world.Step( 0.15, 10, 10 );
+		if( i % 10 == 0 )
+			println( "Iteration "$i$" ... ", body1.position );
+	}
+	
+	world = null;
+}
+());
+
+println( "--- TEST 3 ---" );
+(function()
+{
+	world = Box2D_CreateWorld( vec2( 0, 0 ) );
+	
+	bodydef1 = Box2D_CreateBodyDef();
+	bodydef1.type = Box2D_BodyType_Dynamic;
+	bodydef1.position = vec2(-1,-1);
+	body1 = world.CreateBody( bodydef1 );
+	
+	bodydef2 = Box2D_CreateBodyDef();
+	bodydef2.type = Box2D_BodyType_Static;
+	body2 = world.CreateBody( bodydef2 );
+	
+	djdef = Box2D_CreateDistanceJointDef();
+	djdef.Initialize( body1, body2, body1.position, body2.position );
+	djdef.length = 1;
+	joint = world.CreateJoint( djdef );
+	
+	for( i = 1; i <= 10; ++i )
+	{
+		world.Step( 0.01, 1, 1 );
+		println( "Iteration "$i$" ... ", body1.position );
+	}
+	
+	world = null;
+}
+());
+

@@ -101,28 +101,76 @@ endif
 
 # TARGETS
 ## the library (default target)
-.PHONY: launchers make ss3d ss3dcull sgs-sdl
+.PHONY: tools launchers ss3d ss3dcull sgs-sdl
 
+tools: launchers box2d
 launchers: $(OUTDIR)/sgs-sdl-release$(BINEXT) $(OUTDIR)/sgs-sdl-debug$(BINEXT)
 sgs-sdl: $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT)
 ss3d: $(OUTDIR)/$(LIBPFX)ss3d$(LIBEXT)
 ss3dcull: $(OUTDIR)/$(LIBPFX)ss3dcull$(LIBEXT)
+box2d: $(OUTDIR)/sgsbox2d$(LIBEXT)
 
+
+# SGScript
+sgscript/bin/sgsvm$(BINEXT):
+	$(MAKE) -C sgscript vm
+sgscript/bin/sgsxgmath$(LIBEXT):
+	$(MAKE) -C sgscript xgmath
+sgscript/bin/sgstest$(BINEXT):
+	$(MAKE) -C sgscript build_test
+
+# INPUT LIBRARIES
+.PHONY: sgs-sdl-deps
+ifeq ($(target_os),windows)
+SGS_SDL_DEPS = obj/libjpg.a obj/libpng.a obj/zlib.a obj/freetype.a
+obj/libjpg.a:
+	$(CC) -o obj/libjpg1.o -c $(CFLAGS) ext/src/libjpg1.c
+	$(CC) -o obj/libjpg2.o -c $(CFLAGS) ext/src/libjpg2.c
+	$(CC) -o obj/libjpg3.o -c $(CFLAGS) ext/src/libjpg3.c
+	ar -rcs obj/libjpg.a obj/libjpg1.o obj/libjpg2.o obj/libjpg3.o
+obj/zlib.a:
+	$(CC) -o obj/zlib1.o -c $(CFLAGS) ext/src/zlib1.c
+	$(CC) -o obj/zlib2.o -c $(CFLAGS) ext/src/zlib2.c
+	$(CC) -o obj/zlib3.o -c $(CFLAGS) ext/src/zlib3.c
+	ar -rcs obj/zlib.a obj/zlib1.o obj/zlib2.o obj/zlib3.o
+obj/libpng.a:
+	$(CC) -o obj/libpng1.o -c $(CFLAGS) ext/src/libpng1.c -Iext/src/zlib
+	ar -rcs obj/libpng.a obj/libpng1.o
+obj/freetype.a:
+	$(CC) -o obj/freetype1.o -c $(CFLAGS) ext/src/freetype1.c -Iext/include/freetype
+	ar -rcs obj/freetype.a obj/freetype1.o
+else
+SGS_SDL_DEPS = $(OUTDIR)/$(LIBPFX)jpg$(LIBEXT) $(OUTDIR)/$(LIBPFX)zlib$(LIBEXT) $(OUTDIR)/$(LIBPFX)png$(LIBEXT) $(OUTDIR)/$(LIBPFX)freetype$(LIBEXT)
+$(OUTDIR)/$(LIBPFX)jpg$(LIBEXT):
+	$(CC) -o $@ $(CFLAGS) -shared ext/src/libjpg1.c ext/src/libjpg2.c ext/src/libjpg3.c
+$(OUTDIR)/$(LIBPFX)zlib$(LIBEXT):
+	$(CC) -o $@ $(CFLAGS) -shared ext/src/zlib1.c ext/src/zlib2.c ext/src/zlib3.c
+$(OUTDIR)/$(LIBPFX)png$(LIBEXT): $(OUTDIR)/$(LIBPFX)zlib$(LIBEXT)
+	$(CC) -o $@ $(CFLAGS) -shared ext/src/libpng1.c -Iext/src/zlib $^
+	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libzlib.so @rpath/libzlib.so $@,)
+$(OUTDIR)/$(LIBPFX)freetype$(LIBEXT):
+	$(CC) -o $@ $(CFLAGS) -shared ext/src/freetype1.c -Iext/include/freetype
+endif
+obj/libbox2d.a:
+	$(CXX) -o obj/libbox2d.o -c $(CFLAGS) $(SGS_CXX_FLAGS) -Wno-shadow ext/src/box2d1.cpp -Iext/src/box2d/Box2D
+	ar -rcs obj/libbox2d.a obj/libbox2d.o
+
+
+# MAIN LIBRARIES
 $(OUTDIR)/sgs-sdl-release$(BINEXT): $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) src/ss_launcher.c
 	$(LINUXHACKPRE)
-	gcc -o $@ src/ss_launcher.c $(call fnIF_OS,windows,-mwindows,) $(SGS_SDL_LAUNCHER_FLAGS) -DSS_RELEASE -s
+	$(CC) -o $@ src/ss_launcher.c $(call fnIF_OS,windows,-mwindows,) $(SGS_SDL_LAUNCHER_FLAGS) -DSS_RELEASE -s
 	$(LINUXHACKPOST)
 	$(call SGS_SDL_INSTALL_TOOL,$@)
 $(OUTDIR)/sgs-sdl-debug$(BINEXT): $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) src/ss_launcher.c
 	$(LINUXHACKPRE)
-	gcc -o $@ src/ss_launcher.c $(SGS_SDL_LAUNCHER_FLAGS) -s
+	$(CC) -o $@ src/ss_launcher.c $(SGS_SDL_LAUNCHER_FLAGS) -s
 	$(LINUXHACKPOST)
 	$(call SGS_SDL_INSTALL_TOOL,$@)
 
-$(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT): $(OBJ) sgs-sdl-deps
-	$(MAKE) -C sgscript xgmath
+$(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT): $(OBJ) $(SGS_SDL_DEPS) sgscript/bin/sgsxgmath$(LIBEXT)
 	$(LINUXHACKPRE)
-	gcc -o $@ $(OBJ) $(SGS_SDL_FLAGS)
+	$(CC) -o $@ $(OBJ) $(SGS_SDL_FLAGS)
 	$(LINUXHACKPOST)
 	$(PF_POST)
 	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libjpg.so @rpath/libjpg.so $@,)
@@ -132,17 +180,20 @@ $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT): $(OBJ) sgs-sdl-deps
 	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libsgscript.so @rpath/libsgscript.so $@,)
 	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/sgsxgmath.so @rpath/sgsxgmath.so $@,)
 
-$(OUTDIR)/$(LIBPFX)ss3d$(LIBEXT): $(SS3D_OBJ) $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT)
-	$(MAKE) -C sgscript xgmath
+$(OUTDIR)/ss3d$(LIBEXT): $(SS3D_OBJ) $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) sgscript/bin/sgsxgmath$(LIBEXT)
 	$(LINUXHACKPRE)
-	gcc -o $@ $(SS3D_OBJ) $(SGS_SDL_FLAGS)
+	$(CC) -o $@ $(SS3D_OBJ) $(SGS_SDL_FLAGS)
 	$(LINUXHACKPOST)
 	$(PF_POST)
 
-$(OUTDIR)/$(LIBPFX)ss3dcull$(LIBEXT): src/ss3dcull.cpp src/ss3dcull.hpp src/cppbc_ss3dcull.cpp $(OUTDIR)/$(LIBPFX)ss3d$(LIBEXT)
-	$(MAKE) -C sgscript xgmath
+$(OUTDIR)/ss3dcull$(LIBEXT): src/ss3dcull.cpp src/ss3dcull.hpp src/cppbc_ss3dcull.cpp $(OUTDIR)/ss3d$(LIBEXT) sgscript/bin/sgsxgmath$(LIBEXT)
 	$(LINUXHACKPRE)
-	$(CXX) -o $@ src/ss3dcull.cpp src/cppbc_ss3dcull.cpp $(SGS_SDL_FLAGS) -msse2 $(SGS_CXX_FLAGS) -I. $(OUTDIR)/$(LIBPFX)ss3d$(LIBEXT)
+	$(CXX) -o $@ src/ss3dcull.cpp src/cppbc_ss3dcull.cpp $(SGS_SDL_FLAGS) -msse2 $(SGS_CXX_FLAGS) -I. $(OUTDIR)/ss3d$(LIBEXT)
+	$(LINUXHACKPOST)
+
+$(OUTDIR)/sgsbox2d$(LIBEXT): src/box2d.cpp src/box2d.hpp src/cppbc_box2d.cpp sgscript/bin/sgsxgmath$(LIBEXT) obj/libbox2d.a
+	$(LINUXHACKPRE)
+	$(CXX) -o $@ src/box2d.cpp src/cppbc_box2d.cpp $(SGS_SDL_FLAGS) $(SGS_CXX_FLAGS) -Wno-shadow -Iext/src/box2d/Box2D -Lobj -lbox2d
 	$(LINUXHACKPOST)
 
 obj/ss_%.o: src/ss_%.c $(DEPS)
@@ -157,61 +208,19 @@ obj/dds.o: src/dds.c src/dds.h
 
 src/cppbc_ss3dcull.cpp: src/ss3dcull.hpp sgscript/bin/sgsvm$(BINEXT)
 	sgscript/bin/sgsvm -p sgscript/ext/cppbc.sgs src/ss3dcull.hpp -o src/cppbc_ss3dcull.cpp
-
-
-# SGScript
-sgscript/bin/sgsvm$(BINEXT):
-	make -C sgscript vm
-
-
-# INPUT LIBRARIES
-.PHONY: libjpg zlib libpng freetype sgs-sdl-deps
-sgs-sdl-deps: libjpg libpng zlib freetype
-ifeq ($(target_os),windows)
-libjpg: obj/libjpg.a
-obj/libjpg.a:
-	gcc -o obj/libjpg1.o -c $(CFLAGS) ext/src/libjpg1.c
-	gcc -o obj/libjpg2.o -c $(CFLAGS) ext/src/libjpg2.c
-	gcc -o obj/libjpg3.o -c $(CFLAGS) ext/src/libjpg3.c
-	ar -rcs obj/libjpg.a obj/libjpg1.o obj/libjpg2.o obj/libjpg3.o
-zlib: obj/zlib.a
-obj/zlib.a:
-	gcc -o obj/zlib1.o -c $(CFLAGS) ext/src/zlib1.c
-	gcc -o obj/zlib2.o -c $(CFLAGS) ext/src/zlib2.c
-	gcc -o obj/zlib3.o -c $(CFLAGS) ext/src/zlib3.c
-	ar -rcs obj/zlib.a obj/zlib1.o obj/zlib2.o obj/zlib3.o
-libpng: obj/libpng.a
-obj/libpng.a:
-	gcc -o obj/libpng1.o -c $(CFLAGS) ext/src/libpng1.c -Iext/src/zlib
-	ar -rcs obj/libpng.a obj/libpng1.o
-freetype: obj/freetype.a
-obj/freetype.a:
-	gcc -o obj/freetype1.o -c $(CFLAGS) ext/src/freetype1.c -Iext/include/freetype
-	ar -rcs obj/freetype.a obj/freetype1.o
-else
-libjpg: $(OUTDIR)/$(LIBPFX)jpg$(LIBEXT)
-$(OUTDIR)/$(LIBPFX)jpg$(LIBEXT):
-	gcc -o $@ $(CFLAGS) -shared ext/src/libjpg1.c ext/src/libjpg2.c ext/src/libjpg3.c
-zlib: $(OUTDIR)/$(LIBPFX)zlib$(LIBEXT)
-$(OUTDIR)/$(LIBPFX)zlib$(LIBEXT):
-	gcc -o $@ $(CFLAGS) -shared ext/src/zlib1.c ext/src/zlib2.c ext/src/zlib3.c
-libpng: $(OUTDIR)/$(LIBPFX)png$(LIBEXT)
-$(OUTDIR)/$(LIBPFX)png$(LIBEXT): $(OUTDIR)/$(LIBPFX)zlib$(LIBEXT)
-	gcc -o $@ $(CFLAGS) -shared ext/src/libpng1.c -Iext/src/zlib $^
-	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libzlib.so @rpath/libzlib.so $@,)
-freetype: $(OUTDIR)/$(LIBPFX)freetype$(LIBEXT)
-$(OUTDIR)/$(LIBPFX)freetype$(LIBEXT):
-	gcc -o $@ $(CFLAGS) -shared ext/src/freetype1.c -Iext/include/freetype
-endif
+src/cppbc_box2d.cpp: src/box2d.hpp sgscript/bin/sgsvm$(BINEXT)
+	sgscript/bin/sgsvm -p sgscript/ext/cppbc.sgs src/box2d.hpp -o src/cppbc_box2d.cpp -iname box2d.hpp
 
 # UTILITY TARGETS
-.PHONY: clean clean_deps clean_all
+.PHONY: clean clean_deps clean_all, test
 clean:
 	$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/ss*.o bin/sgs*)
 clean_deps:
 	$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/*lib*.o bin/*.dylib bin/*.so bin/*.so.dSYM obj/*lib*.a obj/freetype*.o obj/freetype*.a)
 clean_all: clean clean_deps
 	$(MAKE) -C sgscript clean
+test: sgscript/bin/sgstest$(BINEXT) $(OUTDIR)/sgsbox2d$(LIBEXT)
+	sgscript/bin/sgstest
 
 
 
