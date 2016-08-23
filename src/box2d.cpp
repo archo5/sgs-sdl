@@ -328,7 +328,7 @@ void Box2DFixture::_cleanUp( bool destroy )
 		}
 		m_fixture = NULL;
 		if( sgs_IsCallableP( &onDestroy.var ) )
-			sgs_Call( C, onDestroy.var, 0, 0 );
+			onDestroy.call( C );
 		sgs_ObjRelease( C, m_sgsObject );
 	}
 }
@@ -574,7 +574,7 @@ void Box2DJoint::_cleanUp( bool destroy )
 			m_joint->GetBodyA()->GetWorld()->DestroyJoint( m_joint );
 		m_joint = NULL;
 		if( sgs_IsCallableP( &onDestroy.var ) )
-			sgs_Call( C, onDestroy.var, 0, 0 );
+			onDestroy.call( C );
 	}
 }
 
@@ -612,20 +612,14 @@ void Box2DWorld::SayGoodbye( b2Joint* joint )
 {
 	Box2DJoint::HandleFromPtr( joint )->_cleanUp( false );
 	if( sgs_IsCallableP( &destructionListener.var ) )
-	{
-		Box2DJoint::HandleFromPtr( joint ).push( C );
-		sgs_Call( C, destructionListener.var, 1, 0 );
-	}
+		destructionListener.tcall<void>( C, Box2DJoint::HandleFromPtr( joint ) );
 }
 
 void Box2DWorld::SayGoodbye( b2Fixture* fixture )
 {
 	Box2DFixture::HandleFromPtr( fixture )->_cleanUp( false );
 	if( sgs_IsCallableP( &destructionListener.var ) )
-	{
-		Box2DFixture::HandleFromPtr( fixture ).push( C );
-		sgs_Call( C, destructionListener.var, 1, 0 );
-	}
+		destructionListener.tcall<void>( C, Box2DFixture::HandleFromPtr( fixture ) );
 }
 
 void Box2DWorld::AddContactHandle( Box2DContact* contact )
@@ -659,10 +653,9 @@ void Box2DWorld::PostSolve( b2Contact* contact, const b2ContactImpulse* impulse 
 
 bool Box2DWorld::ShouldCollide( b2Fixture* fixtureA, b2Fixture* fixtureB )
 {
-	Box2DFixture::HandleFromPtr( fixtureA ).push( C );
-	Box2DFixture::HandleFromPtr( fixtureB ).push( C );
-	sgs_Call( C, contactFilter.var, 2, 1 );
-	return sgs_GetBool( C, -1 );
+	return contactFilter.tcall<bool>( C,
+		Box2DFixture::HandleFromPtr( fixtureA ),
+		Box2DFixture::HandleFromPtr( fixtureB ) );
 }
 
 Box2DBodyHandle Box2DWorld::CreateBody( Box2DBodyDef::Handle bodyDef )
@@ -806,12 +799,7 @@ public:
 	sgsVariable* var;
 	bool ReportFixture( b2Fixture* fixture )
 	{
-		sgs_PushVar( C, Box2DFixture::HandleFromPtr( fixture ) );
-		sgs_Call( C, var->var, 1, 1 );
-		if( !sgs_GetBool( C, -1 ) )
-			return false;
-		sgs_Pop( C, 1 );
-		return true;
+		return var->tcall<bool>( C, Box2DFixture::HandleFromPtr( fixture ) );
 	}
 };
 void Box2DWorld::QueryAABB( sgsVariable func, b2AABB aabb )
@@ -829,14 +817,7 @@ public:
 	sgsVariable* var;
 	float32 ReportFixture( b2Fixture* fixture, const b2Vec2& point, const b2Vec2& normal, float32 fraction )
 	{
-		sgs_PushVar( C, Box2DFixture::HandleFromPtr( fixture ) );
-		sgs_PushVar( C, point );
-		sgs_PushVar( C, normal );
-		sgs_PushReal( C, fraction );
-		sgs_Call( C, var->var, 4, 1 );
-		float32 ret = (float32) sgs_GetReal( C, -1 );
-		sgs_Pop( C, 1 );
-		return ret;
+		return var->tcall<float32>( C, Box2DFixture::HandleFromPtr( fixture ), point, normal, fraction );
 	}
 };
 void Box2DWorld::RayCast( sgsVariable func, b2Vec2 p1, b2Vec2 p2 )
