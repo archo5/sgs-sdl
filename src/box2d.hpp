@@ -1566,16 +1566,13 @@ struct Box2DDraw : b2Draw
 };
 
 
-struct Box2DWorld
+struct Box2DWorld : b2World
 {
 	static Box2DWorldHandle HandleFromPtr( b2World* w )
 	{
 		if( w )
 		{
-			char* p = (char*) w;
-			p -= offsetof( Box2DWorld, m_world ); // I know.
-			Box2DWorld* sgsw = (Box2DWorld*) p;
-			return Box2DWorldHandle( sgsw );
+			return Box2DWorldHandle( (Box2DWorld*) w );
 		}
 		return Box2DWorldHandle();
 	}
@@ -1613,10 +1610,10 @@ struct Box2DWorld
 	
 	SGS_OBJECT;
 	
-	Box2DWorld( const b2Vec2& gravity ) : m_world( gravity )
+	Box2DWorld( const b2Vec2& gravity ) : b2World( gravity )
 	{
 		m_DL = new (m_DLmem) DL( this );
-		m_world.SetDestructionListener( m_DL );
+		GetWorld().SetDestructionListener( m_DL );
 		m_CF = new (m_CFmem) CF( this );
 		sgs_vht_init( &m_contactSet, C, 4, 4 );
 	}
@@ -1659,19 +1656,19 @@ struct Box2DWorld
 	// > DestroyJoint
 	SGS_METHOD void DestroyJoint( Box2DJointHandle joint );
 	// > Step
-	SGS_METHOD void Step( float32 t, int32 vi, int32 pi ){ m_world.Step( t, vi, pi ); }
+	SGS_METHOD void Step( float32 t, int32 vi, int32 pi ){ GetWorld().Step( t, vi, pi ); }
 	// > ClearForces
-	SGS_METHOD void ClearForces(){ m_world.ClearForces(); }
+	SGS_METHOD void ClearForces(){ GetWorld().ClearForces(); }
 	// > DrawDebugData
-	SGS_METHOD void DrawDebugData(){ m_world.DrawDebugData(); }
+	SGS_METHOD void DrawDebugData(){ GetWorld().DrawDebugData(); }
 	// > QueryAABB (callback args [1]: fixture)
 	SGS_METHOD void QueryAABB( sgsVariable func, b2AABB aabb );
 	// > RayCast (callback args [4]: fixture, vec2 point, vec2 normal, real fraction)
 	SGS_METHOD void RayCast( sgsVariable func, b2Vec2 p1, b2Vec2 p2 );
 	// > ShiftOrigin
-	SGS_METHOD void ShiftOrigin( b2Vec2 origin ){ m_world.ShiftOrigin( origin ); }
+	SGS_METHOD void ShiftOrigin( b2Vec2 origin ){ GetWorld().ShiftOrigin( origin ); }
 	// > Dump
-	SGS_METHOD void Dump(){ m_world.Dump(); }
+	SGS_METHOD void Dump(){ GetWorld().Dump(); }
 	
 	//
 	// PROPERTIES
@@ -1679,70 +1676,71 @@ struct Box2DWorld
 	// > debugDraw
 	Box2DDrawHandle _debugDraw;
 	Box2DDrawHandle _getDebugDraw(){ return _debugDraw; }
-	void _setDebugDraw( Box2DDrawHandle h ){ _debugDraw = h; m_world.SetDebugDraw( h ); }
+	void _setDebugDraw( Box2DDrawHandle h ){ _debugDraw = h; GetWorld().SetDebugDraw( h ); }
 	SGS_PROPERTY_FUNC( READ _getDebugDraw WRITE _setDebugDraw ) SGS_ALIAS( Box2DDrawHandle debugDraw );
 	// > READONLY bodyList
-	Box2DBodyHandle _getBodyList(){ return Box2DBody::HandleFromPtr( m_world.GetBodyList() ); }
+	Box2DBodyHandle _getBodyList(){ return Box2DBody::HandleFromPtr( GetWorld().GetBodyList() ); }
 	SGS_PROPERTY_FUNC( READ _getBodyList ) SGS_ALIAS( Box2DBodyHandle bodyList );
 	// > READONLY contactList
-	Box2DContactHandle _getContactList(){ return Box2DContact::HandleFromPtr( m_world.GetContactList(), &m_world ); }
+	Box2DContactHandle _getContactList(){ return Box2DContact::HandleFromPtr( GetWorld().GetContactList(), &GetWorld() ); }
 	SGS_PROPERTY_FUNC( READ _getContactList ) SGS_ALIAS( Box2DContactHandle contactList );
 	// > READONLY jointList
-	Box2DJointHandle _getJointList(){ return Box2DJoint::HandleFromPtr( m_world.GetJointList() ); }
+	Box2DJointHandle _getJointList(){ return Box2DJoint::HandleFromPtr( GetWorld().GetJointList() ); }
 	SGS_PROPERTY_FUNC( READ _getJointList ) SGS_ALIAS( Box2DJointHandle jointList );
 	// > allowSleeping
-	bool _getAllowSleeping(){ return m_world.GetAllowSleeping(); }
-	void _setAllowSleeping( bool b ){ m_world.SetAllowSleeping( b ); }
+	bool _getAllowSleeping(){ return GetWorld().GetAllowSleeping(); }
+	void _setAllowSleeping( bool b ){ GetWorld().SetAllowSleeping( b ); }
 	SGS_PROPERTY_FUNC( READ _getAllowSleeping WRITE _setAllowSleeping ) SGS_ALIAS( bool allowSleeping );
 	// > warmStarting
-	bool _getWarmStarting(){ return m_world.GetWarmStarting(); }
-	void _setWarmStarting( bool b ){ m_world.SetWarmStarting( b ); }
+	bool _getWarmStarting(){ return GetWorld().GetWarmStarting(); }
+	void _setWarmStarting( bool b ){ GetWorld().SetWarmStarting( b ); }
 	SGS_PROPERTY_FUNC( READ _getWarmStarting WRITE _setWarmStarting ) SGS_ALIAS( bool warmStarting );
 	// > continuousPhysics
-	bool _getContinuousPhysics(){ return m_world.GetContinuousPhysics(); }
-	void _setContinuousPhysics( bool b ){ m_world.SetContinuousPhysics( b ); }
+	bool _getContinuousPhysics(){ return GetWorld().GetContinuousPhysics(); }
+	void _setContinuousPhysics( bool b ){ GetWorld().SetContinuousPhysics( b ); }
 	SGS_PROPERTY_FUNC( READ _getContinuousPhysics WRITE _setContinuousPhysics ) SGS_ALIAS( bool continuousPhysics );
 	// > subStepping
-	bool _getSubStepping(){ return m_world.GetSubStepping(); }
-	void _setSubStepping( bool b ){ m_world.SetSubStepping( b ); }
+	bool _getSubStepping(){ return GetWorld().GetSubStepping(); }
+	void _setSubStepping( bool b ){ GetWorld().SetSubStepping( b ); }
 	SGS_PROPERTY_FUNC( READ _getSubStepping WRITE _setSubStepping ) SGS_ALIAS( bool subStepping );
 	// > autoClearForces
-	bool _getAutoClearForces(){ return m_world.GetAutoClearForces(); }
-	void _setAutoClearForces( bool b ){ m_world.SetAutoClearForces( b ); }
+	bool _getAutoClearForces(){ return GetWorld().GetAutoClearForces(); }
+	void _setAutoClearForces( bool b ){ GetWorld().SetAutoClearForces( b ); }
 	SGS_PROPERTY_FUNC( READ _getAutoClearForces WRITE _setAutoClearForces ) SGS_ALIAS( bool autoClearForces );
 	// > READONLY proxyCount
-	int32 _getProxyCount(){ return m_world.GetProxyCount(); }
+	int32 _getProxyCount(){ return GetWorld().GetProxyCount(); }
 	SGS_PROPERTY_FUNC( READ _getProxyCount ) SGS_ALIAS( int32 proxyCount );
 	// > READONLY bodyCount
-	int32 _getBodyCount(){ return m_world.GetBodyCount(); }
+	int32 _getBodyCount(){ return GetWorld().GetBodyCount(); }
 	SGS_PROPERTY_FUNC( READ _getBodyCount ) SGS_ALIAS( int32 bodyCount );
 	// > READONLY jointCount
-	int32 _getJointCount(){ return m_world.GetJointCount(); }
+	int32 _getJointCount(){ return GetWorld().GetJointCount(); }
 	SGS_PROPERTY_FUNC( READ _getJointCount ) SGS_ALIAS( int32 jointCount );
 	// > READONLY contactCount
-	int32 _getContactCount(){ return m_world.GetContactCount(); }
+	int32 _getContactCount(){ return GetWorld().GetContactCount(); }
 	SGS_PROPERTY_FUNC( READ _getContactCount ) SGS_ALIAS( int32 contactCount );
 	// > READONLY treeHeight
-	int32 _getTreeHeight(){ return m_world.GetTreeHeight(); }
+	int32 _getTreeHeight(){ return GetWorld().GetTreeHeight(); }
 	SGS_PROPERTY_FUNC( READ _getTreeHeight ) SGS_ALIAS( int32 treeHeight );
 	// > READONLY treeBalance
-	int32 _getTreeBalance(){ return m_world.GetTreeBalance(); }
+	int32 _getTreeBalance(){ return GetWorld().GetTreeBalance(); }
 	SGS_PROPERTY_FUNC( READ _getTreeBalance ) SGS_ALIAS( int32 treeBalance );
 	// > READONLY treeQuality
-	float32 _getTreeQuality(){ return m_world.GetTreeQuality(); }
+	float32 _getTreeQuality(){ return GetWorld().GetTreeQuality(); }
 	SGS_PROPERTY_FUNC( READ _getTreeQuality ) SGS_ALIAS( float32 treeQuality );
 	// > gravity
-	b2Vec2 _getGravity(){ return m_world.GetGravity(); }
-	void _setGravity( const b2Vec2& v ){ m_world.SetGravity( v ); }
+	b2Vec2 _getGravity(){ return GetWorld().GetGravity(); }
+	void _setGravity( const b2Vec2& v ){ GetWorld().SetGravity( v ); }
 	SGS_PROPERTY_FUNC( READ _getGravity WRITE _setGravity ) SGS_ALIAS( b2Vec2 gravity );
 	
 	// > destructionListener
 	SGS_PROPERTY sgsVariable destructionListener;
 	// > contactFilter
-	void _changeContactFilter(){ m_world.SetContactFilter( sgs_IsCallableP( &contactFilter.var ) ? m_CF : NULL ); }
+	void _changeContactFilter(){ GetWorld().SetContactFilter( sgs_IsCallableP( &contactFilter.var ) ? m_CF : NULL ); }
 	SGS_PROPERTY_FUNC( READ WRITE WRITE_CALLBACK _changeContactFilter ) sgsVariable contactFilter;
 	
-	b2World m_world;
+	b2World& GetWorld(){ return *this; }
+	
 	sgs_VHTable m_contactSet;
 };
 

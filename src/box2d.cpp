@@ -600,10 +600,10 @@ Box2DContactHandle Box2DContact::HandleFromPtr( b2Contact* contact, b2World* wor
 
 Box2DWorld::~Box2DWorld()
 {
-	while( m_world.GetJointList() )
-		DestroyJoint( Box2DJoint::HandleFromPtr( m_world.GetJointList() ) );
-	while( m_world.GetBodyList() )
-		DestroyBody( Box2DBody::HandleFromPtr( m_world.GetBodyList() ) );
+	while( GetWorld().GetJointList() )
+		DestroyJoint( Box2DJoint::HandleFromPtr( GetWorld().GetJointList() ) );
+	while( GetWorld().GetBodyList() )
+		DestroyBody( Box2DBody::HandleFromPtr( GetWorld().GetBodyList() ) );
 	m_DL->~DL();
 	sgs_vht_free( &m_contactSet, C );
 }
@@ -665,7 +665,7 @@ Box2DBodyHandle Box2DWorld::CreateBody( Box2DBodyDef::Handle bodyDef )
 		sgs_Msg( C, SGS_WARNING, "expected BodyDef as argument 1" );
 		return Box2DBodyHandle();
 	}
-	b2Body* body = m_world.CreateBody( bodyDef );
+	b2Body* body = GetWorld().CreateBody( bodyDef );
 	Box2DBody* sgsbody = SGS_CREATECLASS( C, NULL, Box2DBody, ( body ) );
 	sgsbody->userData = bodyDef->_userData;
 	body->SetUserData( sgsbody );
@@ -711,13 +711,13 @@ Box2DJointHandle Box2DWorld::CreateJoint( sgsVariable jointDef )
 	if( jointDef.is_handle< Box2DDistanceJointDef >() )
 	{
 		Box2DDistanceJointDef* jdef = jointDef.get_object_data< Box2DDistanceJointDef >();
-		if( !sgsb2d_CreateJoint( C, m_world, joint, sgsjoint, jdef ) )
+		if( !sgsb2d_CreateJoint( C, GetWorld(), joint, sgsjoint, jdef ) )
 			return Box2DJointHandle();
 	}
 	else if( jointDef.is_handle< Box2DFrictionJointDef >() )
 	{
 		Box2DFrictionJointDef* jdef = jointDef.get_object_data< Box2DFrictionJointDef >();
-		if( !sgsb2d_CreateJoint( C, m_world, joint, sgsjoint, jdef ) )
+		if( !sgsb2d_CreateJoint( C, GetWorld(), joint, sgsjoint, jdef ) )
 			return Box2DJointHandle();
 	}
 	else if( jointDef.is_handle< Box2DGearJointDef >() )
@@ -728,7 +728,7 @@ Box2DJointHandle Box2DWorld::CreateJoint( sgsVariable jointDef )
 	else if( jointDef.is_handle< Box2DMotorJointDef >() )
 	{
 		Box2DMotorJointDef* jdef = jointDef.get_object_data< Box2DMotorJointDef >();
-		if( !sgsb2d_CreateJoint( C, m_world, joint, sgsjoint, jdef ) )
+		if( !sgsb2d_CreateJoint( C, GetWorld(), joint, sgsjoint, jdef ) )
 			return Box2DJointHandle();
 	}
 	else if( jointDef.is_handle< Box2DMouseJointDef >() )
@@ -739,37 +739,37 @@ Box2DJointHandle Box2DWorld::CreateJoint( sgsVariable jointDef )
 	else if( jointDef.is_handle< Box2DPrismaticJointDef >() )
 	{
 		Box2DPrismaticJointDef* jdef = jointDef.get_object_data< Box2DPrismaticJointDef >();
-		if( !sgsb2d_CreateJoint( C, m_world, joint, sgsjoint, jdef ) )
+		if( !sgsb2d_CreateJoint( C, GetWorld(), joint, sgsjoint, jdef ) )
 			return Box2DJointHandle();
 	}
 	else if( jointDef.is_handle< Box2DPulleyJointDef >() )
 	{
 		Box2DPulleyJointDef* jdef = jointDef.get_object_data< Box2DPulleyJointDef >();
-		if( !sgsb2d_CreateJoint( C, m_world, joint, sgsjoint, jdef ) )
+		if( !sgsb2d_CreateJoint( C, GetWorld(), joint, sgsjoint, jdef ) )
 			return Box2DJointHandle();
 	}
 	else if( jointDef.is_handle< Box2DRevoluteJointDef >() )
 	{
 		Box2DRevoluteJointDef* jdef = jointDef.get_object_data< Box2DRevoluteJointDef >();
-		if( !sgsb2d_CreateJoint( C, m_world, joint, sgsjoint, jdef ) )
+		if( !sgsb2d_CreateJoint( C, GetWorld(), joint, sgsjoint, jdef ) )
 			return Box2DJointHandle();
 	}
 	else if( jointDef.is_handle< Box2DRopeJointDef >() )
 	{
 		Box2DRopeJointDef* jdef = jointDef.get_object_data< Box2DRopeJointDef >();
-		if( !sgsb2d_CreateJoint( C, m_world, joint, sgsjoint, jdef ) )
+		if( !sgsb2d_CreateJoint( C, GetWorld(), joint, sgsjoint, jdef ) )
 			return Box2DJointHandle();
 	}
 	else if( jointDef.is_handle< Box2DWeldJointDef >() )
 	{
 		Box2DWeldJointDef* jdef = jointDef.get_object_data< Box2DWeldJointDef >();
-		if( !sgsb2d_CreateJoint( C, m_world, joint, sgsjoint, jdef ) )
+		if( !sgsb2d_CreateJoint( C, GetWorld(), joint, sgsjoint, jdef ) )
 			return Box2DJointHandle();
 	}
 	else if( jointDef.is_handle< Box2DWheelJointDef >() )
 	{
 		Box2DWheelJointDef* jdef = jointDef.get_object_data< Box2DWheelJointDef >();
-		if( !sgsb2d_CreateJoint( C, m_world, joint, sgsjoint, jdef ) )
+		if( !sgsb2d_CreateJoint( C, GetWorld(), joint, sgsjoint, jdef ) )
 			return Box2DJointHandle();
 	}
 	else
@@ -807,7 +807,7 @@ void Box2DWorld::QueryAABB( sgsVariable func, b2AABB aabb )
 	sgs_b2QueryCallback cb;
 	cb.C = C;
 	cb.var = &func;
-	m_world.QueryAABB( &cb, aabb );
+	GetWorld().QueryAABB( &cb, aabb );
 }
 
 class sgs_b2RayCastCallback : public b2RayCastCallback
@@ -825,7 +825,7 @@ void Box2DWorld::RayCast( sgsVariable func, b2Vec2 p1, b2Vec2 p2 )
 	sgs_b2RayCastCallback cb;
 	cb.C = C;
 	cb.var = &func;
-	m_world.RayCast( &cb, p1, p2 );
+	GetWorld().RayCast( &cb, p1, p2 );
 }
 
 
