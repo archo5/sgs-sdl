@@ -2295,8 +2295,9 @@ static int rd3d9i_render( SGS_CTX )
 		D3DCALL_( R->device, SetRenderState, D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
 		D3DCALL_( R->device, SetRenderState, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
 		
+		sgs_PushVariable( C, R->inh.debugDraw );
 		sgs_PushObjectPtr( C, R->inh._myobj );
-		sgs_Call( C, R->inh.debugDraw, 1, 0 );
+		sgs_Call( C, 1, 0 );
 		
 		R->inh.inDebugDraw = 0;
 		D3DCALL_( R->device, SetRenderState, D3DRS_ZENABLE, 0 );

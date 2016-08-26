@@ -1,7 +1,7 @@
 // SGS/CPP-BC
 // warning: do not modify this file, it may be regenerated during any build
 
-#include "src/ss3dcull.hpp"
+#include "ss3dcull.hpp"
 
 static int _sgs_method__SS3D_OcclusionTest__ClearWorld( SGS_CTX )
 {
