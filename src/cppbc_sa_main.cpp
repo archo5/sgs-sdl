@@ -296,6 +296,261 @@ static sgs_ObjInterface SGAudioGenScale__sgs_interface =
 _sgsInterface SGAudioGenScale::_sgs_interface(SGAudioGenScale__sgs_interface, SGAudioGenScale__sgs_ifn, &SGAudioGenerator::_sgs_interface);
 
 
+static int _sgs_method__SGAudioGenMultiply__create( SGS_CTX )
+{
+	SGSFN( "SGAudioGenMultiply.create" );
+	sgs_PushVar(C,SGAudioGenMultiply::create( C )); return 1;
+}
+
+int SGAudioGenMultiply::_sgs_destruct( SGS_CTX, sgs_VarObj* obj )
+{
+	static_cast<SGAudioGenMultiply*>( obj->data )->C = C;
+	static_cast<SGAudioGenMultiply*>( obj->data )->~SGAudioGenMultiply();
+	return SGS_SUCCESS;
+}
+
+int SGAudioGenMultiply::_sgs_gcmark( SGS_CTX, sgs_VarObj* obj )
+{
+	_sgsTmpChanger<sgs_Context*> _tmpchg( static_cast<SGAudioGenMultiply*>( obj->data )->C, C );
+	return SGS_SUCCESS;
+}
+
+int SGAudioGenMultiply::_sgs_getindex( SGS_ARGS_GETINDEXFUNC )
+{
+	_sgsTmpChanger<sgs_Context*> _tmpchg( static_cast<SGAudioGenMultiply*>( obj->data )->C, C );
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "gen1" ){ sgs_PushVar( C, static_cast<SGAudioGenMultiply*>( obj->data )->gen1 ); return SGS_SUCCESS; }
+		SGS_CASE( "gen2" ){ sgs_PushVar( C, static_cast<SGAudioGenMultiply*>( obj->data )->gen2 ); return SGS_SUCCESS; }
+		SGS_CASE( "value" ){ sgs_PushVar( C, static_cast<SGAudioGenMultiply*>( obj->data )->value ); return SGS_SUCCESS; }
+	SGS_END_INDEXFUNC;
+}
+
+int SGAudioGenMultiply::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
+{
+	_sgsTmpChanger<sgs_Context*> _tmpchg( static_cast<SGAudioGenMultiply*>( obj->data )->C, C );
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "gen1" ){ static_cast<SGAudioGenMultiply*>( obj->data )->gen1 = sgs_GetVar<Handle>()( C, 1 ); return SGS_SUCCESS; }
+		SGS_CASE( "gen2" ){ static_cast<SGAudioGenMultiply*>( obj->data )->gen2 = sgs_GetVar<Handle>()( C, 1 ); return SGS_SUCCESS; }
+		SGS_CASE( "value" ){ static_cast<SGAudioGenMultiply*>( obj->data )->value = sgs_GetVar<float>()( C, 1 ); return SGS_SUCCESS; }
+	SGS_END_INDEXFUNC;
+}
+
+int SGAudioGenMultiply::_sgs_dump( SGS_CTX, sgs_VarObj* obj, int depth )
+{
+	_sgsTmpChanger<sgs_Context*> _tmpchg( static_cast<SGAudioGenMultiply*>( obj->data )->C, C );
+	char bfr[ 50 ];
+	sprintf( bfr, "SGAudioGenMultiply (%p) %s", obj->data, depth > 0 ? "\n{" : " ..." );
+	sgs_PushString( C, bfr );
+	if( depth > 0 )
+	{
+		{ sgs_PushString( C, "\ngen1 = " ); sgs_DumpData( C, static_cast<SGAudioGenMultiply*>( obj->data )->gen1, depth ).push( C ); }
+		{ sgs_PushString( C, "\ngen2 = " ); sgs_DumpData( C, static_cast<SGAudioGenMultiply*>( obj->data )->gen2, depth ).push( C ); }
+		{ sgs_PushString( C, "\nvalue = " ); sgs_DumpData( C, static_cast<SGAudioGenMultiply*>( obj->data )->value, depth ).push( C ); }
+		sgs_StringConcat( C, 6 );
+		sgs_PadString( C );
+		sgs_PushString( C, "\n}" );
+		sgs_StringConcat( C, 3 );
+	}
+	return SGS_SUCCESS;
+}
+
+static sgs_RegFuncConst SGAudioGenMultiply__sgs_funcs[] =
+{
+	{ "create", _sgs_method__SGAudioGenMultiply__create },
+	{ NULL, NULL },
+};
+
+static int SGAudioGenMultiply__sgs_ifn( SGS_CTX )
+{
+	sgs_CreateDict( C, NULL, 0 );
+	sgs_StoreFuncConsts( C, sgs_StackItem( C, -1 ),
+		SGAudioGenMultiply__sgs_funcs,
+		-1, "SGAudioGenMultiply." );
+	return 1;
+}
+
+static sgs_ObjInterface SGAudioGenMultiply__sgs_interface =
+{
+	"SGAudioGenMultiply",
+	SGAudioGenMultiply::_sgs_destruct, SGAudioGenMultiply::_sgs_gcmark, SGAudioGenMultiply::_sgs_getindex, SGAudioGenMultiply::_sgs_setindex, NULL, NULL, SGAudioGenMultiply::_sgs_dump, NULL, NULL, NULL, 
+};
+_sgsInterface SGAudioGenMultiply::_sgs_interface(SGAudioGenMultiply__sgs_interface, SGAudioGenMultiply__sgs_ifn, &SGAudioGenerator::_sgs_interface);
+
+
+static int _sgs_method__SGAudioGenSine__create( SGS_CTX )
+{
+	SGSFN( "SGAudioGenSine.create" );
+	sgs_PushVar(C,SGAudioGenSine::create( C )); return 1;
+}
+
+int SGAudioGenSine::_sgs_destruct( SGS_CTX, sgs_VarObj* obj )
+{
+	static_cast<SGAudioGenSine*>( obj->data )->C = C;
+	static_cast<SGAudioGenSine*>( obj->data )->~SGAudioGenSine();
+	return SGS_SUCCESS;
+}
+
+int SGAudioGenSine::_sgs_gcmark( SGS_CTX, sgs_VarObj* obj )
+{
+	_sgsTmpChanger<sgs_Context*> _tmpchg( static_cast<SGAudioGenSine*>( obj->data )->C, C );
+	return SGS_SUCCESS;
+}
+
+int SGAudioGenSine::_sgs_getindex( SGS_ARGS_GETINDEXFUNC )
+{
+	_sgsTmpChanger<sgs_Context*> _tmpchg( static_cast<SGAudioGenSine*>( obj->data )->C, C );
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "power" ){ sgs_PushVar( C, static_cast<SGAudioGenSine*>( obj->data )->power ); return SGS_SUCCESS; }
+		SGS_CASE( "frequency" ){ sgs_PushVar( C, static_cast<SGAudioGenSine*>( obj->data )->frequency ); return SGS_SUCCESS; }
+		SGS_CASE( "phase" ){ sgs_PushVar( C, static_cast<SGAudioGenSine*>( obj->data )->phase ); return SGS_SUCCESS; }
+	SGS_END_INDEXFUNC;
+}
+
+int SGAudioGenSine::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
+{
+	_sgsTmpChanger<sgs_Context*> _tmpchg( static_cast<SGAudioGenSine*>( obj->data )->C, C );
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "power" ){ static_cast<SGAudioGenSine*>( obj->data )->power = sgs_GetVar<float>()( C, 1 ); return SGS_SUCCESS; }
+		SGS_CASE( "frequency" ){ static_cast<SGAudioGenSine*>( obj->data )->frequency = sgs_GetVar<float>()( C, 1 ); return SGS_SUCCESS; }
+		SGS_CASE( "phase" ){ static_cast<SGAudioGenSine*>( obj->data )->phase = sgs_GetVar<float>()( C, 1 ); return SGS_SUCCESS; }
+	SGS_END_INDEXFUNC;
+}
+
+int SGAudioGenSine::_sgs_dump( SGS_CTX, sgs_VarObj* obj, int depth )
+{
+	_sgsTmpChanger<sgs_Context*> _tmpchg( static_cast<SGAudioGenSine*>( obj->data )->C, C );
+	char bfr[ 46 ];
+	sprintf( bfr, "SGAudioGenSine (%p) %s", obj->data, depth > 0 ? "\n{" : " ..." );
+	sgs_PushString( C, bfr );
+	if( depth > 0 )
+	{
+		{ sgs_PushString( C, "\npower = " ); sgs_DumpData( C, static_cast<SGAudioGenSine*>( obj->data )->power, depth ).push( C ); }
+		{ sgs_PushString( C, "\nfrequency = " ); sgs_DumpData( C, static_cast<SGAudioGenSine*>( obj->data )->frequency, depth ).push( C ); }
+		{ sgs_PushString( C, "\nphase = " ); sgs_DumpData( C, static_cast<SGAudioGenSine*>( obj->data )->phase, depth ).push( C ); }
+		sgs_StringConcat( C, 6 );
+		sgs_PadString( C );
+		sgs_PushString( C, "\n}" );
+		sgs_StringConcat( C, 3 );
+	}
+	return SGS_SUCCESS;
+}
+
+static sgs_RegFuncConst SGAudioGenSine__sgs_funcs[] =
+{
+	{ "create", _sgs_method__SGAudioGenSine__create },
+	{ NULL, NULL },
+};
+
+static int SGAudioGenSine__sgs_ifn( SGS_CTX )
+{
+	sgs_CreateDict( C, NULL, 0 );
+	sgs_StoreFuncConsts( C, sgs_StackItem( C, -1 ),
+		SGAudioGenSine__sgs_funcs,
+		-1, "SGAudioGenSine." );
+	return 1;
+}
+
+static sgs_ObjInterface SGAudioGenSine__sgs_interface =
+{
+	"SGAudioGenSine",
+	SGAudioGenSine::_sgs_destruct, SGAudioGenSine::_sgs_gcmark, SGAudioGenSine::_sgs_getindex, SGAudioGenSine::_sgs_setindex, NULL, NULL, SGAudioGenSine::_sgs_dump, NULL, NULL, NULL, 
+};
+_sgsInterface SGAudioGenSine::_sgs_interface(SGAudioGenSine__sgs_interface, SGAudioGenSine__sgs_ifn, &SGAudioGenerator::_sgs_interface);
+
+
+static int _sgs_method__SGAudioGenADSR__create( SGS_CTX )
+{
+	SGSFN( "SGAudioGenADSR.create" );
+	sgs_PushVar(C,SGAudioGenADSR::create( C )); return 1;
+}
+
+int SGAudioGenADSR::_sgs_destruct( SGS_CTX, sgs_VarObj* obj )
+{
+	static_cast<SGAudioGenADSR*>( obj->data )->C = C;
+	static_cast<SGAudioGenADSR*>( obj->data )->~SGAudioGenADSR();
+	return SGS_SUCCESS;
+}
+
+int SGAudioGenADSR::_sgs_gcmark( SGS_CTX, sgs_VarObj* obj )
+{
+	_sgsTmpChanger<sgs_Context*> _tmpchg( static_cast<SGAudioGenADSR*>( obj->data )->C, C );
+	return SGS_SUCCESS;
+}
+
+int SGAudioGenADSR::_sgs_getindex( SGS_ARGS_GETINDEXFUNC )
+{
+	_sgsTmpChanger<sgs_Context*> _tmpchg( static_cast<SGAudioGenADSR*>( obj->data )->C, C );
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "t0" ){ sgs_PushVar( C, static_cast<SGAudioGenADSR*>( obj->data )->t0 ); return SGS_SUCCESS; }
+		SGS_CASE( "length" ){ sgs_PushVar( C, static_cast<SGAudioGenADSR*>( obj->data )->length ); return SGS_SUCCESS; }
+		SGS_CASE( "power" ){ sgs_PushVar( C, static_cast<SGAudioGenADSR*>( obj->data )->power ); return SGS_SUCCESS; }
+		SGS_CASE( "attack" ){ sgs_PushVar( C, static_cast<SGAudioGenADSR*>( obj->data )->attack ); return SGS_SUCCESS; }
+		SGS_CASE( "decay" ){ sgs_PushVar( C, static_cast<SGAudioGenADSR*>( obj->data )->decay ); return SGS_SUCCESS; }
+		SGS_CASE( "sustain" ){ sgs_PushVar( C, static_cast<SGAudioGenADSR*>( obj->data )->sustain ); return SGS_SUCCESS; }
+		SGS_CASE( "release" ){ sgs_PushVar( C, static_cast<SGAudioGenADSR*>( obj->data )->release ); return SGS_SUCCESS; }
+	SGS_END_INDEXFUNC;
+}
+
+int SGAudioGenADSR::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
+{
+	_sgsTmpChanger<sgs_Context*> _tmpchg( static_cast<SGAudioGenADSR*>( obj->data )->C, C );
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "t0" ){ static_cast<SGAudioGenADSR*>( obj->data )->t0 = sgs_GetVar<float>()( C, 1 ); return SGS_SUCCESS; }
+		SGS_CASE( "length" ){ static_cast<SGAudioGenADSR*>( obj->data )->length = sgs_GetVar<float>()( C, 1 ); return SGS_SUCCESS; }
+		SGS_CASE( "power" ){ static_cast<SGAudioGenADSR*>( obj->data )->power = sgs_GetVar<float>()( C, 1 ); return SGS_SUCCESS; }
+		SGS_CASE( "attack" ){ static_cast<SGAudioGenADSR*>( obj->data )->attack = sgs_GetVar<float>()( C, 1 ); return SGS_SUCCESS; }
+		SGS_CASE( "decay" ){ static_cast<SGAudioGenADSR*>( obj->data )->decay = sgs_GetVar<float>()( C, 1 ); return SGS_SUCCESS; }
+		SGS_CASE( "sustain" ){ static_cast<SGAudioGenADSR*>( obj->data )->sustain = sgs_GetVar<float>()( C, 1 ); return SGS_SUCCESS; }
+		SGS_CASE( "release" ){ static_cast<SGAudioGenADSR*>( obj->data )->release = sgs_GetVar<float>()( C, 1 ); return SGS_SUCCESS; }
+	SGS_END_INDEXFUNC;
+}
+
+int SGAudioGenADSR::_sgs_dump( SGS_CTX, sgs_VarObj* obj, int depth )
+{
+	_sgsTmpChanger<sgs_Context*> _tmpchg( static_cast<SGAudioGenADSR*>( obj->data )->C, C );
+	char bfr[ 46 ];
+	sprintf( bfr, "SGAudioGenADSR (%p) %s", obj->data, depth > 0 ? "\n{" : " ..." );
+	sgs_PushString( C, bfr );
+	if( depth > 0 )
+	{
+		{ sgs_PushString( C, "\nt0 = " ); sgs_DumpData( C, static_cast<SGAudioGenADSR*>( obj->data )->t0, depth ).push( C ); }
+		{ sgs_PushString( C, "\nlength = " ); sgs_DumpData( C, static_cast<SGAudioGenADSR*>( obj->data )->length, depth ).push( C ); }
+		{ sgs_PushString( C, "\npower = " ); sgs_DumpData( C, static_cast<SGAudioGenADSR*>( obj->data )->power, depth ).push( C ); }
+		{ sgs_PushString( C, "\nattack = " ); sgs_DumpData( C, static_cast<SGAudioGenADSR*>( obj->data )->attack, depth ).push( C ); }
+		{ sgs_PushString( C, "\ndecay = " ); sgs_DumpData( C, static_cast<SGAudioGenADSR*>( obj->data )->decay, depth ).push( C ); }
+		{ sgs_PushString( C, "\nsustain = " ); sgs_DumpData( C, static_cast<SGAudioGenADSR*>( obj->data )->sustain, depth ).push( C ); }
+		{ sgs_PushString( C, "\nrelease = " ); sgs_DumpData( C, static_cast<SGAudioGenADSR*>( obj->data )->release, depth ).push( C ); }
+		sgs_StringConcat( C, 14 );
+		sgs_PadString( C );
+		sgs_PushString( C, "\n}" );
+		sgs_StringConcat( C, 3 );
+	}
+	return SGS_SUCCESS;
+}
+
+static sgs_RegFuncConst SGAudioGenADSR__sgs_funcs[] =
+{
+	{ "create", _sgs_method__SGAudioGenADSR__create },
+	{ NULL, NULL },
+};
+
+static int SGAudioGenADSR__sgs_ifn( SGS_CTX )
+{
+	sgs_CreateDict( C, NULL, 0 );
+	sgs_StoreFuncConsts( C, sgs_StackItem( C, -1 ),
+		SGAudioGenADSR__sgs_funcs,
+		-1, "SGAudioGenADSR." );
+	return 1;
+}
+
+static sgs_ObjInterface SGAudioGenADSR__sgs_interface =
+{
+	"SGAudioGenADSR",
+	SGAudioGenADSR::_sgs_destruct, SGAudioGenADSR::_sgs_gcmark, SGAudioGenADSR::_sgs_getindex, SGAudioGenADSR::_sgs_setindex, NULL, NULL, SGAudioGenADSR::_sgs_dump, NULL, NULL, NULL, 
+};
+_sgsInterface SGAudioGenADSR::_sgs_interface(SGAudioGenADSR__sgs_interface, SGAudioGenADSR__sgs_ifn, &SGAudioGenerator::_sgs_interface);
+
+
 static int _sgs_method__SGAudioBuffer__resize( SGS_CTX )
 {
 	SGAudioBuffer* data; if( !SGS_PARSE_METHOD( C, SGAudioBuffer::_sgs_interface, data, SGAudioBuffer, resize ) ) return 0;

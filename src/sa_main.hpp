@@ -117,6 +117,16 @@ static void sgsthread_sleep( int ms )
 inline float saturate( float v ){ return TCLAMP( v, 0.0f, 1.0f ); }
 inline float lerp( float a, float b, float t ){ return a * ( 1 - t ) + b * t; }
 inline float revlerp_oneway( float t, float a, float b ){ if( b == a ) return 1.0; return saturate( ( t - a ) / ( b - a ) ); }
+inline float adsr( float curTime, float length, float attack, float decay, float sustain, float release )
+{
+	if( curTime > length ) // release
+		return revlerp_oneway( curTime, length + release, length ) * sustain;
+	if( curTime < attack ) // attack
+		return revlerp_oneway( curTime, 0, attack );
+	if( curTime < attack + decay ) // decay
+		return lerp( 1, sustain, revlerp_oneway( curTime, attack, attack + decay ) );
+	return sustain;
+}
 
 
 struct SGAudioGenerator
@@ -189,6 +199,101 @@ struct SGAudioGenScale : SGAudioGenerator
 	
 	SGS_PROPERTY Handle gen;
 	SGS_PROPERTY float value;
+};
+
+struct SGAudioGenMultiply : SGAudioGenerator
+{
+	SGS_OBJECT_INHERIT( SGAudioGenerator );
+	
+	SGAudioGenMultiply() : value( 1 ){}
+	virtual void Seek( float t )
+	{
+		if( gen1 ) gen1->Seek( t );
+		if( gen2 ) gen2->Seek( t );
+	}
+	virtual void Read( float* out, int samples, float time )
+	{
+		if( gen1.not_null() && gen2.not_null() )
+		{
+			gen1->Read( out, samples, time );
+			
+			float tmp[ 1024 ];
+			float timePerSample = time / samples;
+			int s = 0;
+			while( s < samples )
+			{
+				int cnt = MIN( samples - s, 1024 );
+				gen2->Read( tmp, cnt, timePerSample * cnt );
+				for( int i = 0; i < cnt; ++i )
+					out[ s + i ] *= tmp[ i ] * value;
+				s += cnt;
+			}
+		}
+		else
+		{
+			for( int i = 0; i < samples; ++i )
+				out[ i ] = 0;
+		}
+	}
+	
+	SGS_STATICMETHOD Handle create( sgs_Context* ctx ){ return SGS_CREATECLASS( ctx, NULL, SGAudioGenMultiply, () )->GetScrHandle(); }
+	
+	SGS_PROPERTY Handle gen1;
+	SGS_PROPERTY Handle gen2;
+	SGS_PROPERTY float value;
+};
+
+struct SGAudioGenSine : SGAudioGenerator
+{
+	SGS_OBJECT_INHERIT( SGAudioGenerator );
+	
+	SGAudioGenSine() : power( 1 ), frequency( 440 ), phase( 0 ), curTime( 0 ){}
+	virtual void Seek( float t ){ curTime = t; }
+	virtual void Read( float* out, int samples, float time )
+	{
+		phase *= M_PI * 2;
+		float q = M_PI * 2 * frequency * time / samples;
+		for( int i = 0; i < samples; ++i )
+		{
+			out[ i ] = sin( i * q - phase ) * power;
+		}
+		curTime += time;
+	}
+	
+	SGS_STATICMETHOD Handle create( sgs_Context* ctx ){ return SGS_CREATECLASS( ctx, NULL, SGAudioGenSine, () )->GetScrHandle(); }
+	
+	SGS_PROPERTY float power;
+	SGS_PROPERTY float frequency;
+	SGS_PROPERTY float phase;
+	float curTime;
+};
+
+struct SGAudioGenADSR : SGAudioGenerator
+{
+	SGS_OBJECT_INHERIT( SGAudioGenerator );
+	
+	SGAudioGenADSR() : t0( 0 ), length( 1 ), power( 1 ), attack( 0.1 ), decay( 0.1 ), sustain( 0.8 ), release( 0.5 ), curTime( 0 ){}
+	virtual void Seek( float t ){ curTime = t; }
+	virtual void Read( float* out, int samples, float time )
+	{
+		float q = time / samples;
+		for( int i = 0; i < samples; ++i )
+		{
+			out[ i ] = adsr( curTime + i * q - t0, length, attack, decay, sustain, release ) * power;
+		}
+		curTime += time;
+	}
+	
+	SGS_STATICMETHOD Handle create( sgs_Context* ctx ){ return SGS_CREATECLASS( ctx, NULL, SGAudioGenADSR, () )->GetScrHandle(); }
+	
+	SGS_PROPERTY float t0;
+	SGS_PROPERTY float length;
+	SGS_PROPERTY float power;
+	SGS_PROPERTY float attack;
+	SGS_PROPERTY float decay;
+	SGS_PROPERTY float sustain;
+	SGS_PROPERTY float release;
+	float curTime;
 };
 
 

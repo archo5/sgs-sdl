@@ -120,6 +120,9 @@ extern "C" int sgscript_main( SGS_CTX )
 	env.setprop( "SGAudioGenConstant", sgs_GetClassInterface<SGAudioGenConstant>( C ) );
 	env.setprop( "SGAudioGenNoise", sgs_GetClassInterface<SGAudioGenNoise>( C ) );
 	env.setprop( "SGAudioGenScale", sgs_GetClassInterface<SGAudioGenScale>( C ) );
+	env.setprop( "SGAudioGenMultiply", sgs_GetClassInterface<SGAudioGenMultiply>( C ) );
+	env.setprop( "SGAudioGenSine", sgs_GetClassInterface<SGAudioGenSine>( C ) );
+	env.setprop( "SGAudioGenADSR", sgs_GetClassInterface<SGAudioGenADSR>( C ) );
 	
 	env.setprop( "SGAudioBuffer", sgs_GetClassInterface<SGAudioBuffer>( C ) );
 	env.setprop( "SGAudioEmitter", sgs_GetClassInterface<SGAudioEmitter>( C ) );

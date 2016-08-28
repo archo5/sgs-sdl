@@ -17,7 +17,10 @@ if( 1 )
 	buf = sgs_audio_buffer( 3*44100 );
 	noise = SGAudioGenNoise.create().{ power = 0.1 };
 	scale = SGAudioGenScale.create().{ gen = noise, value = 0.5 };
-	buf.render( scale );
+	sine = SGAudioGenSine.create().{ power = 0.5 };
+	adsr = SGAudioGenADSR.create().{ attack = 0.01, length = 0.1 };
+	mul = SGAudioGenMultiply.create().{ gen1 = sine, gen2 = adsr };
+	buf.render( mul );
 }
 else
 {
