@@ -114,6 +114,327 @@ static void sgsthread_sleep( int ms )
 #endif
 
 
+inline float saturate( float v ){ return TCLAMP( v, 0.0f, 1.0f ); }
+inline float lerp( float a, float b, float t ){ return a * ( 1 - t ) + b * t; }
+inline float revlerp_oneway( float t, float a, float b ){ if( b == a ) return 1.0; return saturate( ( t - a ) / ( b - a ) ); }
+
+
+struct SGAudioGenerator
+{
+	SGS_OBJECT;
+	
+	typedef sgsHandle< SGAudioGenerator > Handle;
+	Handle GetScrHandle(){ return Handle( this ); }
+	
+	virtual void Seek( float t ) = 0;
+	virtual void Read( float* out, int samples, float time ) = 0;
+};
+
+struct SGAudioGenConstant : SGAudioGenerator
+{
+	SGS_OBJECT_INHERIT( SGAudioGenerator );
+	
+	SGAudioGenConstant() : value( 0 ){}
+	virtual void Seek( float ){}
+	virtual void Read( float* out, int samples, float )
+	{
+		for( int i = 0; i < samples; ++i )
+			out[ i ] = value;
+	}
+	
+	SGS_STATICMETHOD Handle create( sgs_Context* ctx ){ return SGS_CREATECLASS( ctx, NULL, SGAudioGenConstant, () )->GetScrHandle(); }
+	
+	SGS_PROPERTY float value;
+};
+
+struct SGAudioGenNoise : SGAudioGenerator
+{
+	SGS_OBJECT_INHERIT( SGAudioGenerator );
+	
+	SGAudioGenNoise() : power( 1 ){}
+	virtual void Seek( float ){}
+	virtual void Read( float* out, int samples, float )
+	{
+		for( int i = 0; i < samples; ++i )
+			out[ i ] = ( float(rand()) / float(RAND_MAX) * 2 - 1 ) * power;
+	}
+	
+	SGS_STATICMETHOD Handle create( sgs_Context* ctx ){ return SGS_CREATECLASS( ctx, NULL, SGAudioGenNoise, () )->GetScrHandle(); }
+	
+	SGS_PROPERTY float power;
+};
+
+struct SGAudioGenScale : SGAudioGenerator
+{
+	SGS_OBJECT_INHERIT( SGAudioGenerator );
+	
+	SGAudioGenScale() : value( 1 ){}
+	virtual void Seek( float t ){ if( gen ) gen->Seek( t ); }
+	virtual void Read( float* out, int samples, float time )
+	{
+		if( gen.not_null() )
+		{
+			gen->Read( out, samples, time );
+			for( int i = 0; i < samples; ++i )
+				out[ i ] *= value;
+		}
+		else
+		{
+			for( int i = 0; i < samples; ++i )
+				out[ i ] = 0;
+		}
+	}
+	
+	SGS_STATICMETHOD Handle create( sgs_Context* ctx ){ return SGS_CREATECLASS( ctx, NULL, SGAudioGenScale, () )->GetScrHandle(); }
+	
+	SGS_PROPERTY Handle gen;
+	SGS_PROPERTY float value;
+};
+
+
+struct SGAudioBuffer
+{
+	SGS_OBJECT;
+	
+	typedef sgsHandle< SGAudioBuffer > Handle;
+	Handle GetScrHandle(){ return Handle( this ); }
+	
+	
+	SGAudioBuffer( int sz, int sr ) : sampleRate( sr )
+	{
+		data.resize( sz, 0.0f );
+	}
+	
+	
+	SGS_METHOD Handle resize( int sz ){ data.resize( sz ); return GetScrHandle(); }
+	
+	SGS_METHOD Handle append( SGAudioBuffer::Handle other )
+	{
+		if( other )
+			data.insert( data.end(), other->data.begin(), other->data.end() );
+		return GetScrHandle();
+	}
+	
+	SGS_METHOD Handle set_sample_rate( int sr ){ sampleRate = sr; return GetScrHandle(); }
+	
+	// assume: vector<float> data, int AA; give: float SAMPLE_ID;
+	#define SGSAB_SAMPLE_WAVEFORM( waveform ) \
+		if( AA == 0 ){ \
+			for( size_t i = 0; i < data.size(); ++i ){ \
+				float SAMPLE_ID = i; \
+				data[ i ] = waveform; \
+			} \
+		} else { \
+			float invAA = 1.0f / AA; \
+			for( size_t i = 0; i < data.size(); ++i ){ \
+				float v = 0; \
+				for( int j = 0; j < AA; ++j ){ \
+					float SAMPLE_ID = i + float(j) * invAA - 0.5f; \
+					v += waveform; \
+				} \
+				data[ i ] = v * invAA; \
+			} \
+		}
+	
+	inline float sample_adsr( float sample, float t, float attack, float decay, float sustain, float release )
+	{
+		sample /= sampleRate;
+		if( sample > t ) // release
+			return revlerp_oneway( sample, t + release, t ) * sustain;
+		if( sample < attack ) // attack
+			return revlerp_oneway( sample, 0, attack );
+		if( sample < attack + decay ) // decay
+			return lerp( 1, sustain, revlerp_oneway( sample, attack, attack + decay ) );
+		return sustain;
+	}
+	inline float sample_adsr_aa( float sample, float t, float attack, float decay, float sustain, float release, int AA )
+	{
+		if( AA == 0 )
+			return sample_adsr( sample, t, attack, decay, sustain, release );
+		
+		float v = 0;
+		float invAA = 1.0f / AA;
+		for( int i = 0; i < AA; ++i )
+			v += sample_adsr( sample + i * invAA - 0.5f, t, attack, decay, sustain, release );
+		return v * invAA;
+	}
+	
+	SGS_METHOD Handle silence()
+	{
+		for( size_t i = 0; i < data.size(); ++i )
+			data[ i ] = 0;
+		return GetScrHandle();
+	}
+	
+	SGS_METHOD Handle add_silence( int samples )
+	{
+		size_t i = data.size();
+		data.resize( i + samples );
+		for( ; i < data.size(); ++i )
+			data[ i ] = 0;
+		return GetScrHandle();
+	}
+	
+	SGS_METHOD Handle sine( float power, float period, float phase, int AA )
+	{
+		if( sgs_StackSize( C ) < 4 )
+			AA = 8;
+		
+		phase *= M_PI * 2;
+		float q = M_PI * 2 / ( float(sampleRate) * period );
+		SGSAB_SAMPLE_WAVEFORM( sin( SAMPLE_ID * q - phase ) * power );
+		return GetScrHandle();
+	}
+	
+	SGS_METHOD Handle triangle( float power, float period, float phase, int AA )
+	{
+		if( sgs_StackSize( C ) < 4 )
+			AA = 8;
+		
+		float q = 4.0f / ( sampleRate * period );
+		phase -= 1.75f;
+		SGSAB_SAMPLE_WAVEFORM( ( fabsf( fmodf( SAMPLE_ID * q - phase * 4, 4.0f ) - 2 ) - 1 ) * power );
+		return GetScrHandle();
+	}
+	
+	SGS_METHOD Handle saw( float power, float period, float phase, int AA )
+	{
+		if( sgs_StackSize( C ) < 4 )
+			AA = 8;
+		
+		float q = 1.0f / ( sampleRate * period );
+		SGSAB_SAMPLE_WAVEFORM( ( fmodf( SAMPLE_ID * q - phase, 1.0f ) * 2 - 1 ) * power );
+		return GetScrHandle();
+	}
+	
+	SGS_METHOD Handle noise( float power )
+	{
+		if( sgs_StackSize( C ) < 1 )
+			power = 1;
+		
+		for( size_t i = 0; i < data.size(); ++i )
+		{
+			data[ i ] = ( float(rand()) / float(RAND_MAX) - 0.5f ) * 2 * power;
+		}
+		return GetScrHandle();
+	}
+	
+	SGS_METHOD Handle scale( float power )
+	{
+		for( size_t i = 0; i < data.size(); ++i )
+		{
+			data[ i ] *= power;
+		}
+		return GetScrHandle();
+	}
+	SGS_METHOD SGS_MULTRET scaled( float power )
+	{
+		SGAudioBuffer* buf = SGS_CREATECLASS( C, NULL, SGAudioBuffer, ( data.size(), sampleRate ) );
+		for( size_t i = 0; i < data.size(); ++i )
+		{
+			buf->data[ i ] = data[ i ] * power;
+		}
+		return 1;
+	}
+	
+	SGS_METHOD Handle lowpass( float factor )
+	{
+		float invfactor = 1 - factor;
+		for( size_t i = 1; i < data.size(); ++i )
+		{
+			data[ i ] = invfactor * data[ i ] + factor * data[ i - 1 ];
+		}
+		return GetScrHandle();
+	}
+	
+	SGS_METHOD Handle taper( float tt )
+	{
+		float mintt = 1.0f / sampleRate;
+		tt = MAX( tt, mintt );
+		float invTT2 = 1.0f / ( tt * tt );
+		float invSampleRate = 1.0f / sampleRate;
+		for( size_t i = 0; i < data.size(); ++i )
+		{
+			float st = i * invSampleRate;
+			float et = ( data.size() - i - 1 ) * invSampleRate;
+			data[ i ] *= TCLAMP( st, 0.0f, tt ) * TCLAMP( et, 0.0f, tt ) * invTT2;
+		}
+		return GetScrHandle();
+	}
+	
+	SGS_METHOD Handle add_note( SGAudioBuffer::Handle pattern, float t0, float t1, float attack, float decay, float sustain, float release, int AA )
+	{
+		if( sgs_StackSize( C ) < 4 )
+			AA = 8;
+		
+		if( !pattern.not_null() )
+		{
+			sgs_Msg( C, SGS_WARNING, "pattern cannot be null" );
+			return GetScrHandle();
+		}
+		if( sampleRate != pattern->sampleRate )
+		{
+			sgs_Msg( C, SGS_WARNING, "incompatible sample rate (source=%d target=%d)", pattern->sampleRate, sampleRate );
+			return GetScrHandle();
+		}
+		size_t i0 = TCLAMP( size_t(t0 * sampleRate), size_t(0), data.size() );
+		size_t i1 = TCLAMP( size_t((t1 + release) * sampleRate), size_t(0), data.size() );
+		for( size_t i = i0; i < i1; ++i )
+		{
+			size_t srci = ( i - i0 ) % pattern->data.size();
+			data[ i ] += pattern->data[ srci ] * sample_adsr_aa( i - i0, t1 - t0, attack, decay, sustain, release, AA );
+		}
+		return GetScrHandle();
+	}
+	
+	SGS_METHOD Handle render( SGAudioGenerator::Handle gen, float t )
+	{
+		if( sgs_StackSize( C ) < 2 )
+			t = 0;
+		
+		if( !gen.not_null() )
+		{
+			sgs_Msg( C, SGS_WARNING, "generator cannot be null" );
+			return GetScrHandle();
+		}
+		if( data.size() == 0 )
+		{
+			sgs_Msg( C, SGS_WARNING, "size of buffer cannot be 0" );
+			return GetScrHandle();
+		}
+		gen->Seek( t );
+		gen->Read( &data[0], data.size(), float(data.size()) / float(sampleRate) );
+		return GetScrHandle();
+	}
+	
+	
+	SGS_IFUNC( GETINDEX ) int _getindex( SGS_ARGS_GETINDEXFUNC )
+	{
+		if( sgs_ObjectArg( C ) == 0 )
+		{
+			// index lookup
+			SGAudioBuffer* buf = (SGAudioBuffer*) obj->data;
+			int i = sgs_GetVar<int>()( C, 0 );
+			if( i < 0 || i >= int(buf->data.size()) )
+				return SGS_EBOUNDS;
+			sgs_PushReal( C, buf->data[ i ] );
+			return SGS_SUCCESS;
+		}
+		return _sgs_getindex( C, obj );
+	}
+	
+	size_t _get_size(){ return data.size(); }
+	SGS_PROPERTY_FUNC( READ _get_size ) SGS_ALIAS( size_t size );
+	
+	float _get_seconds(){ return data.size() / float(sampleRate); }
+	SGS_PROPERTY_FUNC( READ _get_seconds ) SGS_ALIAS( float seconds );
+	
+	
+	std::vector< float > data;
+	SGS_PROPERTY_FUNC( READ ) int sampleRate;
+};
+
+
 
 struct SGAudioSystem;
 struct SGAudioEmitter
@@ -142,6 +463,7 @@ struct SGAudioEmitter
 	SGAudioSystem* GetSystem(){ return System; }
 	
 	SGS_METHOD bool load( sgsString file );
+	SGS_METHOD bool load_buffer( SGAudioBuffer::Handle buf );
 	
 	SGS_METHOD bool unload()
 	{

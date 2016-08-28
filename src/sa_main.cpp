@@ -9,6 +9,22 @@ bool SGAudioEmitter::load( sgsString file )
 	return file.size() ? GetSystem()->Sound.SetupEmitter( file.c_str(), &Emitter ) : false;
 }
 
+bool SGAudioEmitter::load_buffer( SGAudioBuffer::Handle buf )
+{
+	SGLOCK;
+	if( !buf.not_null() )
+	{
+		sgs_Msg( C, SGS_WARNING, "buffer cannot be null" );
+		return false;
+	}
+	if( buf->sampleRate < 1 )
+	{
+		sgs_Msg( C, SGS_WARNING, "bad sample rate: %d", buf->sampleRate );
+		return false;
+	}
+	return GetSystem()->Sound.SetupEmitter( buf->data, buf->sampleRate, &Emitter );
+}
+
 
 threadret_t SGA_Ticker( void* ss )
 {
@@ -76,10 +92,21 @@ int sgs_audio_get_devices( SGS_CTX )
 	return 1;
 }
 
+int sgs_audio_buffer( SGS_CTX )
+{
+	int count = 0, rate = 44100;
+	SGSFN( "sgs_audio_buffer" );
+	if( !sgs_LoadArgs( C, "I|I", &count, &rate ) )
+		return 0;
+	SGS_CREATECLASS( C, NULL, SGAudioBuffer, ( count, rate ) );
+	return 1;
+}
+
 static sgs_RegFuncConst rfc[] =
 {
 	{ "sgs_audio_create", sgs_audio_create },
 	{ "sgs_audio_get_devices", sgs_audio_get_devices },
+	{ "sgs_audio_buffer", sgs_audio_buffer },
 	{ NULL, NULL },
 };
 
@@ -88,6 +115,13 @@ extern "C" int sgscript_main( SGS_CTX )
 {
 	sgs_RegFuncConsts( C, rfc, -1 );
 	sgsVariable env = sgsEnv( C );
+	
+	env.setprop( "SGAudioGenerator", sgs_GetClassInterface<SGAudioGenerator>( C ) );
+	env.setprop( "SGAudioGenConstant", sgs_GetClassInterface<SGAudioGenConstant>( C ) );
+	env.setprop( "SGAudioGenNoise", sgs_GetClassInterface<SGAudioGenNoise>( C ) );
+	env.setprop( "SGAudioGenScale", sgs_GetClassInterface<SGAudioGenScale>( C ) );
+	
+	env.setprop( "SGAudioBuffer", sgs_GetClassInterface<SGAudioBuffer>( C ) );
 	env.setprop( "SGAudioEmitter", sgs_GetClassInterface<SGAudioEmitter>( C ) );
 	env.setprop( "SGAudioSystem", sgs_GetClassInterface<SGAudioSystem>( C ) );
 	return SGS_SUCCESS;

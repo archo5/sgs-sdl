@@ -1,0 +1,42 @@
+
+function pseudosleep( t )
+{
+	println( "waiting for " .. t .. " second(s)..." );
+	start = ftime();
+	while( ftime() - start < t );
+}
+
+println( "loading the DLL..." );
+include "sgsaudio";
+
+println( "creating the audio system..." );
+sys = sgs_audio_create();
+
+if( 1 )
+{
+	buf = sgs_audio_buffer( 3*44100 );
+	noise = SGAudioGenNoise.create().{ power = 0.1 };
+	scale = SGAudioGenScale.create().{ gen = noise, value = 0.5 };
+	buf.render( scale );
+}
+else
+{
+	buf = sgs_audio_buffer( 3*44100 );
+	buf.sine( /*power=*/ 1, /*period=*/ 1/320, /*phase=*/ 0 ).taper(0.01);
+	//buf.add_silence( 2*44100 );
+	saw_pattern = sgs_audio_buffer(2*44100).saw( 0.5, 1/80, 0 ).lowpass( 0.5 );
+	noise_pattern = sgs_audio_buffer(2*44100).noise().lowpass( 0.9 );
+	buf.add_note( saw_pattern, 1, 1.15, 0.01, 0.1, 0.5, 0.2 );
+	buf.add_note( saw_pattern, 1.5, 1.65, 0.01, 0.1, 0.5, 0.2 );
+	buf.add_note( saw_pattern, 2, 2.15, 0.01, 0.1, 0.5, 0.2 );
+	buf.add_note( saw_pattern, 2.5, 2.65, 0.01, 0.1, 0.5, 0.2 );
+}
+
+em = sys.create_emitter();
+println( "buffer loaded? - ", em.load_buffer( buf ) );
+em.play();
+
+pseudosleep( 3.5 );
+
+println( "deleting system before other things..." );
+sys = null;

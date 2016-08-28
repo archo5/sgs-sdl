@@ -793,6 +793,27 @@ ALuint SS_CreateBufferFromFile( SGDataSource* src, const char* file )
 	return buffer;
 }
 
+ALuint SS_CreateBuffer( const std::vector<float>& data, int sampleRate )
+{
+	int16_t* idata = new int16_t[ data.size() ];
+	for( size_t i = 0; i < data.size(); ++i )
+	{
+		float v = data[ i ];
+		if( v < -1 )
+			v = -1;
+		else if( v > 1 )
+			v = 1;
+		idata[ i ] = v * 32767;
+	}
+	
+	ALuint buffer;
+	AL_CALL( alGenBuffers( 1, &buffer ), 0 );
+	AL_CALL( alBufferData( buffer, AL_FORMAT_MONO16, idata, data.size() * 2, sampleRate ), 0 );
+	
+	delete [] idata;
+	return buffer;
+}
+
 ALuint GetBuffer( SGDataSource* src, BufNameMap& names, BufIDMap& ids, const TString& nn )
 {
 	BufNameMap::iterator n = names.find( nn );
@@ -876,6 +897,24 @@ int SSoundSystem::SetupEmitter( const char* sound, SSEmitter* e )
 	return ret;
 }
 
+int SSoundSystem::SetupEmitter( const std::vector<float>& data, int sampleRate, SSEmitter* e )
+{
+	int ret = TRUE;
+	if( e->System )
+	{
+		ReleaseEmitter( e );
+		ret = FALSE;
+	}
+	
+	e->Name = ":BUFFER";
+	e->_Init( this, NULL );
+	ALuint buf = SS_CreateBuffer( data, sampleRate );
+	AL_CALL( alSourcei( e->Source, AL_BUFFER, buf ), 0 );
+	Emitters.push_back( e );
+	
+	return ret;
+}
+
 void SSoundSystem::ReleaseEmitter( SSEmitter* e )
 {
 	if( e == NULL || e->System == NULL || e->System != this )
@@ -908,7 +947,15 @@ void SSoundSystem::ReleaseEmitter( SSEmitter* e )
 		ALint bufid = 0;
 		alGetSourcei( e->Source, AL_BUFFER, &bufid );
 		e->_Destroy();
-		ReleaseBuffer( Names, IDs, bufid );
+		if( e->Name == ":BUFFER" )
+		{
+			ALuint lol = bufid;
+			AL_CALL( alDeleteBuffers( 1, &lol ), 0 );
+		}
+		else
+		{
+			ReleaseBuffer( Names, IDs, bufid );
+		}
 	}
 	
 	for( uint32_t i = 0; i < Emitters.size(); ++i )

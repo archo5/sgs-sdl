@@ -17,6 +17,7 @@ typedef unsigned char byte_t;
 typedef std::string TString;
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #define MAX(a,b) ((a)>(b)?(a):(b))
+template< class T > T TCLAMP( const T& v, const T& min, const T& max ){ return MIN( MAX( v, min ), max ); }
 #define ISBIGENDIAN 0
 #define TRUE 1
 #define FALSE 0
@@ -158,6 +159,7 @@ struct SSoundSystem
 	static int GetDevices( TString& devices );
 
 	int SetupEmitter( const char* sound, SSEmitter* e );
+	int SetupEmitter( const std::vector<float>& data, int sampleRate, SSEmitter* e );
 	void ReleaseEmitter( SSEmitter* e );
 
 	void SetVolume( float Volume, uint32_t Group );
