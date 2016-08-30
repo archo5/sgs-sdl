@@ -9,11 +9,7 @@ ifneq ($(target_os),windows)
 	video=nod3d
 	SDL2_CFLAGS = $(shell sdl2-config --cflags)
 	SDL2_LIBS = $(shell sdl2-config --libs)
-	XGM_LIBS = sgscript/bin/sgsxgmath.so
-	ifneq ($(shell uname -s),Darwin)
-		LINUXHACKPRE = -ln -s sgscript/bin/sgsxgmath.so sgsxgmath.so
-		LINUXHACKPOST = -unlink sgsxgmath.so
-	endif
+	XGM_LIBS = -l:sgsxgmath.so
 else
 	SDL2_CFLAGS = -Iext/include/SDL2
 	SDL2_LIBS = -lSDL2main -lSDL2
@@ -35,8 +31,9 @@ BINFLAGS=$(CFLAGS) $(OUTFLAGS) -lm \
 	$(call fnIF_OS,android,-ldl -Wl$(comma)-rpath$(comma)'$$ORIGIN' -Wl$(comma)-z$(comma)origin,) \
 	$(call fnIF_OS,windows,-lkernel32,) \
 	$(call fnIF_OS,osx,-framework OpenGL -ldl -Wl$(comma)-rpath$(comma)'@executable_path/.',) \
-	$(call fnIF_OS,linux,-ldl -lrt -Wl$(comma)-rpath$(comma)'$$ORIGIN' -Wl$(comma)-z$(comma)origin,)
-MODULEFLAGS=$(BINFLAGS) -shared
+	$(call fnIF_OS,linux,-ldl -lrt -lGL -Wl$(comma)-rpath-link$(comma). \
+		-Wl$(comma)-rpath-link$(comma)bin -Wl$(comma)-rpath$(comma)'$$ORIGIN' -Wl$(comma)-z$(comma)origin,)
+MODULEFLAGS=$(BINFLAGS) -shared -Wl,--no-undefined
 EXEFLAGS=$(BINFLAGS)
 
 _DEPS = ss_main.h ss_cfg.h
@@ -64,10 +61,7 @@ ifeq ($(target_os),windows)
 	           $(fnCOPY_FILE) $(call fnFIX_PATH,sgscript/bin/sgscript.dll bin) & \
 	           $(fnCOPY_FILE) $(call fnFIX_PATH,sgscript/bin/sgsxgmath.dll bin)
 else
-	PF_LINK = $(OUTDIR)/$(LIBPFX)jpg$(LIBEXT) \
-				$(OUTDIR)/$(LIBPFX)png$(LIBEXT) \
-				$(OUTDIR)/$(LIBPFX)zlib$(LIBEXT) \
-				$(OUTDIR)/$(LIBPFX)freetype$(LIBEXT)
+	PF_LINK = -Lbin -lfreetype
 	PF_POST = $(call fnIF_OS,osx,$(fnCOPY_FILE) /usr/local/lib/libSDL2.dylib bin &,) \
 				$(fnCOPY_FILE) sgscript/bin/libsgscript.so bin & \
 				$(fnCOPY_FILE) sgscript/bin/sgsxgmath.so bin
@@ -178,9 +172,9 @@ $(OUTDIR)/sgs-sdl-debug$(BINEXT): $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) src/ss_lau
 
 $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT): $(OBJ) $(SGS_SDL_DEPS) sgscript/bin/sgsxgmath$(LIBEXT)
 	$(LINUXHACKPRE)
+	$(PF_POST)
 	$(CC) -o $@ $(OBJ) $(SGS_SDL_FLAGS)
 	$(LINUXHACKPOST)
-	$(PF_POST)
 	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libfreetype.so @rpath/libfreetype.so $@,)
 	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libsgscript.so @rpath/libsgscript.so $@,)
 	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/sgsxgmath.so @rpath/sgsxgmath.so $@,)
@@ -210,9 +204,10 @@ $(OUTDIR)/sgsaudio$(LIBEXT): src/sa_main.cpp src/sa_main.hpp src/cppbc_sa_main.c
 	$(LINUXHACKPRE)
 	$(CXX) -o $@ src/sa_main.cpp src/cppbc_sa_main.cpp src/sa_sound.cpp \
 		$(SGS_SDL_FLAGS) $(SGS_CXX_FLAGS) -Iext/include -Iext/src/libogg-1.3.1/include -Iext/src/libvorbis-1.3.3/include -Lobj -lvorbis -logg \
-		$(call fnIF_OS,windows,ext/bin-win32/OpenAL32.dll,)
-	$(fnCOPY_FILE) $(call fnFIX_PATH,$(call fnIF_OS,windows,ext/bin-win32/OpenAL32.dll,) $(OUTDIR)/)
-	$(fnCOPY_FILE) $(call fnFIX_PATH,$(call fnIF_OS,windows,ext/bin-win32/wrap_oal.dll,) $(OUTDIR)/)
+		$(call fnIF_OS,windows,ext/bin-win32/OpenAL32.dll,) \
+		$(call fnIF_OS,linux,-lopenal -lpthread,)
+	$(call fnIF_OS,windows,$(fnCOPY_FILE) $(call fnFIX_PATH,ext/bin-win32/OpenAL32.dll) $(OUTDIR)/,)
+	$(call fnIF_OS,windows,$(fnCOPY_FILE) $(call fnFIX_PATH,ext/bin-win32/wrap_oal.dll) $(OUTDIR)/,)
 	$(LINUXHACKPOST)
 
 obj/ss_%.o: src/ss_%.c $(DEPS)

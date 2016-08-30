@@ -111,7 +111,7 @@ static sgs_RegFuncConst rfc[] =
 };
 
 
-extern "C" int sgscript_main( SGS_CTX )
+extern "C" __attribute__((visibility("default"))) int sgscript_main( SGS_CTX )
 {
 	sgs_RegFuncConsts( C, rfc, -1 );
 	sgsVariable env = sgsEnv( C );

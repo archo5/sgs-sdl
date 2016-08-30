@@ -9,6 +9,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <assert.h>
+#include <stdio.h>
 
 #include <AL/al.h>
 #include <AL/alc.h>
