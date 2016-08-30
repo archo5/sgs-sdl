@@ -59,7 +59,7 @@ SS3D_DEPS = $(patsubst %,src/%,$(_SS3D_DEPS))
 SS3D_OBJ = $(patsubst %,obj/%,$(_SS3D_OBJ))
 
 ifeq ($(target_os),windows)
-	PF_LINK = -Lext/lib-win32 -lOpenGL32 obj/libjpg.a obj/libpng.a obj/zlib.a obj/freetype.a
+	PF_LINK = -Lext/lib-win32 -lOpenGL32 obj/freetype.a
 	PF_POST = $(fnCOPY_FILE) $(call fnFIX_PATH,ext/bin-win32/SDL2.dll bin) & \
 	           $(fnCOPY_FILE) $(call fnFIX_PATH,sgscript/bin/sgscript.dll bin) & \
 	           $(fnCOPY_FILE) $(call fnFIX_PATH,sgscript/bin/sgsxgmath.dll bin)
@@ -125,32 +125,12 @@ sgscript/bin/sgstest$(BINEXT):
 # INPUT LIBRARIES
 .PHONY: sgs-sdl-deps
 ifeq ($(target_os),windows)
-SGS_SDL_DEPS = obj/libjpg.a obj/libpng.a obj/zlib.a obj/freetype.a
-obj/libjpg.a:
-	$(CC) -o obj/libjpg1.o -c $(CFLAGS) ext/src/libjpg1.c
-	$(CC) -o obj/libjpg2.o -c $(CFLAGS) ext/src/libjpg2.c
-	$(CC) -o obj/libjpg3.o -c $(CFLAGS) ext/src/libjpg3.c
-	ar -rcs obj/libjpg.a obj/libjpg1.o obj/libjpg2.o obj/libjpg3.o
-obj/zlib.a:
-	$(CC) -o obj/zlib1.o -c $(CFLAGS) ext/src/zlib1.c
-	$(CC) -o obj/zlib2.o -c $(CFLAGS) ext/src/zlib2.c
-	$(CC) -o obj/zlib3.o -c $(CFLAGS) ext/src/zlib3.c
-	ar -rcs obj/zlib.a obj/zlib1.o obj/zlib2.o obj/zlib3.o
-obj/libpng.a:
-	$(CC) -o obj/libpng1.o -c $(CFLAGS) ext/src/libpng1.c -Iext/src/zlib
-	ar -rcs obj/libpng.a obj/libpng1.o
+SGS_SDL_DEPS = obj/freetype.a
 obj/freetype.a:
 	$(CC) -o obj/freetype1.o -c $(CFLAGS) ext/src/freetype1.c -Iext/include/freetype
 	ar -rcs obj/freetype.a obj/freetype1.o
 else
-SGS_SDL_DEPS = $(OUTDIR)/$(LIBPFX)jpg$(LIBEXT) $(OUTDIR)/$(LIBPFX)zlib$(LIBEXT) $(OUTDIR)/$(LIBPFX)png$(LIBEXT) $(OUTDIR)/$(LIBPFX)freetype$(LIBEXT)
-$(OUTDIR)/$(LIBPFX)jpg$(LIBEXT):
-	$(CC) -o $@ $(CFLAGS) -shared ext/src/libjpg1.c ext/src/libjpg2.c ext/src/libjpg3.c
-$(OUTDIR)/$(LIBPFX)zlib$(LIBEXT):
-	$(CC) -o $@ $(CFLAGS) -shared ext/src/zlib1.c ext/src/zlib2.c ext/src/zlib3.c
-$(OUTDIR)/$(LIBPFX)png$(LIBEXT): $(OUTDIR)/$(LIBPFX)zlib$(LIBEXT)
-	$(CC) -o $@ $(CFLAGS) -shared ext/src/libpng1.c -Iext/src/zlib $^
-	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libzlib.so @rpath/libzlib.so $@,)
+SGS_SDL_DEPS = $(OUTDIR)/$(LIBPFX)freetype$(LIBEXT)
 $(OUTDIR)/$(LIBPFX)freetype$(LIBEXT):
 	$(CC) -o $@ $(CFLAGS) -shared ext/src/freetype1.c -Iext/include/freetype
 endif
@@ -201,9 +181,6 @@ $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT): $(OBJ) $(SGS_SDL_DEPS) sgscript/bin/sgsxgma
 	$(CC) -o $@ $(OBJ) $(SGS_SDL_FLAGS)
 	$(LINUXHACKPOST)
 	$(PF_POST)
-	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libjpg.so @rpath/libjpg.so $@,)
-	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libpng.so @rpath/libpng.so $@,)
-	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libzlib.so @rpath/libzlib.so $@,)
 	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libfreetype.so @rpath/libfreetype.so $@,)
 	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libsgscript.so @rpath/libsgscript.so $@,)
 	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/sgsxgmath.so @rpath/sgsxgmath.so $@,)
