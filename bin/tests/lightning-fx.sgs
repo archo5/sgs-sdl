@@ -1,0 +1,94 @@
+
+include "sgsxgmath";
+
+
+function lerp( a, b, t ){ return a * (1-t) + b * t; }
+function randrange( from, to ){ return lerp( from, to, randf() ); }
+
+
+function generate_lightning( from, to, iterations )
+{
+	lines = [ [ from, to ] ];
+	
+	offset_amount = 0.2; // 0.6;
+	offset_power = 0.95; // 1.4;
+	branch_possibility = 0.9;
+	branch_power = 3.7;
+	while( iterations --> 0 )
+	{
+		out = [];
+		foreach( line : lines )
+		{
+			p1 = line[0];
+			p2 = line[1];
+			
+			splitpoint = lerp( p1, p2, randrange( 0.4, 0.6 ) ) + ( p2 - p1 ).perp * randrange(-1,1) * offset_amount;
+			out.push
+			(
+				[p1,splitpoint],
+				[splitpoint,p2]
+			);
+			if( randf() < branch_possibility )
+			{
+				branchpoint = splitpoint + ( splitpoint - (p1+p2) * 0.5 ).normalized * ((p1-splitpoint).length + (p2-splitpoint).length) * 0.25;
+				out.push([ splitpoint, branchpoint ]);
+			}
+		}
+		lines = out;
+		
+		offset_amount = pow( offset_amount, offset_power );
+		branch_possibility = pow( branch_possibility, branch_power );
+	}
+	
+	return lines;
+}
+
+function regen_lightning(){ global line_list = generate_lightning( vec2(0,-1), vec2(0.5,1), 5 ); }
+
+
+function configure()
+{
+}
+
+function initialize()
+{
+	global Window = SS_CreateWindow( "Lightning Effect", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 576, SDL_WINDOW_OPENGLMAYBE );
+	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
+	SS_InitDrawFunctions();
+	
+	regen_lightning();
+}
+
+global timeout = 1;
+global lasttime = ftime();
+function update()
+{
+	global timeout, lasttime;
+	curtime = ftime();
+	delta = curtime - lasttime;
+	lasttime = curtime;
+	timeout -= delta * 2;
+	if( timeout < 0 )
+	{
+		regen_lightning();
+		timeout++;
+	}
+	
+	SS_Clear( color(0.1,1) );
+	SS_SetCamera2D( 0, 0, 1.5, Window.width/Window.height, 0 );
+	
+	foreach( line : line_list )
+		SS_DrawColorLine( line[0].x, line[0].y, line[1].x, line[1].y, 0.2, 0.4, 0.8, 1 );
+	
+	SS_Present();
+}
+
+function on_event( e )
+{
+	if( e.type == SDL_QUIT )
+		global sys_exit = true;
+}
+
+function cleanup()
+{
+}

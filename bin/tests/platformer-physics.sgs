@@ -1,0 +1,176 @@
+
+include "sgsbox2d";
+
+
+function lerp( a, b, s ){ return a * (1-s) + b * s; }
+function clamp( v, vmin, vmax ){ return max( vmin, min( vmax, v ) ); }
+
+
+global Keys = {};
+global JoyAxis = {};
+global JoyButtons = {};
+
+
+function Player_Init( pos )
+{
+	this.position = vec2( pos.x, pos.y );
+	this.velocity = vec2(0);
+	this.onground = false;
+}
+
+function Player_Move( movement, delta )
+{
+	// raycast footing
+	rcheight = 48;
+	p1 = this.position;
+	rcx = vec2( 0, rcheight );
+	p2 = p1 + movement * (rcheight/32) + rcx;
+	
+	
+	hitpos = null;
+	hitfract = null;
+	PhyWorld.RayCast( function( fixture, point, normal, fraction ) use( hitpos, hitfract )
+	{
+		hitpos = point;
+		hitfract = fraction;
+		return fraction;
+	},
+	p1, p2 );
+	
+	
+	this.onground = false;
+	if( hitpos === null )
+	{
+		this.position = p1 + movement;
+	}
+	else
+	{
+		this.position.x = hitpos.x;
+		height = rcheight * hitfract - movement.y;
+		if( height < 32 + delta * 320 )
+		{
+			height = 32;
+			this.onground = true;
+		}
+		this.position.y = hitpos.y - height;
+		if( height <= 32 && this.velocity.y > 0 )
+			this.velocity.y = 0;
+		this.velocity.x = lerp( this.velocity.x, 0, pow( 0.1, 1 - clamp( delta, 0, 1 ) ) );
+	}
+}
+
+function Player_Tick( delta )
+{
+	maxvel = 500;
+	velinc = 2500;
+	
+	// INPUT COMPILATION
+	moveinput = @Keys[ SDLK_D ] - @Keys[ SDLK_A ] + @JoyAxis[ 0 ];
+	if( abs( moveinput ) > 1 ) moveinput = sign( moveinput );
+	jumpinput = @Keys[ SDLK_W ] || @JoyButtons[ 2 ];
+	
+	// UPDATE VELOCITY
+	if( moveinput < 0 && this.velocity.x > -maxvel ) this.velocity.x -= velinc * delta * -moveinput;
+	if( moveinput > 0 && this.velocity.x < maxvel ) this.velocity.x += velinc * delta * moveinput;
+	if( this.onground && jumpinput ) this.velocity.y -= 400;
+	this.velocity += PhyWorld.gravity * delta;
+	
+	// UPDATE POSITION
+	movement = this.velocity * delta;
+	this!Player_Move( movement, delta );
+}
+
+function Player_Draw()
+{
+	pos = this.position;
+	SS_DrawColorLine( pos.x, pos.y - 32, pos.x, pos.y + 32, 0.8, 0.2, 0.2, 1 );
+}
+
+
+function configure()
+{
+}
+
+function initialize()
+{
+	global Window = SS_CreateWindow( "SGS-SDL Game Framework - Platformer Physics", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 576, SDL_WINDOW_OPENGLMAYBE );
+	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
+	SS_InitDrawFunctions();
+	
+	global Joysticks = {};
+	global PhyWorld = Box2D_CreateWorld( vec2(0,800) );
+	
+	global Lines =
+	[
+		[ vec2(-100,100), vec2(-100,0) ],
+		[ vec2(-300,100), vec2(100,100) ],
+		[ vec2(100,100), vec2(200,200) ],
+		[ vec2(200,200), vec2(500,200) ],
+		[ vec2(500,200), vec2(600,150) ],
+		[ vec2(600,150), vec2(800,150) ],
+		[ vec2(800,140), vec2(810,140) ],
+		[ vec2(810,130), vec2(820,130) ],
+		[ vec2(820,120), vec2(830,120) ],
+		[ vec2(830,110), vec2(840,110) ],
+		[ vec2(840,100), vec2(900,100) ],
+	];
+	
+	global Player = {};
+	Player!Player_Init( vec2(300,100) );
+	
+	bodyDef = Box2D_CreateBodyDef();
+	bodyDef.type = Box2D_BodyType_Static;
+	global LineBody = PhyWorld.CreateBody( bodyDef );
+	foreach( line : Lines )
+	{
+		shape = Box2D_CreateEdgeShape();
+		shape.SetEdge( line[0], line[1] );
+		LineBody.CreateFixtureFromShape( shape, 1 );
+	}
+}
+
+global lasttime = ftime();
+function update()
+{
+	global lasttime;
+	curtime = ftime();
+	delta = curtime - lasttime;
+	lasttime = curtime;
+	if( delta > 1/15 ) delta = 1/15;
+	
+//	delta *= 0.2;
+	// TICK
+	PhyWorld.Step( delta, 10, 10 );
+	Player!Player_Tick( delta );
+	
+	// DRAW
+	SS_Clear( color(0.1,0.2,0.4) );
+	
+	SS_SetCamera2D( Player.position.x, Player.position.y, 300, Window.width / Window.height, 0 );
+	
+	foreach( line : Lines )
+	{
+		SS_DrawColorLine( line[0].x, line[0].y, line[1].x, line[1].y, 0.2, 0.8, 0.2, 1 );
+	}
+	Player!Player_Draw();
+	
+	SS_Present();
+}
+
+function on_event( e )
+{
+	if( e.type == SDL_QUIT )
+		global sys_exit = true;
+		
+	if( e.type == SDL_KEYDOWN ) Keys[ e.keycode ] = true;
+	else if( e.type == SDL_KEYUP ) Keys[ e.keycode ] = false;
+	
+	if( e.type == SDL_JOYDEVICEADDED ) Joysticks[ e.which ] = SS_GetJoystick( e.which );
+	else if( e.type == SDL_JOYDEVICEREMOVED ) unset( Joysticks, e.which );
+	
+	if( e.type == SDL_JOYAXISMOTION ) JoyAxis[ e.axis ] = e.value / 32768;
+	else if( e.type == SDL_JOYBUTTONDOWN || e.type == SDL_JOYBUTTONUP ) JoyButtons[ e.button ] = e.state;
+}
+
+function cleanup(){}
+

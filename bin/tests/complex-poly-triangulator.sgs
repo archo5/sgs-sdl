@@ -1,0 +1,281 @@
+
+function line_intersect( la0, la1, lb0, lb1 )
+{
+	s1_x = la1.x - la0.x;	s1_y = la1.y - la0.y;
+	s2_x = lb1.x - lb0.x;	s2_y = lb1.y - lb0.y;
+	
+	d = -s2_x * s1_y + s1_x * s2_y;
+	if( d == 0 )
+		return null;
+	
+	s = (-s1_y * (la0.x - lb0.x) + s1_x * (la0.y - lb0.y)) / d;
+	t = ( s2_x * (la0.y - lb0.y) - s2_y * (la0.x - lb0.x)) / d;
+	
+	if (s >= 0 && s <= 1 && t >= 0 && t <= 1)
+	{
+		// Collision detected
+		return vec2( la0.x + (t * s1_x), la0.y + (t * s1_y) );
+	}
+	return null;
+}
+
+function point_inside_triangle( p, t0, t1, t2 )
+{
+	en0 = ( t1 - t0 ).perp.normalized;
+	en1 = ( t2 - t1 ).perp.normalized;
+	en2 = ( t0 - t2 ).perp.normalized;
+	ds0 = vec2_dot( en0, p ) > vec2_dot( en0, t0 );
+	ds1 = vec2_dot( en1, p ) > vec2_dot( en1, t1 );
+	ds2 = vec2_dot( en2, p ) > vec2_dot( en2, t2 );
+	return ds0 == ds1 && ds1 == ds2;
+}
+
+function point_in_poly( poly, pt )
+{
+	c = false;
+	for( i = 0, j = poly.size - 1; i < poly.size; j = i++ )
+	{
+		if( ((poly[i].y>pt.y) != (poly[j].y>pt.y)) &&
+			(pt.x < (poly[j].x-poly[i].x) * (pt.y-poly[i].y) / (poly[j].y-poly[i].y) + poly[i].x) )
+			c = !c;
+	}
+	return c;
+}
+
+/* algorithm:
+- generate intersection points and side-turning markers (one on each intersection point)
+- generate edge list (expanded from path with intersection points), swapping points if the side is supposed to be turned
+- generate concave polygons by finding sequences of edges (each edge can only be used once, edges cannot change direction)
+- fill concave polygons with any (in this case, ear clipping) algorithm
+*/
+function render_line_path( path )
+{
+	// GENERATE PATH WITH INTERSECTION POINTS
+	npath = [];
+	turnside = [];
+	foreach( p : path )
+	{
+		pp = @npath.last;
+		npath.push( p );
+		turnside.push( false );
+		
+		from = 0;
+		chg = npath.size - 2;
+		to = npath.size - 1;
+		
+		for( i = from; i < chg; ++i )
+		{
+			i1 = i + 1;
+			for( j = chg; j < to; ++j )
+			{
+				j1 = j + 1;
+				
+				pi = npath[i];
+				pi1 = npath[i1];
+				pj = npath[j];
+				pj1 = npath[j1];
+				
+				isp = line_intersect( pj, pj1, pi, pi1 );
+				if( isp && isp != pj && isp != pj1 && isp != pi && isp != pi1 )
+				{
+					npath.insert( i1, isp );
+					turnside.insert( i1, true );
+				//	j++;
+					chg++;
+					to++;
+					npath.insert( j1 + 1, isp );
+					turnside.insert( j1 + 1, true );
+				//	j--;
+					to++;
+				}
+			}
+		}
+	}
+//	printvar(npath);WARNING("!");
+	
+	// GENERATE EDGE LIST
+	sides = [];
+	edgelist = [];
+	curside = false;
+	for( i = 0; i < npath.size; ++i )
+	{
+		if( turnside[ i ] )
+			curside = !curside;
+		sides.push( curside );
+		
+		i1 = ( i + 1 ) % npath.size;
+		if( !curside )
+		{
+			edgelist.push( npath[i] );
+			edgelist.push( npath[i1] );
+		}
+		else
+		{
+			edgelist.push( npath[i1] );
+			edgelist.push( npath[i] );
+		}
+	}
+	
+	// GENERATE POLYGONS FROM EDGE LIST
+	PolyList = [];
+	while( edgelist.size )
+	{
+		poly = [ edgelist[0], edgelist[1] ];
+		edgelist.shift();
+		edgelist.shift();
+		
+		while( poly[0] != poly.last )
+		{
+			for( i = 0; i < edgelist.size; i += 2 )
+			{
+				if( edgelist[i] == poly.last )
+				{
+					poly.push( edgelist[ i + 1 ] );
+					edgelist.erase( i, i + 1 );
+					i -= 2;
+				}
+			}
+		}
+		
+		PolyList.push( poly );
+	}
+	
+	// CONCAVE POLYGON TRIANGULATION
+	triangles = [];
+	foreach( poly : PolyList )
+	{
+		poly = clone( poly );
+		// while there are ears to clip
+		for( numiters = 0; poly.size > 2 && numiters < poly.size; ++numiters )
+		{
+			// for each bi-edge
+			for( i = 0; i < poly.size; ++i )
+			{
+				i0 = i;
+				i1 = ( i + 1 ) % poly.size;
+				i2 = ( i + 2 ) % poly.size;
+				
+				t0 = poly[ i0 ];
+				t1 = poly[ i1 ];
+				t2 = poly[ i2 ];
+				
+				// if triangle center not inside poly, not an ear
+				if( !point_in_poly( poly, (t0+t1+t2)/3 ) )
+					continue;
+				
+				// for each other point
+				for( j = 0; j < poly.size; ++j )
+				{
+					if( i0 == j || i1 == j || i2 == j )
+						continue;
+					// if any other point inside triangle, not an ear
+					if( point_inside_triangle( poly[j], t0, t1, t2 ) )
+						continue 2;
+				}
+				
+				triangles.push( t0 );
+				triangles.push( t1 );
+				triangles.push( t2 );
+				poly.erase( i1 );
+				i--;
+			}
+		}
+	}
+	
+	global g_RB, g_VD_P2CC4;
+	
+	// TRIANGLE FILL
+	g_RB.begin();
+	foreach( vtx : triangles )
+		g_RB.f( vtx.x, vtx.y ).cf2b( 0.5, 0.7, 0.9, 1 );
+	g_RB.draw( null, g_VD_P2CC4, 0, triangles.size, SS_PT_TRIANGLES );
+	
+	// PATH
+	g_RB.begin();
+	foreach( vtx : npath )
+		g_RB.f( vtx.x, vtx.y ).cf2b( 0.9, 0.7, 0.5, 1 );
+	vtx = path[0]; g_RB.f( vtx.x, vtx.y ).cf2b( 0.9, 0.7, 0.5, 1 );
+	g_RB.draw( null, g_VD_P2CC4, 0, path.size + 1, SS_PT_LINE_STRIP );
+	
+	// TRIANGLE WIREFRAME
+	g_RB.begin();
+	for( i = 0; i < triangles.size; i += 3 )
+	{
+		p1 = triangles[ i ];
+		p2 = triangles[ i+1 ];
+		p3 = triangles[ i+2 ];
+		
+		g_RB.f( p1.x, p1.y ).cf2b( 0.5, 0.2, 0.5, 1 );
+		g_RB.f( p2.x, p2.y ).cf2b( 0.5, 0.2, 0.5, 1 );
+		
+		g_RB.f( p2.x, p2.y ).cf2b( 0.5, 0.2, 0.5, 1 );
+		g_RB.f( p3.x, p3.y ).cf2b( 0.5, 0.2, 0.5, 1 );
+		
+		g_RB.f( p3.x, p3.y ).cf2b( 0.5, 0.2, 0.5, 1 );
+		g_RB.f( p1.x, p1.y ).cf2b( 0.5, 0.2, 0.5, 1 );
+	}
+	g_RB.draw( null, g_VD_P2CC4, 0, triangles.size * 2, SS_PT_LINES );
+	
+	// POLY DOTS
+//	poly = PolyList[13];
+//	foreach( i, pt : poly )
+//	{
+//		SS_Draw({ preset = "box", position = pt, scale = 24, color = color(i/poly.size,1,1,1) });
+//		SS_DrawTextLine( i, Font, pt.x, pt.y, color(0,1) );
+//	}
+	
+	// SIDE NUMBERS
+	foreach( i, p0 : npath )
+	{
+		p1 = npath[ (i+1) % npath.size ];
+		avg = (p0+p1) / 2;
+		SS_DrawTextLine( toint(sides[i]), Font, avg.x, avg.y, color(0.9,0.1,0.1,1) );
+	}
+}
+
+
+global testpath1 =
+[
+	vec2(32,32),
+	vec2(400,200),
+	vec2(300,480),
+	vec2(300,320),
+	vec2(100,320),
+	vec2(320,32),
+	vec2(220,32),
+	vec2(128,128),//
+	vec2(256,256),//
+	vec2(32,220),
+];
+
+
+function configure()
+{
+}
+
+function initialize()
+{
+	global Window = SS_CreateWindow( "SGS-SDL Game Framework :: PathProc Test",
+		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 512, 512, SDL_WINDOW_OPENGLMAYBE );
+	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
+	SS_InitDrawFunctions();
+	global Font = SS_CreateFont( "fonts/lato-regular.ttf", 12 );
+}
+
+function update()
+{
+	SS_Clear( color(0.1,1) );
+	SS_SetCameraUI( 0, Window.width, 0, Window.height );
+	render_line_path( testpath1 );
+	SS_Present();
+}
+
+function on_event( e )
+{
+	if( e.type == SDL_QUIT )
+		global sys_exit = true;
+}
+
+function cleanup()
+{
+}

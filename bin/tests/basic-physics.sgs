@@ -1,0 +1,71 @@
+
+include "sgsbox2d";
+
+function configure()
+{
+}
+
+function initialize()
+{
+	global Window = SS_CreateWindow( "SGS-SDL Game Framework", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 576, SDL_WINDOW_OPENGLMAYBE );
+	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
+	SS_InitDrawFunctions();
+	
+	global PW = Box2D_CreateWorld( vec2( 0, 100 ) );
+	
+	bd1 = Box2D_CreateBodyDef();
+	bd1.type = Box2D_BodyType_Dynamic;
+	bd1.position = vec2( Window.width / 2, Window.height / 2 );
+	bd1.angle = 0.2;
+	sd1 = Box2D_CreatePolygonShape();
+	sd1.SetAsBox( 50, 50 );
+	global PW_B1 = PW.CreateBody( bd1 );
+	PW_B1.CreateFixtureFromShape( sd1, 1 ).restitution = 0.1;
+	
+	bd2 = Box2D_CreateBodyDef();
+	bd2.type = Box2D_BodyType_Static;
+	sd2 = Box2D_CreateEdgeShape();
+	sd2.SetEdge( vec2( 0, 400 ), vec2( 1024, 400 ) );
+	global PW_B2 = PW.CreateBody( bd2 );
+	PW_B2.CreateFixtureFromShape( sd2 );
+	
+//	PW = null;
+}
+
+global lasttime = ftime();
+global ACC = 0.0, FDT = 1.0/60.0;
+function update()
+{
+	global lasttime, rotation, P, W, H, ACC, FDT;
+	var curtime = ftime();
+	var delta = curtime - lasttime;
+	lasttime = curtime;
+	if( delta > 1.0/15.0 )
+		delta = 1.0/15.0;
+	
+	global W = Window.width;
+	global H = Window.height;
+	
+	ACC += delta;
+	while( ACC > FDT )
+	{
+		PW.Step( FDT, 10, 10 );
+		ACC -= FDT;
+	}
+	
+	SS_Clear( color(0.1,0.2,0.4) );
+	SS_SetCameraUI( 0, W, 0, H );
+	
+	SS_DrawColorRect( 0, 400, W, H, 0.7, 0.5, 0.3, 0.5 );
+	SS_Draw({ preset = "box", position = PW_B1.position, scale = vec2(100), angle = PW_B1.angle, color = color(0.3,0.3,0.3,1) });
+	
+	SS_Present();
+}
+
+function on_event( e )
+{
+	if( e.type == SDL_QUIT )
+		global sys_exit = true;
+}
+
+function cleanup(){}

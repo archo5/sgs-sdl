@@ -1,0 +1,116 @@
+
+
+function draw_thick_line( tex, col, p1, p2, rad )
+{
+	rb = SS_CreateRenderBuffer();
+	r = col.r;
+	g = col.g;
+	b = col.b;
+	a = col.a;
+	if( sys_rctx_flip_colors ){ tmp = r; r = b; b = tmp; }
+	
+	dir = ( p2 - p1 ).normalized * rad;
+	rgt = dir.perp;
+	
+	p00 = p1 - rgt - dir;
+	p10 = p1 - rgt;
+	p20 = p2 - rgt;
+	p30 = p2 - rgt + dir;
+	p01 = p1 + rgt - dir;
+	p11 = p1 + rgt;
+	p21 = p2 + rgt;
+	p31 = p2 + rgt + dir;
+	
+	rb.begin();
+	rb.f( p00.x, p00.y, 0, 0 ).cf2b( r, g, b, a );
+	rb.f( p01.x, p01.y, 0, 1 ).cf2b( r, g, b, a );
+	rb.f( p10.x, p10.y, 0.5, 0 ).cf2b( r, g, b, a );
+	rb.f( p11.x, p11.y, 0.5, 1 ).cf2b( r, g, b, a );
+	rb.f( p20.x, p20.y, 0.5, 0 ).cf2b( r, g, b, a );
+	rb.f( p21.x, p21.y, 0.5, 1 ).cf2b( r, g, b, a );
+	rb.f( p30.x, p30.y, 1, 0 ).cf2b( r, g, b, a );
+	rb.f( p31.x, p31.y, 1, 1 ).cf2b( r, g, b, a );
+	rb.draw( tex, g_VD_P2T2CC4, 0, 8, SS_PT_TRIANGLE_STRIP );
+}
+
+function draw_thick_circle( tex, col, pos, rad, linerad, parts )
+{
+	if( parts === null ) parts = rad;
+	if( parts < 3 ) parts = 3;
+	
+	ang = M_PI / 2;
+	pp = vec2( cos(ang), sin(ang) ) * rad + pos;
+	angdt = M_PI * 2 / parts;
+	for( i = 0; i < parts; ++i )
+	{
+		ang += angdt;
+		np = vec2( cos(ang), sin(ang) ) * rad + pos;
+		draw_thick_line( tex, col, pp, np, linerad );
+		pp = np;
+	}
+}
+
+
+function SS_DrawTexColorRect_TS( x1, y1, x2, y2, ts, tex, r, g, b, a )
+{
+	if( sys_rctx_flip_colors ){ tmp = r; r = b; b = tmp; }
+	g_RB.begin()
+		.f( x1, y1, x1*ts, y1*ts ).cf2b( r, g, b, a )
+		.f( x2, y1, x2*ts, y1*ts ).cf2b( r, g, b, a )
+		.f( x2, y2, x2*ts, y2*ts ).cf2b( r, g, b, a )
+		.f( x1, y2, x1*ts, y2*ts ).cf2b( r, g, b, a )
+		.draw( tex, g_VD_P2T2CC4, 0, 4, SS_PT_TRIANGLE_FAN );
+}
+
+
+function configure()
+{
+}
+
+function initialize()
+{
+	global Window = SS_CreateWindow( "SGS-SDL Game Framework", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 576, SDL_WINDOW_OPENGLMAYBE );
+	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
+	SS_InitDrawFunctions();
+	
+	global tx_glow = SS_CreateTexture( "images/glow.png" );
+	global tx_screenglow = SS_CreateTexture( "images/screenglow.png" );
+	global tx_scanlines = SS_CreateTexture( "images/scanlines.png", "hrepeat,vrepeat" );
+}
+
+global lasttime = ftime();
+function update()
+{
+	global lasttime, rotation, P, W, H, ACC, FDT;
+	var curtime = ftime();
+	var delta = curtime - lasttime;
+	lasttime = curtime;
+	if( delta > 1.0/15.0 )
+		delta = 1.0/15.0;
+	
+	global W = Window.width;
+	global H = Window.height;
+	
+	SS_Clear( color(0.1,0.1,0.1) );
+	SS_SetCameraUI( 0, W, 0, H );
+	
+	draw_thick_line( tx_glow, color( 0.1, 0.8, 0.1 ), vec2( 100, 100 ), vec2( 100, 300 ), 10 );
+	draw_thick_line( tx_glow, color( 0.1, 0.8, 0.1 ), vec2( 100, 300 ), vec2( 400, 300 ), 10 );
+	draw_thick_line( tx_glow, color( 0.1, 0.8, 0.1 ), vec2( 400, 200 ), vec2( 400, 400 ), 10 );
+	draw_thick_circle( tx_glow, color( 0.8, 0.1, 0.1 ), vec2( 200, 200 ), 32, 6 );
+	
+	SS_DrawTexColorRect( 0, 0, W, H, tx_screenglow, 1, 1, 1, 0.5 );
+	SS_SetBlending( SS_BLENDOP_ADD, SS_BLEND_DESTCOLOR, SS_BLEND_ZERO );
+	SS_DrawTexColorRect_TS( 0, 0, W, H, 1/32, tx_scanlines, 1, 1, 1, 1 );
+	SS_SetBlending( SS_BLENDOP_ADD, SS_BLEND_SRCALPHA, SS_BLEND_INVSRCALPHA );
+	
+	SS_Present();
+}
+
+function on_event( e )
+{
+	if( e.type == SDL_QUIT )
+		global sys_exit = true;
+}
+
+function cleanup(){}
