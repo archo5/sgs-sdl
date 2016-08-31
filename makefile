@@ -129,10 +129,9 @@ obj/libbox2d.a:
 _BLTOBJ = bullet_LinearMath.o bullet_BulletCollision.o bullet_BulletDynamics.o
 BLTOBJ = $(patsubst %,obj/%,$(_BLTOBJ))
 obj/bullet_%.o: ext/src/bullet_%.cpp
-	$(CXX) -o $@ -c $(CFLAGS) $(CXXFLAGS) -Iext/src/bullet/src -Wno-unused-variable $<
+	$(CXX) -o $@ -c $(CFLAGS) $(CXXFLAGS) -Iext/src/bullet/src -Wno-unused-variable -Wno-unused-but-set-variable -Wno-reorder -Wno-shadow $<
 obj/libbullet.a: $(BLTOBJ)
 	ar -rcs $@ $^
-obj/bullet_%.o: ext/src/bullet_%.cpp $(DEPS)
 # - Ogg
 obj/libogg_bitwise.o:
 	gcc -c -o $@ ext/src/libogg-1.3.1/src/bitwise.c -O3 -Iext/src/libogg-1.3.1/include $(CFLAGS)
@@ -240,11 +239,11 @@ src/cppbc_sa_main.cpp: src/sa_main.hpp sgscript/bin/sgsvm$(BINEXT)
 
 
 # UTILITY TARGETS
-.PHONY: clean clean_deps clean_all, test, binarch
+.PHONY: clean clean_deps clean_all test binarch
 clean:
 	-$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/ss*.o bin/sgs*)
 clean_deps:
-	-$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/*lib*.o bin/*.dylib bin/*.so bin/*.so.dSYM obj/*lib*.a obj/freetype*.o obj/freetype*.a)
+	-$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/*lib*.o bin/*.dylib bin/*.so bin/*.so.dSYM obj/*lib*.a obj/freetype*.o obj/freetype*.a obj/bullet_* obj/dds.o obj/lodepng.o)
 clean_all: clean clean_deps
 	$(MAKE) -C sgscript clean
 test: sgscript/bin/sgstest$(BINEXT) $(P_SGSBOX2D) $(P_SGSBULLET)
