@@ -1181,10 +1181,26 @@ struct Box2DJoint
 	{
 		if( IsPrismaticJoint() ) return PrismaticJoint()->GetJointSpeed();
 		if( IsRevoluteJoint() ) return RevoluteJoint()->GetJointSpeed();
-		if( IsWheelJoint() ) return WheelJoint()->GetJointSpeed();
+		if( IsWheelJoint() ) return WheelJoint()->GetJointAngularSpeed();
 		return 0.0f;
 	}
 	SGS_PROPERTY_FUNC( READ _getJointSpeed ) SGS_ALIAS( float32 jointSpeed );
+	// > READONLY jointLinearSpeed
+	float32 _getJointLinearSpeed()
+	{
+		if( IsPrismaticJoint() ) return PrismaticJoint()->GetJointSpeed();
+		if( IsWheelJoint() ) return WheelJoint()->GetJointLinearSpeed();
+		return 0.0f;
+	}
+	SGS_PROPERTY_FUNC( READ _getJointLinearSpeed ) SGS_ALIAS( float32 jointLinearSpeed );
+	// > READONLY jointAngularSpeed
+	float32 _getJointAngularSpeed()
+	{
+		if( IsRevoluteJoint() ) return RevoluteJoint()->GetJointSpeed();
+		if( IsWheelJoint() ) return WheelJoint()->GetJointAngularSpeed();
+		return 0.0f;
+	}
+	SGS_PROPERTY_FUNC( READ _getJointAngularSpeed ) SGS_ALIAS( float32 jointAngularSpeed );
 	// > limit
 	bool _getLimit()
 	{
@@ -1495,6 +1511,7 @@ struct Box2DDraw : b2Draw
 	SGS_PROPERTY_FUNC( READ WRITE VARNAME DrawSolidCircle ) sgsVariable fnDrawSolidCircle;
 	SGS_PROPERTY_FUNC( READ WRITE VARNAME DrawSegment ) sgsVariable fnDrawSegment;
 	SGS_PROPERTY_FUNC( READ WRITE VARNAME DrawTransform ) sgsVariable fnDrawTransform;
+	SGS_PROPERTY_FUNC( READ WRITE VARNAME DrawPoint ) sgsVariable fnDrawPoint;
 	
 	void DrawPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color)
 	{
@@ -1523,45 +1540,27 @@ struct Box2DDraw : b2Draw
 	void DrawCircle(const b2Vec2& center, float32 radius, const b2Color& color)
 	{
 		if( fnDrawCircle.not_null() )
-		{
-			SGS_SCOPE;
-			sgs_PushVar( C, center );
-			sgs_PushVar( C, radius );
-			sgs_PushVar( C, color );
-			GetScriptedObject().thiscall( C, fnDrawCircle, 3 );
-		}
+			GetScriptedObject().tthiscall<void>( C, fnDrawCircle, center, radius, color );
 	}
 	void DrawSolidCircle(const b2Vec2& center, float32 radius, const b2Vec2& axis, const b2Color& color)
 	{
 		if( fnDrawSolidCircle.not_null() )
-		{
-			SGS_SCOPE;
-			sgs_PushVar( C, center );
-			sgs_PushVar( C, radius );
-			sgs_PushVar( C, axis );
-			sgs_PushVar( C, color );
-			GetScriptedObject().thiscall( C, fnDrawSolidCircle, 4 );
-		}
+			GetScriptedObject().tthiscall<void>( C, fnDrawSolidCircle, center, radius, axis, color );
 	}
 	void DrawSegment(const b2Vec2& p1, const b2Vec2& p2, const b2Color& color)
 	{
 		if( fnDrawSegment.not_null() )
-		{
-			SGS_SCOPE;
-			sgs_PushVar( C, p1 );
-			sgs_PushVar( C, p2 );
-			sgs_PushVar( C, color );
-			GetScriptedObject().thiscall( C, fnDrawSegment, 4 );
-		}
+			GetScriptedObject().tthiscall<void>( C, fnDrawSegment, p1, p2, color );
 	}
 	void DrawTransform(const b2Transform& xf)
 	{
 		if( fnDrawTransform.not_null() )
-		{
-			SGS_SCOPE;
-			sgs_PushVar( C, Box2DTransform( xf ) );
-			GetScriptedObject().thiscall( C, fnDrawTransform, 1 );
-		}
+			GetScriptedObject().tthiscall<void>( C, fnDrawTransform, Box2DTransform( xf ) );
+	}
+	void DrawPoint(const b2Vec2& p, float32 size, const b2Color& color)
+	{
+		if( fnDrawPoint.not_null() )
+			GetScriptedObject().tthiscall<void>( C, fnDrawPoint, p, size, color );
 	}
 };
 

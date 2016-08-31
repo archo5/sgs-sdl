@@ -2420,6 +2420,8 @@ int Box2DJoint::_sgs_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "referenceAngle" ){ sgs_PushVar( C, static_cast<Box2DJoint*>( obj->data )->_getReferenceAngle() ); return SGS_SUCCESS; }
 		SGS_CASE( "jointTranslation" ){ sgs_PushVar( C, static_cast<Box2DJoint*>( obj->data )->_getJointTranslation() ); return SGS_SUCCESS; }
 		SGS_CASE( "jointSpeed" ){ sgs_PushVar( C, static_cast<Box2DJoint*>( obj->data )->_getJointSpeed() ); return SGS_SUCCESS; }
+		SGS_CASE( "jointLinearSpeed" ){ sgs_PushVar( C, static_cast<Box2DJoint*>( obj->data )->_getJointLinearSpeed() ); return SGS_SUCCESS; }
+		SGS_CASE( "jointAngularSpeed" ){ sgs_PushVar( C, static_cast<Box2DJoint*>( obj->data )->_getJointAngularSpeed() ); return SGS_SUCCESS; }
 		SGS_CASE( "limit" ){ sgs_PushVar( C, static_cast<Box2DJoint*>( obj->data )->_getLimit() ); return SGS_SUCCESS; }
 		SGS_CASE( "lowerLimit" ){ sgs_PushVar( C, static_cast<Box2DJoint*>( obj->data )->_getLowerLimit() ); return SGS_SUCCESS; }
 		SGS_CASE( "upperLimit" ){ sgs_PushVar( C, static_cast<Box2DJoint*>( obj->data )->_getUpperLimit() ); return SGS_SUCCESS; }
@@ -2501,6 +2503,8 @@ int Box2DJoint::_sgs_dump( SGS_CTX, sgs_VarObj* obj, int depth )
 		{ sgs_PushString( C, "\nreferenceAngle = " ); sgs_DumpData( C, static_cast<Box2DJoint*>( obj->data )->_getReferenceAngle(), depth ).push( C ); }
 		{ sgs_PushString( C, "\njointTranslation = " ); sgs_DumpData( C, static_cast<Box2DJoint*>( obj->data )->_getJointTranslation(), depth ).push( C ); }
 		{ sgs_PushString( C, "\njointSpeed = " ); sgs_DumpData( C, static_cast<Box2DJoint*>( obj->data )->_getJointSpeed(), depth ).push( C ); }
+		{ sgs_PushString( C, "\njointLinearSpeed = " ); sgs_DumpData( C, static_cast<Box2DJoint*>( obj->data )->_getJointLinearSpeed(), depth ).push( C ); }
+		{ sgs_PushString( C, "\njointAngularSpeed = " ); sgs_DumpData( C, static_cast<Box2DJoint*>( obj->data )->_getJointAngularSpeed(), depth ).push( C ); }
 		{ sgs_PushString( C, "\nlimit = " ); sgs_DumpData( C, static_cast<Box2DJoint*>( obj->data )->_getLimit(), depth ).push( C ); }
 		{ sgs_PushString( C, "\nlowerLimit = " ); sgs_DumpData( C, static_cast<Box2DJoint*>( obj->data )->_getLowerLimit(), depth ).push( C ); }
 		{ sgs_PushString( C, "\nupperLimit = " ); sgs_DumpData( C, static_cast<Box2DJoint*>( obj->data )->_getUpperLimit(), depth ).push( C ); }
@@ -2525,7 +2529,7 @@ int Box2DJoint::_sgs_dump( SGS_CTX, sgs_VarObj* obj, int depth )
 		{ sgs_PushString( C, "\njointAngle = " ); sgs_DumpData( C, static_cast<Box2DJoint*>( obj->data )->_getJointAngle(), depth ).push( C ); }
 		{ sgs_PushString( C, "\nmaxLength = " ); sgs_DumpData( C, static_cast<Box2DJoint*>( obj->data )->_getMaxLength(), depth ).push( C ); }
 		{ sgs_PushString( C, "\nlimitState = " ); sgs_DumpData( C, static_cast<Box2DJoint*>( obj->data )->_getLimitState(), depth ).push( C ); }
-		sgs_StringConcat( C, 86 );
+		sgs_StringConcat( C, 90 );
 		sgs_PadString( C );
 		sgs_PushString( C, "\n}" );
 		sgs_StringConcat( C, 3 );
@@ -2696,6 +2700,7 @@ int Box2DDraw::_sgs_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "DrawSolidCircle" ){ sgs_PushVar( C, static_cast<Box2DDraw*>( obj->data )->fnDrawSolidCircle ); return SGS_SUCCESS; }
 		SGS_CASE( "DrawSegment" ){ sgs_PushVar( C, static_cast<Box2DDraw*>( obj->data )->fnDrawSegment ); return SGS_SUCCESS; }
 		SGS_CASE( "DrawTransform" ){ sgs_PushVar( C, static_cast<Box2DDraw*>( obj->data )->fnDrawTransform ); return SGS_SUCCESS; }
+		SGS_CASE( "DrawPoint" ){ sgs_PushVar( C, static_cast<Box2DDraw*>( obj->data )->fnDrawPoint ); return SGS_SUCCESS; }
 	SGS_END_INDEXFUNC;
 }
 
@@ -2716,6 +2721,7 @@ int Box2DDraw::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 		SGS_CASE( "DrawSolidCircle" ){ static_cast<Box2DDraw*>( obj->data )->fnDrawSolidCircle = sgs_GetVar<sgsVariable>()( C, 1 ); return SGS_SUCCESS; }
 		SGS_CASE( "DrawSegment" ){ static_cast<Box2DDraw*>( obj->data )->fnDrawSegment = sgs_GetVar<sgsVariable>()( C, 1 ); return SGS_SUCCESS; }
 		SGS_CASE( "DrawTransform" ){ static_cast<Box2DDraw*>( obj->data )->fnDrawTransform = sgs_GetVar<sgsVariable>()( C, 1 ); return SGS_SUCCESS; }
+		SGS_CASE( "DrawPoint" ){ static_cast<Box2DDraw*>( obj->data )->fnDrawPoint = sgs_GetVar<sgsVariable>()( C, 1 ); return SGS_SUCCESS; }
 	SGS_END_INDEXFUNC;
 }
 
@@ -2740,7 +2746,8 @@ int Box2DDraw::_sgs_dump( SGS_CTX, sgs_VarObj* obj, int depth )
 		{ sgs_PushString( C, "\nDrawSolidCircle = " ); sgs_DumpData( C, static_cast<Box2DDraw*>( obj->data )->fnDrawSolidCircle, depth ).push( C ); }
 		{ sgs_PushString( C, "\nDrawSegment = " ); sgs_DumpData( C, static_cast<Box2DDraw*>( obj->data )->fnDrawSegment, depth ).push( C ); }
 		{ sgs_PushString( C, "\nDrawTransform = " ); sgs_DumpData( C, static_cast<Box2DDraw*>( obj->data )->fnDrawTransform, depth ).push( C ); }
-		sgs_StringConcat( C, 26 );
+		{ sgs_PushString( C, "\nDrawPoint = " ); sgs_DumpData( C, static_cast<Box2DDraw*>( obj->data )->fnDrawPoint, depth ).push( C ); }
+		sgs_StringConcat( C, 28 );
 		sgs_PadString( C );
 		sgs_PushString( C, "\n}" );
 		sgs_StringConcat( C, 3 );

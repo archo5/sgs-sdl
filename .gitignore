@@ -24,3 +24,4 @@ bin/testdata/
 .DS_Store
 xcuserdata
 *.csh
+/libs/
