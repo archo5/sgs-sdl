@@ -1,7 +1,11 @@
 
-include "../bin/sgsxgmath", "../bin/sgsbox2d";
+global ERRORS = "";
+foreach( p : multiply_path_ext_lists( "|/../bin" ) )
+	_G.SGS_PATH ..= ";" .. p;
+include "sgsxgmath", "sgsbox2d";
 
 testEqual( typeof(@Box2D_CreateWorld), "cfunc", "loaded Box2D library" );
+testEqual( ERRORS, "", "loading - no errors" );
 
 println( "--- TEST 1 ---" );
 (function()

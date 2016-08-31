@@ -119,6 +119,6 @@ int ss_ParseColor( SGS_CTX, int pos, float* v4f )
 
 int ss_InitExtMath( SGS_CTX )
 {
-	return xgm_module_entry_point( C );
+	return sgs_xgm_module_entry_point( C );
 }
 

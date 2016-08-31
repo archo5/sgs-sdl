@@ -111,8 +111,10 @@ static sgs_RegFuncConst rfc[] =
 };
 
 
-extern "C" __attribute__((visibility("default"))) int sgscript_main( SGS_CTX )
+SGS_CLINK SGS_DLL_EXPORT int sgscript_main( SGS_CTX )
 {
+	SGS_MODULE_CHECK_VERSION( C );
+	
 	sgs_RegFuncConsts( C, rfc, -1 );
 	sgsVariable env = sgsEnv( C );
 	

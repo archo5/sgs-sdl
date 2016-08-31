@@ -1043,7 +1043,7 @@ static sgs_RegIntConst g_ic[] =
 };
 
 
-extern "C" int sgscript_main( SGS_CTX )
+SGS_CLINK SGS_DLL_EXPORT int sgscript_main( SGS_CTX )
 {
 	SGS_MODULE_CHECK_VERSION( C );
 	sgs_RegFuncConsts( C, g_fc, sizeof(g_fc) / sizeof(g_fc[0]) );

@@ -5,15 +5,13 @@ include sgscript/core.mk
 
 
 # SGS-SDL FLAGS
-ifneq ($(target_os),windows)
+ifneq ($(os),windows)
 	video=nod3d
 	SDL2_CFLAGS = $(shell sdl2-config --cflags)
 	SDL2_LIBS = $(shell sdl2-config --libs)
-	XGM_LIBS = -l:sgsxgmath.so
 else
 	SDL2_CFLAGS = -Iext/include/SDL2
 	SDL2_LIBS = -lSDL2main -lSDL2
-	XGM_LIBS = -lsgsxgmath
 endif
 
 SGS_SDL_INSTALL_TOOL = $(call fnIF_OS,osx,install_name_tool \
@@ -55,19 +53,18 @@ OBJ = $(patsubst %,obj/%,$(_OBJ))
 SS3D_DEPS = $(patsubst %,src/%,$(_SS3D_DEPS))
 SS3D_OBJ = $(patsubst %,obj/%,$(_SS3D_OBJ))
 
-ifeq ($(target_os),windows)
+PF_POST = \
+	$(fnCOPY_FILE) $(call fnFIX_PATH,sgscript/bin/$(LIBPFX)sgscript$(LIBEXT) bin) & \
+	$(fnCOPY_FILE) $(call fnFIX_PATH,sgscript/bin/$(LIBPFX)sgsxgmath$(LIBEXT) bin)
+ifeq ($(os),windows)
 	PF_LINK = -Lext/lib-win32 -lOpenGL32 obj/freetype.a
-	PF_POST = $(fnCOPY_FILE) $(call fnFIX_PATH,ext/bin-win32/SDL2.dll bin) & \
-	           $(fnCOPY_FILE) $(call fnFIX_PATH,sgscript/bin/sgscript.dll bin) & \
-	           $(fnCOPY_FILE) $(call fnFIX_PATH,sgscript/bin/sgsxgmath.dll bin)
+	PF_POST += & $(fnCOPY_FILE) $(call fnFIX_PATH,ext/bin-win32/SDL2.dll bin)
 else
 	PF_LINK = -Lbin -lfreetype
-	PF_POST = $(call fnIF_OS,osx,$(fnCOPY_FILE) /usr/local/lib/libSDL2.dylib bin &,) \
-				$(fnCOPY_FILE) sgscript/bin/libsgscript.so bin & \
-				$(fnCOPY_FILE) sgscript/bin/sgsxgmath.so bin
+	PF_POST += $(call fnIF_OS,osx,& $(fnCOPY_FILE) /usr/local/lib/libSDL2.dylib bin,)
 endif
 
-SGS_SDL_FLAGS = $(SS_CFLAGS) $(MODULEFLAGS) $(PF_LINK) -Lsgscript/bin $(SDL2_LIBS) $(FT2_LIBS) -lsgscript $(XGM_LIBS) $(PF_DEPS)
+SGS_SDL_FLAGS = $(SS_CFLAGS) $(MODULEFLAGS) $(PF_LINK) -Lsgscript/bin $(SDL2_LIBS) $(FT2_LIBS) -lsgscript -lsgsxgmath $(PF_DEPS)
 SGS_SDL_LAUNCHER_FLAGS = $(SS_CFLAGS) $(BINFLAGS) -L$(OUTDIR) -lsgs-sdl
 
 SGS_CXX_FLAGS = -fno-exceptions -fno-rtti -static-libstdc++ -static-libgcc -fno-unwind-tables -fvisibility=hidden
@@ -80,11 +77,10 @@ ifneq ($(MAKECMDGOALS),clean_objbin)
 $(info -------------------)
 $(info SGS-SDL build info )
 $(info -------------------)
-$(info OS - $(cOS))
-$(info ARCH - $(cARCH))
+$(info PLATFORM - $(cOS)/$(cARCH))
 $(info COMPILER - $(cCOMPILER))
-$(info TARGET - $(target_os)/$(target_arch))
-$(info MODE - $(call fnIF_RELEASE,release,debug))
+$(info TARGET - $(os)/$(arch))
+$(info MODE - $(call fnIF_RELEASE,Release,Debug))
 $(info OUT.LIB. - $(OUTFILE))
 $(info TODO - $(MAKECMDGOALS))
 $(info -------------------)
@@ -103,22 +99,22 @@ launchers: $(OUTDIR)/sgs-sdl-release$(BINEXT) $(OUTDIR)/sgs-sdl-debug$(BINEXT)
 sgs-sdl: $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT)
 ss3d: $(OUTDIR)/$(LIBPFX)ss3d$(LIBEXT)
 ss3dcull: $(OUTDIR)/$(LIBPFX)ss3dcull$(LIBEXT)
-box2d: $(OUTDIR)/sgsbox2d$(LIBEXT)
-bullet: $(OUTDIR)/sgsbullet$(LIBEXT)
-audio: $(OUTDIR)/sgsaudio$(LIBEXT)
+box2d: $(OUTDIR)/$(LIBPFX)sgsbox2d$(LIBEXT)
+bullet: $(OUTDIR)/$(LIBPFX)sgsbullet$(LIBEXT)
+audio: $(OUTDIR)/$(LIBPFX)sgsaudio$(LIBEXT)
 
 
 # SGScript
 sgscript/bin/sgsvm$(BINEXT):
 	$(MAKE) -C sgscript vm
-sgscript/bin/sgsxgmath$(LIBEXT):
+sgscript/bin/$(LIBPFX)sgsxgmath$(LIBEXT):
 	$(MAKE) -C sgscript xgmath
 sgscript/bin/sgstest$(BINEXT):
 	$(MAKE) -C sgscript build_test
 
 # INPUT LIBRARIES
 .PHONY: sgs-sdl-deps
-ifeq ($(target_os),windows)
+ifeq ($(os),windows)
 SGS_SDL_DEPS = obj/freetype.a
 obj/freetype.a:
 	$(CC) -o obj/freetype1.o -c $(CFLAGS) ext/src/freetype1.c -Iext/include/freetype
@@ -160,55 +156,39 @@ obj/libvorbis.a: $(patsubst %,obj/libvorbis_%,$(_OBJ_VORBIS))
 
 # MAIN LIBRARIES
 $(OUTDIR)/sgs-sdl-release$(BINEXT): $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) src/ss_launcher.c
-	$(LINUXHACKPRE)
 	$(CC) -o $@ src/ss_launcher.c $(call fnIF_OS,windows,-mwindows,) $(SGS_SDL_LAUNCHER_FLAGS) -DSS_RELEASE -s
-	$(LINUXHACKPOST)
 	$(call SGS_SDL_INSTALL_TOOL,$@)
 $(OUTDIR)/sgs-sdl-debug$(BINEXT): $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) src/ss_launcher.c
-	$(LINUXHACKPRE)
 	$(CC) -o $@ src/ss_launcher.c $(SGS_SDL_LAUNCHER_FLAGS) -s
-	$(LINUXHACKPOST)
 	$(call SGS_SDL_INSTALL_TOOL,$@)
 
-$(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT): $(OBJ) $(SGS_SDL_DEPS) sgscript/bin/sgsxgmath$(LIBEXT)
-	$(LINUXHACKPRE)
+$(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT): $(OBJ) $(SGS_SDL_DEPS) sgscript/bin/$(LIBPFX)sgsxgmath$(LIBEXT)
 	$(PF_POST)
 	$(CC) -o $@ $(OBJ) $(SGS_SDL_FLAGS)
-	$(LINUXHACKPOST)
 	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libfreetype.so @rpath/libfreetype.so $@,)
 	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libsgscript.so @rpath/libsgscript.so $@,)
-	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/sgsxgmath.so @rpath/sgsxgmath.so $@,)
+	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libsgsxgmath.so @rpath/libsgsxgmath.so $@,)
 
-$(OUTDIR)/ss3d$(LIBEXT): $(SS3D_OBJ) $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) sgscript/bin/sgsxgmath$(LIBEXT)
-	$(LINUXHACKPRE)
+$(OUTDIR)/$(LIBPFX)ss3d$(LIBEXT): $(SS3D_OBJ) $(OUTDIR)/$(LIBPFX)sgs-sdl$(LIBEXT) sgscript/bin/$(LIBPFX)sgsxgmath$(LIBEXT)
 	$(CC) -o $@ $(SS3D_OBJ) $(SGS_SDL_FLAGS)
-	$(LINUXHACKPOST)
 	$(PF_POST)
 
-$(OUTDIR)/ss3dcull$(LIBEXT): src/ss3dcull.cpp src/ss3dcull.hpp src/cppbc_ss3dcull.cpp $(OUTDIR)/ss3d$(LIBEXT) sgscript/bin/sgsxgmath$(LIBEXT)
-	$(LINUXHACKPRE)
+$(OUTDIR)/$(LIBPFX)ss3dcull$(LIBEXT): src/ss3dcull.cpp src/ss3dcull.hpp src/cppbc_ss3dcull.cpp $(OUTDIR)/$(LIBPFX)ss3d$(LIBEXT) sgscript/bin/$(LIBPFX)sgsxgmath$(LIBEXT)
 	$(CXX) -o $@ src/ss3dcull.cpp src/cppbc_ss3dcull.cpp $(SGS_SDL_FLAGS) -msse2 $(SGS_CXX_FLAGS) -I. $(OUTDIR)/ss3d$(LIBEXT)
-	$(LINUXHACKPOST)
 
-$(OUTDIR)/sgsbox2d$(LIBEXT): src/box2d.cpp src/box2d.hpp src/cppbc_box2d.cpp sgscript/bin/sgsxgmath$(LIBEXT) obj/libbox2d.a
-	$(LINUXHACKPRE)
+$(OUTDIR)/$(LIBPFX)sgsbox2d$(LIBEXT): src/box2d.cpp src/box2d.hpp src/cppbc_box2d.cpp sgscript/bin/$(LIBPFX)sgsxgmath$(LIBEXT) obj/libbox2d.a
 	$(CXX) -o $@ src/box2d.cpp src/cppbc_box2d.cpp $(SGS_SDL_FLAGS) $(SGS_CXX_FLAGS) -Wno-shadow -Iext/src/box2d/Box2D -Lobj -lbox2d
-	$(LINUXHACKPOST)
 
-$(OUTDIR)/sgsbullet$(LIBEXT): src/bullet.cpp src/bullet.hpp src/cppbc_bullet.cpp $(OUTDIR)/$(LIBPFX)sgscript$(LIBEXT) $(OUTDIR)/sgsxgmath$(LIBEXT) obj/libbullet.a
-	$(LINUXHACKPRE)
+$(OUTDIR)/$(LIBPFX)sgsbullet$(LIBEXT): src/bullet.cpp src/bullet.hpp src/cppbc_bullet.cpp $(OUTDIR)/$(LIBPFX)sgscript$(LIBEXT) $(OUTDIR)/$(LIBPFX)sgsxgmath$(LIBEXT) obj/libbullet.a
 	$(CXX) -o $@ src/bullet.cpp src/cppbc_bullet.cpp $(SGS_SDL_FLAGS) $(SGS_CXX_FLAGS) -Iext/src/bullet/src -Lobj -lbullet -Wno-unused-variable
-	$(LINUXHACKPOST)
 
-$(OUTDIR)/sgsaudio$(LIBEXT): src/sa_main.cpp src/sa_main.hpp src/cppbc_sa_main.cpp src/sa_sound.cpp src/sa_sound.hpp obj/libogg.a obj/libvorbis.a
-	$(LINUXHACKPRE)
+$(OUTDIR)/$(LIBPFX)sgsaudio$(LIBEXT): src/sa_main.cpp src/sa_main.hpp src/cppbc_sa_main.cpp src/sa_sound.cpp src/sa_sound.hpp obj/libogg.a obj/libvorbis.a
 	$(CXX) -o $@ src/sa_main.cpp src/cppbc_sa_main.cpp src/sa_sound.cpp \
 		$(SGS_SDL_FLAGS) $(SGS_CXX_FLAGS) -Iext/include -Iext/src/libogg-1.3.1/include -Iext/src/libvorbis-1.3.3/include -Lobj -lvorbis -logg \
 		$(call fnIF_OS,windows,ext/bin-win32/OpenAL32.dll,) \
 		$(call fnIF_OS,linux,-lopenal -lpthread,)
 	$(call fnIF_OS,windows,$(fnCOPY_FILE) $(call fnFIX_PATH,ext/bin-win32/OpenAL32.dll) $(OUTDIR)/,)
 	$(call fnIF_OS,windows,$(fnCOPY_FILE) $(call fnFIX_PATH,ext/bin-win32/wrap_oal.dll) $(OUTDIR)/,)
-	$(LINUXHACKPOST)
 
 obj/ss_%.o: src/ss_%.c $(DEPS)
 	$(CC) -c -o $@ $< $(SS_CFLAGS)
@@ -237,7 +217,7 @@ clean_deps:
 	-$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/*lib*.o bin/*.dylib bin/*.so bin/*.so.dSYM obj/*lib*.a obj/freetype*.o obj/freetype*.a)
 clean_all: clean clean_deps
 	$(MAKE) -C sgscript clean
-test: sgscript/bin/sgstest$(BINEXT) $(OUTDIR)/sgsbox2d$(LIBEXT) $(OUTDIR)/sgsbullet$(LIBEXT)
+test: sgscript/bin/sgstest$(BINEXT) $(OUTDIR)/$(LIBPFX)sgsbox2d$(LIBEXT) $(OUTDIR)/$(LIBPFX)sgsbullet$(LIBEXT)
 	sgscript/bin/sgstest
 binarch: sgscript/bin/sgsvm$(BINEXT)
 	sgsvm build/prep.sgs

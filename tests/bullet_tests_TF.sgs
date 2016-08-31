@@ -1,11 +1,12 @@
 
-global ERRORS;
-ERRORS = "";
-
-include "../bin/sgsxgmath", "../bin/sgsbullet";
+global ERRORS = "";
+foreach( p : multiply_path_ext_lists( "|/../bin" ) )
+	_G.SGS_PATH ..= ";" .. p;
+include "sgsxgmath", "sgsbullet";
 
 
 testEqual( typeof(Bullet_CreateWorld), "cfunc", "sgs-bullet successfully loaded" );
+testEqual( ERRORS, "", "loading - no errors" );
 
 world = Bullet_CreateWorld();
 testEqual( typeof(world), "BulletDynamicsWorld", "created world" );
@@ -20,6 +21,7 @@ testEqual( typeof(rbci), "BulletRigidBodyCreationInfo", "created body creation i
 rbci.collisionShape = sh_sphere;
 rbci.position = vec3(5,10,0);
 testEqual( typeof(rbci.position), "vec3", "rbci.position type = vec3" );
+testEqual( ERRORS, "", "assignment - no errors" );
 testEqual( ''$rbci.position, "vec3(5;10;0)", "rbci.position value" );
 
 body1 = Bullet_CreateRigidBody( rbci );
