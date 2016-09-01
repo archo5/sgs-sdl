@@ -35,12 +35,13 @@ else
 endif
 
 
-CFLAGS=-Wall -Wshadow -Wpointer-arith -Wcast-align \
+CFLAGS=-Wall -Wshadow -Wpointer-arith \
 	$(call fnIF_RELEASE,-O2,-D_DEBUG -g) $(call fnIF_COMPILER gcc,-static-libgcc,) \
 	$(call fnIF_ARCH,x86,-m32,$(call fnIF_ARCH,x64,-m64,)) -Isrc \
 	$(call fnIF_OS,windows,,-fPIC -D_FILE_OFFSET_BITS=64) \
 	$(call fnIF_OS,android,-DSGS_PF_ANDROID,)
-CXXFLAGS = -fno-exceptions -fno-rtti -static-libstdc++ -static-libgcc -fno-unwind-tables -fvisibility=hidden -std=c++03 -Dnullptr=NULL
+CXXFLAGS = -fno-exceptions -fno-rtti -static-libstdc++ $(call fnIF_COMPILER,gcc,-static-libgcc,) \
+	-fno-unwind-tables -fvisibility=hidden -std=c++03 -Dnullptr=NULL
 
 BINFLAGS=-lm \
 	$(call fnIF_OS,android,-ldl -Wl$(comma)-rpath$(comma)'$$ORIGIN' -Wl$(comma)-z$(comma)origin,) \
@@ -48,7 +49,7 @@ BINFLAGS=-lm \
 	$(call fnIF_OS,osx,-framework OpenGL -ldl -Wl$(comma)-rpath$(comma)'@executable_path/.',) \
 	$(call fnIF_OS,linux,-ldl -lrt -lGL -Wl$(comma)-rpath-link$(comma). \
 		-Wl$(comma)-rpath-link$(comma)bin -Wl$(comma)-rpath$(comma)'$$ORIGIN' -Wl$(comma)-z$(comma)origin,)
-LIBFLAGS=$(BINFLAGS) -shared -Wl,--no-undefined
+LIBFLAGS=$(BINFLAGS) -shared $(call fnIF_COMPILER,gcc,-Wl$(comma)--no-undefined,)
 
 
 
@@ -231,7 +232,8 @@ $(P_SGSAUDIO): src/sa_main.cpp src/sa_main.hpp src/cppbc_sa_main.cpp src/sa_soun
 	$(CXX) -o $@ src/sa_main.cpp src/cppbc_sa_main.cpp src/sa_sound.cpp \
 		$(CFLAGS) $(CXXFLAGS) $(SGS_CFLAGS) $(SGS_LIBS) $(LIBFLAGS) -Iext/include -Iext/src/libogg-1.3.1/include -Iext/src/libvorbis-1.3.3/include -Lobj -lvorbis -logg \
 		$(call fnIF_OS,windows,ext/bin-win32/OpenAL32.dll,) \
-		$(call fnIF_OS,linux,-lopenal -lpthread,)
+		$(call fnIF_OS,linux,-lopenal -lpthread,) \
+		$(call fnIF_OS,osx,-framework OpenAL,)
 	$(call fnIF_OS,windows,$(fnCOPY_FILE) $(call fnFIX_PATH,ext/bin-win32/OpenAL32.dll $(OUTDIR)/),)
 	$(call fnIF_OS,windows,$(fnCOPY_FILE) $(call fnFIX_PATH,ext/bin-win32/wrap_oal.dll $(OUTDIR)/),)
 src/cppbc_sa_main.cpp: src/sa_main.hpp sgscript/bin/sgsvm$(BINEXT)
