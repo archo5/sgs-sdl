@@ -565,8 +565,8 @@ static int ss_ri_gl_create_texture_argb8( SS_Renderer* R, SS_Texture* T, SS_Imag
 			ss_DeleteImage( pdI, C );
 	}
 	
-	if( flags & SS_TEXTURE_HREPEAT ) glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
-	if( flags & SS_TEXTURE_VREPEAT ) glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, flags & SS_TEXTURE_HREPEAT ? GL_REPEAT : GL_CLAMP_TO_EDGE );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, flags & SS_TEXTURE_VREPEAT ? GL_REPEAT : GL_CLAMP_TO_EDGE );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, flags & SS_TEXTURE_NOLERP ? GL_NEAREST : GL_LINEAR );
 	{
 		GLuint minf = flags & SS_TEXTURE_MIPMAPS ?

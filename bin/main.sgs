@@ -41,8 +41,6 @@ function initialize()
 	Window.setMinSize( 300, 200 );
 //	Window.setBufferScale( 600, 500, SS_POSMODE_FITRND );
 	
-	global Surf = SS_CreateRenderTexture( Window.width, Window.height );
-	
 	global Font = SS_CreateFont( "fonts/lato-regular.ttf", 12 );
 	
 	SS_InitDrawFunctions();
@@ -90,11 +88,6 @@ function update()
 	
 	SS_SetCameraUI( 0, W, 0, H );
 	
-	SS_SetRenderTarget( Surf );
-	SS_Clear( color(0.7,0.7,0.7) );
-	
-	SS_SetRenderTarget();
-	
 	SS_Clear( color(0.1,0.1,0.1) );
 	
 	Wslash = W / 2 + 1;
@@ -123,8 +116,6 @@ function update()
 	SS_Draw({ preset = "tile", position = vec2( W * 0.9 - tW - 32, Hslash - tH + 24 ), scale = vec2( tW, tH ), texture = LogoTexture });
 	SS_Draw({ preset = "tile", position = vec2( W * 0.9 - tW - 32, Hslash + tH + 24 ), scale = vec2( tW, -tH ), texture = LogoTexture, color = color(0.5,0.5,0.5,0.5) });
 	
-//	SS_Draw({ preset = "tile", position = vec2( W/2, H/2 - 32 ), scale = vec2( 128, 128 ), texture = Surf });
-	
 	PMenu.draw( delta );
 	
 	SS_Present();
@@ -137,14 +128,6 @@ function on_event( e )
 {
 	if( e.type == SDL_QUIT )
 		global sys_exit = true;
-	if( e.type == SDL_VIDEODEVICELOST )
-	{
-		global Surf = null;
-	}
-	if( e.type == SDL_VIDEODEVICERESET )
-	{
-		global Surf = SS_CreateRenderTexture( Window.width, Window.height );
-	}
 	PMenu.on_event( e );
 	if( e.type == SDL_WINDOWEVENT && e.event == SDL_WINDOWEVENT_SIZE_CHANGED )
 		PMenu.resize( ( e.data1 - 64 ) * 4/7, e.data2 - 64 );
