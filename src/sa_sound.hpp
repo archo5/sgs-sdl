@@ -25,6 +25,11 @@ template< class T > T TCLAMP( const T& v, const T& min, const T& max ){ return M
 #define FALSE 0
 #define PI 3.14159265358979323846
 
+#ifdef _WIN32
+#  define snprintf _snprintf
+#  define vsnprintf _vsnprintf
+#endif
+
 
 struct SGStream
 {

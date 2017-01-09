@@ -41,7 +41,7 @@ CFLAGS=-Wall -Wshadow -Wpointer-arith \
 	$(call fnIF_OS,windows,,-fPIC -D_FILE_OFFSET_BITS=64) \
 	$(call fnIF_OS,android,-DSGS_PF_ANDROID,)
 CXXFLAGS = -fno-exceptions -fno-rtti -static-libstdc++ $(call fnIF_COMPILER,gcc,-static-libgcc,) \
-	-fno-unwind-tables -fvisibility=hidden -std=c++03 -Dnullptr=NULL
+	-fno-unwind-tables -fvisibility=hidden -std=gnu++03 -Dnullptr=NULL
 
 BINFLAGS=-lm \
 	$(call fnIF_OS,android,-ldl -Wl$(comma)-rpath$(comma)'$$ORIGIN' -Wl$(comma)-z$(comma)origin,) \
