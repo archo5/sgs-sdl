@@ -246,22 +246,22 @@ function SS_DrawFitted( tex, left, top, right, bottom, xq, yq )
 // MATRICES
 //
 
-function SS_GetCamera2DMatrix( x, y, size, aspect, angle )
+function SS_GetCamera2DMatrix( x, y, size, aspect, angle, yflip )
 {
 	size = 1.0/size;
 	x *= size/aspect;
-	y *= size;
+	y *= if( yflip, -size, size );
 	return mat4
 	(
 		size/aspect, 0, 0, 0,
-		0, -size, 0, 0,
+		0, if( yflip, size, -size ), 0, 0,
 		0, 0, size, 0,
 		-x, y, 0.5*size, 1
 	);
 }
-function SS_SetCamera2D( x, y, size, aspect, angle )
+function SS_SetCamera2D( x, y, size, aspect, angle, yflip )
 {
-	SS_SetCamera( SS_GetCamera2DMatrix( x, y, size, aspect, angle ) );
+	SS_SetCamera( SS_GetCamera2DMatrix( x, y, size, aspect, angle, yflip ) );
 }
 
 function SS_GetCameraUIMatrix( x1, x2, y1, y2 )

@@ -1,0 +1,252 @@
+// run this script from project root
+
+include "io", "re", "string", "sgsmeta";
+
+// read the API header
+text = io_file_read( "ext/src/imgui/imgui.h" );
+
+tokens = meta_tokens_parse( text );
+
+// preprocess
+for( i = 0; i < tokens.size; ++i )
+{
+	// preprocessor directives
+	if( tokens[i].type == "#" )
+	{
+		j = i + 1;
+		while( j < tokens.size && tokens[j].line == tokens[i].line )
+			j++;
+		tokens.erase( i, j - 1 );
+		i--;
+	}
+	// known macros
+	else if( tokens[i].type == "ident" && tokens[i].value == "IM_PRINTFARGS" )
+	{
+		assert( tokens[i+1].type == "(" );
+		assert( tokens[i+2].type == "int" );
+		assert( tokens[i+3].type == ")" );
+		tokens.erase( i, i + 3 );
+		i += 3;
+	}
+}
+
+function dump_tokens( tokens )
+{
+	out = "";
+	for i : ( tokens.size )
+	{
+		if( i > 0 )
+		{
+			if( tokens[ i ].line != tokens[ i - 1 ].line )
+				out ..= "\n";
+			else
+				out ..= " ";
+		}
+		t = tokens[ i ];
+		if( t.type == "ident" || t.type == "keyword" || t.type == "real" || t.type == "int" || t.type == "string" )
+			out ..= t.value;
+		else
+			out ..= t.type;
+	}
+	return out;
+}
+
+function prev_tokens_until( tokens, i, check )
+{
+	end = i;
+	while( i > 0 && check( tokens[ i ], i ) == false )
+		i--;
+	return tokens.part( i + 1, end - i - 1 );
+}
+
+function skip_until_brace_aware( tokens, i, check )
+{
+	stack = [];
+	for( ; i < tokens.size; ++i )
+	{
+		t = tokens[i];
+		if( stack.size == 0 && check( t, i ) )
+			return i;
+		if( t.type == "(" || t.type == "{" || t.type == "<" )
+			stack.push( t.type );
+		else if( t.type == ")" )
+		{
+			assert( stack.size != 0 );
+			assert( stack.last == "(" );
+			stack.pop();
+		}
+		else if( t.type == "}" )
+		{
+			assert( stack.size != 0 );
+			assert( stack.last == "{" );
+			stack.pop();
+		}
+		else if( t.type == ">" )
+		{
+			assert( stack.size != 0 );
+			assert( stack.last == "<" );
+			stack.pop();
+		}
+	}
+	assert( false );
+}
+
+// parse
+GLOBALFUNCS = [];
+REGINTS = {};
+metaobj_set( REGINTS, _G );
+eval = _G.eval;
+bkG = _G;
+for( i = 0; i < tokens.size; ++i )
+{
+	t = tokens[ i ];
+	
+	if( t.type == "ident" && t.value == "namespace" )
+	{
+		i++;
+		assert( @tokens[i].type == "ident" );
+		println( "Found namespace: ", tokens[i].value );
+		assert( @tokens[i].value == "ImGui" );
+		i++;
+		assert( @tokens[i].type == "{" );
+		i++;
+		
+		for( ; i < tokens.size; ++i )
+		{
+			// function definition search
+			if( tokens[i].type == "}" )
+				break;
+			if( tokens[i].type == "(" && tokens[i-1].type == "ident" )
+			{
+				name = tokens[i-1].value;
+				ret_type = prev_tokens_until( tokens, i - 1, function(t) = t.type == ";" || t.type == "{" || t.type == "}"; );
+				if( @ret_type.first.value === "IMGUI_API" )
+					ret_type.shift();
+				
+				println( dump_tokens( ret_type ), "    ", name );
+				
+				i++;
+				assert( i < tokens.size );
+				
+				newfunc = { name, ret_type, args = [] };
+				GLOBALFUNCS.push( newfunc );
+				
+				for(;;)
+				{
+					end = skip_until_brace_aware( tokens, i, function(t) = t.type == ")" || t.type == ","; );
+					
+					if( end != i )
+					{
+						println(">>>",dump_tokens(tokens.part(i,end-i)));
+						if( end - i == 2 && tokens[i].type == "$" && tokens[i+1].type == "." )
+						{
+							argname = "<vararg>";
+							argtype = [];
+							argvalue = [];
+						}
+						else
+						{
+							asp = skip_until_brace_aware( tokens, i, function(t,i) use(end) = t.type == "=" || i == end; );
+							
+							argvalue = if( asp == end, [], tokens.part( asp + 1, end - asp - 1 ) );
+							
+						//	printvar(tokens[asp-1]);
+							argtype = tokens.part( i, asp - i );
+							if( tokens[ asp - 1 ].type == "ident" )
+							{
+								argname = tokens[ asp - 1 ].value;
+								argtype.pop();
+							}
+							else // it might be a callback or an array
+							{
+								argname = null;
+								start = i;
+								for( i += 1; i < asp - 1; ++i )
+								{
+									if( ( i >= start + 2 && tokens[i-2].type == "(" && tokens[i-1].type == "*" && tokens[i].type == "ident" ) ||
+										( tokens[i].type == "ident" && tokens[i+1].type == "[" ) )
+									{
+										argname = tokens[i].value;
+										argtype.erase( i - start ); // remove name from type
+										break;
+									}
+								}
+								assert( argname !== null );
+							}
+						}
+						
+						newfunc.args.push({ name = argname, type = argtype, value = argvalue });
+						println( "--- ", {name=argname, type=dump_tokens(argtype), val=dump_tokens(argvalue)} );
+					}
+					
+					i = end + 1;
+					if( tokens[end].type == ")" )
+					{
+						if( tokens[i].type == "{" )
+						{
+							i = skip_until_brace_aware( tokens, i, function(t) = t.type == "}"; );
+						}
+						break;
+					}
+				}
+			}
+		}
+	}
+	else if( t.type == "ident" && t.value == "enum" )
+	{
+		i++;
+		assert( @tokens[i].type == "ident" );
+		println( "Found enum: ", tokens[i].value );
+		i++;
+		assert( @tokens[i].type == "{" );
+		i++;
+		
+		last_number = 0;
+		while( i < tokens.size )
+		{
+			if( tokens[i].type == "}" )
+				break;
+			
+			assert( tokens[i].type == "ident" );
+			
+			name = tokens[i].value;
+			i++;
+			assert( i < tokens.size );
+			if( tokens[i].type == "=" )
+			{
+				i++;
+				assert( i < tokens.size );
+				
+				start = i;
+				while( tokens[i].type != "," && tokens[i].type != "}" )
+					i++;
+				
+				value_tokens = tokens.part( start, i - start );
+				
+				value_token_str = dump_tokens( value_tokens );
+				_G = REGINTS;
+				value = eval( "return " .. value_token_str .. ";" );
+				_G = bkG;
+				last_number = toint( value );
+			}
+			REGINTS[ name ] = last_number++;
+			
+			if( tokens[i].type == "," )
+				i++;
+		}
+	}
+}
+
+out = "\n#include \"imgui.hpp\"\n\nstatic sgs_RegIntConst imgui_iconsts[] =\n{";
+foreach( key, value : REGINTS )
+{
+	out ..= "\n\t{ " .. sgson_encode( key ) .. ", " .. value .. " },";
+}
+out ..= "\n};\n\n";
+
+out ..= "\nvoid sgs_imgui_bind( SGS_CTX )\n{";
+out ..= "\n\tsgs_RegIntConsts( C, imgui_iconsts, -1 );";
+out ..= "\n};\n\n";
+
+io_file_write( "src/imgui_bind.cpp", out );
+

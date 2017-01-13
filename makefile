@@ -78,13 +78,14 @@ P_SS3DCULL = $(OUTDIR)/$(LIBPFX)ss3dcull$(LIBEXT)
 P_SGSBOX2D = $(OUTDIR)/$(LIBPFX)sgsbox2d$(LIBEXT)
 P_SGSBULLET = $(OUTDIR)/$(LIBPFX)sgsbullet$(LIBEXT)
 P_SGSAUDIO = $(OUTDIR)/$(LIBPFX)sgsaudio$(LIBEXT)
+P_SGSIMGUI = $(OUTDIR)/$(LIBPFX)sgsimgui$(LIBEXT)
 
 
 # TARGETS
 ## the library (default target)
-.PHONY: tools make launchers ss3d ss3dcull sgs-sdl box2d bullet audio
+.PHONY: tools make launchers ss3d ss3dcull sgs-sdl box2d bullet audio imgui
 
-tools: launchers box2d bullet audio
+tools: launchers box2d bullet audio imgui
 make: tools
 launchers: $(OUTDIR)/sgs-sdl-release$(BINEXT) $(OUTDIR)/sgs-sdl-debug$(BINEXT)
 sgs-sdl: $(P_SGSSDL)
@@ -93,6 +94,7 @@ ss3dcull: $(P_SS3DCULL)
 box2d: $(P_SGSBOX2D)
 bullet: $(P_SGSBULLET)
 audio: $(P_SGSAUDIO)
+imgui: $(P_SGSIMGUI)
 
 
 # SGScript
@@ -135,9 +137,9 @@ obj/libbullet.a: $(BLTOBJ)
 	ar -rcs $@ $^
 # - Ogg
 obj/libogg_bitwise.o:
-	gcc -c -o $@ ext/src/libogg-1.3.1/src/bitwise.c -O3 -Iext/src/libogg-1.3.1/include $(CFLAGS)
+	$(CC) -c -o $@ ext/src/libogg-1.3.1/src/bitwise.c -O3 -Iext/src/libogg-1.3.1/include $(CFLAGS)
 obj/libogg_framing.o:
-	gcc -c -o $@ ext/src/libogg-1.3.1/src/framing.c -O3 -Iext/src/libogg-1.3.1/include $(CFLAGS)
+	$(CC) -c -o $@ ext/src/libogg-1.3.1/src/framing.c -O3 -Iext/src/libogg-1.3.1/include $(CFLAGS)
 obj/libogg.a: obj/libogg_bitwise.o obj/libogg_framing.o
 	ar rcs $@ $?
 # - Vorbis
@@ -146,8 +148,13 @@ floor0.o floor1.o info.o lookup.o lpc.o lsp.o mapping0.o mdct.o psy.o \
 registry.o res0.o sharedbook.o smallft.o synthesis.o vorbisenc.o vorbisfile.o window.o
 OBJ_VORBIS = $(patsubst %,obj/%,$(_OBJ_VORBIS))
 obj/libvorbis_%.o: ext/src/libvorbis-1.3.3/lib/%.c
-	gcc -c -o $@ $< -Iext/src/libvorbis-1.3.3/include -Iext/src/libvorbis-1.3.3/lib -Iext/src/libogg-1.3.1/include $(CFLAGS)
+	$(CC) -c -o $@ $< -Iext/src/libvorbis-1.3.3/include -Iext/src/libvorbis-1.3.3/lib -Iext/src/libogg-1.3.1/include $(CFLAGS)
 obj/libvorbis.a: $(patsubst %,obj/libvorbis_%,$(_OBJ_VORBIS))
+	ar rcs $@ $?
+# - IMGUI
+obj/libimgui_%.o: ext/src/imgui/%.cpp
+	$(CC) -c -o $@ $< -Iext/src/libogg-1.3.1/include $(CFLAGS)
+obj/libimgui.a: obj/libimgui_imgui.o obj/libimgui_imgui_draw.o
 	ar rcs $@ $?
 
 
@@ -238,6 +245,11 @@ $(P_SGSAUDIO): src/sa_main.cpp src/sa_main.hpp src/cppbc_sa_main.cpp src/sa_soun
 	$(call fnIF_OS,windows,$(fnCOPY_FILE) $(call fnFIX_PATH,ext/bin-win32/wrap_oal.dll $(OUTDIR)/),)
 src/cppbc_sa_main.cpp: src/sa_main.hpp sgscript/bin/sgsvm$(BINEXT)
 	sgscript/bin/sgsvm -p sgscript/ext/cppbc.sgs src/sa_main.hpp -o $@ -iname sa_main.hpp
+
+
+# - sgs-IMGUI
+$(P_SGSIMGUI): src/imgui.cpp src/imgui_bind.cpp obj/libimgui.a
+	$(CXX) -o $@ $^ $(CFLAGS) $(CXXFLAGS) $(SGS_CFLAGS) $(SGS_LIBS) $(LIBFLAGS)
 
 
 # UTILITY TARGETS
