@@ -92,6 +92,7 @@ function skip_until_brace_aware( tokens, i, check )
 }
 
 // parse
+NUMOVERLOADS = {};
 GLOBALFUNCS = [];
 REGINTS = {};
 metaobj_set( REGINTS, _G );
@@ -120,7 +121,8 @@ for( i = 0; i < tokens.size; ++i )
 			{
 				name = tokens[i-1].value;
 				ret_type = prev_tokens_until( tokens, i - 1, function(t) = t.type == ";" || t.type == "{" || t.type == "}"; );
-				if( @ret_type.first.value === "IMGUI_API" )
+				while( @ret_type.first.value === "IMGUI_API" ||
+					@ret_type.first.value == "static" )
 					ret_type.shift();
 				
 				println( dump_tokens( ret_type ), "    ", name );
@@ -130,6 +132,7 @@ for( i = 0; i < tokens.size; ++i )
 				
 				newfunc = { name, ret_type, args = [] };
 				GLOBALFUNCS.push( newfunc );
+				@(NUMOVERLOADS[ name ] += 1);
 				
 				for(;;)
 				{
@@ -175,7 +178,7 @@ for( i = 0; i < tokens.size; ++i )
 							}
 						}
 						
-						newfunc.args.push({ name = argname, type = argtype, value = argvalue });
+						newfunc.args.push({ name = argname, type = argtype, typestr = dump_tokens( argtype ), value = argvalue });
 						println( "--- ", {name=argname, type=dump_tokens(argtype), val=dump_tokens(argvalue)} );
 					}
 					
@@ -237,16 +240,253 @@ for( i = 0; i < tokens.size; ++i )
 	}
 }
 
-out = "\n#include \"imgui.hpp\"\n\nstatic sgs_RegIntConst imgui_iconsts[] =\n{";
+out = "\n#include \"imgui.hpp\"\n\n\n";
+
+FUNCLIST = {};
+foreach( func : GLOBALFUNCS )
+{
+	fn = func.name;
+	ret_type = dump_tokens( func.ret_type );
+	// these functions are not needed for us
+	func.procstate = 0;
+	if( fn == "ShowTestWindow" ) continue;
+	if( fn == "ShowUserGuide" ) continue;
+	if( fn == "ShowStyleEditor" ) continue;
+	if( fn == "Value" ) continue;
+	// obsolete functions
+	func.procstate = 1;
+	if( fn == "Begin" && func.args.size == 5 ) continue;
+	// these functions are not done yet
+	func.procstate = 2;
+	if( fn == "GetIO" ) continue;
+	if( fn == "GetStyle" ) continue;
+	if( fn == "GetDrawData" ) continue;
+	if( fn == "SetNextWindowSizeConstraints" ) continue;
+	if( fn == "PushFont" ) continue;
+	if( fn == "GetFont" ) continue;
+	if( fn == "InputText" ) continue;
+	if( fn == "InputTextMultiline" ) continue;
+	if( fn == "GetWindowDrawList" ) continue;
+	if( fn == "GetStateStorage" ) continue;
+	if( fn == "SetStateStorage" ) continue;
+	if( fn == "CreateContext" ) continue;
+	if( fn == "DestroyContext" ) continue;
+	if( fn == "GetCurrentContext" ) continue;
+	if( fn == "SetCurrentContext" ) continue;
+	
+	func.procstate = 3;
+	if( NUMOVERLOADS[ fn ] > 1 )
+	{
+		// special overload processing
+		continue;
+	}
+	
+	func.procstate = 4;
+	Cname = "sgsimgui_" .. fn;
+	SGSname = "ImGui_" .. fn;
+	FUNCLIST[ SGSname ] = Cname;
+	
+	out ..= "static int " .. Cname .. "( SGS_CTX )\n{";
+	out ..= "\n\tSGSFN( " .. sgson_encode( SGSname ) .. " );";
+	
+	preret = "";
+	
+	rvcount = 0;
+	loadidx = 0;
+	foreach( idx, arg : func.args )
+	{
+		tmpnm = "val" .. loadidx;
+		if( arg.typestr == "bool *" )
+		{
+			out ..= "\n\tbool "..tmpnm.." = sgs_GetVar<bool>()( C, " .. loadidx++ .. " );";
+			preret ..= "\n\tsgs_PushBool( C, "..tmpnm.." );";
+			rvcount += 1;
+			arg.loader = "&"..tmpnm.."";
+		}
+		else if( arg.typestr == "float *" )
+		{
+			out ..= "\n\tfloat "..tmpnm.." = sgs_GetVar<float>()( C, " .. loadidx++ .. " );";
+			preret ..= "\n\tsgs_PushReal( C, "..tmpnm.." );";
+			rvcount += 1;
+			arg.loader = "&"..tmpnm.."";
+		}
+		else if( arg.typestr == "float [ 2 ]" )
+		{
+			out ..= "\n\tfloat "..tmpnm.."[2] = { sgs_GetVar<float>()( C, " .. loadidx++ .. " ),";
+			out ..= " sgs_GetVar<float>()( C, " .. loadidx++ .. " ) };";
+			preret ..= "\n\tsgs_PushReal( C, "..tmpnm.."[0] );";
+			preret ..= "\n\tsgs_PushReal( C, "..tmpnm.."[1] );";
+			rvcount += 2;
+			arg.loader = ""..tmpnm.."";
+		}
+		else if( arg.typestr == "float [ 3 ]" )
+		{
+			out ..= "\n\tfloat "..tmpnm.."[3] = { sgs_GetVar<float>()( C, " .. loadidx++ .. " ),";
+			out ..= " sgs_GetVar<float>()( C, " .. loadidx++ .. " ),";
+			out ..= " sgs_GetVar<float>()( C, " .. loadidx++ .. " ) };";
+			preret ..= "\n\tsgs_PushReal( C, "..tmpnm.."[0] );";
+			preret ..= "\n\tsgs_PushReal( C, "..tmpnm.."[1] );";
+			preret ..= "\n\tsgs_PushReal( C, "..tmpnm.."[2] );";
+			rvcount += 3;
+			arg.loader = ""..tmpnm.."";
+		}
+		else if( arg.typestr == "float [ 4 ]" )
+		{
+			out ..= "\n\tfloat "..tmpnm.."[4] = { sgs_GetVar<float>()( C, " .. loadidx++ .. " ),";
+			out ..= " sgs_GetVar<float>()( C, " .. loadidx++ .. " ),";
+			out ..= " sgs_GetVar<float>()( C, " .. loadidx++ .. " ),";
+			out ..= " sgs_GetVar<float>()( C, " .. loadidx++ .. " ) };";
+			preret ..= "\n\tsgs_PushReal( C, "..tmpnm.."[0] );";
+			preret ..= "\n\tsgs_PushReal( C, "..tmpnm.."[1] );";
+			preret ..= "\n\tsgs_PushReal( C, "..tmpnm.."[2] );";
+			preret ..= "\n\tsgs_PushReal( C, "..tmpnm.."[3] );";
+			rvcount += 4;
+			arg.loader = ""..tmpnm.."";
+		}
+		else if( arg.typestr == "float &" )
+		{
+			out ..= "\n\tfloat "..tmpnm.." = sgs_GetVar<float>()( C, " .. loadidx++ .. " );";
+			preret ..= "\n\tsgs_PushReal( C, "..tmpnm.." );";
+			rvcount += 1;
+			arg.loader = tmpnm;
+		}
+		else if( arg.typestr == "int *" )
+		{
+			out ..= "\n\tint "..tmpnm.." = sgs_GetVar<int>()( C, " .. loadidx++ .. " );";
+			preret ..= "\n\tsgs_PushInt( C, "..tmpnm.." );";
+			rvcount += 1;
+			arg.loader = "&"..tmpnm.."";
+		}
+		else if( arg.typestr == "int [ 2 ]" )
+		{
+			out ..= "\n\tint "..tmpnm.."[2] = { sgs_GetVar<int>()( C, " .. loadidx++ .. " ),";
+			out ..= " sgs_GetVar<int>()( C, " .. loadidx++ .. " ) };";
+			preret ..= "\n\tsgs_PushInt( C, "..tmpnm.."[0] );";
+			preret ..= "\n\tsgs_PushInt( C, "..tmpnm.."[1] );";
+			rvcount += 2;
+			arg.loader = ""..tmpnm.."";
+		}
+		else if( arg.typestr == "int [ 3 ]" )
+		{
+			out ..= "\n\tint "..tmpnm.."[3] = { sgs_GetVar<int>()( C, " .. loadidx++ .. " ),";
+			out ..= " sgs_GetVar<int>()( C, " .. loadidx++ .. " ),";
+			out ..= " sgs_GetVar<int>()( C, " .. loadidx++ .. " ) };";
+			preret ..= "\n\tsgs_PushInt( C, "..tmpnm.."[0] );";
+			preret ..= "\n\tsgs_PushInt( C, "..tmpnm.."[1] );";
+			preret ..= "\n\tsgs_PushInt( C, "..tmpnm.."[2] );";
+			rvcount += 3;
+			arg.loader = ""..tmpnm.."";
+		}
+		else if( arg.typestr == "int [ 4 ]" )
+		{
+			out ..= "\n\tint "..tmpnm.."[4] = { sgs_GetVar<int>()( C, " .. loadidx++ .. " ),";
+			out ..= " sgs_GetVar<int>()( C, " .. loadidx++ .. " ),";
+			out ..= " sgs_GetVar<int>()( C, " .. loadidx++ .. " ),";
+			out ..= " sgs_GetVar<int>()( C, " .. loadidx++ .. " ) };";
+			preret ..= "\n\tsgs_PushInt( C, "..tmpnm.."[0] );";
+			preret ..= "\n\tsgs_PushInt( C, "..tmpnm.."[1] );";
+			preret ..= "\n\tsgs_PushInt( C, "..tmpnm.."[2] );";
+			preret ..= "\n\tsgs_PushInt( C, "..tmpnm.."[3] );";
+			rvcount += 4;
+			arg.loader = ""..tmpnm.."";
+		}
+		else if( arg.typestr == "unsigned int *" )
+		{
+			out ..= "\n\tunsigned "..tmpnm.." = sgs_GetVar<unsigned>()( C, " .. loadidx++ .. " );";
+			preret ..= "\n\tsgs_PushInt( C, "..tmpnm.." );";
+			rvcount += 1;
+			arg.loader = "&"..tmpnm.."";
+		}
+		else if( arg.typestr == "const ImVec2 &" )
+		{
+			arg.loader = "sgs_GetVar<ImVec2>()( C, " .. loadidx .. " )";
+			loadidx += 2;
+		}
+		else if( arg.typestr == "const ImVec4 &" )
+		{
+			arg.loader = "sgs_GetVar<ImVec4>()( C, " .. loadidx .. " )";
+			loadidx += 4;
+		}
+		else if( @func.args[ idx + 1 ].name == "<vararg>" )
+		{
+			arg.loader = "\"%s\"";
+		}
+		else
+		{
+			argty = if( arg.name == "<vararg>", "const char*", arg.typestr );
+			arg.loader = "sgs_GetVar<" .. argty .. ">()( C, " .. loadidx++ .. " )";
+		}
+	}
+	
+	callstr = "\n\t";
+	if( ret_type != "void" )
+	{
+		rvcount++;
+		callstr ..= "sgs_PushVar( C, ";
+		if( ret_type == "ImVec2" )
+			rvcount++;
+	}
+	callstr ..= "ImGui::" .. fn .. "(";
+	foreach( idx, arg : func.args )
+	{
+		if( idx > 0 )
+			callstr ..= ",";
+		callstr ..= "\n\t\t" .. arg.loader;
+	}
+	if( ret_type == "void" )
+		callstr ..= "\n\t);";
+	else
+		callstr ..= "\n\t) );";
+	out ..= callstr;
+	
+	out ..= preret;
+	
+	out ..= "\n\treturn " .. rvcount .. ";";
+	out ..= "\n}\n\n";
+}
+
+out ..= "\nstatic sgs_RegFuncConst imgui_fconsts[] =\n{";
+foreach( key, value : FUNCLIST )
+{
+	out ..= "\n\t{ " .. sgson_encode( key ) .. ", " .. value .. " },";
+}
+out ..= "\n\t{ NULL, NULL }";
+out ..= "\n};\n\n";
+
+out ..= "\nstatic sgs_RegIntConst imgui_iconsts[] =\n{";
 foreach( key, value : REGINTS )
 {
 	out ..= "\n\t{ " .. sgson_encode( key ) .. ", " .. value .. " },";
 }
+out ..= "\n\t{ NULL, 0 }";
 out ..= "\n};\n\n";
 
 out ..= "\nvoid sgs_imgui_bind( SGS_CTX )\n{";
+out ..= "\n\tsgs_RegFuncConsts( C, imgui_fconsts, -1 );";
 out ..= "\n\tsgs_RegIntConsts( C, imgui_iconsts, -1 );";
 out ..= "\n};\n\n";
 
 io_file_write( "src/imgui_bind.cpp", out );
+
+
+fn_stat_names = [
+	"unneeded",
+	"obsolete",
+	"unimplemented (basic)",
+	"unimplemented (overloaded)",
+	"available",
+];
+fn_stat_values = [ 0, 0, 0, 0, 0 ];
+foreach( func : GLOBALFUNCS )
+{
+	fn_stat_values[ func.procstate ]++;
+}
+println( "--- statistics ---" );
+println( "// global" );
+println( "- # enum values: ", dict_size( REGINTS ) );
+println( "// namespace ImGui" );
+for i : (5)
+{
+	println( "- [func] ", fn_stat_names[ i ], ": ", fn_stat_values[ i ] );
+}
 
