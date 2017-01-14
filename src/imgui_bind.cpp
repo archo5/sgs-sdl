@@ -52,6 +52,19 @@ static int sgsimgui_ShowMetricsWindow( SGS_CTX )
 	return 1;
 }
 
+static int sgsimgui_Begin( SGS_CTX )
+{
+	SGSFN( "ImGui_Begin" );
+	bool val1 = sgs_GetVar<bool>()( C, 1 );
+	sgs_PushVar( C, ImGui::Begin(
+		sgs_GetVar<const char *>()( C, 0 ),
+		&val1,
+		sgs_GetVar<ImGuiWindowFlags>()( C, 2 )
+	) );
+	sgs_PushBool( C, val1 );
+	return 2;
+}
+
 static int sgsimgui_End( SGS_CTX )
 {
 	SGSFN( "ImGui_End" );
@@ -395,6 +408,26 @@ static int sgsimgui_PopStyleColor( SGS_CTX )
 	return 0;
 }
 
+static int sgsimgui_PushStyleVarF( SGS_CTX )
+{
+	SGSFN( "ImGui_PushStyleVarF" );
+	ImGui::PushStyleVar(
+		sgs_GetVar<ImGuiStyleVar>()( C, 0 ),
+		sgs_GetVar<float>()( C, 1 )
+	);
+	return 0;
+}
+
+static int sgsimgui_PushStyleVarV2( SGS_CTX )
+{
+	SGSFN( "ImGui_PushStyleVarV2" );
+	ImGui::PushStyleVar(
+		sgs_GetVar<ImGuiStyleVar>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 1 )
+	);
+	return 0;
+}
+
 static int sgsimgui_PopStyleVar( SGS_CTX )
 {
 	SGSFN( "ImGui_PopStyleVar" );
@@ -723,9 +756,7 @@ static int sgsimgui_GetColumnsCount( SGS_CTX )
 static int sgsimgui_PushID( SGS_CTX )
 {
 	SGSFN( "ImGui_PushID" );
-	uint32_t t = sgs_ItemType( C, 0 );
-	if( t == SGS_VT_BOOL || t == SGS_VT_INT || t == SGS_VT_REAL ) ImGui::PushID( sgs_GetInt( C, 0 ) );
-	else ImGui::PushID( sgs_GetPtr( C, 0 ) );
+	ImGui::PushID( sgs_GetPtr( C, 0 ) );
 	return 0;
 }
 
@@ -903,6 +934,21 @@ static int sgsimgui_CheckboxFlags( SGS_CTX )
 	) );
 	sgs_PushInt( C, val1 );
 	return 2;
+}
+
+static int sgsimgui_RadioButton( SGS_CTX )
+{
+	SGSFN( "ImGui_RadioButton" );
+	sgs_SizeVal ssz = sgs_StackSize( C );
+	if( ssz == 2 ){ sgs_PushBool( C, ImGui::RadioButton( sgs_GetVar<const char*>()( C, 0 ), sgs_GetInt( C, 1 ) ) ); return 1; }
+	else if( ssz == 3 )
+	{
+		int val = sgs_GetInt( C, 1 );
+		sgs_PushBool( C, ImGui::RadioButton( sgs_GetVar<const char*>()( C, 0 ), &val, sgs_GetInt( C, 2 ) ) );
+		sgs_PushInt( C, val );
+		return 2;
+	}
+	else return sgs_Msg( C, SGS_WARNING, "expected 2 or 3 arguments, got %d", ssz );
 }
 
 static int sgsimgui_ColorButton( SGS_CTX )
@@ -1458,6 +1504,33 @@ static int sgsimgui_VSliderInt( SGS_CTX )
 	return 2;
 }
 
+static int sgsimgui_TreeNode( SGS_CTX )
+{
+	SGSFN( "ImGui_TreeNode" );
+	sgs_SizeVal ssz = sgs_StackSize( C );
+	if( ssz == 1 ){ sgs_PushBool( C, ImGui::TreeNode( sgs_GetVar<const char*>()( C, 0 ) ) ); return 1; }
+	else if( ssz == 2 ){ sgs_PushBool( C, ImGui::TreeNode( sgs_GetVar<void*>()( C, 0 ), "%s", sgs_GetVar<const char*>()( C, 1 ) ) ); return 1; }
+	else return sgs_Msg( C, SGS_WARNING, "expected 1 or 2 arguments, got %d", ssz );
+}
+
+static int sgsimgui_TreeNodeEx( SGS_CTX )
+{
+	SGSFN( "ImGui_TreeNodeEx" );
+	sgs_SizeVal ssz = sgs_StackSize( C );
+	if( ssz == 2 ){ sgs_PushBool( C, ImGui::TreeNodeEx( sgs_GetVar<const char*>()( C, 0 ), sgs_GetInt( C, 1 ) ) ); return 1; }
+	else if( ssz == 3 ){ sgs_PushBool( C, ImGui::TreeNodeEx( sgs_GetVar<void*>()( C, 0 ), sgs_GetInt( C, 1 ), "%s", sgs_GetVar<const char*>()( C, 2 ) ) ); return 1; }
+	else return sgs_Msg( C, SGS_WARNING, "expected 1 or 2 arguments, got %d", ssz );
+}
+
+static int sgsimgui_TreePush( SGS_CTX )
+{
+	SGSFN( "ImGui_TreePush" );
+	ImGui::TreePush(
+		sgs_GetVar<const void *>()( C, 0 )
+	);
+	return 0;
+}
+
 static int sgsimgui_TreePop( SGS_CTX )
 {
 	SGSFN( "ImGui_TreePop" );
@@ -1489,10 +1562,109 @@ static int sgsimgui_SetNextTreeNodeOpen( SGS_CTX )
 	return 0;
 }
 
+static int sgsimgui_CollapsingHeader( SGS_CTX )
+{
+	SGSFN( "ImGui_CollapsingHeader" );
+	sgs_PushVar( C, ImGui::CollapsingHeader(
+		sgs_GetVar<const char *>()( C, 0 ),
+		sgs_GetVar<ImGuiTreeNodeFlags>()( C, 1 )
+	) );
+	return 1;
+}
+
+static int sgsimgui_CollapsingHeaderCloseable( SGS_CTX )
+{
+	SGSFN( "ImGui_CollapsingHeaderCloseable" );
+	bool val1 = sgs_GetVar<bool>()( C, 1 );
+	sgs_PushVar( C, ImGui::CollapsingHeader(
+		sgs_GetVar<const char *>()( C, 0 ),
+		&val1,
+		sgs_GetVar<ImGuiTreeNodeFlags>()( C, 2 )
+	) );
+	sgs_PushBool( C, val1 );
+	return 2;
+}
+
+static int sgsimgui_Selectable( SGS_CTX )
+{
+	SGSFN( "ImGui_Selectable" );
+	bool val1 = sgs_GetVar<bool>()( C, 1 );
+	sgs_PushVar( C, ImGui::Selectable(
+		sgs_GetVar<const char *>()( C, 0 ),
+		&val1,
+		sgs_GetVar<ImGuiSelectableFlags>()( C, 2 ),
+		sgs_GetVar<ImVec2>()( C, 3 )
+	) );
+	sgs_PushBool( C, val1 );
+	return 2;
+}
+
+static int sgsimgui_ListBoxHeader( SGS_CTX )
+{
+	SGSFN( "ImGui_ListBoxHeader" );
+	sgs_PushVar( C, ImGui::ListBoxHeader(
+		sgs_GetVar<const char *>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 1 )
+	) );
+	return 1;
+}
+
+static int sgsimgui_ListBoxHeader2( SGS_CTX )
+{
+	SGSFN( "ImGui_ListBoxHeader2" );
+	sgs_PushVar( C, ImGui::ListBoxHeader(
+		sgs_GetVar<const char *>()( C, 0 ),
+		sgs_GetVar<int>()( C, 1 ),
+		sgs_GetVar<int>()( C, 2 )
+	) );
+	return 1;
+}
+
 static int sgsimgui_ListBoxFooter( SGS_CTX )
 {
 	SGSFN( "ImGui_ListBoxFooter" );
 	ImGui::ListBoxFooter();
+	return 0;
+}
+
+static int sgsimgui_ValueB( SGS_CTX )
+{
+	SGSFN( "ImGui_ValueB" );
+	ImGui::Value(
+		sgs_GetVar<const char *>()( C, 0 ),
+		sgs_GetVar<bool>()( C, 1 )
+	);
+	return 0;
+}
+
+static int sgsimgui_ValueI( SGS_CTX )
+{
+	SGSFN( "ImGui_ValueI" );
+	ImGui::Value(
+		sgs_GetVar<const char *>()( C, 0 ),
+		sgs_GetVar<int>()( C, 1 )
+	);
+	return 0;
+}
+
+static int sgsimgui_ValueU( SGS_CTX )
+{
+	SGSFN( "ImGui_ValueU" );
+	ImGui::Value(
+		sgs_GetVar<const char *>()( C, 0 ),
+		sgs_GetVar<unsigned int>()( C, 1 )
+	);
+	return 0;
+}
+
+static int sgsimgui_ValueF( SGS_CTX )
+{
+	SGSFN( "ImGui_ValueF" );
+	ImGui::Value(
+		sgs_GetVar<const char *>()( C, 0 ),
+		sgs_GetVar<float>()( C, 1 ),
+		sgs_GetVar<const char *>()( C, 2 )
+	);
 	return 0;
 }
 
@@ -1583,6 +1755,20 @@ static int sgsimgui_EndMenu( SGS_CTX )
 	SGSFN( "ImGui_EndMenu" );
 	ImGui::EndMenu();
 	return 0;
+}
+
+static int sgsimgui_MenuItem( SGS_CTX )
+{
+	SGSFN( "ImGui_MenuItem" );
+	bool val2 = sgs_GetVar<bool>()( C, 2 );
+	sgs_PushVar( C, ImGui::MenuItem(
+		sgs_GetVar<const char *>()( C, 0 ),
+		sgs_GetVar<const char *>()( C, 1 ),
+		&val2,
+		sgs_GetVar<bool>()( C, 3 )
+	) );
+	sgs_PushBool( C, val2 );
+	return 2;
 }
 
 static int sgsimgui_OpenPopup( SGS_CTX )
@@ -1842,6 +2028,25 @@ static int sgsimgui_IsRootWindowOrAnyChildHovered( SGS_CTX )
 {
 	SGSFN( "ImGui_IsRootWindowOrAnyChildHovered" );
 	sgs_PushVar( C, ImGui::IsRootWindowOrAnyChildHovered() );
+	return 1;
+}
+
+static int sgsimgui_IsRectVisible( SGS_CTX )
+{
+	SGSFN( "ImGui_IsRectVisible" );
+	sgs_PushVar( C, ImGui::IsRectVisible(
+		sgs_GetVar<ImVec2>()( C, 0 )
+	) );
+	return 1;
+}
+
+static int sgsimgui_IsRectVisibleScreen( SGS_CTX )
+{
+	SGSFN( "ImGui_IsRectVisibleScreen" );
+	sgs_PushVar( C, ImGui::IsRectVisible(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 2 )
+	) );
 	return 1;
 }
 
@@ -2218,6 +2423,7 @@ static sgs_RegFuncConst imgui_fconsts[] =
 	{ "ImGui_ShowUserGuide", sgsimgui_ShowUserGuide },
 	{ "ImGui_ShowTestWindow", sgsimgui_ShowTestWindow },
 	{ "ImGui_ShowMetricsWindow", sgsimgui_ShowMetricsWindow },
+	{ "ImGui_Begin", sgsimgui_Begin },
 	{ "ImGui_End", sgsimgui_End },
 	{ "ImGui_EndChild", sgsimgui_EndChild },
 	{ "ImGui_GetContentRegionMax", sgsimgui_GetContentRegionMax },
@@ -2259,6 +2465,8 @@ static sgs_RegFuncConst imgui_fconsts[] =
 	{ "ImGui_PopFont", sgsimgui_PopFont },
 	{ "ImGui_PushStyleColor", sgsimgui_PushStyleColor },
 	{ "ImGui_PopStyleColor", sgsimgui_PopStyleColor },
+	{ "ImGui_PushStyleVarF", sgsimgui_PushStyleVarF },
+	{ "ImGui_PushStyleVarV2", sgsimgui_PushStyleVarV2 },
 	{ "ImGui_PopStyleVar", sgsimgui_PopStyleVar },
 	{ "ImGui_GetFontSize", sgsimgui_GetFontSize },
 	{ "ImGui_GetFontTexUvWhitePixel", sgsimgui_GetFontTexUvWhitePixel },
@@ -2318,6 +2526,7 @@ static sgs_RegFuncConst imgui_fconsts[] =
 	{ "ImGui_ImageButton", sgsimgui_ImageButton },
 	{ "ImGui_Checkbox", sgsimgui_Checkbox },
 	{ "ImGui_CheckboxFlags", sgsimgui_CheckboxFlags },
+	{ "ImGui_RadioButton", sgsimgui_RadioButton },
 	{ "ImGui_ColorButton", sgsimgui_ColorButton },
 	{ "ImGui_ColorEdit3", sgsimgui_ColorEdit3 },
 	{ "ImGui_ColorEdit4", sgsimgui_ColorEdit4 },
@@ -2352,11 +2561,23 @@ static sgs_RegFuncConst imgui_fconsts[] =
 	{ "ImGui_SliderInt4", sgsimgui_SliderInt4 },
 	{ "ImGui_VSliderFloat", sgsimgui_VSliderFloat },
 	{ "ImGui_VSliderInt", sgsimgui_VSliderInt },
+	{ "ImGui_TreeNode", sgsimgui_TreeNode },
+	{ "ImGui_TreeNodeEx", sgsimgui_TreeNodeEx },
+	{ "ImGui_TreePush", sgsimgui_TreePush },
 	{ "ImGui_TreePop", sgsimgui_TreePop },
 	{ "ImGui_TreeAdvanceToLabelPos", sgsimgui_TreeAdvanceToLabelPos },
 	{ "ImGui_GetTreeNodeToLabelSpacing", sgsimgui_GetTreeNodeToLabelSpacing },
 	{ "ImGui_SetNextTreeNodeOpen", sgsimgui_SetNextTreeNodeOpen },
+	{ "ImGui_CollapsingHeader", sgsimgui_CollapsingHeader },
+	{ "ImGui_CollapsingHeaderCloseable", sgsimgui_CollapsingHeaderCloseable },
+	{ "ImGui_Selectable", sgsimgui_Selectable },
+	{ "ImGui_ListBoxHeader", sgsimgui_ListBoxHeader },
+	{ "ImGui_ListBoxHeader2", sgsimgui_ListBoxHeader2 },
 	{ "ImGui_ListBoxFooter", sgsimgui_ListBoxFooter },
+	{ "ImGui_ValueB", sgsimgui_ValueB },
+	{ "ImGui_ValueI", sgsimgui_ValueI },
+	{ "ImGui_ValueU", sgsimgui_ValueU },
+	{ "ImGui_ValueF", sgsimgui_ValueF },
 	{ "ImGui_ValueColorF", sgsimgui_ValueColorF },
 	{ "ImGui_ValueColor", sgsimgui_ValueColor },
 	{ "ImGui_SetTooltip", sgsimgui_SetTooltip },
@@ -2368,6 +2589,7 @@ static sgs_RegFuncConst imgui_fconsts[] =
 	{ "ImGui_EndMenuBar", sgsimgui_EndMenuBar },
 	{ "ImGui_BeginMenu", sgsimgui_BeginMenu },
 	{ "ImGui_EndMenu", sgsimgui_EndMenu },
+	{ "ImGui_MenuItem", sgsimgui_MenuItem },
 	{ "ImGui_OpenPopup", sgsimgui_OpenPopup },
 	{ "ImGui_BeginPopup", sgsimgui_BeginPopup },
 	{ "ImGui_BeginPopupModal", sgsimgui_BeginPopupModal },
@@ -2400,6 +2622,8 @@ static sgs_RegFuncConst imgui_fconsts[] =
 	{ "ImGui_IsRootWindowFocused", sgsimgui_IsRootWindowFocused },
 	{ "ImGui_IsRootWindowOrAnyChildFocused", sgsimgui_IsRootWindowOrAnyChildFocused },
 	{ "ImGui_IsRootWindowOrAnyChildHovered", sgsimgui_IsRootWindowOrAnyChildHovered },
+	{ "ImGui_IsRectVisible", sgsimgui_IsRectVisible },
+	{ "ImGui_IsRectVisibleScreen", sgsimgui_IsRectVisibleScreen },
 	{ "ImGui_IsPosHoveringAnyWindow", sgsimgui_IsPosHoveringAnyWindow },
 	{ "ImGui_GetTime", sgsimgui_GetTime },
 	{ "ImGui_GetFrameCount", sgsimgui_GetFrameCount },
