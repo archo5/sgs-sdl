@@ -53,6 +53,10 @@ function map_global_to_name( vv, pfx )
 
 function event_to_string( e )
 {
+	ed = {};
+	foreach( k : get_props( e ) )
+		ed[ k ] = e.(k);
+	e = ed;
 	if( e.type == SDL_KEYUP || e.type == SDL_KEYDOWN )
 		e.keyname = map_global_to_name( e.keycode, "SDLK_" );
 	e.type = map_global_to_name( e.type, "SDL_" );

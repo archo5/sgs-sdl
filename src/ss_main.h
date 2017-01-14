@@ -325,6 +325,22 @@ typedef struct _SS_Window
 }
 SS_Window;
 
+typedef struct SS_MouseMotionEvent
+{
+	SDL_MouseMotionEvent orig;
+	Sint32 x;
+	Sint32 y;
+}
+SS_MouseMotionEvent;
+
+typedef struct SS_MouseButtonEvent
+{
+	SDL_MouseButtonEvent orig;
+	Sint32 x;
+	Sint32 y;
+}
+SS_MouseButtonEvent;
+
 
 /* utility */
 char* ss_GetBufferPtr();

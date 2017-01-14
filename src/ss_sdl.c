@@ -2922,60 +2922,290 @@ static void ss_calc_cursor_pos( int* rcp_x, int* rcp_y, int x, int y, Uint32 wid
 	*rcp_y = y;
 }
 
+
+#define EVENT_COMMON_PROPS( type_ ) \
+	SGS_OBJPROP_OFFSET( "type", offsetof( SDL_##type_, type ), SGS_OBJPROPTYPE_U32, 0 ), \
+	SGS_OBJPROP_OFFSET( "timestamp", offsetof( SDL_##type_, timestamp ), SGS_OBJPROPTYPE_U32, 0 ),
+#define EVENT_WINDOW_PROPS( type_ ) \
+	EVENT_COMMON_PROPS( type_ ) \
+	SGS_OBJPROP_OFFSET( "windowID", offsetof( SDL_##type_, windowID ), SGS_OBJPROPTYPE_U32, 0 ),
+#define EVENT_IFACE( type_ ) \
+	sgs_ObjInterface ssi_##type_[1] = {{ \
+		"SDL_" #type_, \
+		NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, \
+		ssp_##type_, }};
+
+static sgs_ObjProp ssp_WindowEvent[] =
+{
+	EVENT_WINDOW_PROPS( WindowEvent )
+	SGS_OBJPROP_OFFSET( "event", offsetof( SDL_WindowEvent, event ), SGS_OBJPROPTYPE_U8, 0 ),
+	SGS_OBJPROP_OFFSET( "data1", offsetof( SDL_WindowEvent, data1 ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_OFFSET( "data2", offsetof( SDL_WindowEvent, data2 ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( WindowEvent );
+
+static sgs_ObjProp ssp_KeyboardEvent[] =
+{
+	EVENT_WINDOW_PROPS( KeyboardEvent )
+	SGS_OBJPROP_OFFSET( "state", offsetof( SDL_KeyboardEvent, state ), SGS_OBJPROPTYPE_U8BOOL, 0 ),
+	SGS_OBJPROP_OFFSET( "repeat", offsetof( SDL_KeyboardEvent, repeat ), SGS_OBJPROPTYPE_U8, 0 ),
+	SGS_OBJPROP_OFFSET( "hwcode", offsetof( SDL_KeyboardEvent, keysym.scancode ), SGS_OBJPROPTYPE_IINT, 0 ),
+	SGS_OBJPROP_OFFSET( "keycode", offsetof( SDL_KeyboardEvent, keysym.sym ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_OFFSET( "mod", offsetof( SDL_KeyboardEvent, keysym.mod ), SGS_OBJPROPTYPE_U16, 0 ),
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( KeyboardEvent );
+
+static int ssp_TextEditingEvent_text_read( SGS_CTX, sgs_VarObj* obj )
+{
+	sgs_PushString( C, ((SDL_TextEditingEvent*)obj->data)->text );
+	return SGS_SUCCESS;
+}
+static sgs_ObjProp ssp_TextEditingEvent[] =
+{
+	EVENT_WINDOW_PROPS( TextEditingEvent )
+	SGS_OBJPROP_CALLBACK( "text", ssp_TextEditingEvent_text_read, NULL, 0 ),
+	SGS_OBJPROP_OFFSET( "start", offsetof( SDL_TextEditingEvent, start ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_OFFSET( "length", offsetof( SDL_TextEditingEvent, length ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( TextEditingEvent );
+
+static int ssp_TextInputEvent_text_read( SGS_CTX, sgs_VarObj* obj )
+{
+	sgs_PushString( C, ((SDL_TextInputEvent*)obj->data)->text );
+	return SGS_SUCCESS;
+}
+static sgs_ObjProp ssp_TextInputEvent[] =
+{
+	EVENT_WINDOW_PROPS( TextInputEvent )
+	SGS_OBJPROP_CALLBACK( "text", ssp_TextInputEvent_text_read, NULL, 0 ),
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( TextInputEvent );
+
+static sgs_ObjProp ssp_MouseMotionEvent[] =
+{
+	SGS_OBJPROP_OFFSET( "type", offsetof( SS_MouseMotionEvent, orig.type ), SGS_OBJPROPTYPE_U32, 0 ),
+	SGS_OBJPROP_OFFSET( "timestamp", offsetof( SS_MouseMotionEvent, orig.timestamp ), SGS_OBJPROPTYPE_U32, 0 ),
+	SGS_OBJPROP_OFFSET( "windowID", offsetof( SS_MouseMotionEvent, orig.windowID ), SGS_OBJPROPTYPE_U32, 0 ),
+	SGS_OBJPROP_OFFSET( "which", offsetof( SS_MouseMotionEvent, orig.which ), SGS_OBJPROPTYPE_U32, 0 ),
+	SGS_OBJPROP_OFFSET( "state", offsetof( SS_MouseMotionEvent, orig.state ), SGS_OBJPROPTYPE_U32, 0 ),
+	SGS_OBJPROP_OFFSET( "x", offsetof( SS_MouseMotionEvent, x ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_OFFSET( "y", offsetof( SS_MouseMotionEvent, y ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_OFFSET( "wx", offsetof( SS_MouseMotionEvent, orig.x ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_OFFSET( "wy", offsetof( SS_MouseMotionEvent, orig.y ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_OFFSET( "xrel", offsetof( SS_MouseMotionEvent, orig.xrel ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_OFFSET( "yrel", offsetof( SS_MouseMotionEvent, orig.yrel ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( MouseMotionEvent );
+
+static sgs_ObjProp ssp_MouseButtonEvent[] =
+{
+	SGS_OBJPROP_OFFSET( "type", offsetof( SS_MouseButtonEvent, orig.type ), SGS_OBJPROPTYPE_U32, 0 ),
+	SGS_OBJPROP_OFFSET( "timestamp", offsetof( SS_MouseButtonEvent, orig.timestamp ), SGS_OBJPROPTYPE_U32, 0 ),
+	SGS_OBJPROP_OFFSET( "windowID", offsetof( SS_MouseButtonEvent, orig.windowID ), SGS_OBJPROPTYPE_U32, 0 ),
+	SGS_OBJPROP_OFFSET( "which", offsetof( SS_MouseButtonEvent, orig.which ), SGS_OBJPROPTYPE_U32, 0 ),
+	SGS_OBJPROP_OFFSET( "button", offsetof( SS_MouseButtonEvent, orig.button ), SGS_OBJPROPTYPE_U8, 0 ),
+	SGS_OBJPROP_OFFSET( "state", offsetof( SS_MouseButtonEvent, orig.state ), SGS_OBJPROPTYPE_U8BOOL, 0 ),
+	SGS_OBJPROP_OFFSET( "clicks", offsetof( SS_MouseButtonEvent, orig.clicks ), SGS_OBJPROPTYPE_U8, 0 ),
+	SGS_OBJPROP_OFFSET( "x", offsetof( SS_MouseButtonEvent, x ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_OFFSET( "y", offsetof( SS_MouseButtonEvent, y ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_OFFSET( "wx", offsetof( SS_MouseButtonEvent, orig.x ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_OFFSET( "wy", offsetof( SS_MouseButtonEvent, orig.y ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( MouseButtonEvent );
+
+static sgs_ObjProp ssp_MouseWheelEvent[] =
+{
+	EVENT_WINDOW_PROPS( MouseWheelEvent )
+	SGS_OBJPROP_OFFSET( "which", offsetof( SDL_MouseWheelEvent, which ), SGS_OBJPROPTYPE_U32, 0 ),
+	SGS_OBJPROP_OFFSET( "x", offsetof( SDL_MouseWheelEvent, x ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_OFFSET( "y", offsetof( SDL_MouseWheelEvent, y ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_OFFSET( "direction", offsetof( SDL_MouseWheelEvent, direction ), SGS_OBJPROPTYPE_U32, 0 ),
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( MouseWheelEvent );
+
+static sgs_ObjProp ssp_JoyAxisEvent[] =
+{
+	EVENT_COMMON_PROPS( JoyAxisEvent )
+	SGS_OBJPROP_OFFSET( "which", offsetof( SDL_JoyAxisEvent, which ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_OFFSET( "axis", offsetof( SDL_JoyAxisEvent, axis ), SGS_OBJPROPTYPE_U8, 0 ),
+	SGS_OBJPROP_OFFSET( "value", offsetof( SDL_JoyAxisEvent, value ), SGS_OBJPROPTYPE_I16, 0 ),
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( JoyAxisEvent );
+
+static sgs_ObjProp ssp_JoyBallEvent[] =
+{
+	EVENT_COMMON_PROPS( JoyBallEvent )
+	SGS_OBJPROP_OFFSET( "which", offsetof( SDL_JoyBallEvent, which ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_OFFSET( "ball", offsetof( SDL_JoyBallEvent, ball ), SGS_OBJPROPTYPE_U8, 0 ),
+	SGS_OBJPROP_OFFSET( "xrel", offsetof( SDL_JoyBallEvent, xrel ), SGS_OBJPROPTYPE_I16, 0 ),
+	SGS_OBJPROP_OFFSET( "yrel", offsetof( SDL_JoyBallEvent, yrel ), SGS_OBJPROPTYPE_I16, 0 ),
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( JoyBallEvent );
+
+static sgs_ObjProp ssp_JoyHatEvent[] =
+{
+	EVENT_COMMON_PROPS( JoyHatEvent )
+	SGS_OBJPROP_OFFSET( "which", offsetof( SDL_JoyHatEvent, which ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_OFFSET( "hat", offsetof( SDL_JoyHatEvent, hat ), SGS_OBJPROPTYPE_U8, 0 ),
+	SGS_OBJPROP_OFFSET( "value", offsetof( SDL_JoyHatEvent, value ), SGS_OBJPROPTYPE_U8, 0 ),
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( JoyHatEvent );
+
+static sgs_ObjProp ssp_JoyButtonEvent[] =
+{
+	EVENT_COMMON_PROPS( JoyButtonEvent )
+	SGS_OBJPROP_OFFSET( "which", offsetof( SDL_JoyButtonEvent, which ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_OFFSET( "button", offsetof( SDL_JoyButtonEvent, button ), SGS_OBJPROPTYPE_U8, 0 ),
+	SGS_OBJPROP_OFFSET( "state", offsetof( SDL_JoyButtonEvent, state ), SGS_OBJPROPTYPE_U8, 0 ),
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( JoyButtonEvent );
+
+static sgs_ObjProp ssp_JoyDeviceEvent[] =
+{
+	EVENT_COMMON_PROPS( JoyDeviceEvent )
+	SGS_OBJPROP_OFFSET( "which", offsetof( SDL_JoyDeviceEvent, which ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( JoyDeviceEvent );
+
+static sgs_ObjProp ssp_ControllerAxisEvent[] =
+{
+	EVENT_COMMON_PROPS( ControllerAxisEvent )
+	SGS_OBJPROP_OFFSET( "which", offsetof( SDL_ControllerAxisEvent, which ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_OFFSET( "axis", offsetof( SDL_ControllerAxisEvent, axis ), SGS_OBJPROPTYPE_U8, 0 ),
+	SGS_OBJPROP_OFFSET( "value", offsetof( SDL_ControllerAxisEvent, value ), SGS_OBJPROPTYPE_I16, 0 ),
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( ControllerAxisEvent );
+
+static sgs_ObjProp ssp_ControllerButtonEvent[] =
+{
+	EVENT_COMMON_PROPS( ControllerButtonEvent )
+	SGS_OBJPROP_OFFSET( "which", offsetof( SDL_ControllerButtonEvent, which ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_OFFSET( "button", offsetof( SDL_ControllerButtonEvent, button ), SGS_OBJPROPTYPE_U8, 0 ),
+	SGS_OBJPROP_OFFSET( "state", offsetof( SDL_ControllerButtonEvent, state ), SGS_OBJPROPTYPE_U8, 0 ),
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( ControllerButtonEvent );
+
+static sgs_ObjProp ssp_ControllerDeviceEvent[] =
+{
+	EVENT_COMMON_PROPS( ControllerDeviceEvent )
+	SGS_OBJPROP_OFFSET( "which", offsetof( SDL_ControllerDeviceEvent, which ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( ControllerDeviceEvent );
+
+static sgs_ObjProp ssp_QuitEvent[] =
+{
+	EVENT_COMMON_PROPS( QuitEvent )
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( QuitEvent );
+
+static sgs_ObjProp ssp_UserEvent[] =
+{
+	EVENT_WINDOW_PROPS( UserEvent )
+	SGS_OBJPROP_OFFSET( "code", offsetof( SDL_UserEvent, code ), SGS_OBJPROPTYPE_I32, 0 ),
+	SGS_OBJPROP_OFFSET( "data1", offsetof( SDL_UserEvent, data1 ), SGS_OBJPROPTYPE_VOIDP, 0 ),
+	SGS_OBJPROP_OFFSET( "data2", offsetof( SDL_UserEvent, data2 ), SGS_OBJPROPTYPE_VOIDP, 0 ),
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( UserEvent );
+
+static sgs_ObjProp ssp_SysWMEvent[] =
+{
+	EVENT_COMMON_PROPS( SysWMEvent )
+	SGS_OBJPROP_OFFSET( "msg", offsetof( SDL_SysWMEvent, msg ), SGS_OBJPROPTYPE_VOIDP, 0 ),
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( SysWMEvent );
+
+static sgs_ObjProp ssp_TouchFingerEvent[] =
+{
+	EVENT_COMMON_PROPS( TouchFingerEvent )
+	SGS_OBJPROP_OFFSET( "touchID", offsetof( SDL_TouchFingerEvent, touchId ), SGS_OBJPROPTYPE_I64, 0 ),
+	SGS_OBJPROP_OFFSET( "fingerID", offsetof( SDL_TouchFingerEvent, fingerId ), SGS_OBJPROPTYPE_I64, 0 ),
+	SGS_OBJPROP_OFFSET( "x", offsetof( SDL_TouchFingerEvent, x ), SGS_OBJPROPTYPE_FLOAT, 0 ),
+	SGS_OBJPROP_OFFSET( "y", offsetof( SDL_TouchFingerEvent, y ), SGS_OBJPROPTYPE_FLOAT, 0 ),
+	SGS_OBJPROP_OFFSET( "dx", offsetof( SDL_TouchFingerEvent, dx ), SGS_OBJPROPTYPE_FLOAT, 0 ),
+	SGS_OBJPROP_OFFSET( "dy", offsetof( SDL_TouchFingerEvent, dy ), SGS_OBJPROPTYPE_FLOAT, 0 ),
+	SGS_OBJPROP_OFFSET( "pressure", offsetof( SDL_TouchFingerEvent, pressure ), SGS_OBJPROPTYPE_FLOAT, 0 ),
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( TouchFingerEvent );
+
+static sgs_ObjProp ssp_MultiGestureEvent[] =
+{
+	EVENT_COMMON_PROPS( MultiGestureEvent )
+	SGS_OBJPROP_OFFSET( "touchID", offsetof( SDL_MultiGestureEvent, touchId ), SGS_OBJPROPTYPE_I64, 0 ),
+	SGS_OBJPROP_OFFSET( "dTheta", offsetof( SDL_MultiGestureEvent, dTheta ), SGS_OBJPROPTYPE_FLOAT, 0 ),
+	SGS_OBJPROP_OFFSET( "dDist", offsetof( SDL_MultiGestureEvent, dDist ), SGS_OBJPROPTYPE_FLOAT, 0 ),
+	SGS_OBJPROP_OFFSET( "x", offsetof( SDL_MultiGestureEvent, x ), SGS_OBJPROPTYPE_FLOAT, 0 ),
+	SGS_OBJPROP_OFFSET( "y", offsetof( SDL_MultiGestureEvent, y ), SGS_OBJPROPTYPE_FLOAT, 0 ),
+	SGS_OBJPROP_OFFSET( "numFingers", offsetof( SDL_MultiGestureEvent, numFingers ), SGS_OBJPROPTYPE_U16, 0 ),
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( MultiGestureEvent );
+
+static sgs_ObjProp ssp_DollarGestureEvent[] =
+{
+	EVENT_COMMON_PROPS( DollarGestureEvent )
+	SGS_OBJPROP_OFFSET( "touchID", offsetof( SDL_DollarGestureEvent, touchId ), SGS_OBJPROPTYPE_I64, 0 ),
+	SGS_OBJPROP_OFFSET( "gestureID", offsetof( SDL_DollarGestureEvent, gestureId ), SGS_OBJPROPTYPE_I64, 0 ),
+	SGS_OBJPROP_OFFSET( "numFingers", offsetof( SDL_DollarGestureEvent, numFingers ), SGS_OBJPROPTYPE_U32, 0 ),
+	SGS_OBJPROP_OFFSET( "error", offsetof( SDL_DollarGestureEvent, error ), SGS_OBJPROPTYPE_FLOAT, 0 ),
+	SGS_OBJPROP_OFFSET( "x", offsetof( SDL_DollarGestureEvent, x ), SGS_OBJPROPTYPE_FLOAT, 0 ),
+	SGS_OBJPROP_OFFSET( "y", offsetof( SDL_DollarGestureEvent, y ), SGS_OBJPROPTYPE_FLOAT, 0 ),
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( DollarGestureEvent );
+
+static sgs_ObjProp ssp_DropEvent[] =
+{
+	EVENT_COMMON_PROPS( DropEvent )
+	SGS_OBJPROP_END(),
+};
+static int ss_DropEvent_destruct( SGS_CTX, sgs_VarObj* obj )
+{
+	char* f = ((SDL_DropEvent*)obj->data)->file;
+	if( f )
+		SDL_free( f );
+	return SGS_SUCCESS;
+}
+sgs_ObjInterface ssi_DropEvent[1] =
+{{
+	"SDL_DropEvent",
+	ss_DropEvent_destruct, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+	ssp_DropEvent,
+}};
+
+
+#define SS_CREATE_EVENT_FROM( type, e ) \
+	memcpy( sgs_CreateObjectIPA( C, NULL, sizeof(SDL_##type), ssi_##type ), e, sizeof(SDL_##type) );
+
 void ss_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 {
-	int osz, rcp_x, rcp_y;
-	
-	osz = sgs_StackSize( C );
-	
-	sgs_PushString( C, "type" );
-	sgs_PushInt( C, event->type );
-	sgs_PushString( C, "timestamp" );
-	sgs_PushInt( C, event->common.timestamp );
-	
 	switch( event->type )
 	{
-	case SDL_CONTROLLERAXISMOTION:
-		sgs_PushString( C, "which" );
-		sgs_PushInt( C, event->caxis.which );
-		sgs_PushString( C, "axis" );
-		sgs_PushInt( C, event->caxis.axis );
-		sgs_PushString( C, "value" );
-		sgs_PushInt( C, event->caxis.value );
-		break;
-		
+	case SDL_CONTROLLERAXISMOTION: SS_CREATE_EVENT_FROM( ControllerAxisEvent, &event->caxis ); break;
 	case SDL_CONTROLLERBUTTONDOWN:
-	case SDL_CONTROLLERBUTTONUP:
-		sgs_PushString( C, "which" );
-		sgs_PushInt( C, event->cbutton.which );
-		sgs_PushString( C, "button" );
-		sgs_PushInt( C, event->cbutton.button );
-		sgs_PushString( C, "state" );
-		sgs_PushInt( C, event->cbutton.state );
-		break;
-		
+	case SDL_CONTROLLERBUTTONUP: SS_CREATE_EVENT_FROM( ControllerButtonEvent, &event->cbutton ); break;
 	case SDL_CONTROLLERDEVICEADDED:
 	case SDL_CONTROLLERDEVICEREMOVED:
-	case SDL_CONTROLLERDEVICEREMAPPED:
-		sgs_PushString( C, "which" );
-		sgs_PushInt( C, event->cdevice.which );
-		break;
-		
-	case SDL_DOLLARGESTURE:
-		sgs_PushString( C, "touchID" );
-		sgs_PushInt( C, event->dgesture.touchId );
-		sgs_PushString( C, "gestureID" );
-		sgs_PushInt( C, event->dgesture.gestureId );
-		sgs_PushString( C, "numFingers" );
-		sgs_PushInt( C, event->dgesture.numFingers );
-		sgs_PushString( C, "error" );
-		sgs_PushReal( C, event->dgesture.error );
-		sgs_PushString( C, "x" );
-		sgs_PushReal( C, event->dgesture.x );
-		sgs_PushString( C, "y" );
-		sgs_PushReal( C, event->dgesture.y );
-		break;
-		
+	case SDL_CONTROLLERDEVICEREMAPPED: SS_CREATE_EVENT_FROM( ControllerDeviceEvent, &event->cdevice ); break;
+	case SDL_DOLLARGESTURE: SS_CREATE_EVENT_FROM( DollarGestureEvent, &event->dgesture ); break;
 	case SDL_DROPFILE:
 		sgs_PushString( C, "file" );
 		sgs_PushString( C, event->drop.file );
@@ -2984,186 +3214,35 @@ void ss_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 		
 	case SDL_FINGERMOTION:
 	case SDL_FINGERDOWN:
-	case SDL_FINGERUP:
-		sgs_PushString( C, "touchID" );
-		sgs_PushInt( C, event->tfinger.touchId );
-		sgs_PushString( C, "fingerID" );
-		sgs_PushInt( C, event->tfinger.fingerId );
-		sgs_PushString( C, "x" );
-		sgs_PushReal( C, event->tfinger.x );
-		sgs_PushString( C, "y" );
-		sgs_PushReal( C, event->tfinger.y );
-		sgs_PushString( C, "dx" );
-		sgs_PushReal( C, event->tfinger.dx );
-		sgs_PushString( C, "dy" );
-		sgs_PushReal( C, event->tfinger.dy );
-		sgs_PushString( C, "pressure" );
-		sgs_PushReal( C, event->tfinger.pressure );
-		break;
-		
-	case SDL_JOYAXISMOTION:
-		sgs_PushString( C, "which" );
-		sgs_PushInt( C, event->jaxis.which );
-		sgs_PushString( C, "axis" );
-		sgs_PushInt( C, event->jaxis.axis );
-		sgs_PushString( C, "value" );
-		sgs_PushInt( C, event->jaxis.value );
-		break;
-		
-	case SDL_JOYBALLMOTION:
-		sgs_PushString( C, "which" );
-		sgs_PushInt( C, event->jball.which );
-		sgs_PushString( C, "ball" );
-		sgs_PushInt( C, event->jball.ball );
-		sgs_PushString( C, "xrel" );
-		sgs_PushInt( C, event->jball.xrel );
-		sgs_PushString( C, "yrel" );
-		sgs_PushInt( C, event->jball.yrel );
-		break;
-		
+	case SDL_FINGERUP: SS_CREATE_EVENT_FROM( TouchFingerEvent, &event->tfinger ); break;
+	case SDL_JOYAXISMOTION: SS_CREATE_EVENT_FROM( JoyAxisEvent, &event->jaxis ); break;
+	case SDL_JOYBALLMOTION: SS_CREATE_EVENT_FROM( JoyBallEvent, &event->jball ); break;
 	case SDL_JOYBUTTONDOWN:
-	case SDL_JOYBUTTONUP:
-		sgs_PushString( C, "which" );
-		sgs_PushInt( C, event->jbutton.which );
-		sgs_PushString( C, "button" );
-		sgs_PushInt( C, event->jbutton.button );
-		sgs_PushString( C, "state" );
-		sgs_PushInt( C, event->jbutton.state );
-		break;
-		
+	case SDL_JOYBUTTONUP: SS_CREATE_EVENT_FROM( JoyButtonEvent, &event->jbutton ); break;
 	case SDL_JOYDEVICEADDED:
-	case SDL_JOYDEVICEREMOVED:
-		sgs_PushString( C, "which" );
-		sgs_PushInt( C, event->jdevice.which );
-		break;
-		
-	case SDL_JOYHATMOTION:
-		sgs_PushString( C, "which" );
-		sgs_PushInt( C, event->jhat.which );
-		sgs_PushString( C, "hat" );
-		sgs_PushInt( C, event->jhat.hat );
-		sgs_PushString( C, "value" );
-		sgs_PushInt( C, event->jhat.value );
-		break;
-		
+	case SDL_JOYDEVICEREMOVED: SS_CREATE_EVENT_FROM( JoyDeviceEvent, &event->jdevice ); break;
+	case SDL_JOYHATMOTION: SS_CREATE_EVENT_FROM( JoyHatEvent, &event->jhat ); break;
 	case SDL_KEYDOWN:
-	case SDL_KEYUP:
-		sgs_PushString( C, "windowID" );
-		sgs_PushInt( C, event->key.windowID );
-		sgs_PushString( C, "state" );
-		sgs_PushBool( C, event->key.state == SDL_PRESSED );
-		sgs_PushString( C, "repeat" );
-		sgs_PushInt( C, event->key.repeat );
-		sgs_PushString( C, "hwcode" );
-		sgs_PushInt( C, event->key.keysym.scancode );
-		sgs_PushString( C, "keycode" );
-		sgs_PushInt( C, event->key.keysym.sym );
-		sgs_PushString( C, "mod" );
-		sgs_PushInt( C, event->key.keysym.mod );
-		break;
-		
+	case SDL_KEYUP: SS_CREATE_EVENT_FROM( KeyboardEvent, &event->key ); break;
 	case SDL_MOUSEBUTTONDOWN:
-	case SDL_MOUSEBUTTONUP:
-		ss_calc_cursor_pos( &rcp_x, &rcp_y, event->button.x, event->button.y, event->button.windowID );
-		sgs_PushString( C, "windowID" );
-		sgs_PushInt( C, event->button.windowID );
-		sgs_PushString( C, "which" );
-		sgs_PushInt( C, event->button.which );
-		sgs_PushString( C, "button" );
-		sgs_PushInt( C, event->button.button );
-		sgs_PushString( C, "state" );
-		sgs_PushBool( C, event->button.state == SDL_PRESSED );
-		sgs_PushString( C, "clicks" );
-		sgs_PushInt( C, event->button.clicks );
-		sgs_PushString( C, "x" );
-		sgs_PushInt( C, rcp_x );
-		sgs_PushString( C, "y" );
-		sgs_PushInt( C, rcp_y );
-		sgs_PushString( C, "wx" );
-		sgs_PushInt( C, event->button.x );
-		sgs_PushString( C, "wy" );
-		sgs_PushInt( C, event->button.y );
-		break;
-		
-	case SDL_MOUSEMOTION:
-		ss_calc_cursor_pos( &rcp_x, &rcp_y, event->motion.x, event->motion.y, event->button.windowID );
-		sgs_PushString( C, "windowID" );
-		sgs_PushInt( C, event->motion.windowID );
-		sgs_PushString( C, "which" );
-		sgs_PushInt( C, event->motion.which );
-		sgs_PushString( C, "buttons" );
-		sgs_PushInt( C, event->motion.state );
-		sgs_PushString( C, "lbutton" );
-		sgs_PushBool( C, event->motion.state & SDL_BUTTON_LMASK );
-		sgs_PushString( C, "mbutton" );
-		sgs_PushBool( C, event->motion.state & SDL_BUTTON_MMASK );
-		sgs_PushString( C, "rbutton" );
-		sgs_PushBool( C, event->motion.state & SDL_BUTTON_RMASK );
-		sgs_PushString( C, "x1button" );
-		sgs_PushBool( C, event->motion.state & SDL_BUTTON_X1MASK );
-		sgs_PushString( C, "x2button" );
-		sgs_PushBool( C, event->motion.state & SDL_BUTTON_X2MASK );
-		sgs_PushString( C, "x" );
-		sgs_PushInt( C, rcp_x );
-		sgs_PushString( C, "y" );
-		sgs_PushInt( C, rcp_y );
-		sgs_PushString( C, "wx" );
-		sgs_PushInt( C, event->motion.x );
-		sgs_PushString( C, "wy" );
-		sgs_PushInt( C, event->motion.y );
-		sgs_PushString( C, "xrel" );
-		sgs_PushInt( C, event->motion.xrel );
-		sgs_PushString( C, "yrel" );
-		sgs_PushInt( C, event->motion.yrel );
-		break;
-		
-	case SDL_MOUSEWHEEL:
-		sgs_PushString( C, "windowID" );
-		sgs_PushInt( C, event->wheel.windowID );
-		sgs_PushString( C, "which" );
-		sgs_PushInt( C, event->wheel.which );
-		sgs_PushString( C, "x" );
-		sgs_PushInt( C, event->wheel.x );
-		sgs_PushString( C, "y" );
-		sgs_PushInt( C, event->wheel.y );
-		break;
-		
-	case SDL_MULTIGESTURE:
-		sgs_PushString( C, "touchID" );
-		sgs_PushInt( C, event->mgesture.touchId );
-		sgs_PushString( C, "dTheta" );
-		sgs_PushReal( C, event->mgesture.dTheta );
-		sgs_PushString( C, "dDist" );
-		sgs_PushReal( C, event->mgesture.dDist );
-		sgs_PushString( C, "x" );
-		sgs_PushReal( C, event->mgesture.x );
-		sgs_PushString( C, "y" );
-		sgs_PushReal( C, event->mgesture.y );
-		sgs_PushString( C, "numFingers" );
-		sgs_PushInt( C, event->mgesture.numFingers );
-		break;
-		
-	case SDL_QUIT: break;
-	case SDL_SYSWMEVENT: /* TODO */ break;
-		
-	case SDL_TEXTEDITING:
-		sgs_PushString( C, "windowID" );
-		sgs_PushInt( C, event->edit.windowID );
-		sgs_PushString( C, "text" );
-		sgs_PushString( C, event->edit.text );
-		sgs_PushString( C, "start" );
-		sgs_PushInt( C, event->edit.start );
-		sgs_PushString( C, "length" );
-		sgs_PushInt( C, event->edit.length );
-		break;
-		
-	case SDL_TEXTINPUT:
-		sgs_PushString( C, "windowID" );
-		sgs_PushInt( C, event->text.windowID );
-		sgs_PushString( C, "text" );
-		sgs_PushString( C, event->text.text );
-		break;
-		
+	case SDL_MOUSEBUTTONUP: {
+			SS_MouseButtonEvent mbe = { event->button, 0, 0 };
+			ss_calc_cursor_pos( &mbe.x, &mbe.y, event->button.x, event->button.y, event->button.windowID );
+			memcpy( sgs_CreateObjectIPA( C, NULL, sizeof(SS_MouseButtonEvent), ssi_MouseButtonEvent ), &mbe, sizeof(SS_MouseButtonEvent) );
+		} break;
+	case SDL_MOUSEMOTION: {
+			SS_MouseMotionEvent mme = { event->motion, 0, 0 };
+			ss_calc_cursor_pos( &mme.x, &mme.y, event->motion.x, event->motion.y, event->motion.windowID );
+			memcpy( sgs_CreateObjectIPA( C, NULL, sizeof(SS_MouseMotionEvent), ssi_MouseMotionEvent ), &mme, sizeof(SS_MouseMotionEvent) );
+		} break;
+	case SDL_MOUSEWHEEL: SS_CREATE_EVENT_FROM( MouseWheelEvent, &event->wheel ); break;
+	case SDL_MULTIGESTURE: SS_CREATE_EVENT_FROM( MultiGestureEvent, &event->mgesture ); break;
+	case SDL_QUIT: SS_CREATE_EVENT_FROM( QuitEvent, &event->quit ); break;
+	case SDL_SYSWMEVENT: SS_CREATE_EVENT_FROM( SysWMEvent, &event->syswm ); break;
+	case SDL_AUDIODEVICEADDED: /* TODO */ break;
+	case SDL_AUDIODEVICEREMOVED: /* TODO */ break;
+	case SDL_TEXTEDITING: SS_CREATE_EVENT_FROM( TextEditingEvent, &event->edit ); break;
+	case SDL_TEXTINPUT: SS_CREATE_EVENT_FROM( TextInputEvent, &event->text ); break;
 	case SDL_WINDOWEVENT:
 		if( event->window.event == SDL_WINDOWEVENT_SIZE_CHANGED )
 		{
@@ -3176,28 +3255,9 @@ void ss_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 				ss_TmpRestoreCurrent( &ctx );
 			}
 		}
-		sgs_PushString( C, "windowID" );
-		sgs_PushInt( C, event->window.windowID );
-		sgs_PushString( C, "event" );
-		sgs_PushInt( C, event->window.event );
-		sgs_PushString( C, "data1" );
-		sgs_PushInt( C, event->window.data1 );
-		sgs_PushString( C, "data2" );
-		sgs_PushInt( C, event->window.data2 );
+		SS_CREATE_EVENT_FROM( WindowEvent, &event->window );
 		break;
-		
-	case SDL_USEREVENT:
-		sgs_PushString( C, "windowID" );
-		sgs_PushInt( C, event->user.windowID );
-		sgs_PushString( C, "code" );
-		sgs_PushInt( C, event->user.code );
-		sgs_PushString( C, "data1" );
-		sgs_PushPtr( C, event->user.data1 );
-		sgs_PushString( C, "data2" );
-		sgs_PushPtr( C, event->user.data2 );
-		break;
-		
+	case SDL_USEREVENT: SS_CREATE_EVENT_FROM( UserEvent, &event->user ); break;
+	default: sgs_PushNull( C ); break;
 	}
-	
-	sgs_CreateDict( C, NULL, sgs_StackSize( C ) - osz );
 }
