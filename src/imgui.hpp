@@ -2,6 +2,9 @@
 
 #pragma once
 #include <sgs_cppbc.h>
+extern "C" {
+#include "ss_main.h"
+}
 #include "../ext/src/imgui/imgui.h"
 
 template<> inline void sgs_PushVar<ImVec2>( SGS_CTX, const ImVec2& v )

@@ -249,7 +249,7 @@ src/cppbc_sa_main.cpp: src/sa_main.hpp sgscript/bin/sgsvm$(BINEXT)
 
 # - sgs-IMGUI
 $(P_SGSIMGUI): src/imgui.cpp src/imgui_bind.cpp obj/libimgui.a
-	$(CXX) -o $@ $^ $(CFLAGS) $(CXXFLAGS) $(SGS_CFLAGS) $(SGS_LIBS) $(LIBFLAGS)
+	$(CXX) -o $@ $^ $(CFLAGS) $(CXXFLAGS) $(SGS_CFLAGS) $(SGS_LIBS) $(LIBFLAGS) -lsgs-sdl $(SDL2_CFLAGS) $(SDL2_LIBS)
 
 
 # UTILITY TARGETS

@@ -342,6 +342,30 @@ typedef struct SS_MouseButtonEvent
 SS_MouseButtonEvent;
 
 
+extern sgs_ObjInterface ssi_WindowEvent[1];
+extern sgs_ObjInterface ssi_KeyboardEvent[1];
+extern sgs_ObjInterface ssi_TextEditingEvent[1];
+extern sgs_ObjInterface ssi_TextInputEvent[1];
+extern sgs_ObjInterface ssi_MouseMotionEvent[1];
+extern sgs_ObjInterface ssi_MouseButtonEvent[1];
+extern sgs_ObjInterface ssi_MouseWheelEvent[1];
+extern sgs_ObjInterface ssi_JoyAxisEvent[1];
+extern sgs_ObjInterface ssi_JoyBallEvent[1];
+extern sgs_ObjInterface ssi_JoyHatEvent[1];
+extern sgs_ObjInterface ssi_JoyButtonEvent[1];
+extern sgs_ObjInterface ssi_JoyDeviceEvent[1];
+extern sgs_ObjInterface ssi_ControllerAxisEvent[1];
+extern sgs_ObjInterface ssi_ControllerButtonEvent[1];
+extern sgs_ObjInterface ssi_ControllerDeviceEvent[1];
+extern sgs_ObjInterface ssi_QuitEvent[1];
+extern sgs_ObjInterface ssi_UserEvent[1];
+extern sgs_ObjInterface ssi_SysWMEvent[1];
+extern sgs_ObjInterface ssi_TouchFingerEvent[1];
+extern sgs_ObjInterface ssi_MultiGestureEvent[1];
+extern sgs_ObjInterface ssi_DollarGestureEvent[1];
+extern sgs_ObjInterface ssi_DropEvent[1];
+
+
 /* utility */
 char* ss_GetBufferPtr();
 char* ss_RequestMemory( size_t numbytes );
