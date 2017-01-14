@@ -249,10 +249,7 @@ foreach( func : GLOBALFUNCS )
 	ret_type = dump_tokens( func.ret_type );
 	// these functions are not needed for us
 	func.procstate = 0;
-	if( fn == "ShowTestWindow" ) continue;
-	if( fn == "ShowUserGuide" ) continue;
-	if( fn == "ShowStyleEditor" ) continue;
-	if( fn == "Value" ) continue;
+	if( @func.args.last.type[0].value == "va_list" ) continue;
 	// obsolete functions
 	func.procstate = 1;
 	if( fn == "Begin" && func.args.size == 5 ) continue;
@@ -261,6 +258,7 @@ foreach( func : GLOBALFUNCS )
 	if( fn == "GetIO" ) continue;
 	if( fn == "GetStyle" ) continue;
 	if( fn == "GetDrawData" ) continue;
+	if( fn == "ShowStyleEditor" ) continue;
 	if( fn == "SetNextWindowSizeConstraints" ) continue;
 	if( fn == "PushFont" ) continue;
 	if( fn == "GetFont" ) continue;
@@ -278,7 +276,49 @@ foreach( func : GLOBALFUNCS )
 	if( NUMOVERLOADS[ fn ] > 1 )
 	{
 		// special overload processing
-		continue;
+		// - separate by changing name
+		if( fn == "SetWindowPos" ){ if( func.args.size == 2 ) fn = "SetCurrentWindowPos"; }
+		else if( fn == "SetWindowSize" ){ if( func.args.size == 2 ) fn = "SetCurrentWindowSize"; }
+		else if( fn == "SetWindowCollapsed" ){ if( func.args.size == 2 ) fn = "SetCurrentWindowCollapsed"; }
+		else if( fn == "SetWindowFocus" ){ if( func.args.size == 0 ) fn = "SetCurrentWindowFocus"; }
+		else if( fn == "ValueColor" ){ if( func.args[1].type[0].value != "ImU32" ) fn = "ValueColorF"; }
+		// - custom coalescing implementation
+		else if( fn == "PushID" )
+		{
+			if( !pushid_handled )
+			{
+				out ..= "static int sgsimgui_PushID( SGS_CTX )\n{";
+				out ..= "\n\tSGSFN( \"ImGui_PushID\" );";
+				out ..= "\n\tuint32_t t = sgs_ItemType( C, 0 );";
+				out ..= "\n\tif( t == SGS_VT_BOOL || t == SGS_VT_INT || t == SGS_VT_REAL ) ImGui::PushID( sgs_GetInt( C, 0 ) );";
+				out ..= "\n\telse ImGui::PushID( sgs_GetPtr( C, 0 ) );"; // strings are interned, so can save time by not hashing contents and using unique pointer instead
+				out ..= "\n\treturn 0;";
+				out ..= "\n}\n\n";
+				FUNCLIST[ "ImGui_PushID" ] = "sgsimgui_PushID";
+				pushid_handled = true;
+			}
+			func.procstate = 4;
+			continue;
+		}
+		else if( fn == "GetID" )
+		{
+			if( !getid_handled )
+			{
+				out ..= "static int sgsimgui_GetID( SGS_CTX )\n{";
+				out ..= "\n\tSGSFN( \"ImGui_GetID\" );"; // no integer version like PushID had
+				out ..= "\n\tsgs_PushInt( C, ImGui::GetID( sgs_GetPtr( C, 0 ) ) );"; // strings are interned, so can save time by not hashing contents and using unique pointer instead
+				out ..= "\n\treturn 1;";
+				out ..= "\n}\n\n";
+				FUNCLIST[ "ImGui_GetID" ] = "sgsimgui_GetID";
+				getid_handled = true;
+			}
+			func.procstate = 4;
+			continue;
+		}
+		else
+		{
+			continue;
+		}
 	}
 	
 	func.procstate = 4;
@@ -418,26 +458,26 @@ foreach( func : GLOBALFUNCS )
 		}
 	}
 	
-	callstr = "\n\t";
+	out ..= "\n\t";
 	if( ret_type != "void" )
 	{
 		rvcount++;
-		callstr ..= "sgs_PushVar( C, ";
+		out ..= "sgs_PushVar( C, ";
 		if( ret_type == "ImVec2" )
 			rvcount++;
 	}
-	callstr ..= "ImGui::" .. fn .. "(";
+	out ..= "ImGui::" .. func.name .. "(";
 	foreach( idx, arg : func.args )
 	{
 		if( idx > 0 )
-			callstr ..= ",";
-		callstr ..= "\n\t\t" .. arg.loader;
+			out ..= ",";
+		out ..= "\n\t\t" .. arg.loader;
 	}
-	if( ret_type == "void" )
-		callstr ..= "\n\t);";
-	else
-		callstr ..= "\n\t) );";
-	out ..= callstr;
+	if( loadidx != 0 )
+		out ..= "\n\t";
+	if( ret_type != "void" )
+		out ..= ") ";
+	out ..= ");";
 	
 	out ..= preret;
 	
@@ -472,13 +512,20 @@ io_file_write( "src/imgui_bind.cpp", out );
 fn_stat_names = [
 	"unneeded",
 	"obsolete",
-	"unimplemented (basic)",
-	"unimplemented (overloaded)",
+	"unimplemented",
+	"unresolved overloaded",
 	"available",
 ];
 fn_stat_values = [ 0, 0, 0, 0, 0 ];
+fn_printed_set = {};
 foreach( func : GLOBALFUNCS )
 {
+	if( !isset( fn_printed_set, func.name ) )
+	{
+		if( func.procstate < 4 )
+			println( fn_stat_names[ func.procstate ], ": ", func.name );
+		fn_printed_set[ func.name ] = true;
+	}
 	fn_stat_values[ func.procstate ]++;
 }
 println( "--- statistics ---" );

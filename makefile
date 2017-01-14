@@ -154,7 +154,7 @@ obj/libvorbis.a: $(patsubst %,obj/libvorbis_%,$(_OBJ_VORBIS))
 # - IMGUI
 obj/libimgui_%.o: ext/src/imgui/%.cpp
 	$(CC) -c -o $@ $< -Iext/src/libogg-1.3.1/include $(CFLAGS)
-obj/libimgui.a: obj/libimgui_imgui.o obj/libimgui_imgui_draw.o
+obj/libimgui.a: obj/libimgui_imgui.o obj/libimgui_imgui_draw.o obj/libimgui_imgui_demo.o
 	ar rcs $@ $?
 
 

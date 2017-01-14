@@ -39,8 +39,5 @@ template<> struct sgs_GetVar<ImVec4>
 		return ImVec4(1,1,1,1);
 	}
 };
-// TODO integrate
-template<> struct sgs_GetVar<const char*> { const char* operator () ( SGS_CTX, sgs_StkIdx item ){
-	char* str = NULL; sgs_ParseString( C, item, &str, NULL ); return str; }};
 
 

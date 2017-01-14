@@ -5,25 +5,40 @@
 static int sgsimgui_NewFrame( SGS_CTX )
 {
 	SGSFN( "ImGui_NewFrame" );
-	ImGui::NewFrame(
-	);
+	ImGui::NewFrame();
 	return 0;
 }
 
 static int sgsimgui_Render( SGS_CTX )
 {
 	SGSFN( "ImGui_Render" );
-	ImGui::Render(
-	);
+	ImGui::Render();
 	return 0;
 }
 
 static int sgsimgui_Shutdown( SGS_CTX )
 {
 	SGSFN( "ImGui_Shutdown" );
-	ImGui::Shutdown(
-	);
+	ImGui::Shutdown();
 	return 0;
+}
+
+static int sgsimgui_ShowUserGuide( SGS_CTX )
+{
+	SGSFN( "ImGui_ShowUserGuide" );
+	ImGui::ShowUserGuide();
+	return 0;
+}
+
+static int sgsimgui_ShowTestWindow( SGS_CTX )
+{
+	SGSFN( "ImGui_ShowTestWindow" );
+	bool val0 = sgs_GetVar<bool>()( C, 0 );
+	ImGui::ShowTestWindow(
+		&val0
+	);
+	sgs_PushBool( C, val0 );
+	return 1;
 }
 
 static int sgsimgui_ShowMetricsWindow( SGS_CTX )
@@ -40,104 +55,91 @@ static int sgsimgui_ShowMetricsWindow( SGS_CTX )
 static int sgsimgui_End( SGS_CTX )
 {
 	SGSFN( "ImGui_End" );
-	ImGui::End(
-	);
+	ImGui::End();
 	return 0;
 }
 
 static int sgsimgui_EndChild( SGS_CTX )
 {
 	SGSFN( "ImGui_EndChild" );
-	ImGui::EndChild(
-	);
+	ImGui::EndChild();
 	return 0;
 }
 
 static int sgsimgui_GetContentRegionMax( SGS_CTX )
 {
 	SGSFN( "ImGui_GetContentRegionMax" );
-	sgs_PushVar( C, ImGui::GetContentRegionMax(
-	) );
+	sgs_PushVar( C, ImGui::GetContentRegionMax() );
 	return 2;
 }
 
 static int sgsimgui_GetContentRegionAvail( SGS_CTX )
 {
 	SGSFN( "ImGui_GetContentRegionAvail" );
-	sgs_PushVar( C, ImGui::GetContentRegionAvail(
-	) );
+	sgs_PushVar( C, ImGui::GetContentRegionAvail() );
 	return 2;
 }
 
 static int sgsimgui_GetContentRegionAvailWidth( SGS_CTX )
 {
 	SGSFN( "ImGui_GetContentRegionAvailWidth" );
-	sgs_PushVar( C, ImGui::GetContentRegionAvailWidth(
-	) );
+	sgs_PushVar( C, ImGui::GetContentRegionAvailWidth() );
 	return 1;
 }
 
 static int sgsimgui_GetWindowContentRegionMin( SGS_CTX )
 {
 	SGSFN( "ImGui_GetWindowContentRegionMin" );
-	sgs_PushVar( C, ImGui::GetWindowContentRegionMin(
-	) );
+	sgs_PushVar( C, ImGui::GetWindowContentRegionMin() );
 	return 2;
 }
 
 static int sgsimgui_GetWindowContentRegionMax( SGS_CTX )
 {
 	SGSFN( "ImGui_GetWindowContentRegionMax" );
-	sgs_PushVar( C, ImGui::GetWindowContentRegionMax(
-	) );
+	sgs_PushVar( C, ImGui::GetWindowContentRegionMax() );
 	return 2;
 }
 
 static int sgsimgui_GetWindowContentRegionWidth( SGS_CTX )
 {
 	SGSFN( "ImGui_GetWindowContentRegionWidth" );
-	sgs_PushVar( C, ImGui::GetWindowContentRegionWidth(
-	) );
+	sgs_PushVar( C, ImGui::GetWindowContentRegionWidth() );
 	return 1;
 }
 
 static int sgsimgui_GetWindowPos( SGS_CTX )
 {
 	SGSFN( "ImGui_GetWindowPos" );
-	sgs_PushVar( C, ImGui::GetWindowPos(
-	) );
+	sgs_PushVar( C, ImGui::GetWindowPos() );
 	return 2;
 }
 
 static int sgsimgui_GetWindowSize( SGS_CTX )
 {
 	SGSFN( "ImGui_GetWindowSize" );
-	sgs_PushVar( C, ImGui::GetWindowSize(
-	) );
+	sgs_PushVar( C, ImGui::GetWindowSize() );
 	return 2;
 }
 
 static int sgsimgui_GetWindowWidth( SGS_CTX )
 {
 	SGSFN( "ImGui_GetWindowWidth" );
-	sgs_PushVar( C, ImGui::GetWindowWidth(
-	) );
+	sgs_PushVar( C, ImGui::GetWindowWidth() );
 	return 1;
 }
 
 static int sgsimgui_GetWindowHeight( SGS_CTX )
 {
 	SGSFN( "ImGui_GetWindowHeight" );
-	sgs_PushVar( C, ImGui::GetWindowHeight(
-	) );
+	sgs_PushVar( C, ImGui::GetWindowHeight() );
 	return 1;
 }
 
 static int sgsimgui_IsWindowCollapsed( SGS_CTX )
 {
 	SGSFN( "ImGui_IsWindowCollapsed" );
-	sgs_PushVar( C, ImGui::IsWindowCollapsed(
-	) );
+	sgs_PushVar( C, ImGui::IsWindowCollapsed() );
 	return 1;
 }
 
@@ -210,7 +212,85 @@ static int sgsimgui_SetNextWindowCollapsed( SGS_CTX )
 static int sgsimgui_SetNextWindowFocus( SGS_CTX )
 {
 	SGSFN( "ImGui_SetNextWindowFocus" );
-	ImGui::SetNextWindowFocus(
+	ImGui::SetNextWindowFocus();
+	return 0;
+}
+
+static int sgsimgui_SetCurrentWindowPos( SGS_CTX )
+{
+	SGSFN( "ImGui_SetCurrentWindowPos" );
+	ImGui::SetWindowPos(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<ImGuiSetCond>()( C, 2 )
+	);
+	return 0;
+}
+
+static int sgsimgui_SetCurrentWindowSize( SGS_CTX )
+{
+	SGSFN( "ImGui_SetCurrentWindowSize" );
+	ImGui::SetWindowSize(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<ImGuiSetCond>()( C, 2 )
+	);
+	return 0;
+}
+
+static int sgsimgui_SetCurrentWindowCollapsed( SGS_CTX )
+{
+	SGSFN( "ImGui_SetCurrentWindowCollapsed" );
+	ImGui::SetWindowCollapsed(
+		sgs_GetVar<bool>()( C, 0 ),
+		sgs_GetVar<ImGuiSetCond>()( C, 1 )
+	);
+	return 0;
+}
+
+static int sgsimgui_SetCurrentWindowFocus( SGS_CTX )
+{
+	SGSFN( "ImGui_SetCurrentWindowFocus" );
+	ImGui::SetWindowFocus();
+	return 0;
+}
+
+static int sgsimgui_SetWindowPos( SGS_CTX )
+{
+	SGSFN( "ImGui_SetWindowPos" );
+	ImGui::SetWindowPos(
+		sgs_GetVar<const char *>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 1 ),
+		sgs_GetVar<ImGuiSetCond>()( C, 3 )
+	);
+	return 0;
+}
+
+static int sgsimgui_SetWindowSize( SGS_CTX )
+{
+	SGSFN( "ImGui_SetWindowSize" );
+	ImGui::SetWindowSize(
+		sgs_GetVar<const char *>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 1 ),
+		sgs_GetVar<ImGuiSetCond>()( C, 3 )
+	);
+	return 0;
+}
+
+static int sgsimgui_SetWindowCollapsed( SGS_CTX )
+{
+	SGSFN( "ImGui_SetWindowCollapsed" );
+	ImGui::SetWindowCollapsed(
+		sgs_GetVar<const char *>()( C, 0 ),
+		sgs_GetVar<bool>()( C, 1 ),
+		sgs_GetVar<ImGuiSetCond>()( C, 2 )
+	);
+	return 0;
+}
+
+static int sgsimgui_SetWindowFocus( SGS_CTX )
+{
+	SGSFN( "ImGui_SetWindowFocus" );
+	ImGui::SetWindowFocus(
+		sgs_GetVar<const char *>()( C, 0 )
 	);
 	return 0;
 }
@@ -218,32 +298,28 @@ static int sgsimgui_SetNextWindowFocus( SGS_CTX )
 static int sgsimgui_GetScrollX( SGS_CTX )
 {
 	SGSFN( "ImGui_GetScrollX" );
-	sgs_PushVar( C, ImGui::GetScrollX(
-	) );
+	sgs_PushVar( C, ImGui::GetScrollX() );
 	return 1;
 }
 
 static int sgsimgui_GetScrollY( SGS_CTX )
 {
 	SGSFN( "ImGui_GetScrollY" );
-	sgs_PushVar( C, ImGui::GetScrollY(
-	) );
+	sgs_PushVar( C, ImGui::GetScrollY() );
 	return 1;
 }
 
 static int sgsimgui_GetScrollMaxX( SGS_CTX )
 {
 	SGSFN( "ImGui_GetScrollMaxX" );
-	sgs_PushVar( C, ImGui::GetScrollMaxX(
-	) );
+	sgs_PushVar( C, ImGui::GetScrollMaxX() );
 	return 1;
 }
 
 static int sgsimgui_GetScrollMaxY( SGS_CTX )
 {
 	SGSFN( "ImGui_GetScrollMaxY" );
-	sgs_PushVar( C, ImGui::GetScrollMaxY(
-	) );
+	sgs_PushVar( C, ImGui::GetScrollMaxY() );
 	return 1;
 }
 
@@ -296,8 +372,7 @@ static int sgsimgui_SetKeyboardFocusHere( SGS_CTX )
 static int sgsimgui_PopFont( SGS_CTX )
 {
 	SGSFN( "ImGui_PopFont" );
-	ImGui::PopFont(
-	);
+	ImGui::PopFont();
 	return 0;
 }
 
@@ -332,16 +407,14 @@ static int sgsimgui_PopStyleVar( SGS_CTX )
 static int sgsimgui_GetFontSize( SGS_CTX )
 {
 	SGSFN( "ImGui_GetFontSize" );
-	sgs_PushVar( C, ImGui::GetFontSize(
-	) );
+	sgs_PushVar( C, ImGui::GetFontSize() );
 	return 1;
 }
 
 static int sgsimgui_GetFontTexUvWhitePixel( SGS_CTX )
 {
 	SGSFN( "ImGui_GetFontTexUvWhitePixel" );
-	sgs_PushVar( C, ImGui::GetFontTexUvWhitePixel(
-	) );
+	sgs_PushVar( C, ImGui::GetFontTexUvWhitePixel() );
 	return 2;
 }
 
@@ -357,16 +430,14 @@ static int sgsimgui_PushItemWidth( SGS_CTX )
 static int sgsimgui_PopItemWidth( SGS_CTX )
 {
 	SGSFN( "ImGui_PopItemWidth" );
-	ImGui::PopItemWidth(
-	);
+	ImGui::PopItemWidth();
 	return 0;
 }
 
 static int sgsimgui_CalcItemWidth( SGS_CTX )
 {
 	SGSFN( "ImGui_CalcItemWidth" );
-	sgs_PushVar( C, ImGui::CalcItemWidth(
-	) );
+	sgs_PushVar( C, ImGui::CalcItemWidth() );
 	return 1;
 }
 
@@ -382,8 +453,7 @@ static int sgsimgui_PushTextWrapPos( SGS_CTX )
 static int sgsimgui_PopTextWrapPos( SGS_CTX )
 {
 	SGSFN( "ImGui_PopTextWrapPos" );
-	ImGui::PopTextWrapPos(
-	);
+	ImGui::PopTextWrapPos();
 	return 0;
 }
 
@@ -399,8 +469,7 @@ static int sgsimgui_PushAllowKeyboardFocus( SGS_CTX )
 static int sgsimgui_PopAllowKeyboardFocus( SGS_CTX )
 {
 	SGSFN( "ImGui_PopAllowKeyboardFocus" );
-	ImGui::PopAllowKeyboardFocus(
-	);
+	ImGui::PopAllowKeyboardFocus();
 	return 0;
 }
 
@@ -416,16 +485,14 @@ static int sgsimgui_PushButtonRepeat( SGS_CTX )
 static int sgsimgui_PopButtonRepeat( SGS_CTX )
 {
 	SGSFN( "ImGui_PopButtonRepeat" );
-	ImGui::PopButtonRepeat(
-	);
+	ImGui::PopButtonRepeat();
 	return 0;
 }
 
 static int sgsimgui_Separator( SGS_CTX )
 {
 	SGSFN( "ImGui_Separator" );
-	ImGui::Separator(
-	);
+	ImGui::Separator();
 	return 0;
 }
 
@@ -442,16 +509,14 @@ static int sgsimgui_SameLine( SGS_CTX )
 static int sgsimgui_NewLine( SGS_CTX )
 {
 	SGSFN( "ImGui_NewLine" );
-	ImGui::NewLine(
-	);
+	ImGui::NewLine();
 	return 0;
 }
 
 static int sgsimgui_Spacing( SGS_CTX )
 {
 	SGSFN( "ImGui_Spacing" );
-	ImGui::Spacing(
-	);
+	ImGui::Spacing();
 	return 0;
 }
 
@@ -485,40 +550,35 @@ static int sgsimgui_Unindent( SGS_CTX )
 static int sgsimgui_BeginGroup( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginGroup" );
-	ImGui::BeginGroup(
-	);
+	ImGui::BeginGroup();
 	return 0;
 }
 
 static int sgsimgui_EndGroup( SGS_CTX )
 {
 	SGSFN( "ImGui_EndGroup" );
-	ImGui::EndGroup(
-	);
+	ImGui::EndGroup();
 	return 0;
 }
 
 static int sgsimgui_GetCursorPos( SGS_CTX )
 {
 	SGSFN( "ImGui_GetCursorPos" );
-	sgs_PushVar( C, ImGui::GetCursorPos(
-	) );
+	sgs_PushVar( C, ImGui::GetCursorPos() );
 	return 2;
 }
 
 static int sgsimgui_GetCursorPosX( SGS_CTX )
 {
 	SGSFN( "ImGui_GetCursorPosX" );
-	sgs_PushVar( C, ImGui::GetCursorPosX(
-	) );
+	sgs_PushVar( C, ImGui::GetCursorPosX() );
 	return 1;
 }
 
 static int sgsimgui_GetCursorPosY( SGS_CTX )
 {
 	SGSFN( "ImGui_GetCursorPosY" );
-	sgs_PushVar( C, ImGui::GetCursorPosY(
-	) );
+	sgs_PushVar( C, ImGui::GetCursorPosY() );
 	return 1;
 }
 
@@ -552,16 +612,14 @@ static int sgsimgui_SetCursorPosY( SGS_CTX )
 static int sgsimgui_GetCursorStartPos( SGS_CTX )
 {
 	SGSFN( "ImGui_GetCursorStartPos" );
-	sgs_PushVar( C, ImGui::GetCursorStartPos(
-	) );
+	sgs_PushVar( C, ImGui::GetCursorStartPos() );
 	return 2;
 }
 
 static int sgsimgui_GetCursorScreenPos( SGS_CTX )
 {
 	SGSFN( "ImGui_GetCursorScreenPos" );
-	sgs_PushVar( C, ImGui::GetCursorScreenPos(
-	) );
+	sgs_PushVar( C, ImGui::GetCursorScreenPos() );
 	return 2;
 }
 
@@ -577,32 +635,28 @@ static int sgsimgui_SetCursorScreenPos( SGS_CTX )
 static int sgsimgui_AlignFirstTextHeightToWidgets( SGS_CTX )
 {
 	SGSFN( "ImGui_AlignFirstTextHeightToWidgets" );
-	ImGui::AlignFirstTextHeightToWidgets(
-	);
+	ImGui::AlignFirstTextHeightToWidgets();
 	return 0;
 }
 
 static int sgsimgui_GetTextLineHeight( SGS_CTX )
 {
 	SGSFN( "ImGui_GetTextLineHeight" );
-	sgs_PushVar( C, ImGui::GetTextLineHeight(
-	) );
+	sgs_PushVar( C, ImGui::GetTextLineHeight() );
 	return 1;
 }
 
 static int sgsimgui_GetTextLineHeightWithSpacing( SGS_CTX )
 {
 	SGSFN( "ImGui_GetTextLineHeightWithSpacing" );
-	sgs_PushVar( C, ImGui::GetTextLineHeightWithSpacing(
-	) );
+	sgs_PushVar( C, ImGui::GetTextLineHeightWithSpacing() );
 	return 1;
 }
 
 static int sgsimgui_GetItemsLineHeightWithSpacing( SGS_CTX )
 {
 	SGSFN( "ImGui_GetItemsLineHeightWithSpacing" );
-	sgs_PushVar( C, ImGui::GetItemsLineHeightWithSpacing(
-	) );
+	sgs_PushVar( C, ImGui::GetItemsLineHeightWithSpacing() );
 	return 1;
 }
 
@@ -620,16 +674,14 @@ static int sgsimgui_Columns( SGS_CTX )
 static int sgsimgui_NextColumn( SGS_CTX )
 {
 	SGSFN( "ImGui_NextColumn" );
-	ImGui::NextColumn(
-	);
+	ImGui::NextColumn();
 	return 0;
 }
 
 static int sgsimgui_GetColumnIndex( SGS_CTX )
 {
 	SGSFN( "ImGui_GetColumnIndex" );
-	sgs_PushVar( C, ImGui::GetColumnIndex(
-	) );
+	sgs_PushVar( C, ImGui::GetColumnIndex() );
 	return 1;
 }
 
@@ -664,17 +716,31 @@ static int sgsimgui_GetColumnWidth( SGS_CTX )
 static int sgsimgui_GetColumnsCount( SGS_CTX )
 {
 	SGSFN( "ImGui_GetColumnsCount" );
-	sgs_PushVar( C, ImGui::GetColumnsCount(
-	) );
+	sgs_PushVar( C, ImGui::GetColumnsCount() );
 	return 1;
+}
+
+static int sgsimgui_PushID( SGS_CTX )
+{
+	SGSFN( "ImGui_PushID" );
+	uint32_t t = sgs_ItemType( C, 0 );
+	if( t == SGS_VT_BOOL || t == SGS_VT_INT || t == SGS_VT_REAL ) ImGui::PushID( sgs_GetInt( C, 0 ) );
+	else ImGui::PushID( sgs_GetPtr( C, 0 ) );
+	return 0;
 }
 
 static int sgsimgui_PopID( SGS_CTX )
 {
 	SGSFN( "ImGui_PopID" );
-	ImGui::PopID(
-	);
+	ImGui::PopID();
 	return 0;
+}
+
+static int sgsimgui_GetID( SGS_CTX )
+{
+	SGSFN( "ImGui_GetID" );
+	sgs_PushInt( C, ImGui::GetID( sgs_GetPtr( C, 0 ) ) );
+	return 1;
 }
 
 static int sgsimgui_Text( SGS_CTX )
@@ -683,16 +749,6 @@ static int sgsimgui_Text( SGS_CTX )
 	ImGui::Text(
 		"%s",
 		sgs_GetVar<const char*>()( C, 0 )
-	);
-	return 0;
-}
-
-static int sgsimgui_TextV( SGS_CTX )
-{
-	SGSFN( "ImGui_TextV" );
-	ImGui::TextV(
-		sgs_GetVar<const char *>()( C, 0 ),
-		sgs_GetVar<va_list>()( C, 1 )
 	);
 	return 0;
 }
@@ -708,17 +764,6 @@ static int sgsimgui_TextColored( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_TextColoredV( SGS_CTX )
-{
-	SGSFN( "ImGui_TextColoredV" );
-	ImGui::TextColoredV(
-		sgs_GetVar<ImVec4>()( C, 0 ),
-		sgs_GetVar<const char *>()( C, 4 ),
-		sgs_GetVar<va_list>()( C, 5 )
-	);
-	return 0;
-}
-
 static int sgsimgui_TextDisabled( SGS_CTX )
 {
 	SGSFN( "ImGui_TextDisabled" );
@@ -729,32 +774,12 @@ static int sgsimgui_TextDisabled( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_TextDisabledV( SGS_CTX )
-{
-	SGSFN( "ImGui_TextDisabledV" );
-	ImGui::TextDisabledV(
-		sgs_GetVar<const char *>()( C, 0 ),
-		sgs_GetVar<va_list>()( C, 1 )
-	);
-	return 0;
-}
-
 static int sgsimgui_TextWrapped( SGS_CTX )
 {
 	SGSFN( "ImGui_TextWrapped" );
 	ImGui::TextWrapped(
 		"%s",
 		sgs_GetVar<const char*>()( C, 0 )
-	);
-	return 0;
-}
-
-static int sgsimgui_TextWrappedV( SGS_CTX )
-{
-	SGSFN( "ImGui_TextWrappedV" );
-	ImGui::TextWrappedV(
-		sgs_GetVar<const char *>()( C, 0 ),
-		sgs_GetVar<va_list>()( C, 1 )
 	);
 	return 0;
 }
@@ -780,22 +805,10 @@ static int sgsimgui_LabelText( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_LabelTextV( SGS_CTX )
-{
-	SGSFN( "ImGui_LabelTextV" );
-	ImGui::LabelTextV(
-		sgs_GetVar<const char *>()( C, 0 ),
-		sgs_GetVar<const char *>()( C, 1 ),
-		sgs_GetVar<va_list>()( C, 2 )
-	);
-	return 0;
-}
-
 static int sgsimgui_Bullet( SGS_CTX )
 {
 	SGSFN( "ImGui_Bullet" );
-	ImGui::Bullet(
-	);
+	ImGui::Bullet();
 	return 0;
 }
 
@@ -805,16 +818,6 @@ static int sgsimgui_BulletText( SGS_CTX )
 	ImGui::BulletText(
 		"%s",
 		sgs_GetVar<const char*>()( C, 0 )
-	);
-	return 0;
-}
-
-static int sgsimgui_BulletTextV( SGS_CTX )
-{
-	SGSFN( "ImGui_BulletTextV" );
-	ImGui::BulletTextV(
-		sgs_GetVar<const char *>()( C, 0 ),
-		sgs_GetVar<va_list>()( C, 1 )
 	);
 	return 0;
 }
@@ -1458,24 +1461,21 @@ static int sgsimgui_VSliderInt( SGS_CTX )
 static int sgsimgui_TreePop( SGS_CTX )
 {
 	SGSFN( "ImGui_TreePop" );
-	ImGui::TreePop(
-	);
+	ImGui::TreePop();
 	return 0;
 }
 
 static int sgsimgui_TreeAdvanceToLabelPos( SGS_CTX )
 {
 	SGSFN( "ImGui_TreeAdvanceToLabelPos" );
-	ImGui::TreeAdvanceToLabelPos(
-	);
+	ImGui::TreeAdvanceToLabelPos();
 	return 0;
 }
 
 static int sgsimgui_GetTreeNodeToLabelSpacing( SGS_CTX )
 {
 	SGSFN( "ImGui_GetTreeNodeToLabelSpacing" );
-	sgs_PushVar( C, ImGui::GetTreeNodeToLabelSpacing(
-	) );
+	sgs_PushVar( C, ImGui::GetTreeNodeToLabelSpacing() );
 	return 1;
 }
 
@@ -1492,7 +1492,26 @@ static int sgsimgui_SetNextTreeNodeOpen( SGS_CTX )
 static int sgsimgui_ListBoxFooter( SGS_CTX )
 {
 	SGSFN( "ImGui_ListBoxFooter" );
-	ImGui::ListBoxFooter(
+	ImGui::ListBoxFooter();
+	return 0;
+}
+
+static int sgsimgui_ValueColorF( SGS_CTX )
+{
+	SGSFN( "ImGui_ValueColorF" );
+	ImGui::ValueColor(
+		sgs_GetVar<const char *>()( C, 0 ),
+		sgs_GetVar<ImVec4>()( C, 1 )
+	);
+	return 0;
+}
+
+static int sgsimgui_ValueColor( SGS_CTX )
+{
+	SGSFN( "ImGui_ValueColor" );
+	ImGui::ValueColor(
+		sgs_GetVar<const char *>()( C, 0 ),
+		sgs_GetVar<ImU32>()( C, 1 )
 	);
 	return 0;
 }
@@ -1507,61 +1526,45 @@ static int sgsimgui_SetTooltip( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetTooltipV( SGS_CTX )
-{
-	SGSFN( "ImGui_SetTooltipV" );
-	ImGui::SetTooltipV(
-		sgs_GetVar<const char *>()( C, 0 ),
-		sgs_GetVar<va_list>()( C, 1 )
-	);
-	return 0;
-}
-
 static int sgsimgui_BeginTooltip( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginTooltip" );
-	ImGui::BeginTooltip(
-	);
+	ImGui::BeginTooltip();
 	return 0;
 }
 
 static int sgsimgui_EndTooltip( SGS_CTX )
 {
 	SGSFN( "ImGui_EndTooltip" );
-	ImGui::EndTooltip(
-	);
+	ImGui::EndTooltip();
 	return 0;
 }
 
 static int sgsimgui_BeginMainMenuBar( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginMainMenuBar" );
-	sgs_PushVar( C, ImGui::BeginMainMenuBar(
-	) );
+	sgs_PushVar( C, ImGui::BeginMainMenuBar() );
 	return 1;
 }
 
 static int sgsimgui_EndMainMenuBar( SGS_CTX )
 {
 	SGSFN( "ImGui_EndMainMenuBar" );
-	ImGui::EndMainMenuBar(
-	);
+	ImGui::EndMainMenuBar();
 	return 0;
 }
 
 static int sgsimgui_BeginMenuBar( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginMenuBar" );
-	sgs_PushVar( C, ImGui::BeginMenuBar(
-	) );
+	sgs_PushVar( C, ImGui::BeginMenuBar() );
 	return 1;
 }
 
 static int sgsimgui_EndMenuBar( SGS_CTX )
 {
 	SGSFN( "ImGui_EndMenuBar" );
-	ImGui::EndMenuBar(
-	);
+	ImGui::EndMenuBar();
 	return 0;
 }
 
@@ -1578,8 +1581,7 @@ static int sgsimgui_BeginMenu( SGS_CTX )
 static int sgsimgui_EndMenu( SGS_CTX )
 {
 	SGSFN( "ImGui_EndMenu" );
-	ImGui::EndMenu(
-	);
+	ImGui::EndMenu();
 	return 0;
 }
 
@@ -1648,16 +1650,14 @@ static int sgsimgui_BeginPopupContextVoid( SGS_CTX )
 static int sgsimgui_EndPopup( SGS_CTX )
 {
 	SGSFN( "ImGui_EndPopup" );
-	ImGui::EndPopup(
-	);
+	ImGui::EndPopup();
 	return 0;
 }
 
 static int sgsimgui_CloseCurrentPopup( SGS_CTX )
 {
 	SGSFN( "ImGui_CloseCurrentPopup" );
-	ImGui::CloseCurrentPopup(
-	);
+	ImGui::CloseCurrentPopup();
 	return 0;
 }
 
@@ -1692,16 +1692,14 @@ static int sgsimgui_LogToClipboard( SGS_CTX )
 static int sgsimgui_LogFinish( SGS_CTX )
 {
 	SGSFN( "ImGui_LogFinish" );
-	ImGui::LogFinish(
-	);
+	ImGui::LogFinish();
 	return 0;
 }
 
 static int sgsimgui_LogButtons( SGS_CTX )
 {
 	SGSFN( "ImGui_LogButtons" );
-	ImGui::LogButtons(
-	);
+	ImGui::LogButtons();
 	return 0;
 }
 
@@ -1729,32 +1727,28 @@ static int sgsimgui_PushClipRect( SGS_CTX )
 static int sgsimgui_PopClipRect( SGS_CTX )
 {
 	SGSFN( "ImGui_PopClipRect" );
-	ImGui::PopClipRect(
-	);
+	ImGui::PopClipRect();
 	return 0;
 }
 
 static int sgsimgui_IsItemHovered( SGS_CTX )
 {
 	SGSFN( "ImGui_IsItemHovered" );
-	sgs_PushVar( C, ImGui::IsItemHovered(
-	) );
+	sgs_PushVar( C, ImGui::IsItemHovered() );
 	return 1;
 }
 
 static int sgsimgui_IsItemHoveredRect( SGS_CTX )
 {
 	SGSFN( "ImGui_IsItemHoveredRect" );
-	sgs_PushVar( C, ImGui::IsItemHoveredRect(
-	) );
+	sgs_PushVar( C, ImGui::IsItemHoveredRect() );
 	return 1;
 }
 
 static int sgsimgui_IsItemActive( SGS_CTX )
 {
 	SGSFN( "ImGui_IsItemActive" );
-	sgs_PushVar( C, ImGui::IsItemActive(
-	) );
+	sgs_PushVar( C, ImGui::IsItemActive() );
 	return 1;
 }
 
@@ -1770,96 +1764,84 @@ static int sgsimgui_IsItemClicked( SGS_CTX )
 static int sgsimgui_IsItemVisible( SGS_CTX )
 {
 	SGSFN( "ImGui_IsItemVisible" );
-	sgs_PushVar( C, ImGui::IsItemVisible(
-	) );
+	sgs_PushVar( C, ImGui::IsItemVisible() );
 	return 1;
 }
 
 static int sgsimgui_IsAnyItemHovered( SGS_CTX )
 {
 	SGSFN( "ImGui_IsAnyItemHovered" );
-	sgs_PushVar( C, ImGui::IsAnyItemHovered(
-	) );
+	sgs_PushVar( C, ImGui::IsAnyItemHovered() );
 	return 1;
 }
 
 static int sgsimgui_IsAnyItemActive( SGS_CTX )
 {
 	SGSFN( "ImGui_IsAnyItemActive" );
-	sgs_PushVar( C, ImGui::IsAnyItemActive(
-	) );
+	sgs_PushVar( C, ImGui::IsAnyItemActive() );
 	return 1;
 }
 
 static int sgsimgui_GetItemRectMin( SGS_CTX )
 {
 	SGSFN( "ImGui_GetItemRectMin" );
-	sgs_PushVar( C, ImGui::GetItemRectMin(
-	) );
+	sgs_PushVar( C, ImGui::GetItemRectMin() );
 	return 2;
 }
 
 static int sgsimgui_GetItemRectMax( SGS_CTX )
 {
 	SGSFN( "ImGui_GetItemRectMax" );
-	sgs_PushVar( C, ImGui::GetItemRectMax(
-	) );
+	sgs_PushVar( C, ImGui::GetItemRectMax() );
 	return 2;
 }
 
 static int sgsimgui_GetItemRectSize( SGS_CTX )
 {
 	SGSFN( "ImGui_GetItemRectSize" );
-	sgs_PushVar( C, ImGui::GetItemRectSize(
-	) );
+	sgs_PushVar( C, ImGui::GetItemRectSize() );
 	return 2;
 }
 
 static int sgsimgui_SetItemAllowOverlap( SGS_CTX )
 {
 	SGSFN( "ImGui_SetItemAllowOverlap" );
-	ImGui::SetItemAllowOverlap(
-	);
+	ImGui::SetItemAllowOverlap();
 	return 0;
 }
 
 static int sgsimgui_IsWindowHovered( SGS_CTX )
 {
 	SGSFN( "ImGui_IsWindowHovered" );
-	sgs_PushVar( C, ImGui::IsWindowHovered(
-	) );
+	sgs_PushVar( C, ImGui::IsWindowHovered() );
 	return 1;
 }
 
 static int sgsimgui_IsWindowFocused( SGS_CTX )
 {
 	SGSFN( "ImGui_IsWindowFocused" );
-	sgs_PushVar( C, ImGui::IsWindowFocused(
-	) );
+	sgs_PushVar( C, ImGui::IsWindowFocused() );
 	return 1;
 }
 
 static int sgsimgui_IsRootWindowFocused( SGS_CTX )
 {
 	SGSFN( "ImGui_IsRootWindowFocused" );
-	sgs_PushVar( C, ImGui::IsRootWindowFocused(
-	) );
+	sgs_PushVar( C, ImGui::IsRootWindowFocused() );
 	return 1;
 }
 
 static int sgsimgui_IsRootWindowOrAnyChildFocused( SGS_CTX )
 {
 	SGSFN( "ImGui_IsRootWindowOrAnyChildFocused" );
-	sgs_PushVar( C, ImGui::IsRootWindowOrAnyChildFocused(
-	) );
+	sgs_PushVar( C, ImGui::IsRootWindowOrAnyChildFocused() );
 	return 1;
 }
 
 static int sgsimgui_IsRootWindowOrAnyChildHovered( SGS_CTX )
 {
 	SGSFN( "ImGui_IsRootWindowOrAnyChildHovered" );
-	sgs_PushVar( C, ImGui::IsRootWindowOrAnyChildHovered(
-	) );
+	sgs_PushVar( C, ImGui::IsRootWindowOrAnyChildHovered() );
 	return 1;
 }
 
@@ -1875,16 +1857,14 @@ static int sgsimgui_IsPosHoveringAnyWindow( SGS_CTX )
 static int sgsimgui_GetTime( SGS_CTX )
 {
 	SGSFN( "ImGui_GetTime" );
-	sgs_PushVar( C, ImGui::GetTime(
-	) );
+	sgs_PushVar( C, ImGui::GetTime() );
 	return 1;
 }
 
 static int sgsimgui_GetFrameCount( SGS_CTX )
 {
 	SGSFN( "ImGui_GetFrameCount" );
-	sgs_PushVar( C, ImGui::GetFrameCount(
-	) );
+	sgs_PushVar( C, ImGui::GetFrameCount() );
 	return 1;
 }
 
@@ -1950,8 +1930,7 @@ static int sgsimgui_BeginChildFrame( SGS_CTX )
 static int sgsimgui_EndChildFrame( SGS_CTX )
 {
 	SGSFN( "ImGui_EndChildFrame" );
-	ImGui::EndChildFrame(
-	);
+	ImGui::EndChildFrame();
 	return 0;
 }
 
@@ -2090,16 +2069,14 @@ static int sgsimgui_IsMouseReleased( SGS_CTX )
 static int sgsimgui_IsMouseHoveringWindow( SGS_CTX )
 {
 	SGSFN( "ImGui_IsMouseHoveringWindow" );
-	sgs_PushVar( C, ImGui::IsMouseHoveringWindow(
-	) );
+	sgs_PushVar( C, ImGui::IsMouseHoveringWindow() );
 	return 1;
 }
 
 static int sgsimgui_IsMouseHoveringAnyWindow( SGS_CTX )
 {
 	SGSFN( "ImGui_IsMouseHoveringAnyWindow" );
-	sgs_PushVar( C, ImGui::IsMouseHoveringAnyWindow(
-	) );
+	sgs_PushVar( C, ImGui::IsMouseHoveringAnyWindow() );
 	return 1;
 }
 
@@ -2127,16 +2104,14 @@ static int sgsimgui_IsMouseDragging( SGS_CTX )
 static int sgsimgui_GetMousePos( SGS_CTX )
 {
 	SGSFN( "ImGui_GetMousePos" );
-	sgs_PushVar( C, ImGui::GetMousePos(
-	) );
+	sgs_PushVar( C, ImGui::GetMousePos() );
 	return 2;
 }
 
 static int sgsimgui_GetMousePosOnOpeningCurrentPopup( SGS_CTX )
 {
 	SGSFN( "ImGui_GetMousePosOnOpeningCurrentPopup" );
-	sgs_PushVar( C, ImGui::GetMousePosOnOpeningCurrentPopup(
-	) );
+	sgs_PushVar( C, ImGui::GetMousePosOnOpeningCurrentPopup() );
 	return 2;
 }
 
@@ -2162,8 +2137,7 @@ static int sgsimgui_ResetMouseDragDelta( SGS_CTX )
 static int sgsimgui_GetMouseCursor( SGS_CTX )
 {
 	SGSFN( "ImGui_GetMouseCursor" );
-	sgs_PushVar( C, ImGui::GetMouseCursor(
-	) );
+	sgs_PushVar( C, ImGui::GetMouseCursor() );
 	return 1;
 }
 
@@ -2215,8 +2189,7 @@ static int sgsimgui_MemFree( SGS_CTX )
 static int sgsimgui_GetClipboardText( SGS_CTX )
 {
 	SGSFN( "ImGui_GetClipboardText" );
-	sgs_PushVar( C, ImGui::GetClipboardText(
-	) );
+	sgs_PushVar( C, ImGui::GetClipboardText() );
 	return 1;
 }
 
@@ -2232,8 +2205,7 @@ static int sgsimgui_SetClipboardText( SGS_CTX )
 static int sgsimgui_GetVersion( SGS_CTX )
 {
 	SGSFN( "ImGui_GetVersion" );
-	sgs_PushVar( C, ImGui::GetVersion(
-	) );
+	sgs_PushVar( C, ImGui::GetVersion() );
 	return 1;
 }
 
@@ -2243,6 +2215,8 @@ static sgs_RegFuncConst imgui_fconsts[] =
 	{ "ImGui_NewFrame", sgsimgui_NewFrame },
 	{ "ImGui_Render", sgsimgui_Render },
 	{ "ImGui_Shutdown", sgsimgui_Shutdown },
+	{ "ImGui_ShowUserGuide", sgsimgui_ShowUserGuide },
+	{ "ImGui_ShowTestWindow", sgsimgui_ShowTestWindow },
 	{ "ImGui_ShowMetricsWindow", sgsimgui_ShowMetricsWindow },
 	{ "ImGui_End", sgsimgui_End },
 	{ "ImGui_EndChild", sgsimgui_EndChild },
@@ -2265,6 +2239,14 @@ static sgs_RegFuncConst imgui_fconsts[] =
 	{ "ImGui_SetNextWindowContentWidth", sgsimgui_SetNextWindowContentWidth },
 	{ "ImGui_SetNextWindowCollapsed", sgsimgui_SetNextWindowCollapsed },
 	{ "ImGui_SetNextWindowFocus", sgsimgui_SetNextWindowFocus },
+	{ "ImGui_SetCurrentWindowPos", sgsimgui_SetCurrentWindowPos },
+	{ "ImGui_SetCurrentWindowSize", sgsimgui_SetCurrentWindowSize },
+	{ "ImGui_SetCurrentWindowCollapsed", sgsimgui_SetCurrentWindowCollapsed },
+	{ "ImGui_SetCurrentWindowFocus", sgsimgui_SetCurrentWindowFocus },
+	{ "ImGui_SetWindowPos", sgsimgui_SetWindowPos },
+	{ "ImGui_SetWindowSize", sgsimgui_SetWindowSize },
+	{ "ImGui_SetWindowCollapsed", sgsimgui_SetWindowCollapsed },
+	{ "ImGui_SetWindowFocus", sgsimgui_SetWindowFocus },
 	{ "ImGui_GetScrollX", sgsimgui_GetScrollX },
 	{ "ImGui_GetScrollY", sgsimgui_GetScrollY },
 	{ "ImGui_GetScrollMaxX", sgsimgui_GetScrollMaxX },
@@ -2318,21 +2300,17 @@ static sgs_RegFuncConst imgui_fconsts[] =
 	{ "ImGui_SetColumnOffset", sgsimgui_SetColumnOffset },
 	{ "ImGui_GetColumnWidth", sgsimgui_GetColumnWidth },
 	{ "ImGui_GetColumnsCount", sgsimgui_GetColumnsCount },
+	{ "ImGui_PushID", sgsimgui_PushID },
 	{ "ImGui_PopID", sgsimgui_PopID },
+	{ "ImGui_GetID", sgsimgui_GetID },
 	{ "ImGui_Text", sgsimgui_Text },
-	{ "ImGui_TextV", sgsimgui_TextV },
 	{ "ImGui_TextColored", sgsimgui_TextColored },
-	{ "ImGui_TextColoredV", sgsimgui_TextColoredV },
 	{ "ImGui_TextDisabled", sgsimgui_TextDisabled },
-	{ "ImGui_TextDisabledV", sgsimgui_TextDisabledV },
 	{ "ImGui_TextWrapped", sgsimgui_TextWrapped },
-	{ "ImGui_TextWrappedV", sgsimgui_TextWrappedV },
 	{ "ImGui_TextUnformatted", sgsimgui_TextUnformatted },
 	{ "ImGui_LabelText", sgsimgui_LabelText },
-	{ "ImGui_LabelTextV", sgsimgui_LabelTextV },
 	{ "ImGui_Bullet", sgsimgui_Bullet },
 	{ "ImGui_BulletText", sgsimgui_BulletText },
-	{ "ImGui_BulletTextV", sgsimgui_BulletTextV },
 	{ "ImGui_Button", sgsimgui_Button },
 	{ "ImGui_SmallButton", sgsimgui_SmallButton },
 	{ "ImGui_InvisibleButton", sgsimgui_InvisibleButton },
@@ -2379,8 +2357,9 @@ static sgs_RegFuncConst imgui_fconsts[] =
 	{ "ImGui_GetTreeNodeToLabelSpacing", sgsimgui_GetTreeNodeToLabelSpacing },
 	{ "ImGui_SetNextTreeNodeOpen", sgsimgui_SetNextTreeNodeOpen },
 	{ "ImGui_ListBoxFooter", sgsimgui_ListBoxFooter },
+	{ "ImGui_ValueColorF", sgsimgui_ValueColorF },
+	{ "ImGui_ValueColor", sgsimgui_ValueColor },
 	{ "ImGui_SetTooltip", sgsimgui_SetTooltip },
-	{ "ImGui_SetTooltipV", sgsimgui_SetTooltipV },
 	{ "ImGui_BeginTooltip", sgsimgui_BeginTooltip },
 	{ "ImGui_EndTooltip", sgsimgui_EndTooltip },
 	{ "ImGui_BeginMainMenuBar", sgsimgui_BeginMainMenuBar },
