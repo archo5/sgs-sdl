@@ -34,6 +34,8 @@ global lasttime = ftime();
 global whichtest = 0;
 global testnum = 1.5;
 global testarr = [];
+global testfilepicker = new ImGuiFilePicker( "tests", ".sgs" );
+global testfile = "imgui-test.sgs";
 function update()
 {
 	global whichtest;
@@ -91,6 +93,7 @@ function update()
 				{
 					ImGui_Text( "part 3" );
 					(chg,_G.testnum) = ImGui_SliderFloat( "test number", _G.testnum, 0, 10, "%.2f", 2 );
+					(chg,_G.testfile) = testfilepicker.Property( "Pick a test file", "test file", _G.testfile );
 				}
 			);
 		});

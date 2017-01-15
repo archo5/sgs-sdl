@@ -479,6 +479,8 @@ foreach( func : GLOBALFUNCS )
 		tmpnm = "val" .. loadidx;
 		if( arg.typestr == "bool *" )
 		{
+			if( arg.value )
+				arg.cond = "sgs_ItemType( C, " .. loadidx .. " ) != SGS_VT_NULL";
 			out ..= "\n\tbool "..tmpnm.." = sgs_GetVar<bool>()( C, " .. loadidx++ .. " );";
 			preret ..= "\n\tsgs_PushBool( C, "..tmpnm.." );";
 			rvcount += 1;
@@ -578,6 +580,23 @@ foreach( func : GLOBALFUNCS )
 			rvcount += 1;
 			arg.loader = "&"..tmpnm.."";
 		}
+		else if( arg.typestr == "char *" && arg !== func.args.last && func.args[ idx + 1 ].typestr == "size_t" )
+		{
+			// char* / size_t - InputText(Multiline)
+			out ..= "\n\tsize_t "..tmpnm.."_size = sgs_GetInt( C, " .. loadidx + 1 .. " );";
+			out ..= "\n\tchar* "..tmpnm.." = new char[ "..tmpnm.."_size + 1 ];";
+			out ..= "\n\tsgsString "..tmpnm.."_src( C, " .. loadidx .. " );";
+			out ..= "\n\tsize_t "..tmpnm.."_cpsz = "..tmpnm.."_size < "..tmpnm.."_src.size() ? "..tmpnm.."_size : "..tmpnm.."_src.size();";
+			out ..= "\n\tmemcpy( "..tmpnm..", "..tmpnm.."_src.c_str(), "..tmpnm.."_cpsz );";
+			out ..= "\n\t"..tmpnm.."[ "..tmpnm.."_cpsz ] = 0;";
+			preret ..= "\n\t"..tmpnm.."[ "..tmpnm.."_size ] = 0;";
+			preret ..= "\n\tsgs_PushString( C, "..tmpnm.." );";
+			rvcount += 1;
+			loadidx += 2;
+			arg.loader = tmpnm;
+			idx++;
+			func.args[ idx ].loader = tmpnm.."_size";
+		}
 		else if( arg.typestr == "const ImVec2 &" )
 		{
 			arg.loader = "sgs_GetVar<ImVec2>()( C, " .. loadidx .. " )";
@@ -666,10 +685,11 @@ foreach( func : GLOBALFUNCS )
 			out ..= ",";
 		if( arg.value )
 		{
+			cond = @arg.cond ?? ( arg.minsize .. " <= ssz" );
 			v = dump_tokens( arg.value );
 			if( toint( v ) == v && toint( v ) > 0x7fffffff )
 				v ..= "U";
-			out ..= "\n\t\t" .. arg.minsize .. " <= ssz ? " .. arg.loader .. " : " .. v;
+			out ..= "\n\t\t" .. cond .. " ? " .. arg.loader .. " : " .. v;
 		}
 		else
 			out ..= "\n\t\t" .. arg.loader;

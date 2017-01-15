@@ -258,11 +258,21 @@ static int sgsimgui_SS_Event( SGS_CTX )
 	return 0;
 }
 
+static int sgsImGuiIO_GetDisplaySize( SGS_CTX )
+{
+	SGSFN( "ImGuiIO_GetDisplaySize" );
+	ImGuiIO& io = ImGui::GetIO();
+	sgs_PushReal( C, io.DisplaySize.x );
+	sgs_PushReal( C, io.DisplaySize.y );
+	return 2;
+}
+
 static sgs_RegFuncConst imgui_fconsts[] =
 {
 	{ "ImGui_SS_NewFrame", sgsimgui_SS_NewFrame },
 	{ "ImGui_SS_Init", sgsimgui_SS_Init },
 	{ "ImGui_SS_Event", sgsimgui_SS_Event },
+	{ "ImGuiIO_GetDisplaySize", sgsImGuiIO_GetDisplaySize },
 	{ NULL, NULL },
 };
 

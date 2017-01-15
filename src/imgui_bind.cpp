@@ -40,7 +40,7 @@ static int sgsImGui_ShowTestWindow( SGS_CTX )
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	bool val0 = sgs_GetVar<bool>()( C, 0 );
 	ImGui::ShowTestWindow(
-		1 <= ssz ? &val0 : NULL
+		sgs_ItemType( C, 0 ) != SGS_VT_NULL ? &val0 : NULL
 	);
 	sgs_PushBool( C, val0 );
 	return 1;
@@ -52,7 +52,7 @@ static int sgsImGui_ShowMetricsWindow( SGS_CTX )
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	bool val0 = sgs_GetVar<bool>()( C, 0 );
 	ImGui::ShowMetricsWindow(
-		1 <= ssz ? &val0 : NULL
+		sgs_ItemType( C, 0 ) != SGS_VT_NULL ? &val0 : NULL
 	);
 	sgs_PushBool( C, val0 );
 	return 1;
@@ -65,7 +65,7 @@ static int sgsImGui_Begin( SGS_CTX )
 	bool val1 = sgs_GetVar<bool>()( C, 1 );
 	sgs_PushVar( C, ImGui::Begin(
 		sgs_GetVar<const char *>()( C, 0 ),
-		2 <= ssz ? &val1 : NULL,
+		sgs_ItemType( C, 1 ) != SGS_VT_NULL ? &val1 : NULL,
 		3 <= ssz ? sgs_GetVar<ImGuiWindowFlags>()( C, 2 ) : 0
 	) );
 	sgs_PushBool( C, val1 );
@@ -1485,31 +1485,47 @@ static int sgsImGui_InputText( SGS_CTX )
 {
 	SGSFN( "ImGui_InputText" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	size_t val1_size = sgs_GetInt( C, 2 );
+	char* val1 = new char[ val1_size + 1 ];
+	sgsString val1_src( C, 1 );
+	size_t val1_cpsz = val1_size < val1_src.size() ? val1_size : val1_src.size();
+	memcpy( val1, val1_src.c_str(), val1_cpsz );
+	val1[ val1_cpsz ] = 0;
 	sgs_PushVar( C, ImGui::InputText(
 		sgs_GetVar<const char *>()( C, 0 ),
-		sgs_GetVar<char *>()( C, 1 ),
-		sgs_GetVar<size_t>()( C, 2 ),
+		val1,
+		val1_size,
 		4 <= ssz ? sgs_GetVar<ImGuiInputTextFlags>()( C, 3 ) : 0,
 		4 <= ssz ? NULL : NULL,
 		5 <= ssz ? sgs_GetVar<void *>()( C, 4 ) : NULL
 	) );
-	return 1;
+	val1[ val1_size ] = 0;
+	sgs_PushString( C, val1 );
+	return 2;
 }
 
 static int sgsImGui_InputTextMultiline( SGS_CTX )
 {
 	SGSFN( "ImGui_InputTextMultiline" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	size_t val1_size = sgs_GetInt( C, 2 );
+	char* val1 = new char[ val1_size + 1 ];
+	sgsString val1_src( C, 1 );
+	size_t val1_cpsz = val1_size < val1_src.size() ? val1_size : val1_src.size();
+	memcpy( val1, val1_src.c_str(), val1_cpsz );
+	val1[ val1_cpsz ] = 0;
 	sgs_PushVar( C, ImGui::InputTextMultiline(
 		sgs_GetVar<const char *>()( C, 0 ),
-		sgs_GetVar<char *>()( C, 1 ),
-		sgs_GetVar<size_t>()( C, 2 ),
+		val1,
+		val1_size,
 		5 <= ssz ? sgs_GetVar<ImVec2>()( C, 3 ) : ImVec2 ( 0 , 0 ),
 		6 <= ssz ? sgs_GetVar<ImGuiInputTextFlags>()( C, 5 ) : 0,
 		6 <= ssz ? NULL : NULL,
 		7 <= ssz ? sgs_GetVar<void *>()( C, 6 ) : NULL
 	) );
-	return 1;
+	val1[ val1_size ] = 0;
+	sgs_PushString( C, val1 );
+	return 2;
 }
 
 static int sgsImGui_InputFloat( SGS_CTX )
@@ -2159,7 +2175,7 @@ static int sgsImGui_BeginPopupModal( SGS_CTX )
 	bool val1 = sgs_GetVar<bool>()( C, 1 );
 	sgs_PushVar( C, ImGui::BeginPopupModal(
 		sgs_GetVar<const char *>()( C, 0 ),
-		2 <= ssz ? &val1 : NULL,
+		sgs_ItemType( C, 1 ) != SGS_VT_NULL ? &val1 : NULL,
 		3 <= ssz ? sgs_GetVar<ImGuiWindowFlags>()( C, 2 ) : 0
 	) );
 	sgs_PushBool( C, val1 );

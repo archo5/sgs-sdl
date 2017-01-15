@@ -1,4 +1,13 @@
 
+include "string", "io";
+
+
+function string_match_loose( str, what )
+{
+	// TODO
+	return true;
+}
+
 
 function ImGui_HSplit( at, left, right )
 {
@@ -135,4 +144,307 @@ function ImGui_EditArray( arr, editfn, newfn, addtext )
 		chg = true;
 	return chg;
 }
+
+
+class ImGuiPickerCore
+{
+	function __construct()
+	{
+		this.isGridLayout = false;
+		this.itemSizeX = 256;
+		this.itemSizeY = 32;
+		this.looseSearch = true;
+		this.searchString = "";
+		this.nameMap = map{};
+		this.filtered = [];
+	}
+	function OpenPopup( caption )
+	{
+		this.Reload();
+		ImGui_OpenPopup( caption );
+	}
+	function Popup( caption, editstr )
+	{
+		(dsw, dsh) = ImGuiIO_GetDisplaySize();
+		opened = true;
+		changed = false;
+		ImGui_SetNextWindowPos( 20, 20, ImGuiSetCond_Appearing );
+		ImGui_SetNextWindowSize( dsw - 40, dsh - 40, ImGuiSetCond_Appearing );
+		if( (o,opened) = ImGui_BeginPopupModal( caption, opened, 0 ) )
+		{
+			if( (c,editstr) = this._SearchUI( editstr ) )
+			{
+				opened = false;
+				changed = true;
+			}
+			
+			// ImGui_Separator();
+			(rw,rh) = ImGui_GetContentRegionAvail();
+			ImGui_BeginChild( "subframe", rw, rh, true, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysUseWindowPadding );
+			
+			if( this.isGridLayout )
+			{
+				ncols = toint( ImGui_GetContentRegionAvailWidth() / this.itemSizeX );
+				for( i = 0; i < this.filtered.size; ++i )
+				{
+					x = i % ncols;
+					
+					if( x )
+						ImGui_SameLine();
+					
+					key = this.GetEntryKey( this.filtered[ i ] );
+					ImGui_PushID( key );
+					if( this.EntryUI( this.filtered[ i ], editstr ) )
+					{
+						editstr = key;
+						opened = false;
+						changed = true;
+					}
+					ImGui_PopID();
+				}
+			}
+			else
+			{
+				for( i = 0; i < this.filtered.size; ++i )
+				{
+					key = this.GetEntryKey( this.filtered[ i ] );
+					ImGui_PushID( key );
+					if( this.EntryUI( this.filtered[ i ], editstr ) )
+					{
+						editstr = key;
+						opened = false;
+						changed = true;
+					}
+					ImGui_PopID();
+				}
+			}
+			
+			ImGui_EndChild();
+			
+			if( ImGui_IsKeyPressed( SDLK_ESCAPE ) )
+				opened = false;
+			if( !opened )
+				ImGui_CloseCurrentPopup();
+			ImGui_EndPopup();
+		}
+		
+		return changed, editstr;
+	}
+	function Property( caption, label, editstr )
+	{
+		ImGui_PushID( label );
+		name = @this.nameMap[ editstr ] ?? editstr ?? "<click to select>";
+		if( ImGui_Button( name, ImGui_GetContentRegionAvailWidth() * 2 / 3, 20 ) )
+		{
+			this.OpenPopup( caption );
+		}
+		ImGui_SameLine();
+		ImGui_Text( label );
+		(ret, editstr) = this.Popup( caption, editstr );
+		ImGui_PopID();
+		return ret, editstr;
+	}
+	function Reload()
+	{
+		this.nameMap = map{};
+		this.ReloadItems();
+		this._Search( this.searchString );
+	}
+	function _SearchUI( editstr )
+	{
+		prev = this.searchString;
+		(c,this.searchString) = ImGui_InputText( "Search query", this.searchString, 256 );
+		if( prev != this.searchString )
+			this._Search( this.searchString );
+		return false, editstr;
+	}
+	function _Search( text )
+	{
+		count = this.GetEntryCount();
+		this.filtered.clear();
+		if( !text )
+		{
+			for i : (count)
+				this.filtered.push( i );
+		}
+		else if( this.looseSearch )
+		{
+			for i : (count)
+			{
+				e = this.GetEntryName( i );
+				if( !e || string_match_loose( e, text ) )
+					this.filtered.push( i );
+			}
+		}
+		else
+		{
+			for i : (count)
+			{
+				e = this.GetEntryName( i );
+				if( !e || string_find( e, text ) !== null )
+					this.filtered.push( i );
+			}
+		}
+	}
+	
+	// overrideable
+	function ReloadItems(){}
+	function GetEntryCount(){ return 1; }
+	function GetEntryName( i ){ return "<unimplemented>"; }
+	function GetEntryKey( i ){ return "<unimplemented>"; }
+	function EntryUI( i, editstr )
+	{
+		if( this.isGridLayout )
+		{
+			return ImGui_Button( this.GetEntryName( i ), this.itemSizeX, this.itemSizeY );
+		}
+		else
+		{
+			return ImGui_Selectable( this.GetEntryName( i ) );
+		}
+		return false;
+	}
+}
+
+class ImGuiEntryPicker : ImGuiPickerCore
+{
+	function __construct()
+	{
+		this!ImGuiPickerCore.__construct();
+		this.entries = [];
+	}
+	function GetEntryCount(){ return this.entries.size; }
+	function GetEntryName( i ){ return this.entries[ i ]; }
+	function GetEntryKey( i ){ return this.entries[ i ]; }
+}
+
+class ImGuiFilePicker : ImGuiEntryPicker
+{
+	function __construct( dir, ext, confirm )
+	{
+		this!ImGuiEntryPicker.__construct();
+		this.
+		{
+			saveMode = false,
+			confirm = confirm ?? true,
+			directory = dir,
+			extension = ext,
+		};
+		this.Reload();
+	}
+	function Popup( caption, editstr, save )
+	{
+		this.saveMode = save;
+		(chg,editstr) = this!ImGuiEntryPicker.Popup( caption, editstr );
+		return chg, editstr;
+	}
+	function ReloadItems()
+	{
+		this.entries.clear();
+		this._AddItemsFrom( this.directory );
+	}
+	function _AddItemsFrom( dir )
+	{
+		foreach( is_real, file : io_dir( dir ) )
+		{
+			if( !is_real )
+				continue;
+			ffn = dir .. "/" .. file;
+			if( io_dir_exists( ffn ) )
+				this._AddItemsFrom( ffn );
+			else if( io_file_exists( ffn ) )
+				this.entries.push( ffn );
+		}
+	}
+	function _SearchUI( text )
+	{
+		this!ImGuiPickerCore._SearchUI( text );
+		if( this.saveMode )
+		{
+			fullfilename = this.directory .. "/" .. this.searchString .. this.extension;
+			
+			ImGui_SameLine();
+			if( ImGui_Button( "Save" ) )
+			{
+				if( !this.searchString )
+				{
+					ImGui_OpenPopup( "ENONAME" );
+				}
+				else
+				{
+					if( !io_file_exists( fullfilename ) )
+					{
+						return true, fullfilename;
+					}
+					ImGui_OpenPopup( "Overwrite file" );
+				}
+			}
+			if( ImGui_BeginPopup( "ENONAME" ) )
+			{
+				ImGui_Text( "Please specify a name!" );
+				if( ImGui_Button( "OK" ) )
+					ImGui_CloseCurrentPopup();
+				ImGui_EndPopup();
+			}
+			
+			if( this._ConfirmPopup( "Overwrite file", "Do you really want to overwrite this file?", fullfilename ) )
+			{
+				return true, fullfilename;
+			}
+		}
+		return false, text;
+	}
+	
+	function EntryUI( i, editstr )
+	{
+		ret = this!ImGuiPickerCore.EntryUI( i, editstr );
+		
+		if( !this.confirm )
+		{
+			return ret;
+		}
+		
+		if( this.saveMode )
+		{
+			popupName = "Overwrite file";
+			labelText = "Do you really want to overwrite this file?";
+		}
+		else
+		{
+			popupName = "Open file";
+			labelText = "Do you really want to open this file?";
+		}
+		if( ret )
+			ImGui_OpenPopup( popupName );
+		
+		return this._ConfirmPopup( popupName, labelText, this.GetEntryName( i ) );
+	}
+	function _ConfirmPopup( caption, label, file )
+	{
+		ret = false;
+		if( ImGui_BeginPopupModal( caption, null, ImGuiWindowFlags_AlwaysAutoResize ) )
+		{
+			ImGui_Text( label );
+			
+			ImGui_Separator();
+			ImGui_Text( file );
+			ImGui_Separator();
+			
+			if( ImGui_Button( "Yes" ) )
+			{
+				ret = true;
+				ImGui_CloseCurrentPopup();
+			}
+			ImGui_SameLine( 0, 20 );
+			if( ImGui_Button( "No" ) )
+			{
+				ImGui_CloseCurrentPopup();
+			}
+			
+			ImGui_EndPopup();
+		}
+		
+		return ret;
+	}
+};
 
