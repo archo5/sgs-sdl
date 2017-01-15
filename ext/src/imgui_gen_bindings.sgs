@@ -43,8 +43,10 @@ function dump_tokens( tokens )
 				out ..= " ";
 		}
 		t = tokens[ i ];
-		if( t.type == "ident" || t.type == "keyword" || t.type == "real" || t.type == "int" || t.type == "string" )
+		if( t.type == "ident" || t.type == "keyword" || t.type == "real" || t.type == "int" )
 			out ..= t.value;
+		else if( t.type == "string" )
+			out ..= sgson_encode( t.value );
 		else
 			out ..= t.type;
 	}
@@ -188,7 +190,7 @@ for( i = 0; i < tokens.size; ++i )
 					{
 						if( tokens[i].type == "{" )
 						{
-							i = skip_until_brace_aware( tokens, i + 1, function(t) = t.type == "}"; ) + 1;
+							i = skip_until_brace_aware( tokens, i + 1, function(t) = t.type == "}"; );
 						}
 						break;
 					}
@@ -257,10 +259,10 @@ foreach( func : GLOBALFUNCS )
 {
 	fn = func.name;
 	ret_type = dump_tokens( func.ret_type );
-	// these functions are not needed for us
+	// these functions are not needed for us (100% replaceable with different ones)
 	func.procstate = 0;
 	if( @func.args.last.type[0].value == "va_list" ) continue;
-	// obsolete functions
+	// obsolete functions (as noted in comments of imgui.h)
 	func.procstate = 1;
 	if( fn == "Begin" && func.args.size == 5 ) continue;
 	if( fn == "CollapsingHeader" && func.args.size == 4 ) continue;
@@ -269,7 +271,7 @@ foreach( func : GLOBALFUNCS )
 	if( fn == "SetScrollPosHere" ) continue;
 	if( fn == "GetWindowCollapsed" ) continue;
 	if( fn == "IsRectClipped" ) continue;
-	// these functions are not done yet
+	// these functions are not done yet (cannot handle arguments or return values)
 	func.procstate = 2;
 	if( fn == "GetIO" ) continue;
 	if( fn == "GetStyle" ) continue;
@@ -278,8 +280,6 @@ foreach( func : GLOBALFUNCS )
 	if( fn == "SetNextWindowSizeConstraints" ) continue;
 	if( fn == "PushFont" ) continue;
 	if( fn == "GetFont" ) continue;
-	if( fn == "InputText" ) continue;
-	if( fn == "InputTextMultiline" ) continue;
 	if( fn == "GetWindowDrawList" ) continue;
 	if( fn == "GetStateStorage" ) continue;
 	if( fn == "SetStateStorage" ) continue;
@@ -310,12 +310,22 @@ foreach( func : GLOBALFUNCS )
 		}
 		else if( fn == "ValueColor" ){ if( func.args[1].typestr != "ImU32" ) fn = "ValueColorF"; }
 		else if( fn == "PushStyleVar" ){ fn ..= if( func.args[1].typestr == "float", "F", "V2" ); }
+		else if( fn == "GetColorU32" ){ if( func.args[0].typestr == "ImGuiCol" ) fn = "GetStyleColorU32"; }
 		else if( fn == "ListBoxHeader" ){ if( func.args[1].typestr == "int" ) fn ..= "2"; }
+		else if( fn == "PlotLines" ){ if( func.args[1].typestr == "float ( * ) ( void * data , int idx )" ) fn ..= "Cb"; }
+		else if( fn == "PlotHistogram" ){ if( func.args[1].typestr == "float ( * ) ( void * data , int idx )" ) fn ..= "Cb"; }
 		else if( fn == "IsRectVisible" ){ if( func.args.size == 2 ) fn ..= "Screen"; }
 		// - one implementation includes another
+		else if( fn == "BeginChild" ){ if( func.args[0].typestr == "const char *" ){ func.procstate = 4; continue; } }
 		else if( fn == "TreePush" ){ if( func.args[0].typestr == "const char *" ){ func.procstate = 4; continue; } }
 		else if( fn == "Selectable" ){ if( func.args[1].typestr == "bool" ){ func.procstate = 4; continue; } }
 		else if( fn == "MenuItem" ){ if( func.args[2].typestr == "bool" ){ func.procstate = 4; continue; } }
+		// - mixed processing
+		else if( fn == "Combo" )
+		{
+			if( func.args[2].typestr == "bool ( * ) ( void * data , int idx , const char * * out_text )" ) fn ..= "Cb";
+			else if( func.args[2].typestr == "const char * const *" ){ func.procstate = 4; continue; }
+		}
 		// - custom coalescing implementation
 		else if( fn == "PushID" )
 		{
@@ -415,13 +425,15 @@ foreach( func : GLOBALFUNCS )
 	
 	out ..= "static int " .. Cname .. "( SGS_CTX )\n{";
 	out ..= "\n\tSGSFN( " .. sgson_encode( SGSname ) .. " );";
+	out ..= "\n\tsgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;";
 	
 	preret = "";
 	
 	rvcount = 0;
 	loadidx = 0;
-	foreach( idx, arg : func.args )
+	for( idx = 0; idx < func.args.size; ++idx )
 	{
+		arg = func.args[ idx ];
 		tmpnm = "val" .. loadidx;
 		if( arg.typestr == "bool *" )
 		{
@@ -534,6 +546,39 @@ foreach( func : GLOBALFUNCS )
 			arg.loader = "sgs_GetVar<ImVec4>()( C, " .. loadidx .. " )";
 			loadidx += 4;
 		}
+		else if( arg.typestr == "ImGuiID" )
+		{
+			arg.loader = "ImGui::GetID( sgs_GetPtr( C, " .. loadidx .. " ) )";
+			loadidx += 1;
+		}
+		else if( arg.typestr == "const float *" )
+		{
+			out ..= "\n\timgui_FloatArrayParser "..tmpnm.."( C, " .. loadidx++ .. " );";
+			arg.loader = tmpnm..".values";
+			idx++;
+			func.args[ idx ].loader = tmpnm..".count";
+		}
+		else if( arg.typestr == "bool ( * ) ( void * data , int idx , const char * * out_text )" )
+		{
+			out ..= "\n\timgui_TextArrayCallbackData "..tmpnm..";";
+			out ..= "\n\t"..tmpnm..".func = sgsVariable( C, " .. loadidx++ .. " );";
+			arg.loader = "_imgui_TextArrayCallback";
+			idx++;
+			func.args[ idx ].loader = "&"..tmpnm;
+		}
+		else if( arg.typestr == "float ( * ) ( void * data , int idx )" )
+		{
+			out ..= "\n\tsgsVariable "..tmpnm.."( C, " .. loadidx++ .. " );";
+			arg.loader = "_imgui_FloatArrayCallback";
+			idx++;
+			func.args[ idx ].loader = "&"..tmpnm;
+		}
+		else if( arg.typestr == "ImGuiTextEditCallback" )
+		{
+			// TODO
+			arg.loader = "NULL";
+			func.procstate = 5;
+		}
 		else if( @func.args[ idx + 1 ].name == "<vararg>" )
 		{
 			arg.loader = "\"%s\"";
@@ -543,6 +588,7 @@ foreach( func : GLOBALFUNCS )
 			argty = if( arg.name == "<vararg>", "const char*", arg.typestr );
 			arg.loader = "sgs_GetVar<" .. argty .. ">()( C, " .. loadidx++ .. " )";
 		}
+		arg.minsize = loadidx;
 	}
 	
 	out ..= "\n\t";
@@ -558,7 +604,10 @@ foreach( func : GLOBALFUNCS )
 	{
 		if( idx > 0 )
 			out ..= ",";
-		out ..= "\n\t\t" .. arg.loader;
+		if( arg.value )
+			out ..= "\n\t\t" .. arg.minsize .. " <= ssz ? " .. arg.loader .. " : " .. dump_tokens( arg.value );
+		else
+			out ..= "\n\t\t" .. arg.loader;
 	}
 	if( loadidx != 0 )
 		out ..= "\n\t";
@@ -602,15 +651,20 @@ fn_stat_names = [
 	"!! unimplemented",
 	"!! unresolved overloaded",
 	"+ available",
+	"?? incomplete support",
 ];
-fn_stat_values = [ 0, 0, 0, 0, 0 ];
+fn_stat_values = [ 0, 0, 0, 0, 0, 0 ];
 fn_printed_set = {};
+ifnum = 0;
 foreach( func : GLOBALFUNCS )
 {
 	if( !isset( fn_printed_set, func.ovrname ) )
 	{
-		if( func.procstate < 4 )
-			println( fn_stat_names[ func.procstate ], ": ", func.ovrname );
+		if( func.procstate == 3 && func.args.last.typestr == "va_list" )
+			continue; // we don't care about va_list and that's unlikely to change
+		
+		if( func.procstate != 4 )
+			println( "[", ifnum++, "] ", fn_stat_names[ func.procstate ], ": ", func.ovrname );
 		fn_printed_set[ func.ovrname ] = true;
 	}
 	fn_stat_values[ func.procstate ]++;
@@ -619,7 +673,7 @@ println( "--- statistics ---" );
 println( "// global" );
 println( "- # enum values: ", dict_size( REGINTS ) );
 println( "// namespace ImGui" );
-for i : (5)
+for i : (6)
 {
 	println( "- [func] ", fn_stat_names[ i ], ": ", fn_stat_values[ i ] );
 }

@@ -43,4 +43,21 @@ template<> struct sgs_GetVar<ImVec4>
 	}
 };
 
+struct imgui_TextArrayCallbackData
+{
+	sgsVariable func;
+	sgsString str;
+};
+bool _imgui_TextArrayCallback( void* data, int idx, const char** out_text );
+float _imgui_FloatArrayCallback( void* data, int idx );
+
+struct imgui_FloatArrayParser
+{
+	imgui_FloatArrayParser( SGS_CTX, sgs_StkIdx item );
+	~imgui_FloatArrayParser(){ if( values ) delete [] values; }
+	
+	float* values;
+	int count;
+};
+
 

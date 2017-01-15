@@ -5,6 +5,7 @@
 static int sgsimgui_NewFrame( SGS_CTX )
 {
 	SGSFN( "ImGui_NewFrame" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::NewFrame();
 	return 0;
 }
@@ -12,6 +13,7 @@ static int sgsimgui_NewFrame( SGS_CTX )
 static int sgsimgui_Render( SGS_CTX )
 {
 	SGSFN( "ImGui_Render" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::Render();
 	return 0;
 }
@@ -19,6 +21,7 @@ static int sgsimgui_Render( SGS_CTX )
 static int sgsimgui_Shutdown( SGS_CTX )
 {
 	SGSFN( "ImGui_Shutdown" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::Shutdown();
 	return 0;
 }
@@ -26,6 +29,7 @@ static int sgsimgui_Shutdown( SGS_CTX )
 static int sgsimgui_ShowUserGuide( SGS_CTX )
 {
 	SGSFN( "ImGui_ShowUserGuide" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::ShowUserGuide();
 	return 0;
 }
@@ -33,9 +37,10 @@ static int sgsimgui_ShowUserGuide( SGS_CTX )
 static int sgsimgui_ShowTestWindow( SGS_CTX )
 {
 	SGSFN( "ImGui_ShowTestWindow" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	bool val0 = sgs_GetVar<bool>()( C, 0 );
 	ImGui::ShowTestWindow(
-		&val0
+		1 <= ssz ? &val0 : NULL
 	);
 	sgs_PushBool( C, val0 );
 	return 1;
@@ -44,9 +49,10 @@ static int sgsimgui_ShowTestWindow( SGS_CTX )
 static int sgsimgui_ShowMetricsWindow( SGS_CTX )
 {
 	SGSFN( "ImGui_ShowMetricsWindow" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	bool val0 = sgs_GetVar<bool>()( C, 0 );
 	ImGui::ShowMetricsWindow(
-		&val0
+		1 <= ssz ? &val0 : NULL
 	);
 	sgs_PushBool( C, val0 );
 	return 1;
@@ -55,11 +61,12 @@ static int sgsimgui_ShowMetricsWindow( SGS_CTX )
 static int sgsimgui_Begin( SGS_CTX )
 {
 	SGSFN( "ImGui_Begin" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	bool val1 = sgs_GetVar<bool>()( C, 1 );
 	sgs_PushVar( C, ImGui::Begin(
 		sgs_GetVar<const char *>()( C, 0 ),
-		&val1,
-		sgs_GetVar<ImGuiWindowFlags>()( C, 2 )
+		2 <= ssz ? &val1 : NULL,
+		3 <= ssz ? sgs_GetVar<ImGuiWindowFlags>()( C, 2 ) : 0
 	) );
 	sgs_PushBool( C, val1 );
 	return 2;
@@ -68,13 +75,28 @@ static int sgsimgui_Begin( SGS_CTX )
 static int sgsimgui_End( SGS_CTX )
 {
 	SGSFN( "ImGui_End" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::End();
 	return 0;
+}
+
+static int sgsimgui_BeginChild( SGS_CTX )
+{
+	SGSFN( "ImGui_BeginChild" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	sgs_PushVar( C, ImGui::BeginChild(
+		ImGui::GetID( sgs_GetPtr( C, 0 ) ),
+		3 <= ssz ? sgs_GetVar<ImVec2>()( C, 1 ) : ImVec2 ( 0 , 0 ),
+		4 <= ssz ? sgs_GetVar<bool>()( C, 3 ) : false,
+		5 <= ssz ? sgs_GetVar<ImGuiWindowFlags>()( C, 4 ) : 0
+	) );
+	return 1;
 }
 
 static int sgsimgui_EndChild( SGS_CTX )
 {
 	SGSFN( "ImGui_EndChild" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::EndChild();
 	return 0;
 }
@@ -82,6 +104,7 @@ static int sgsimgui_EndChild( SGS_CTX )
 static int sgsimgui_GetContentRegionMax( SGS_CTX )
 {
 	SGSFN( "ImGui_GetContentRegionMax" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetContentRegionMax() );
 	return 2;
 }
@@ -89,6 +112,7 @@ static int sgsimgui_GetContentRegionMax( SGS_CTX )
 static int sgsimgui_GetContentRegionAvail( SGS_CTX )
 {
 	SGSFN( "ImGui_GetContentRegionAvail" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetContentRegionAvail() );
 	return 2;
 }
@@ -96,6 +120,7 @@ static int sgsimgui_GetContentRegionAvail( SGS_CTX )
 static int sgsimgui_GetContentRegionAvailWidth( SGS_CTX )
 {
 	SGSFN( "ImGui_GetContentRegionAvailWidth" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetContentRegionAvailWidth() );
 	return 1;
 }
@@ -103,6 +128,7 @@ static int sgsimgui_GetContentRegionAvailWidth( SGS_CTX )
 static int sgsimgui_GetWindowContentRegionMin( SGS_CTX )
 {
 	SGSFN( "ImGui_GetWindowContentRegionMin" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetWindowContentRegionMin() );
 	return 2;
 }
@@ -110,6 +136,7 @@ static int sgsimgui_GetWindowContentRegionMin( SGS_CTX )
 static int sgsimgui_GetWindowContentRegionMax( SGS_CTX )
 {
 	SGSFN( "ImGui_GetWindowContentRegionMax" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetWindowContentRegionMax() );
 	return 2;
 }
@@ -117,6 +144,7 @@ static int sgsimgui_GetWindowContentRegionMax( SGS_CTX )
 static int sgsimgui_GetWindowContentRegionWidth( SGS_CTX )
 {
 	SGSFN( "ImGui_GetWindowContentRegionWidth" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetWindowContentRegionWidth() );
 	return 1;
 }
@@ -124,6 +152,7 @@ static int sgsimgui_GetWindowContentRegionWidth( SGS_CTX )
 static int sgsimgui_GetWindowPos( SGS_CTX )
 {
 	SGSFN( "ImGui_GetWindowPos" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetWindowPos() );
 	return 2;
 }
@@ -131,6 +160,7 @@ static int sgsimgui_GetWindowPos( SGS_CTX )
 static int sgsimgui_GetWindowSize( SGS_CTX )
 {
 	SGSFN( "ImGui_GetWindowSize" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetWindowSize() );
 	return 2;
 }
@@ -138,6 +168,7 @@ static int sgsimgui_GetWindowSize( SGS_CTX )
 static int sgsimgui_GetWindowWidth( SGS_CTX )
 {
 	SGSFN( "ImGui_GetWindowWidth" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetWindowWidth() );
 	return 1;
 }
@@ -145,6 +176,7 @@ static int sgsimgui_GetWindowWidth( SGS_CTX )
 static int sgsimgui_GetWindowHeight( SGS_CTX )
 {
 	SGSFN( "ImGui_GetWindowHeight" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetWindowHeight() );
 	return 1;
 }
@@ -152,6 +184,7 @@ static int sgsimgui_GetWindowHeight( SGS_CTX )
 static int sgsimgui_IsWindowCollapsed( SGS_CTX )
 {
 	SGSFN( "ImGui_IsWindowCollapsed" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsWindowCollapsed() );
 	return 1;
 }
@@ -159,6 +192,7 @@ static int sgsimgui_IsWindowCollapsed( SGS_CTX )
 static int sgsimgui_SetWindowFontScale( SGS_CTX )
 {
 	SGSFN( "ImGui_SetWindowFontScale" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetWindowFontScale(
 		sgs_GetVar<float>()( C, 0 )
 	);
@@ -168,9 +202,10 @@ static int sgsimgui_SetWindowFontScale( SGS_CTX )
 static int sgsimgui_SetNextWindowPos( SGS_CTX )
 {
 	SGSFN( "ImGui_SetNextWindowPos" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetNextWindowPos(
 		sgs_GetVar<ImVec2>()( C, 0 ),
-		sgs_GetVar<ImGuiSetCond>()( C, 2 )
+		3 <= ssz ? sgs_GetVar<ImGuiSetCond>()( C, 2 ) : 0
 	);
 	return 0;
 }
@@ -178,8 +213,9 @@ static int sgsimgui_SetNextWindowPos( SGS_CTX )
 static int sgsimgui_SetNextWindowPosCenter( SGS_CTX )
 {
 	SGSFN( "ImGui_SetNextWindowPosCenter" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetNextWindowPosCenter(
-		sgs_GetVar<ImGuiSetCond>()( C, 0 )
+		1 <= ssz ? sgs_GetVar<ImGuiSetCond>()( C, 0 ) : 0
 	);
 	return 0;
 }
@@ -187,9 +223,10 @@ static int sgsimgui_SetNextWindowPosCenter( SGS_CTX )
 static int sgsimgui_SetNextWindowSize( SGS_CTX )
 {
 	SGSFN( "ImGui_SetNextWindowSize" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetNextWindowSize(
 		sgs_GetVar<ImVec2>()( C, 0 ),
-		sgs_GetVar<ImGuiSetCond>()( C, 2 )
+		3 <= ssz ? sgs_GetVar<ImGuiSetCond>()( C, 2 ) : 0
 	);
 	return 0;
 }
@@ -197,6 +234,7 @@ static int sgsimgui_SetNextWindowSize( SGS_CTX )
 static int sgsimgui_SetNextWindowContentSize( SGS_CTX )
 {
 	SGSFN( "ImGui_SetNextWindowContentSize" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetNextWindowContentSize(
 		sgs_GetVar<ImVec2>()( C, 0 )
 	);
@@ -206,6 +244,7 @@ static int sgsimgui_SetNextWindowContentSize( SGS_CTX )
 static int sgsimgui_SetNextWindowContentWidth( SGS_CTX )
 {
 	SGSFN( "ImGui_SetNextWindowContentWidth" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetNextWindowContentWidth(
 		sgs_GetVar<float>()( C, 0 )
 	);
@@ -215,9 +254,10 @@ static int sgsimgui_SetNextWindowContentWidth( SGS_CTX )
 static int sgsimgui_SetNextWindowCollapsed( SGS_CTX )
 {
 	SGSFN( "ImGui_SetNextWindowCollapsed" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetNextWindowCollapsed(
 		sgs_GetVar<bool>()( C, 0 ),
-		sgs_GetVar<ImGuiSetCond>()( C, 1 )
+		2 <= ssz ? sgs_GetVar<ImGuiSetCond>()( C, 1 ) : 0
 	);
 	return 0;
 }
@@ -225,6 +265,7 @@ static int sgsimgui_SetNextWindowCollapsed( SGS_CTX )
 static int sgsimgui_SetNextWindowFocus( SGS_CTX )
 {
 	SGSFN( "ImGui_SetNextWindowFocus" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetNextWindowFocus();
 	return 0;
 }
@@ -232,9 +273,10 @@ static int sgsimgui_SetNextWindowFocus( SGS_CTX )
 static int sgsimgui_SetCurrentWindowPos( SGS_CTX )
 {
 	SGSFN( "ImGui_SetCurrentWindowPos" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetWindowPos(
 		sgs_GetVar<ImVec2>()( C, 0 ),
-		sgs_GetVar<ImGuiSetCond>()( C, 2 )
+		3 <= ssz ? sgs_GetVar<ImGuiSetCond>()( C, 2 ) : 0
 	);
 	return 0;
 }
@@ -242,9 +284,10 @@ static int sgsimgui_SetCurrentWindowPos( SGS_CTX )
 static int sgsimgui_SetCurrentWindowSize( SGS_CTX )
 {
 	SGSFN( "ImGui_SetCurrentWindowSize" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetWindowSize(
 		sgs_GetVar<ImVec2>()( C, 0 ),
-		sgs_GetVar<ImGuiSetCond>()( C, 2 )
+		3 <= ssz ? sgs_GetVar<ImGuiSetCond>()( C, 2 ) : 0
 	);
 	return 0;
 }
@@ -252,9 +295,10 @@ static int sgsimgui_SetCurrentWindowSize( SGS_CTX )
 static int sgsimgui_SetCurrentWindowCollapsed( SGS_CTX )
 {
 	SGSFN( "ImGui_SetCurrentWindowCollapsed" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetWindowCollapsed(
 		sgs_GetVar<bool>()( C, 0 ),
-		sgs_GetVar<ImGuiSetCond>()( C, 1 )
+		2 <= ssz ? sgs_GetVar<ImGuiSetCond>()( C, 1 ) : 0
 	);
 	return 0;
 }
@@ -262,6 +306,7 @@ static int sgsimgui_SetCurrentWindowCollapsed( SGS_CTX )
 static int sgsimgui_SetCurrentWindowFocus( SGS_CTX )
 {
 	SGSFN( "ImGui_SetCurrentWindowFocus" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetWindowFocus();
 	return 0;
 }
@@ -269,10 +314,11 @@ static int sgsimgui_SetCurrentWindowFocus( SGS_CTX )
 static int sgsimgui_SetWindowPos( SGS_CTX )
 {
 	SGSFN( "ImGui_SetWindowPos" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetWindowPos(
 		sgs_GetVar<const char *>()( C, 0 ),
 		sgs_GetVar<ImVec2>()( C, 1 ),
-		sgs_GetVar<ImGuiSetCond>()( C, 3 )
+		4 <= ssz ? sgs_GetVar<ImGuiSetCond>()( C, 3 ) : 0
 	);
 	return 0;
 }
@@ -280,10 +326,11 @@ static int sgsimgui_SetWindowPos( SGS_CTX )
 static int sgsimgui_SetWindowSize( SGS_CTX )
 {
 	SGSFN( "ImGui_SetWindowSize" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetWindowSize(
 		sgs_GetVar<const char *>()( C, 0 ),
 		sgs_GetVar<ImVec2>()( C, 1 ),
-		sgs_GetVar<ImGuiSetCond>()( C, 3 )
+		4 <= ssz ? sgs_GetVar<ImGuiSetCond>()( C, 3 ) : 0
 	);
 	return 0;
 }
@@ -291,10 +338,11 @@ static int sgsimgui_SetWindowSize( SGS_CTX )
 static int sgsimgui_SetWindowCollapsed( SGS_CTX )
 {
 	SGSFN( "ImGui_SetWindowCollapsed" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetWindowCollapsed(
 		sgs_GetVar<const char *>()( C, 0 ),
 		sgs_GetVar<bool>()( C, 1 ),
-		sgs_GetVar<ImGuiSetCond>()( C, 2 )
+		3 <= ssz ? sgs_GetVar<ImGuiSetCond>()( C, 2 ) : 0
 	);
 	return 0;
 }
@@ -302,6 +350,7 @@ static int sgsimgui_SetWindowCollapsed( SGS_CTX )
 static int sgsimgui_SetWindowFocus( SGS_CTX )
 {
 	SGSFN( "ImGui_SetWindowFocus" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetWindowFocus(
 		sgs_GetVar<const char *>()( C, 0 )
 	);
@@ -311,6 +360,7 @@ static int sgsimgui_SetWindowFocus( SGS_CTX )
 static int sgsimgui_GetScrollX( SGS_CTX )
 {
 	SGSFN( "ImGui_GetScrollX" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetScrollX() );
 	return 1;
 }
@@ -318,6 +368,7 @@ static int sgsimgui_GetScrollX( SGS_CTX )
 static int sgsimgui_GetScrollY( SGS_CTX )
 {
 	SGSFN( "ImGui_GetScrollY" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetScrollY() );
 	return 1;
 }
@@ -325,6 +376,7 @@ static int sgsimgui_GetScrollY( SGS_CTX )
 static int sgsimgui_GetScrollMaxX( SGS_CTX )
 {
 	SGSFN( "ImGui_GetScrollMaxX" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetScrollMaxX() );
 	return 1;
 }
@@ -332,6 +384,7 @@ static int sgsimgui_GetScrollMaxX( SGS_CTX )
 static int sgsimgui_GetScrollMaxY( SGS_CTX )
 {
 	SGSFN( "ImGui_GetScrollMaxY" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetScrollMaxY() );
 	return 1;
 }
@@ -339,6 +392,7 @@ static int sgsimgui_GetScrollMaxY( SGS_CTX )
 static int sgsimgui_SetScrollX( SGS_CTX )
 {
 	SGSFN( "ImGui_SetScrollX" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetScrollX(
 		sgs_GetVar<float>()( C, 0 )
 	);
@@ -348,6 +402,7 @@ static int sgsimgui_SetScrollX( SGS_CTX )
 static int sgsimgui_SetScrollY( SGS_CTX )
 {
 	SGSFN( "ImGui_SetScrollY" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetScrollY(
 		sgs_GetVar<float>()( C, 0 )
 	);
@@ -357,8 +412,9 @@ static int sgsimgui_SetScrollY( SGS_CTX )
 static int sgsimgui_SetScrollHere( SGS_CTX )
 {
 	SGSFN( "ImGui_SetScrollHere" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetScrollHere(
-		sgs_GetVar<float>()( C, 0 )
+		1 <= ssz ? sgs_GetVar<float>()( C, 0 ) : 0.5
 	);
 	return 0;
 }
@@ -366,9 +422,10 @@ static int sgsimgui_SetScrollHere( SGS_CTX )
 static int sgsimgui_SetScrollFromPosY( SGS_CTX )
 {
 	SGSFN( "ImGui_SetScrollFromPosY" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetScrollFromPosY(
 		sgs_GetVar<float>()( C, 0 ),
-		sgs_GetVar<float>()( C, 1 )
+		2 <= ssz ? sgs_GetVar<float>()( C, 1 ) : 0.5
 	);
 	return 0;
 }
@@ -376,8 +433,9 @@ static int sgsimgui_SetScrollFromPosY( SGS_CTX )
 static int sgsimgui_SetKeyboardFocusHere( SGS_CTX )
 {
 	SGSFN( "ImGui_SetKeyboardFocusHere" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetKeyboardFocusHere(
-		sgs_GetVar<int>()( C, 0 )
+		1 <= ssz ? sgs_GetVar<int>()( C, 0 ) : 0
 	);
 	return 0;
 }
@@ -385,6 +443,7 @@ static int sgsimgui_SetKeyboardFocusHere( SGS_CTX )
 static int sgsimgui_PopFont( SGS_CTX )
 {
 	SGSFN( "ImGui_PopFont" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::PopFont();
 	return 0;
 }
@@ -392,6 +451,7 @@ static int sgsimgui_PopFont( SGS_CTX )
 static int sgsimgui_PushStyleColor( SGS_CTX )
 {
 	SGSFN( "ImGui_PushStyleColor" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::PushStyleColor(
 		sgs_GetVar<ImGuiCol>()( C, 0 ),
 		sgs_GetVar<ImVec4>()( C, 1 )
@@ -402,8 +462,9 @@ static int sgsimgui_PushStyleColor( SGS_CTX )
 static int sgsimgui_PopStyleColor( SGS_CTX )
 {
 	SGSFN( "ImGui_PopStyleColor" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::PopStyleColor(
-		sgs_GetVar<int>()( C, 0 )
+		1 <= ssz ? sgs_GetVar<int>()( C, 0 ) : 1
 	);
 	return 0;
 }
@@ -411,6 +472,7 @@ static int sgsimgui_PopStyleColor( SGS_CTX )
 static int sgsimgui_PushStyleVarF( SGS_CTX )
 {
 	SGSFN( "ImGui_PushStyleVarF" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::PushStyleVar(
 		sgs_GetVar<ImGuiStyleVar>()( C, 0 ),
 		sgs_GetVar<float>()( C, 1 )
@@ -421,6 +483,7 @@ static int sgsimgui_PushStyleVarF( SGS_CTX )
 static int sgsimgui_PushStyleVarV2( SGS_CTX )
 {
 	SGSFN( "ImGui_PushStyleVarV2" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::PushStyleVar(
 		sgs_GetVar<ImGuiStyleVar>()( C, 0 ),
 		sgs_GetVar<ImVec2>()( C, 1 )
@@ -431,8 +494,9 @@ static int sgsimgui_PushStyleVarV2( SGS_CTX )
 static int sgsimgui_PopStyleVar( SGS_CTX )
 {
 	SGSFN( "ImGui_PopStyleVar" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::PopStyleVar(
-		sgs_GetVar<int>()( C, 0 )
+		1 <= ssz ? sgs_GetVar<int>()( C, 0 ) : 1
 	);
 	return 0;
 }
@@ -440,6 +504,7 @@ static int sgsimgui_PopStyleVar( SGS_CTX )
 static int sgsimgui_GetFontSize( SGS_CTX )
 {
 	SGSFN( "ImGui_GetFontSize" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetFontSize() );
 	return 1;
 }
@@ -447,13 +512,36 @@ static int sgsimgui_GetFontSize( SGS_CTX )
 static int sgsimgui_GetFontTexUvWhitePixel( SGS_CTX )
 {
 	SGSFN( "ImGui_GetFontTexUvWhitePixel" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetFontTexUvWhitePixel() );
 	return 2;
+}
+
+static int sgsimgui_GetStyleColorU32( SGS_CTX )
+{
+	SGSFN( "ImGui_GetStyleColorU32" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	sgs_PushVar( C, ImGui::GetColorU32(
+		sgs_GetVar<ImGuiCol>()( C, 0 ),
+		2 <= ssz ? sgs_GetVar<float>()( C, 1 ) : 1
+	) );
+	return 1;
+}
+
+static int sgsimgui_GetColorU32( SGS_CTX )
+{
+	SGSFN( "ImGui_GetColorU32" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	sgs_PushVar( C, ImGui::GetColorU32(
+		sgs_GetVar<ImVec4>()( C, 0 )
+	) );
+	return 1;
 }
 
 static int sgsimgui_PushItemWidth( SGS_CTX )
 {
 	SGSFN( "ImGui_PushItemWidth" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::PushItemWidth(
 		sgs_GetVar<float>()( C, 0 )
 	);
@@ -463,6 +551,7 @@ static int sgsimgui_PushItemWidth( SGS_CTX )
 static int sgsimgui_PopItemWidth( SGS_CTX )
 {
 	SGSFN( "ImGui_PopItemWidth" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::PopItemWidth();
 	return 0;
 }
@@ -470,6 +559,7 @@ static int sgsimgui_PopItemWidth( SGS_CTX )
 static int sgsimgui_CalcItemWidth( SGS_CTX )
 {
 	SGSFN( "ImGui_CalcItemWidth" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::CalcItemWidth() );
 	return 1;
 }
@@ -477,8 +567,9 @@ static int sgsimgui_CalcItemWidth( SGS_CTX )
 static int sgsimgui_PushTextWrapPos( SGS_CTX )
 {
 	SGSFN( "ImGui_PushTextWrapPos" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::PushTextWrapPos(
-		sgs_GetVar<float>()( C, 0 )
+		1 <= ssz ? sgs_GetVar<float>()( C, 0 ) : 0
 	);
 	return 0;
 }
@@ -486,6 +577,7 @@ static int sgsimgui_PushTextWrapPos( SGS_CTX )
 static int sgsimgui_PopTextWrapPos( SGS_CTX )
 {
 	SGSFN( "ImGui_PopTextWrapPos" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::PopTextWrapPos();
 	return 0;
 }
@@ -493,6 +585,7 @@ static int sgsimgui_PopTextWrapPos( SGS_CTX )
 static int sgsimgui_PushAllowKeyboardFocus( SGS_CTX )
 {
 	SGSFN( "ImGui_PushAllowKeyboardFocus" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::PushAllowKeyboardFocus(
 		sgs_GetVar<bool>()( C, 0 )
 	);
@@ -502,6 +595,7 @@ static int sgsimgui_PushAllowKeyboardFocus( SGS_CTX )
 static int sgsimgui_PopAllowKeyboardFocus( SGS_CTX )
 {
 	SGSFN( "ImGui_PopAllowKeyboardFocus" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::PopAllowKeyboardFocus();
 	return 0;
 }
@@ -509,6 +603,7 @@ static int sgsimgui_PopAllowKeyboardFocus( SGS_CTX )
 static int sgsimgui_PushButtonRepeat( SGS_CTX )
 {
 	SGSFN( "ImGui_PushButtonRepeat" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::PushButtonRepeat(
 		sgs_GetVar<bool>()( C, 0 )
 	);
@@ -518,6 +613,7 @@ static int sgsimgui_PushButtonRepeat( SGS_CTX )
 static int sgsimgui_PopButtonRepeat( SGS_CTX )
 {
 	SGSFN( "ImGui_PopButtonRepeat" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::PopButtonRepeat();
 	return 0;
 }
@@ -525,6 +621,7 @@ static int sgsimgui_PopButtonRepeat( SGS_CTX )
 static int sgsimgui_Separator( SGS_CTX )
 {
 	SGSFN( "ImGui_Separator" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::Separator();
 	return 0;
 }
@@ -532,9 +629,10 @@ static int sgsimgui_Separator( SGS_CTX )
 static int sgsimgui_SameLine( SGS_CTX )
 {
 	SGSFN( "ImGui_SameLine" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SameLine(
-		sgs_GetVar<float>()( C, 0 ),
-		sgs_GetVar<float>()( C, 1 )
+		1 <= ssz ? sgs_GetVar<float>()( C, 0 ) : 0,
+		2 <= ssz ? sgs_GetVar<float>()( C, 1 ) : - 1
 	);
 	return 0;
 }
@@ -542,6 +640,7 @@ static int sgsimgui_SameLine( SGS_CTX )
 static int sgsimgui_NewLine( SGS_CTX )
 {
 	SGSFN( "ImGui_NewLine" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::NewLine();
 	return 0;
 }
@@ -549,6 +648,7 @@ static int sgsimgui_NewLine( SGS_CTX )
 static int sgsimgui_Spacing( SGS_CTX )
 {
 	SGSFN( "ImGui_Spacing" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::Spacing();
 	return 0;
 }
@@ -556,6 +656,7 @@ static int sgsimgui_Spacing( SGS_CTX )
 static int sgsimgui_Dummy( SGS_CTX )
 {
 	SGSFN( "ImGui_Dummy" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::Dummy(
 		sgs_GetVar<ImVec2>()( C, 0 )
 	);
@@ -565,8 +666,9 @@ static int sgsimgui_Dummy( SGS_CTX )
 static int sgsimgui_Indent( SGS_CTX )
 {
 	SGSFN( "ImGui_Indent" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::Indent(
-		sgs_GetVar<float>()( C, 0 )
+		1 <= ssz ? sgs_GetVar<float>()( C, 0 ) : 0
 	);
 	return 0;
 }
@@ -574,8 +676,9 @@ static int sgsimgui_Indent( SGS_CTX )
 static int sgsimgui_Unindent( SGS_CTX )
 {
 	SGSFN( "ImGui_Unindent" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::Unindent(
-		sgs_GetVar<float>()( C, 0 )
+		1 <= ssz ? sgs_GetVar<float>()( C, 0 ) : 0
 	);
 	return 0;
 }
@@ -583,6 +686,7 @@ static int sgsimgui_Unindent( SGS_CTX )
 static int sgsimgui_BeginGroup( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginGroup" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::BeginGroup();
 	return 0;
 }
@@ -590,6 +694,7 @@ static int sgsimgui_BeginGroup( SGS_CTX )
 static int sgsimgui_EndGroup( SGS_CTX )
 {
 	SGSFN( "ImGui_EndGroup" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::EndGroup();
 	return 0;
 }
@@ -597,6 +702,7 @@ static int sgsimgui_EndGroup( SGS_CTX )
 static int sgsimgui_GetCursorPos( SGS_CTX )
 {
 	SGSFN( "ImGui_GetCursorPos" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetCursorPos() );
 	return 2;
 }
@@ -604,6 +710,7 @@ static int sgsimgui_GetCursorPos( SGS_CTX )
 static int sgsimgui_GetCursorPosX( SGS_CTX )
 {
 	SGSFN( "ImGui_GetCursorPosX" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetCursorPosX() );
 	return 1;
 }
@@ -611,6 +718,7 @@ static int sgsimgui_GetCursorPosX( SGS_CTX )
 static int sgsimgui_GetCursorPosY( SGS_CTX )
 {
 	SGSFN( "ImGui_GetCursorPosY" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetCursorPosY() );
 	return 1;
 }
@@ -618,6 +726,7 @@ static int sgsimgui_GetCursorPosY( SGS_CTX )
 static int sgsimgui_SetCursorPos( SGS_CTX )
 {
 	SGSFN( "ImGui_SetCursorPos" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetCursorPos(
 		sgs_GetVar<ImVec2>()( C, 0 )
 	);
@@ -627,6 +736,7 @@ static int sgsimgui_SetCursorPos( SGS_CTX )
 static int sgsimgui_SetCursorPosX( SGS_CTX )
 {
 	SGSFN( "ImGui_SetCursorPosX" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetCursorPosX(
 		sgs_GetVar<float>()( C, 0 )
 	);
@@ -636,6 +746,7 @@ static int sgsimgui_SetCursorPosX( SGS_CTX )
 static int sgsimgui_SetCursorPosY( SGS_CTX )
 {
 	SGSFN( "ImGui_SetCursorPosY" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetCursorPosY(
 		sgs_GetVar<float>()( C, 0 )
 	);
@@ -645,6 +756,7 @@ static int sgsimgui_SetCursorPosY( SGS_CTX )
 static int sgsimgui_GetCursorStartPos( SGS_CTX )
 {
 	SGSFN( "ImGui_GetCursorStartPos" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetCursorStartPos() );
 	return 2;
 }
@@ -652,6 +764,7 @@ static int sgsimgui_GetCursorStartPos( SGS_CTX )
 static int sgsimgui_GetCursorScreenPos( SGS_CTX )
 {
 	SGSFN( "ImGui_GetCursorScreenPos" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetCursorScreenPos() );
 	return 2;
 }
@@ -659,6 +772,7 @@ static int sgsimgui_GetCursorScreenPos( SGS_CTX )
 static int sgsimgui_SetCursorScreenPos( SGS_CTX )
 {
 	SGSFN( "ImGui_SetCursorScreenPos" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetCursorScreenPos(
 		sgs_GetVar<ImVec2>()( C, 0 )
 	);
@@ -668,6 +782,7 @@ static int sgsimgui_SetCursorScreenPos( SGS_CTX )
 static int sgsimgui_AlignFirstTextHeightToWidgets( SGS_CTX )
 {
 	SGSFN( "ImGui_AlignFirstTextHeightToWidgets" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::AlignFirstTextHeightToWidgets();
 	return 0;
 }
@@ -675,6 +790,7 @@ static int sgsimgui_AlignFirstTextHeightToWidgets( SGS_CTX )
 static int sgsimgui_GetTextLineHeight( SGS_CTX )
 {
 	SGSFN( "ImGui_GetTextLineHeight" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetTextLineHeight() );
 	return 1;
 }
@@ -682,6 +798,7 @@ static int sgsimgui_GetTextLineHeight( SGS_CTX )
 static int sgsimgui_GetTextLineHeightWithSpacing( SGS_CTX )
 {
 	SGSFN( "ImGui_GetTextLineHeightWithSpacing" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetTextLineHeightWithSpacing() );
 	return 1;
 }
@@ -689,6 +806,7 @@ static int sgsimgui_GetTextLineHeightWithSpacing( SGS_CTX )
 static int sgsimgui_GetItemsLineHeightWithSpacing( SGS_CTX )
 {
 	SGSFN( "ImGui_GetItemsLineHeightWithSpacing" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetItemsLineHeightWithSpacing() );
 	return 1;
 }
@@ -696,10 +814,11 @@ static int sgsimgui_GetItemsLineHeightWithSpacing( SGS_CTX )
 static int sgsimgui_Columns( SGS_CTX )
 {
 	SGSFN( "ImGui_Columns" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::Columns(
-		sgs_GetVar<int>()( C, 0 ),
-		sgs_GetVar<const char *>()( C, 1 ),
-		sgs_GetVar<bool>()( C, 2 )
+		1 <= ssz ? sgs_GetVar<int>()( C, 0 ) : 1,
+		2 <= ssz ? sgs_GetVar<const char *>()( C, 1 ) : NULL,
+		3 <= ssz ? sgs_GetVar<bool>()( C, 2 ) : true
 	);
 	return 0;
 }
@@ -707,6 +826,7 @@ static int sgsimgui_Columns( SGS_CTX )
 static int sgsimgui_NextColumn( SGS_CTX )
 {
 	SGSFN( "ImGui_NextColumn" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::NextColumn();
 	return 0;
 }
@@ -714,6 +834,7 @@ static int sgsimgui_NextColumn( SGS_CTX )
 static int sgsimgui_GetColumnIndex( SGS_CTX )
 {
 	SGSFN( "ImGui_GetColumnIndex" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetColumnIndex() );
 	return 1;
 }
@@ -721,8 +842,9 @@ static int sgsimgui_GetColumnIndex( SGS_CTX )
 static int sgsimgui_GetColumnOffset( SGS_CTX )
 {
 	SGSFN( "ImGui_GetColumnOffset" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetColumnOffset(
-		sgs_GetVar<int>()( C, 0 )
+		1 <= ssz ? sgs_GetVar<int>()( C, 0 ) : - 1
 	) );
 	return 1;
 }
@@ -730,6 +852,7 @@ static int sgsimgui_GetColumnOffset( SGS_CTX )
 static int sgsimgui_SetColumnOffset( SGS_CTX )
 {
 	SGSFN( "ImGui_SetColumnOffset" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetColumnOffset(
 		sgs_GetVar<int>()( C, 0 ),
 		sgs_GetVar<float>()( C, 1 )
@@ -740,8 +863,9 @@ static int sgsimgui_SetColumnOffset( SGS_CTX )
 static int sgsimgui_GetColumnWidth( SGS_CTX )
 {
 	SGSFN( "ImGui_GetColumnWidth" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetColumnWidth(
-		sgs_GetVar<int>()( C, 0 )
+		1 <= ssz ? sgs_GetVar<int>()( C, 0 ) : - 1
 	) );
 	return 1;
 }
@@ -749,6 +873,7 @@ static int sgsimgui_GetColumnWidth( SGS_CTX )
 static int sgsimgui_GetColumnsCount( SGS_CTX )
 {
 	SGSFN( "ImGui_GetColumnsCount" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetColumnsCount() );
 	return 1;
 }
@@ -763,6 +888,7 @@ static int sgsimgui_PushID( SGS_CTX )
 static int sgsimgui_PopID( SGS_CTX )
 {
 	SGSFN( "ImGui_PopID" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::PopID();
 	return 0;
 }
@@ -777,6 +903,7 @@ static int sgsimgui_GetID( SGS_CTX )
 static int sgsimgui_Text( SGS_CTX )
 {
 	SGSFN( "ImGui_Text" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::Text(
 		"%s",
 		sgs_GetVar<const char*>()( C, 0 )
@@ -787,6 +914,7 @@ static int sgsimgui_Text( SGS_CTX )
 static int sgsimgui_TextColored( SGS_CTX )
 {
 	SGSFN( "ImGui_TextColored" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::TextColored(
 		sgs_GetVar<ImVec4>()( C, 0 ),
 		"%s",
@@ -798,6 +926,7 @@ static int sgsimgui_TextColored( SGS_CTX )
 static int sgsimgui_TextDisabled( SGS_CTX )
 {
 	SGSFN( "ImGui_TextDisabled" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::TextDisabled(
 		"%s",
 		sgs_GetVar<const char*>()( C, 0 )
@@ -808,6 +937,7 @@ static int sgsimgui_TextDisabled( SGS_CTX )
 static int sgsimgui_TextWrapped( SGS_CTX )
 {
 	SGSFN( "ImGui_TextWrapped" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::TextWrapped(
 		"%s",
 		sgs_GetVar<const char*>()( C, 0 )
@@ -818,9 +948,10 @@ static int sgsimgui_TextWrapped( SGS_CTX )
 static int sgsimgui_TextUnformatted( SGS_CTX )
 {
 	SGSFN( "ImGui_TextUnformatted" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::TextUnformatted(
 		sgs_GetVar<const char *>()( C, 0 ),
-		sgs_GetVar<const char *>()( C, 1 )
+		2 <= ssz ? sgs_GetVar<const char *>()( C, 1 ) : NULL
 	);
 	return 0;
 }
@@ -828,6 +959,7 @@ static int sgsimgui_TextUnformatted( SGS_CTX )
 static int sgsimgui_LabelText( SGS_CTX )
 {
 	SGSFN( "ImGui_LabelText" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::LabelText(
 		sgs_GetVar<const char *>()( C, 0 ),
 		"%s",
@@ -839,6 +971,7 @@ static int sgsimgui_LabelText( SGS_CTX )
 static int sgsimgui_Bullet( SGS_CTX )
 {
 	SGSFN( "ImGui_Bullet" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::Bullet();
 	return 0;
 }
@@ -846,6 +979,7 @@ static int sgsimgui_Bullet( SGS_CTX )
 static int sgsimgui_BulletText( SGS_CTX )
 {
 	SGSFN( "ImGui_BulletText" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::BulletText(
 		"%s",
 		sgs_GetVar<const char*>()( C, 0 )
@@ -856,9 +990,10 @@ static int sgsimgui_BulletText( SGS_CTX )
 static int sgsimgui_Button( SGS_CTX )
 {
 	SGSFN( "ImGui_Button" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::Button(
 		sgs_GetVar<const char *>()( C, 0 ),
-		sgs_GetVar<ImVec2>()( C, 1 )
+		3 <= ssz ? sgs_GetVar<ImVec2>()( C, 1 ) : ImVec2 ( 0 , 0 )
 	) );
 	return 1;
 }
@@ -866,6 +1001,7 @@ static int sgsimgui_Button( SGS_CTX )
 static int sgsimgui_SmallButton( SGS_CTX )
 {
 	SGSFN( "ImGui_SmallButton" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::SmallButton(
 		sgs_GetVar<const char *>()( C, 0 )
 	) );
@@ -875,6 +1011,7 @@ static int sgsimgui_SmallButton( SGS_CTX )
 static int sgsimgui_InvisibleButton( SGS_CTX )
 {
 	SGSFN( "ImGui_InvisibleButton" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::InvisibleButton(
 		sgs_GetVar<const char *>()( C, 0 ),
 		sgs_GetVar<ImVec2>()( C, 1 )
@@ -885,13 +1022,14 @@ static int sgsimgui_InvisibleButton( SGS_CTX )
 static int sgsimgui_Image( SGS_CTX )
 {
 	SGSFN( "ImGui_Image" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::Image(
 		sgs_GetVar<ImTextureID>()( C, 0 ),
 		sgs_GetVar<ImVec2>()( C, 1 ),
-		sgs_GetVar<ImVec2>()( C, 3 ),
-		sgs_GetVar<ImVec2>()( C, 5 ),
-		sgs_GetVar<ImVec4>()( C, 7 ),
-		sgs_GetVar<ImVec4>()( C, 11 )
+		5 <= ssz ? sgs_GetVar<ImVec2>()( C, 3 ) : ImVec2 ( 0 , 0 ),
+		7 <= ssz ? sgs_GetVar<ImVec2>()( C, 5 ) : ImVec2 ( 1 , 1 ),
+		11 <= ssz ? sgs_GetVar<ImVec4>()( C, 7 ) : ImVec4 ( 1 , 1 , 1 , 1 ),
+		15 <= ssz ? sgs_GetVar<ImVec4>()( C, 11 ) : ImVec4 ( 0 , 0 , 0 , 0 )
 	);
 	return 0;
 }
@@ -899,14 +1037,15 @@ static int sgsimgui_Image( SGS_CTX )
 static int sgsimgui_ImageButton( SGS_CTX )
 {
 	SGSFN( "ImGui_ImageButton" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::ImageButton(
 		sgs_GetVar<ImTextureID>()( C, 0 ),
 		sgs_GetVar<ImVec2>()( C, 1 ),
-		sgs_GetVar<ImVec2>()( C, 3 ),
-		sgs_GetVar<ImVec2>()( C, 5 ),
-		sgs_GetVar<int>()( C, 7 ),
-		sgs_GetVar<ImVec4>()( C, 8 ),
-		sgs_GetVar<ImVec4>()( C, 12 )
+		5 <= ssz ? sgs_GetVar<ImVec2>()( C, 3 ) : ImVec2 ( 0 , 0 ),
+		7 <= ssz ? sgs_GetVar<ImVec2>()( C, 5 ) : ImVec2 ( 1 , 1 ),
+		8 <= ssz ? sgs_GetVar<int>()( C, 7 ) : - 1,
+		12 <= ssz ? sgs_GetVar<ImVec4>()( C, 8 ) : ImVec4 ( 0 , 0 , 0 , 0 ),
+		16 <= ssz ? sgs_GetVar<ImVec4>()( C, 12 ) : ImVec4 ( 1 , 1 , 1 , 1 )
 	) );
 	return 1;
 }
@@ -914,6 +1053,7 @@ static int sgsimgui_ImageButton( SGS_CTX )
 static int sgsimgui_Checkbox( SGS_CTX )
 {
 	SGSFN( "ImGui_Checkbox" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	bool val1 = sgs_GetVar<bool>()( C, 1 );
 	sgs_PushVar( C, ImGui::Checkbox(
 		sgs_GetVar<const char *>()( C, 0 ),
@@ -926,6 +1066,7 @@ static int sgsimgui_Checkbox( SGS_CTX )
 static int sgsimgui_CheckboxFlags( SGS_CTX )
 {
 	SGSFN( "ImGui_CheckboxFlags" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	unsigned val1 = sgs_GetVar<unsigned>()( C, 1 );
 	sgs_PushVar( C, ImGui::CheckboxFlags(
 		sgs_GetVar<const char *>()( C, 0 ),
@@ -951,13 +1092,48 @@ static int sgsimgui_RadioButton( SGS_CTX )
 	else return sgs_Msg( C, SGS_WARNING, "expected 2 or 3 arguments, got %d", ssz );
 }
 
+static int sgsimgui_Combo( SGS_CTX )
+{
+	SGSFN( "ImGui_Combo" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	int val1 = sgs_GetVar<int>()( C, 1 );
+	sgs_PushVar( C, ImGui::Combo(
+		sgs_GetVar<const char *>()( C, 0 ),
+		&val1,
+		sgs_GetVar<const char *>()( C, 2 ),
+		4 <= ssz ? sgs_GetVar<int>()( C, 3 ) : - 1
+	) );
+	sgs_PushInt( C, val1 );
+	return 2;
+}
+
+static int sgsimgui_ComboCb( SGS_CTX )
+{
+	SGSFN( "ImGui_ComboCb" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	int val1 = sgs_GetVar<int>()( C, 1 );
+	imgui_TextArrayCallbackData val2;
+	val2.func = sgsVariable( C, 2 );
+	sgs_PushVar( C, ImGui::Combo(
+		sgs_GetVar<const char *>()( C, 0 ),
+		&val1,
+		_imgui_TextArrayCallback,
+		&val2,
+		sgs_GetVar<int>()( C, 3 ),
+		5 <= ssz ? sgs_GetVar<int>()( C, 4 ) : - 1
+	) );
+	sgs_PushInt( C, val1 );
+	return 2;
+}
+
 static int sgsimgui_ColorButton( SGS_CTX )
 {
 	SGSFN( "ImGui_ColorButton" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::ColorButton(
 		sgs_GetVar<ImVec4>()( C, 0 ),
-		sgs_GetVar<bool>()( C, 4 ),
-		sgs_GetVar<bool>()( C, 5 )
+		5 <= ssz ? sgs_GetVar<bool>()( C, 4 ) : false,
+		6 <= ssz ? sgs_GetVar<bool>()( C, 5 ) : true
 	) );
 	return 1;
 }
@@ -965,6 +1141,7 @@ static int sgsimgui_ColorButton( SGS_CTX )
 static int sgsimgui_ColorEdit3( SGS_CTX )
 {
 	SGSFN( "ImGui_ColorEdit3" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	float val1[3] = { sgs_GetVar<float>()( C, 1 ), sgs_GetVar<float>()( C, 2 ), sgs_GetVar<float>()( C, 3 ) };
 	sgs_PushVar( C, ImGui::ColorEdit3(
 		sgs_GetVar<const char *>()( C, 0 ),
@@ -979,11 +1156,12 @@ static int sgsimgui_ColorEdit3( SGS_CTX )
 static int sgsimgui_ColorEdit4( SGS_CTX )
 {
 	SGSFN( "ImGui_ColorEdit4" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	float val1[4] = { sgs_GetVar<float>()( C, 1 ), sgs_GetVar<float>()( C, 2 ), sgs_GetVar<float>()( C, 3 ), sgs_GetVar<float>()( C, 4 ) };
 	sgs_PushVar( C, ImGui::ColorEdit4(
 		sgs_GetVar<const char *>()( C, 0 ),
 		val1,
-		sgs_GetVar<bool>()( C, 5 )
+		6 <= ssz ? sgs_GetVar<bool>()( C, 5 ) : true
 	) );
 	sgs_PushReal( C, val1[0] );
 	sgs_PushReal( C, val1[1] );
@@ -995,8 +1173,85 @@ static int sgsimgui_ColorEdit4( SGS_CTX )
 static int sgsimgui_ColorEditMode( SGS_CTX )
 {
 	SGSFN( "ImGui_ColorEditMode" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::ColorEditMode(
 		sgs_GetVar<ImGuiColorEditMode>()( C, 0 )
+	);
+	return 0;
+}
+
+static int sgsimgui_PlotLines( SGS_CTX )
+{
+	SGSFN( "ImGui_PlotLines" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	imgui_FloatArrayParser val1( C, 1 );
+	ImGui::PlotLines(
+		sgs_GetVar<const char *>()( C, 0 ),
+		val1.values,
+		val1.count,
+		3 <= ssz ? sgs_GetVar<int>()( C, 2 ) : 0,
+		4 <= ssz ? sgs_GetVar<const char *>()( C, 3 ) : NULL,
+		5 <= ssz ? sgs_GetVar<float>()( C, 4 ) : FLT_MAX,
+		6 <= ssz ? sgs_GetVar<float>()( C, 5 ) : FLT_MAX,
+		7 <= ssz ? sgs_GetVar<ImVec2>()( C, 6 ) : ImVec2 ( 0 , 0 ),
+		8 <= ssz ? sgs_GetVar<int>()( C, 7 ) : sizeof ( float )
+	);
+	return 0;
+}
+
+static int sgsimgui_PlotLinesCb( SGS_CTX )
+{
+	SGSFN( "ImGui_PlotLinesCb" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	sgsVariable val1( C, 1 );
+	ImGui::PlotLines(
+		sgs_GetVar<const char *>()( C, 0 ),
+		_imgui_FloatArrayCallback,
+		&val1,
+		sgs_GetVar<int>()( C, 2 ),
+		4 <= ssz ? sgs_GetVar<int>()( C, 3 ) : 0,
+		5 <= ssz ? sgs_GetVar<const char *>()( C, 4 ) : NULL,
+		6 <= ssz ? sgs_GetVar<float>()( C, 5 ) : FLT_MAX,
+		7 <= ssz ? sgs_GetVar<float>()( C, 6 ) : FLT_MAX,
+		8 <= ssz ? sgs_GetVar<ImVec2>()( C, 7 ) : ImVec2 ( 0 , 0 )
+	);
+	return 0;
+}
+
+static int sgsimgui_PlotHistogram( SGS_CTX )
+{
+	SGSFN( "ImGui_PlotHistogram" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	imgui_FloatArrayParser val1( C, 1 );
+	ImGui::PlotHistogram(
+		sgs_GetVar<const char *>()( C, 0 ),
+		val1.values,
+		val1.count,
+		3 <= ssz ? sgs_GetVar<int>()( C, 2 ) : 0,
+		4 <= ssz ? sgs_GetVar<const char *>()( C, 3 ) : NULL,
+		5 <= ssz ? sgs_GetVar<float>()( C, 4 ) : FLT_MAX,
+		6 <= ssz ? sgs_GetVar<float>()( C, 5 ) : FLT_MAX,
+		7 <= ssz ? sgs_GetVar<ImVec2>()( C, 6 ) : ImVec2 ( 0 , 0 ),
+		8 <= ssz ? sgs_GetVar<int>()( C, 7 ) : sizeof ( float )
+	);
+	return 0;
+}
+
+static int sgsimgui_PlotHistogramCb( SGS_CTX )
+{
+	SGSFN( "ImGui_PlotHistogramCb" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	sgsVariable val1( C, 1 );
+	ImGui::PlotHistogram(
+		sgs_GetVar<const char *>()( C, 0 ),
+		_imgui_FloatArrayCallback,
+		&val1,
+		sgs_GetVar<int>()( C, 2 ),
+		4 <= ssz ? sgs_GetVar<int>()( C, 3 ) : 0,
+		5 <= ssz ? sgs_GetVar<const char *>()( C, 4 ) : NULL,
+		6 <= ssz ? sgs_GetVar<float>()( C, 5 ) : FLT_MAX,
+		7 <= ssz ? sgs_GetVar<float>()( C, 6 ) : FLT_MAX,
+		8 <= ssz ? sgs_GetVar<ImVec2>()( C, 7 ) : ImVec2 ( 0 , 0 )
 	);
 	return 0;
 }
@@ -1004,10 +1259,11 @@ static int sgsimgui_ColorEditMode( SGS_CTX )
 static int sgsimgui_ProgressBar( SGS_CTX )
 {
 	SGSFN( "ImGui_ProgressBar" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::ProgressBar(
 		sgs_GetVar<float>()( C, 0 ),
-		sgs_GetVar<ImVec2>()( C, 1 ),
-		sgs_GetVar<const char *>()( C, 3 )
+		3 <= ssz ? sgs_GetVar<ImVec2>()( C, 1 ) : ImVec2 ( - 1 , 0 ),
+		4 <= ssz ? sgs_GetVar<const char *>()( C, 3 ) : NULL
 	);
 	return 0;
 }
@@ -1015,15 +1271,16 @@ static int sgsimgui_ProgressBar( SGS_CTX )
 static int sgsimgui_DragFloat( SGS_CTX )
 {
 	SGSFN( "ImGui_DragFloat" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	float val1 = sgs_GetVar<float>()( C, 1 );
 	sgs_PushVar( C, ImGui::DragFloat(
 		sgs_GetVar<const char *>()( C, 0 ),
 		&val1,
-		sgs_GetVar<float>()( C, 2 ),
-		sgs_GetVar<float>()( C, 3 ),
-		sgs_GetVar<float>()( C, 4 ),
-		sgs_GetVar<const char *>()( C, 5 ),
-		sgs_GetVar<float>()( C, 6 )
+		3 <= ssz ? sgs_GetVar<float>()( C, 2 ) : 1,
+		4 <= ssz ? sgs_GetVar<float>()( C, 3 ) : 0,
+		5 <= ssz ? sgs_GetVar<float>()( C, 4 ) : 0,
+		6 <= ssz ? sgs_GetVar<const char *>()( C, 5 ) : "%.3f",
+		7 <= ssz ? sgs_GetVar<float>()( C, 6 ) : 1
 	) );
 	sgs_PushReal( C, val1 );
 	return 2;
@@ -1032,15 +1289,16 @@ static int sgsimgui_DragFloat( SGS_CTX )
 static int sgsimgui_DragFloat2( SGS_CTX )
 {
 	SGSFN( "ImGui_DragFloat2" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	float val1[2] = { sgs_GetVar<float>()( C, 1 ), sgs_GetVar<float>()( C, 2 ) };
 	sgs_PushVar( C, ImGui::DragFloat2(
 		sgs_GetVar<const char *>()( C, 0 ),
 		val1,
-		sgs_GetVar<float>()( C, 3 ),
-		sgs_GetVar<float>()( C, 4 ),
-		sgs_GetVar<float>()( C, 5 ),
-		sgs_GetVar<const char *>()( C, 6 ),
-		sgs_GetVar<float>()( C, 7 )
+		4 <= ssz ? sgs_GetVar<float>()( C, 3 ) : 1,
+		5 <= ssz ? sgs_GetVar<float>()( C, 4 ) : 0,
+		6 <= ssz ? sgs_GetVar<float>()( C, 5 ) : 0,
+		7 <= ssz ? sgs_GetVar<const char *>()( C, 6 ) : "%.3f",
+		8 <= ssz ? sgs_GetVar<float>()( C, 7 ) : 1
 	) );
 	sgs_PushReal( C, val1[0] );
 	sgs_PushReal( C, val1[1] );
@@ -1050,15 +1308,16 @@ static int sgsimgui_DragFloat2( SGS_CTX )
 static int sgsimgui_DragFloat3( SGS_CTX )
 {
 	SGSFN( "ImGui_DragFloat3" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	float val1[3] = { sgs_GetVar<float>()( C, 1 ), sgs_GetVar<float>()( C, 2 ), sgs_GetVar<float>()( C, 3 ) };
 	sgs_PushVar( C, ImGui::DragFloat3(
 		sgs_GetVar<const char *>()( C, 0 ),
 		val1,
-		sgs_GetVar<float>()( C, 4 ),
-		sgs_GetVar<float>()( C, 5 ),
-		sgs_GetVar<float>()( C, 6 ),
-		sgs_GetVar<const char *>()( C, 7 ),
-		sgs_GetVar<float>()( C, 8 )
+		5 <= ssz ? sgs_GetVar<float>()( C, 4 ) : 1,
+		6 <= ssz ? sgs_GetVar<float>()( C, 5 ) : 0,
+		7 <= ssz ? sgs_GetVar<float>()( C, 6 ) : 0,
+		8 <= ssz ? sgs_GetVar<const char *>()( C, 7 ) : "%.3f",
+		9 <= ssz ? sgs_GetVar<float>()( C, 8 ) : 1
 	) );
 	sgs_PushReal( C, val1[0] );
 	sgs_PushReal( C, val1[1] );
@@ -1069,15 +1328,16 @@ static int sgsimgui_DragFloat3( SGS_CTX )
 static int sgsimgui_DragFloat4( SGS_CTX )
 {
 	SGSFN( "ImGui_DragFloat4" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	float val1[4] = { sgs_GetVar<float>()( C, 1 ), sgs_GetVar<float>()( C, 2 ), sgs_GetVar<float>()( C, 3 ), sgs_GetVar<float>()( C, 4 ) };
 	sgs_PushVar( C, ImGui::DragFloat4(
 		sgs_GetVar<const char *>()( C, 0 ),
 		val1,
-		sgs_GetVar<float>()( C, 5 ),
-		sgs_GetVar<float>()( C, 6 ),
-		sgs_GetVar<float>()( C, 7 ),
-		sgs_GetVar<const char *>()( C, 8 ),
-		sgs_GetVar<float>()( C, 9 )
+		6 <= ssz ? sgs_GetVar<float>()( C, 5 ) : 1,
+		7 <= ssz ? sgs_GetVar<float>()( C, 6 ) : 0,
+		8 <= ssz ? sgs_GetVar<float>()( C, 7 ) : 0,
+		9 <= ssz ? sgs_GetVar<const char *>()( C, 8 ) : "%.3f",
+		10 <= ssz ? sgs_GetVar<float>()( C, 9 ) : 1
 	) );
 	sgs_PushReal( C, val1[0] );
 	sgs_PushReal( C, val1[1] );
@@ -1089,18 +1349,19 @@ static int sgsimgui_DragFloat4( SGS_CTX )
 static int sgsimgui_DragFloatRange2( SGS_CTX )
 {
 	SGSFN( "ImGui_DragFloatRange2" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	float val1 = sgs_GetVar<float>()( C, 1 );
 	float val2 = sgs_GetVar<float>()( C, 2 );
 	sgs_PushVar( C, ImGui::DragFloatRange2(
 		sgs_GetVar<const char *>()( C, 0 ),
 		&val1,
 		&val2,
-		sgs_GetVar<float>()( C, 3 ),
-		sgs_GetVar<float>()( C, 4 ),
-		sgs_GetVar<float>()( C, 5 ),
-		sgs_GetVar<const char *>()( C, 6 ),
-		sgs_GetVar<const char *>()( C, 7 ),
-		sgs_GetVar<float>()( C, 8 )
+		4 <= ssz ? sgs_GetVar<float>()( C, 3 ) : 1,
+		5 <= ssz ? sgs_GetVar<float>()( C, 4 ) : 0,
+		6 <= ssz ? sgs_GetVar<float>()( C, 5 ) : 0,
+		7 <= ssz ? sgs_GetVar<const char *>()( C, 6 ) : "%.3f",
+		8 <= ssz ? sgs_GetVar<const char *>()( C, 7 ) : NULL,
+		9 <= ssz ? sgs_GetVar<float>()( C, 8 ) : 1
 	) );
 	sgs_PushReal( C, val1 );
 	sgs_PushReal( C, val2 );
@@ -1110,14 +1371,15 @@ static int sgsimgui_DragFloatRange2( SGS_CTX )
 static int sgsimgui_DragInt( SGS_CTX )
 {
 	SGSFN( "ImGui_DragInt" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	int val1 = sgs_GetVar<int>()( C, 1 );
 	sgs_PushVar( C, ImGui::DragInt(
 		sgs_GetVar<const char *>()( C, 0 ),
 		&val1,
-		sgs_GetVar<float>()( C, 2 ),
-		sgs_GetVar<int>()( C, 3 ),
-		sgs_GetVar<int>()( C, 4 ),
-		sgs_GetVar<const char *>()( C, 5 )
+		3 <= ssz ? sgs_GetVar<float>()( C, 2 ) : 1,
+		4 <= ssz ? sgs_GetVar<int>()( C, 3 ) : 0,
+		5 <= ssz ? sgs_GetVar<int>()( C, 4 ) : 0,
+		6 <= ssz ? sgs_GetVar<const char *>()( C, 5 ) : "%.0f"
 	) );
 	sgs_PushInt( C, val1 );
 	return 2;
@@ -1126,14 +1388,15 @@ static int sgsimgui_DragInt( SGS_CTX )
 static int sgsimgui_DragInt2( SGS_CTX )
 {
 	SGSFN( "ImGui_DragInt2" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	int val1[2] = { sgs_GetVar<int>()( C, 1 ), sgs_GetVar<int>()( C, 2 ) };
 	sgs_PushVar( C, ImGui::DragInt2(
 		sgs_GetVar<const char *>()( C, 0 ),
 		val1,
-		sgs_GetVar<float>()( C, 3 ),
-		sgs_GetVar<int>()( C, 4 ),
-		sgs_GetVar<int>()( C, 5 ),
-		sgs_GetVar<const char *>()( C, 6 )
+		4 <= ssz ? sgs_GetVar<float>()( C, 3 ) : 1,
+		5 <= ssz ? sgs_GetVar<int>()( C, 4 ) : 0,
+		6 <= ssz ? sgs_GetVar<int>()( C, 5 ) : 0,
+		7 <= ssz ? sgs_GetVar<const char *>()( C, 6 ) : "%.0f"
 	) );
 	sgs_PushInt( C, val1[0] );
 	sgs_PushInt( C, val1[1] );
@@ -1143,14 +1406,15 @@ static int sgsimgui_DragInt2( SGS_CTX )
 static int sgsimgui_DragInt3( SGS_CTX )
 {
 	SGSFN( "ImGui_DragInt3" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	int val1[3] = { sgs_GetVar<int>()( C, 1 ), sgs_GetVar<int>()( C, 2 ), sgs_GetVar<int>()( C, 3 ) };
 	sgs_PushVar( C, ImGui::DragInt3(
 		sgs_GetVar<const char *>()( C, 0 ),
 		val1,
-		sgs_GetVar<float>()( C, 4 ),
-		sgs_GetVar<int>()( C, 5 ),
-		sgs_GetVar<int>()( C, 6 ),
-		sgs_GetVar<const char *>()( C, 7 )
+		5 <= ssz ? sgs_GetVar<float>()( C, 4 ) : 1,
+		6 <= ssz ? sgs_GetVar<int>()( C, 5 ) : 0,
+		7 <= ssz ? sgs_GetVar<int>()( C, 6 ) : 0,
+		8 <= ssz ? sgs_GetVar<const char *>()( C, 7 ) : "%.0f"
 	) );
 	sgs_PushInt( C, val1[0] );
 	sgs_PushInt( C, val1[1] );
@@ -1161,14 +1425,15 @@ static int sgsimgui_DragInt3( SGS_CTX )
 static int sgsimgui_DragInt4( SGS_CTX )
 {
 	SGSFN( "ImGui_DragInt4" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	int val1[4] = { sgs_GetVar<int>()( C, 1 ), sgs_GetVar<int>()( C, 2 ), sgs_GetVar<int>()( C, 3 ), sgs_GetVar<int>()( C, 4 ) };
 	sgs_PushVar( C, ImGui::DragInt4(
 		sgs_GetVar<const char *>()( C, 0 ),
 		val1,
-		sgs_GetVar<float>()( C, 5 ),
-		sgs_GetVar<int>()( C, 6 ),
-		sgs_GetVar<int>()( C, 7 ),
-		sgs_GetVar<const char *>()( C, 8 )
+		6 <= ssz ? sgs_GetVar<float>()( C, 5 ) : 1,
+		7 <= ssz ? sgs_GetVar<int>()( C, 6 ) : 0,
+		8 <= ssz ? sgs_GetVar<int>()( C, 7 ) : 0,
+		9 <= ssz ? sgs_GetVar<const char *>()( C, 8 ) : "%.0f"
 	) );
 	sgs_PushInt( C, val1[0] );
 	sgs_PushInt( C, val1[1] );
@@ -1180,34 +1445,67 @@ static int sgsimgui_DragInt4( SGS_CTX )
 static int sgsimgui_DragIntRange2( SGS_CTX )
 {
 	SGSFN( "ImGui_DragIntRange2" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	int val1 = sgs_GetVar<int>()( C, 1 );
 	int val2 = sgs_GetVar<int>()( C, 2 );
 	sgs_PushVar( C, ImGui::DragIntRange2(
 		sgs_GetVar<const char *>()( C, 0 ),
 		&val1,
 		&val2,
-		sgs_GetVar<float>()( C, 3 ),
-		sgs_GetVar<int>()( C, 4 ),
-		sgs_GetVar<int>()( C, 5 ),
-		sgs_GetVar<const char *>()( C, 6 ),
-		sgs_GetVar<const char *>()( C, 7 )
+		4 <= ssz ? sgs_GetVar<float>()( C, 3 ) : 1,
+		5 <= ssz ? sgs_GetVar<int>()( C, 4 ) : 0,
+		6 <= ssz ? sgs_GetVar<int>()( C, 5 ) : 0,
+		7 <= ssz ? sgs_GetVar<const char *>()( C, 6 ) : "%.0f",
+		8 <= ssz ? sgs_GetVar<const char *>()( C, 7 ) : NULL
 	) );
 	sgs_PushInt( C, val1 );
 	sgs_PushInt( C, val2 );
 	return 3;
 }
 
+static int sgsimgui_InputText( SGS_CTX )
+{
+	SGSFN( "ImGui_InputText" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	sgs_PushVar( C, ImGui::InputText(
+		sgs_GetVar<const char *>()( C, 0 ),
+		sgs_GetVar<char *>()( C, 1 ),
+		sgs_GetVar<size_t>()( C, 2 ),
+		4 <= ssz ? sgs_GetVar<ImGuiInputTextFlags>()( C, 3 ) : 0,
+		4 <= ssz ? NULL : NULL,
+		5 <= ssz ? sgs_GetVar<void *>()( C, 4 ) : NULL
+	) );
+	return 1;
+}
+
+static int sgsimgui_InputTextMultiline( SGS_CTX )
+{
+	SGSFN( "ImGui_InputTextMultiline" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	sgs_PushVar( C, ImGui::InputTextMultiline(
+		sgs_GetVar<const char *>()( C, 0 ),
+		sgs_GetVar<char *>()( C, 1 ),
+		sgs_GetVar<size_t>()( C, 2 ),
+		5 <= ssz ? sgs_GetVar<ImVec2>()( C, 3 ) : ImVec2 ( 0 , 0 ),
+		6 <= ssz ? sgs_GetVar<ImGuiInputTextFlags>()( C, 5 ) : 0,
+		6 <= ssz ? NULL : NULL,
+		7 <= ssz ? sgs_GetVar<void *>()( C, 6 ) : NULL
+	) );
+	return 1;
+}
+
 static int sgsimgui_InputFloat( SGS_CTX )
 {
 	SGSFN( "ImGui_InputFloat" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	float val1 = sgs_GetVar<float>()( C, 1 );
 	sgs_PushVar( C, ImGui::InputFloat(
 		sgs_GetVar<const char *>()( C, 0 ),
 		&val1,
-		sgs_GetVar<float>()( C, 2 ),
-		sgs_GetVar<float>()( C, 3 ),
-		sgs_GetVar<int>()( C, 4 ),
-		sgs_GetVar<ImGuiInputTextFlags>()( C, 5 )
+		3 <= ssz ? sgs_GetVar<float>()( C, 2 ) : 0,
+		4 <= ssz ? sgs_GetVar<float>()( C, 3 ) : 0,
+		5 <= ssz ? sgs_GetVar<int>()( C, 4 ) : - 1,
+		6 <= ssz ? sgs_GetVar<ImGuiInputTextFlags>()( C, 5 ) : 0
 	) );
 	sgs_PushReal( C, val1 );
 	return 2;
@@ -1216,12 +1514,13 @@ static int sgsimgui_InputFloat( SGS_CTX )
 static int sgsimgui_InputFloat2( SGS_CTX )
 {
 	SGSFN( "ImGui_InputFloat2" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	float val1[2] = { sgs_GetVar<float>()( C, 1 ), sgs_GetVar<float>()( C, 2 ) };
 	sgs_PushVar( C, ImGui::InputFloat2(
 		sgs_GetVar<const char *>()( C, 0 ),
 		val1,
-		sgs_GetVar<int>()( C, 3 ),
-		sgs_GetVar<ImGuiInputTextFlags>()( C, 4 )
+		4 <= ssz ? sgs_GetVar<int>()( C, 3 ) : - 1,
+		5 <= ssz ? sgs_GetVar<ImGuiInputTextFlags>()( C, 4 ) : 0
 	) );
 	sgs_PushReal( C, val1[0] );
 	sgs_PushReal( C, val1[1] );
@@ -1231,12 +1530,13 @@ static int sgsimgui_InputFloat2( SGS_CTX )
 static int sgsimgui_InputFloat3( SGS_CTX )
 {
 	SGSFN( "ImGui_InputFloat3" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	float val1[3] = { sgs_GetVar<float>()( C, 1 ), sgs_GetVar<float>()( C, 2 ), sgs_GetVar<float>()( C, 3 ) };
 	sgs_PushVar( C, ImGui::InputFloat3(
 		sgs_GetVar<const char *>()( C, 0 ),
 		val1,
-		sgs_GetVar<int>()( C, 4 ),
-		sgs_GetVar<ImGuiInputTextFlags>()( C, 5 )
+		5 <= ssz ? sgs_GetVar<int>()( C, 4 ) : - 1,
+		6 <= ssz ? sgs_GetVar<ImGuiInputTextFlags>()( C, 5 ) : 0
 	) );
 	sgs_PushReal( C, val1[0] );
 	sgs_PushReal( C, val1[1] );
@@ -1247,12 +1547,13 @@ static int sgsimgui_InputFloat3( SGS_CTX )
 static int sgsimgui_InputFloat4( SGS_CTX )
 {
 	SGSFN( "ImGui_InputFloat4" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	float val1[4] = { sgs_GetVar<float>()( C, 1 ), sgs_GetVar<float>()( C, 2 ), sgs_GetVar<float>()( C, 3 ), sgs_GetVar<float>()( C, 4 ) };
 	sgs_PushVar( C, ImGui::InputFloat4(
 		sgs_GetVar<const char *>()( C, 0 ),
 		val1,
-		sgs_GetVar<int>()( C, 5 ),
-		sgs_GetVar<ImGuiInputTextFlags>()( C, 6 )
+		6 <= ssz ? sgs_GetVar<int>()( C, 5 ) : - 1,
+		7 <= ssz ? sgs_GetVar<ImGuiInputTextFlags>()( C, 6 ) : 0
 	) );
 	sgs_PushReal( C, val1[0] );
 	sgs_PushReal( C, val1[1] );
@@ -1264,13 +1565,14 @@ static int sgsimgui_InputFloat4( SGS_CTX )
 static int sgsimgui_InputInt( SGS_CTX )
 {
 	SGSFN( "ImGui_InputInt" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	int val1 = sgs_GetVar<int>()( C, 1 );
 	sgs_PushVar( C, ImGui::InputInt(
 		sgs_GetVar<const char *>()( C, 0 ),
 		&val1,
-		sgs_GetVar<int>()( C, 2 ),
-		sgs_GetVar<int>()( C, 3 ),
-		sgs_GetVar<ImGuiInputTextFlags>()( C, 4 )
+		3 <= ssz ? sgs_GetVar<int>()( C, 2 ) : 1,
+		4 <= ssz ? sgs_GetVar<int>()( C, 3 ) : 100,
+		5 <= ssz ? sgs_GetVar<ImGuiInputTextFlags>()( C, 4 ) : 0
 	) );
 	sgs_PushInt( C, val1 );
 	return 2;
@@ -1279,11 +1581,12 @@ static int sgsimgui_InputInt( SGS_CTX )
 static int sgsimgui_InputInt2( SGS_CTX )
 {
 	SGSFN( "ImGui_InputInt2" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	int val1[2] = { sgs_GetVar<int>()( C, 1 ), sgs_GetVar<int>()( C, 2 ) };
 	sgs_PushVar( C, ImGui::InputInt2(
 		sgs_GetVar<const char *>()( C, 0 ),
 		val1,
-		sgs_GetVar<ImGuiInputTextFlags>()( C, 3 )
+		4 <= ssz ? sgs_GetVar<ImGuiInputTextFlags>()( C, 3 ) : 0
 	) );
 	sgs_PushInt( C, val1[0] );
 	sgs_PushInt( C, val1[1] );
@@ -1293,11 +1596,12 @@ static int sgsimgui_InputInt2( SGS_CTX )
 static int sgsimgui_InputInt3( SGS_CTX )
 {
 	SGSFN( "ImGui_InputInt3" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	int val1[3] = { sgs_GetVar<int>()( C, 1 ), sgs_GetVar<int>()( C, 2 ), sgs_GetVar<int>()( C, 3 ) };
 	sgs_PushVar( C, ImGui::InputInt3(
 		sgs_GetVar<const char *>()( C, 0 ),
 		val1,
-		sgs_GetVar<ImGuiInputTextFlags>()( C, 4 )
+		5 <= ssz ? sgs_GetVar<ImGuiInputTextFlags>()( C, 4 ) : 0
 	) );
 	sgs_PushInt( C, val1[0] );
 	sgs_PushInt( C, val1[1] );
@@ -1308,11 +1612,12 @@ static int sgsimgui_InputInt3( SGS_CTX )
 static int sgsimgui_InputInt4( SGS_CTX )
 {
 	SGSFN( "ImGui_InputInt4" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	int val1[4] = { sgs_GetVar<int>()( C, 1 ), sgs_GetVar<int>()( C, 2 ), sgs_GetVar<int>()( C, 3 ), sgs_GetVar<int>()( C, 4 ) };
 	sgs_PushVar( C, ImGui::InputInt4(
 		sgs_GetVar<const char *>()( C, 0 ),
 		val1,
-		sgs_GetVar<ImGuiInputTextFlags>()( C, 5 )
+		6 <= ssz ? sgs_GetVar<ImGuiInputTextFlags>()( C, 5 ) : 0
 	) );
 	sgs_PushInt( C, val1[0] );
 	sgs_PushInt( C, val1[1] );
@@ -1324,14 +1629,15 @@ static int sgsimgui_InputInt4( SGS_CTX )
 static int sgsimgui_SliderFloat( SGS_CTX )
 {
 	SGSFN( "ImGui_SliderFloat" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	float val1 = sgs_GetVar<float>()( C, 1 );
 	sgs_PushVar( C, ImGui::SliderFloat(
 		sgs_GetVar<const char *>()( C, 0 ),
 		&val1,
 		sgs_GetVar<float>()( C, 2 ),
 		sgs_GetVar<float>()( C, 3 ),
-		sgs_GetVar<const char *>()( C, 4 ),
-		sgs_GetVar<float>()( C, 5 )
+		5 <= ssz ? sgs_GetVar<const char *>()( C, 4 ) : "%.3f",
+		6 <= ssz ? sgs_GetVar<float>()( C, 5 ) : 1
 	) );
 	sgs_PushReal( C, val1 );
 	return 2;
@@ -1340,14 +1646,15 @@ static int sgsimgui_SliderFloat( SGS_CTX )
 static int sgsimgui_SliderFloat2( SGS_CTX )
 {
 	SGSFN( "ImGui_SliderFloat2" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	float val1[2] = { sgs_GetVar<float>()( C, 1 ), sgs_GetVar<float>()( C, 2 ) };
 	sgs_PushVar( C, ImGui::SliderFloat2(
 		sgs_GetVar<const char *>()( C, 0 ),
 		val1,
 		sgs_GetVar<float>()( C, 3 ),
 		sgs_GetVar<float>()( C, 4 ),
-		sgs_GetVar<const char *>()( C, 5 ),
-		sgs_GetVar<float>()( C, 6 )
+		6 <= ssz ? sgs_GetVar<const char *>()( C, 5 ) : "%.3f",
+		7 <= ssz ? sgs_GetVar<float>()( C, 6 ) : 1
 	) );
 	sgs_PushReal( C, val1[0] );
 	sgs_PushReal( C, val1[1] );
@@ -1357,14 +1664,15 @@ static int sgsimgui_SliderFloat2( SGS_CTX )
 static int sgsimgui_SliderFloat3( SGS_CTX )
 {
 	SGSFN( "ImGui_SliderFloat3" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	float val1[3] = { sgs_GetVar<float>()( C, 1 ), sgs_GetVar<float>()( C, 2 ), sgs_GetVar<float>()( C, 3 ) };
 	sgs_PushVar( C, ImGui::SliderFloat3(
 		sgs_GetVar<const char *>()( C, 0 ),
 		val1,
 		sgs_GetVar<float>()( C, 4 ),
 		sgs_GetVar<float>()( C, 5 ),
-		sgs_GetVar<const char *>()( C, 6 ),
-		sgs_GetVar<float>()( C, 7 )
+		7 <= ssz ? sgs_GetVar<const char *>()( C, 6 ) : "%.3f",
+		8 <= ssz ? sgs_GetVar<float>()( C, 7 ) : 1
 	) );
 	sgs_PushReal( C, val1[0] );
 	sgs_PushReal( C, val1[1] );
@@ -1375,14 +1683,15 @@ static int sgsimgui_SliderFloat3( SGS_CTX )
 static int sgsimgui_SliderFloat4( SGS_CTX )
 {
 	SGSFN( "ImGui_SliderFloat4" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	float val1[4] = { sgs_GetVar<float>()( C, 1 ), sgs_GetVar<float>()( C, 2 ), sgs_GetVar<float>()( C, 3 ), sgs_GetVar<float>()( C, 4 ) };
 	sgs_PushVar( C, ImGui::SliderFloat4(
 		sgs_GetVar<const char *>()( C, 0 ),
 		val1,
 		sgs_GetVar<float>()( C, 5 ),
 		sgs_GetVar<float>()( C, 6 ),
-		sgs_GetVar<const char *>()( C, 7 ),
-		sgs_GetVar<float>()( C, 8 )
+		8 <= ssz ? sgs_GetVar<const char *>()( C, 7 ) : "%.3f",
+		9 <= ssz ? sgs_GetVar<float>()( C, 8 ) : 1
 	) );
 	sgs_PushReal( C, val1[0] );
 	sgs_PushReal( C, val1[1] );
@@ -1394,12 +1703,13 @@ static int sgsimgui_SliderFloat4( SGS_CTX )
 static int sgsimgui_SliderAngle( SGS_CTX )
 {
 	SGSFN( "ImGui_SliderAngle" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	float val1 = sgs_GetVar<float>()( C, 1 );
 	sgs_PushVar( C, ImGui::SliderAngle(
 		sgs_GetVar<const char *>()( C, 0 ),
 		&val1,
-		sgs_GetVar<float>()( C, 2 ),
-		sgs_GetVar<float>()( C, 3 )
+		3 <= ssz ? sgs_GetVar<float>()( C, 2 ) : - 360,
+		4 <= ssz ? sgs_GetVar<float>()( C, 3 ) : + 360
 	) );
 	sgs_PushReal( C, val1 );
 	return 2;
@@ -1408,13 +1718,14 @@ static int sgsimgui_SliderAngle( SGS_CTX )
 static int sgsimgui_SliderInt( SGS_CTX )
 {
 	SGSFN( "ImGui_SliderInt" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	int val1 = sgs_GetVar<int>()( C, 1 );
 	sgs_PushVar( C, ImGui::SliderInt(
 		sgs_GetVar<const char *>()( C, 0 ),
 		&val1,
 		sgs_GetVar<int>()( C, 2 ),
 		sgs_GetVar<int>()( C, 3 ),
-		sgs_GetVar<const char *>()( C, 4 )
+		5 <= ssz ? sgs_GetVar<const char *>()( C, 4 ) : "%.0f"
 	) );
 	sgs_PushInt( C, val1 );
 	return 2;
@@ -1423,13 +1734,14 @@ static int sgsimgui_SliderInt( SGS_CTX )
 static int sgsimgui_SliderInt2( SGS_CTX )
 {
 	SGSFN( "ImGui_SliderInt2" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	int val1[2] = { sgs_GetVar<int>()( C, 1 ), sgs_GetVar<int>()( C, 2 ) };
 	sgs_PushVar( C, ImGui::SliderInt2(
 		sgs_GetVar<const char *>()( C, 0 ),
 		val1,
 		sgs_GetVar<int>()( C, 3 ),
 		sgs_GetVar<int>()( C, 4 ),
-		sgs_GetVar<const char *>()( C, 5 )
+		6 <= ssz ? sgs_GetVar<const char *>()( C, 5 ) : "%.0f"
 	) );
 	sgs_PushInt( C, val1[0] );
 	sgs_PushInt( C, val1[1] );
@@ -1439,13 +1751,14 @@ static int sgsimgui_SliderInt2( SGS_CTX )
 static int sgsimgui_SliderInt3( SGS_CTX )
 {
 	SGSFN( "ImGui_SliderInt3" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	int val1[3] = { sgs_GetVar<int>()( C, 1 ), sgs_GetVar<int>()( C, 2 ), sgs_GetVar<int>()( C, 3 ) };
 	sgs_PushVar( C, ImGui::SliderInt3(
 		sgs_GetVar<const char *>()( C, 0 ),
 		val1,
 		sgs_GetVar<int>()( C, 4 ),
 		sgs_GetVar<int>()( C, 5 ),
-		sgs_GetVar<const char *>()( C, 6 )
+		7 <= ssz ? sgs_GetVar<const char *>()( C, 6 ) : "%.0f"
 	) );
 	sgs_PushInt( C, val1[0] );
 	sgs_PushInt( C, val1[1] );
@@ -1456,13 +1769,14 @@ static int sgsimgui_SliderInt3( SGS_CTX )
 static int sgsimgui_SliderInt4( SGS_CTX )
 {
 	SGSFN( "ImGui_SliderInt4" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	int val1[4] = { sgs_GetVar<int>()( C, 1 ), sgs_GetVar<int>()( C, 2 ), sgs_GetVar<int>()( C, 3 ), sgs_GetVar<int>()( C, 4 ) };
 	sgs_PushVar( C, ImGui::SliderInt4(
 		sgs_GetVar<const char *>()( C, 0 ),
 		val1,
 		sgs_GetVar<int>()( C, 5 ),
 		sgs_GetVar<int>()( C, 6 ),
-		sgs_GetVar<const char *>()( C, 7 )
+		8 <= ssz ? sgs_GetVar<const char *>()( C, 7 ) : "%.0f"
 	) );
 	sgs_PushInt( C, val1[0] );
 	sgs_PushInt( C, val1[1] );
@@ -1474,6 +1788,7 @@ static int sgsimgui_SliderInt4( SGS_CTX )
 static int sgsimgui_VSliderFloat( SGS_CTX )
 {
 	SGSFN( "ImGui_VSliderFloat" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	float val3 = sgs_GetVar<float>()( C, 3 );
 	sgs_PushVar( C, ImGui::VSliderFloat(
 		sgs_GetVar<const char *>()( C, 0 ),
@@ -1481,8 +1796,8 @@ static int sgsimgui_VSliderFloat( SGS_CTX )
 		&val3,
 		sgs_GetVar<float>()( C, 4 ),
 		sgs_GetVar<float>()( C, 5 ),
-		sgs_GetVar<const char *>()( C, 6 ),
-		sgs_GetVar<float>()( C, 7 )
+		7 <= ssz ? sgs_GetVar<const char *>()( C, 6 ) : "%.3f",
+		8 <= ssz ? sgs_GetVar<float>()( C, 7 ) : 1
 	) );
 	sgs_PushReal( C, val3 );
 	return 2;
@@ -1491,6 +1806,7 @@ static int sgsimgui_VSliderFloat( SGS_CTX )
 static int sgsimgui_VSliderInt( SGS_CTX )
 {
 	SGSFN( "ImGui_VSliderInt" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	int val3 = sgs_GetVar<int>()( C, 3 );
 	sgs_PushVar( C, ImGui::VSliderInt(
 		sgs_GetVar<const char *>()( C, 0 ),
@@ -1498,7 +1814,7 @@ static int sgsimgui_VSliderInt( SGS_CTX )
 		&val3,
 		sgs_GetVar<int>()( C, 4 ),
 		sgs_GetVar<int>()( C, 5 ),
-		sgs_GetVar<const char *>()( C, 6 )
+		7 <= ssz ? sgs_GetVar<const char *>()( C, 6 ) : "%.0f"
 	) );
 	sgs_PushInt( C, val3 );
 	return 2;
@@ -1525,8 +1841,9 @@ static int sgsimgui_TreeNodeEx( SGS_CTX )
 static int sgsimgui_TreePush( SGS_CTX )
 {
 	SGSFN( "ImGui_TreePush" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::TreePush(
-		sgs_GetVar<const void *>()( C, 0 )
+		1 <= ssz ? sgs_GetVar<const void *>()( C, 0 ) : NULL
 	);
 	return 0;
 }
@@ -1534,6 +1851,7 @@ static int sgsimgui_TreePush( SGS_CTX )
 static int sgsimgui_TreePop( SGS_CTX )
 {
 	SGSFN( "ImGui_TreePop" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::TreePop();
 	return 0;
 }
@@ -1541,6 +1859,7 @@ static int sgsimgui_TreePop( SGS_CTX )
 static int sgsimgui_TreeAdvanceToLabelPos( SGS_CTX )
 {
 	SGSFN( "ImGui_TreeAdvanceToLabelPos" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::TreeAdvanceToLabelPos();
 	return 0;
 }
@@ -1548,6 +1867,7 @@ static int sgsimgui_TreeAdvanceToLabelPos( SGS_CTX )
 static int sgsimgui_GetTreeNodeToLabelSpacing( SGS_CTX )
 {
 	SGSFN( "ImGui_GetTreeNodeToLabelSpacing" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetTreeNodeToLabelSpacing() );
 	return 1;
 }
@@ -1555,9 +1875,10 @@ static int sgsimgui_GetTreeNodeToLabelSpacing( SGS_CTX )
 static int sgsimgui_SetNextTreeNodeOpen( SGS_CTX )
 {
 	SGSFN( "ImGui_SetNextTreeNodeOpen" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetNextTreeNodeOpen(
 		sgs_GetVar<bool>()( C, 0 ),
-		sgs_GetVar<ImGuiSetCond>()( C, 1 )
+		2 <= ssz ? sgs_GetVar<ImGuiSetCond>()( C, 1 ) : 0
 	);
 	return 0;
 }
@@ -1565,9 +1886,10 @@ static int sgsimgui_SetNextTreeNodeOpen( SGS_CTX )
 static int sgsimgui_CollapsingHeader( SGS_CTX )
 {
 	SGSFN( "ImGui_CollapsingHeader" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::CollapsingHeader(
 		sgs_GetVar<const char *>()( C, 0 ),
-		sgs_GetVar<ImGuiTreeNodeFlags>()( C, 1 )
+		2 <= ssz ? sgs_GetVar<ImGuiTreeNodeFlags>()( C, 1 ) : 0
 	) );
 	return 1;
 }
@@ -1575,11 +1897,12 @@ static int sgsimgui_CollapsingHeader( SGS_CTX )
 static int sgsimgui_CollapsingHeaderCloseable( SGS_CTX )
 {
 	SGSFN( "ImGui_CollapsingHeaderCloseable" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	bool val1 = sgs_GetVar<bool>()( C, 1 );
 	sgs_PushVar( C, ImGui::CollapsingHeader(
 		sgs_GetVar<const char *>()( C, 0 ),
 		&val1,
-		sgs_GetVar<ImGuiTreeNodeFlags>()( C, 2 )
+		3 <= ssz ? sgs_GetVar<ImGuiTreeNodeFlags>()( C, 2 ) : 0
 	) );
 	sgs_PushBool( C, val1 );
 	return 2;
@@ -1588,12 +1911,13 @@ static int sgsimgui_CollapsingHeaderCloseable( SGS_CTX )
 static int sgsimgui_Selectable( SGS_CTX )
 {
 	SGSFN( "ImGui_Selectable" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	bool val1 = sgs_GetVar<bool>()( C, 1 );
 	sgs_PushVar( C, ImGui::Selectable(
 		sgs_GetVar<const char *>()( C, 0 ),
 		&val1,
-		sgs_GetVar<ImGuiSelectableFlags>()( C, 2 ),
-		sgs_GetVar<ImVec2>()( C, 3 )
+		3 <= ssz ? sgs_GetVar<ImGuiSelectableFlags>()( C, 2 ) : 0,
+		5 <= ssz ? sgs_GetVar<ImVec2>()( C, 3 ) : ImVec2 ( 0 , 0 )
 	) );
 	sgs_PushBool( C, val1 );
 	return 2;
@@ -1602,9 +1926,10 @@ static int sgsimgui_Selectable( SGS_CTX )
 static int sgsimgui_ListBoxHeader( SGS_CTX )
 {
 	SGSFN( "ImGui_ListBoxHeader" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::ListBoxHeader(
 		sgs_GetVar<const char *>()( C, 0 ),
-		sgs_GetVar<ImVec2>()( C, 1 )
+		3 <= ssz ? sgs_GetVar<ImVec2>()( C, 1 ) : ImVec2 ( 0 , 0 )
 	) );
 	return 1;
 }
@@ -1612,10 +1937,11 @@ static int sgsimgui_ListBoxHeader( SGS_CTX )
 static int sgsimgui_ListBoxHeader2( SGS_CTX )
 {
 	SGSFN( "ImGui_ListBoxHeader2" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::ListBoxHeader(
 		sgs_GetVar<const char *>()( C, 0 ),
 		sgs_GetVar<int>()( C, 1 ),
-		sgs_GetVar<int>()( C, 2 )
+		3 <= ssz ? sgs_GetVar<int>()( C, 2 ) : - 1
 	) );
 	return 1;
 }
@@ -1623,6 +1949,7 @@ static int sgsimgui_ListBoxHeader2( SGS_CTX )
 static int sgsimgui_ListBoxFooter( SGS_CTX )
 {
 	SGSFN( "ImGui_ListBoxFooter" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::ListBoxFooter();
 	return 0;
 }
@@ -1630,6 +1957,7 @@ static int sgsimgui_ListBoxFooter( SGS_CTX )
 static int sgsimgui_ValueB( SGS_CTX )
 {
 	SGSFN( "ImGui_ValueB" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::Value(
 		sgs_GetVar<const char *>()( C, 0 ),
 		sgs_GetVar<bool>()( C, 1 )
@@ -1640,6 +1968,7 @@ static int sgsimgui_ValueB( SGS_CTX )
 static int sgsimgui_ValueI( SGS_CTX )
 {
 	SGSFN( "ImGui_ValueI" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::Value(
 		sgs_GetVar<const char *>()( C, 0 ),
 		sgs_GetVar<int>()( C, 1 )
@@ -1650,6 +1979,7 @@ static int sgsimgui_ValueI( SGS_CTX )
 static int sgsimgui_ValueU( SGS_CTX )
 {
 	SGSFN( "ImGui_ValueU" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::Value(
 		sgs_GetVar<const char *>()( C, 0 ),
 		sgs_GetVar<unsigned int>()( C, 1 )
@@ -1660,10 +1990,11 @@ static int sgsimgui_ValueU( SGS_CTX )
 static int sgsimgui_ValueF( SGS_CTX )
 {
 	SGSFN( "ImGui_ValueF" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::Value(
 		sgs_GetVar<const char *>()( C, 0 ),
 		sgs_GetVar<float>()( C, 1 ),
-		sgs_GetVar<const char *>()( C, 2 )
+		3 <= ssz ? sgs_GetVar<const char *>()( C, 2 ) : NULL
 	);
 	return 0;
 }
@@ -1671,6 +2002,7 @@ static int sgsimgui_ValueF( SGS_CTX )
 static int sgsimgui_ValueColorF( SGS_CTX )
 {
 	SGSFN( "ImGui_ValueColorF" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::ValueColor(
 		sgs_GetVar<const char *>()( C, 0 ),
 		sgs_GetVar<ImVec4>()( C, 1 )
@@ -1681,6 +2013,7 @@ static int sgsimgui_ValueColorF( SGS_CTX )
 static int sgsimgui_ValueColor( SGS_CTX )
 {
 	SGSFN( "ImGui_ValueColor" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::ValueColor(
 		sgs_GetVar<const char *>()( C, 0 ),
 		sgs_GetVar<ImU32>()( C, 1 )
@@ -1691,6 +2024,7 @@ static int sgsimgui_ValueColor( SGS_CTX )
 static int sgsimgui_SetTooltip( SGS_CTX )
 {
 	SGSFN( "ImGui_SetTooltip" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetTooltip(
 		"%s",
 		sgs_GetVar<const char*>()( C, 0 )
@@ -1701,6 +2035,7 @@ static int sgsimgui_SetTooltip( SGS_CTX )
 static int sgsimgui_BeginTooltip( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginTooltip" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::BeginTooltip();
 	return 0;
 }
@@ -1708,6 +2043,7 @@ static int sgsimgui_BeginTooltip( SGS_CTX )
 static int sgsimgui_EndTooltip( SGS_CTX )
 {
 	SGSFN( "ImGui_EndTooltip" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::EndTooltip();
 	return 0;
 }
@@ -1715,6 +2051,7 @@ static int sgsimgui_EndTooltip( SGS_CTX )
 static int sgsimgui_BeginMainMenuBar( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginMainMenuBar" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::BeginMainMenuBar() );
 	return 1;
 }
@@ -1722,6 +2059,7 @@ static int sgsimgui_BeginMainMenuBar( SGS_CTX )
 static int sgsimgui_EndMainMenuBar( SGS_CTX )
 {
 	SGSFN( "ImGui_EndMainMenuBar" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::EndMainMenuBar();
 	return 0;
 }
@@ -1729,6 +2067,7 @@ static int sgsimgui_EndMainMenuBar( SGS_CTX )
 static int sgsimgui_BeginMenuBar( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginMenuBar" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::BeginMenuBar() );
 	return 1;
 }
@@ -1736,6 +2075,7 @@ static int sgsimgui_BeginMenuBar( SGS_CTX )
 static int sgsimgui_EndMenuBar( SGS_CTX )
 {
 	SGSFN( "ImGui_EndMenuBar" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::EndMenuBar();
 	return 0;
 }
@@ -1743,9 +2083,10 @@ static int sgsimgui_EndMenuBar( SGS_CTX )
 static int sgsimgui_BeginMenu( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginMenu" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::BeginMenu(
 		sgs_GetVar<const char *>()( C, 0 ),
-		sgs_GetVar<bool>()( C, 1 )
+		2 <= ssz ? sgs_GetVar<bool>()( C, 1 ) : true
 	) );
 	return 1;
 }
@@ -1753,6 +2094,7 @@ static int sgsimgui_BeginMenu( SGS_CTX )
 static int sgsimgui_EndMenu( SGS_CTX )
 {
 	SGSFN( "ImGui_EndMenu" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::EndMenu();
 	return 0;
 }
@@ -1760,12 +2102,13 @@ static int sgsimgui_EndMenu( SGS_CTX )
 static int sgsimgui_MenuItem( SGS_CTX )
 {
 	SGSFN( "ImGui_MenuItem" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	bool val2 = sgs_GetVar<bool>()( C, 2 );
 	sgs_PushVar( C, ImGui::MenuItem(
 		sgs_GetVar<const char *>()( C, 0 ),
 		sgs_GetVar<const char *>()( C, 1 ),
 		&val2,
-		sgs_GetVar<bool>()( C, 3 )
+		4 <= ssz ? sgs_GetVar<bool>()( C, 3 ) : true
 	) );
 	sgs_PushBool( C, val2 );
 	return 2;
@@ -1774,6 +2117,7 @@ static int sgsimgui_MenuItem( SGS_CTX )
 static int sgsimgui_OpenPopup( SGS_CTX )
 {
 	SGSFN( "ImGui_OpenPopup" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::OpenPopup(
 		sgs_GetVar<const char *>()( C, 0 )
 	);
@@ -1783,6 +2127,7 @@ static int sgsimgui_OpenPopup( SGS_CTX )
 static int sgsimgui_BeginPopup( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginPopup" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::BeginPopup(
 		sgs_GetVar<const char *>()( C, 0 )
 	) );
@@ -1792,11 +2137,12 @@ static int sgsimgui_BeginPopup( SGS_CTX )
 static int sgsimgui_BeginPopupModal( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginPopupModal" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	bool val1 = sgs_GetVar<bool>()( C, 1 );
 	sgs_PushVar( C, ImGui::BeginPopupModal(
 		sgs_GetVar<const char *>()( C, 0 ),
-		&val1,
-		sgs_GetVar<ImGuiWindowFlags>()( C, 2 )
+		2 <= ssz ? &val1 : NULL,
+		3 <= ssz ? sgs_GetVar<ImGuiWindowFlags>()( C, 2 ) : 0
 	) );
 	sgs_PushBool( C, val1 );
 	return 2;
@@ -1805,9 +2151,10 @@ static int sgsimgui_BeginPopupModal( SGS_CTX )
 static int sgsimgui_BeginPopupContextItem( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginPopupContextItem" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::BeginPopupContextItem(
 		sgs_GetVar<const char *>()( C, 0 ),
-		sgs_GetVar<int>()( C, 1 )
+		2 <= ssz ? sgs_GetVar<int>()( C, 1 ) : 1
 	) );
 	return 1;
 }
@@ -1815,10 +2162,11 @@ static int sgsimgui_BeginPopupContextItem( SGS_CTX )
 static int sgsimgui_BeginPopupContextWindow( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginPopupContextWindow" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::BeginPopupContextWindow(
-		sgs_GetVar<bool>()( C, 0 ),
-		sgs_GetVar<const char *>()( C, 1 ),
-		sgs_GetVar<int>()( C, 2 )
+		1 <= ssz ? sgs_GetVar<bool>()( C, 0 ) : true,
+		2 <= ssz ? sgs_GetVar<const char *>()( C, 1 ) : NULL,
+		3 <= ssz ? sgs_GetVar<int>()( C, 2 ) : 1
 	) );
 	return 1;
 }
@@ -1826,9 +2174,10 @@ static int sgsimgui_BeginPopupContextWindow( SGS_CTX )
 static int sgsimgui_BeginPopupContextVoid( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginPopupContextVoid" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::BeginPopupContextVoid(
-		sgs_GetVar<const char *>()( C, 0 ),
-		sgs_GetVar<int>()( C, 1 )
+		1 <= ssz ? sgs_GetVar<const char *>()( C, 0 ) : NULL,
+		2 <= ssz ? sgs_GetVar<int>()( C, 1 ) : 1
 	) );
 	return 1;
 }
@@ -1836,6 +2185,7 @@ static int sgsimgui_BeginPopupContextVoid( SGS_CTX )
 static int sgsimgui_EndPopup( SGS_CTX )
 {
 	SGSFN( "ImGui_EndPopup" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::EndPopup();
 	return 0;
 }
@@ -1843,6 +2193,7 @@ static int sgsimgui_EndPopup( SGS_CTX )
 static int sgsimgui_CloseCurrentPopup( SGS_CTX )
 {
 	SGSFN( "ImGui_CloseCurrentPopup" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::CloseCurrentPopup();
 	return 0;
 }
@@ -1850,8 +2201,9 @@ static int sgsimgui_CloseCurrentPopup( SGS_CTX )
 static int sgsimgui_LogToTTY( SGS_CTX )
 {
 	SGSFN( "ImGui_LogToTTY" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::LogToTTY(
-		sgs_GetVar<int>()( C, 0 )
+		1 <= ssz ? sgs_GetVar<int>()( C, 0 ) : - 1
 	);
 	return 0;
 }
@@ -1859,9 +2211,10 @@ static int sgsimgui_LogToTTY( SGS_CTX )
 static int sgsimgui_LogToFile( SGS_CTX )
 {
 	SGSFN( "ImGui_LogToFile" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::LogToFile(
-		sgs_GetVar<int>()( C, 0 ),
-		sgs_GetVar<const char *>()( C, 1 )
+		1 <= ssz ? sgs_GetVar<int>()( C, 0 ) : - 1,
+		2 <= ssz ? sgs_GetVar<const char *>()( C, 1 ) : NULL
 	);
 	return 0;
 }
@@ -1869,8 +2222,9 @@ static int sgsimgui_LogToFile( SGS_CTX )
 static int sgsimgui_LogToClipboard( SGS_CTX )
 {
 	SGSFN( "ImGui_LogToClipboard" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::LogToClipboard(
-		sgs_GetVar<int>()( C, 0 )
+		1 <= ssz ? sgs_GetVar<int>()( C, 0 ) : - 1
 	);
 	return 0;
 }
@@ -1878,6 +2232,7 @@ static int sgsimgui_LogToClipboard( SGS_CTX )
 static int sgsimgui_LogFinish( SGS_CTX )
 {
 	SGSFN( "ImGui_LogFinish" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::LogFinish();
 	return 0;
 }
@@ -1885,6 +2240,7 @@ static int sgsimgui_LogFinish( SGS_CTX )
 static int sgsimgui_LogButtons( SGS_CTX )
 {
 	SGSFN( "ImGui_LogButtons" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::LogButtons();
 	return 0;
 }
@@ -1892,6 +2248,7 @@ static int sgsimgui_LogButtons( SGS_CTX )
 static int sgsimgui_LogText( SGS_CTX )
 {
 	SGSFN( "ImGui_LogText" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::LogText(
 		"%s",
 		sgs_GetVar<const char*>()( C, 0 )
@@ -1902,6 +2259,7 @@ static int sgsimgui_LogText( SGS_CTX )
 static int sgsimgui_PushClipRect( SGS_CTX )
 {
 	SGSFN( "ImGui_PushClipRect" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::PushClipRect(
 		sgs_GetVar<ImVec2>()( C, 0 ),
 		sgs_GetVar<ImVec2>()( C, 2 ),
@@ -1913,6 +2271,7 @@ static int sgsimgui_PushClipRect( SGS_CTX )
 static int sgsimgui_PopClipRect( SGS_CTX )
 {
 	SGSFN( "ImGui_PopClipRect" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::PopClipRect();
 	return 0;
 }
@@ -1920,6 +2279,7 @@ static int sgsimgui_PopClipRect( SGS_CTX )
 static int sgsimgui_IsItemHovered( SGS_CTX )
 {
 	SGSFN( "ImGui_IsItemHovered" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsItemHovered() );
 	return 1;
 }
@@ -1927,6 +2287,7 @@ static int sgsimgui_IsItemHovered( SGS_CTX )
 static int sgsimgui_IsItemHoveredRect( SGS_CTX )
 {
 	SGSFN( "ImGui_IsItemHoveredRect" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsItemHoveredRect() );
 	return 1;
 }
@@ -1934,6 +2295,7 @@ static int sgsimgui_IsItemHoveredRect( SGS_CTX )
 static int sgsimgui_IsItemActive( SGS_CTX )
 {
 	SGSFN( "ImGui_IsItemActive" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsItemActive() );
 	return 1;
 }
@@ -1941,8 +2303,9 @@ static int sgsimgui_IsItemActive( SGS_CTX )
 static int sgsimgui_IsItemClicked( SGS_CTX )
 {
 	SGSFN( "ImGui_IsItemClicked" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsItemClicked(
-		sgs_GetVar<int>()( C, 0 )
+		1 <= ssz ? sgs_GetVar<int>()( C, 0 ) : 0
 	) );
 	return 1;
 }
@@ -1950,6 +2313,7 @@ static int sgsimgui_IsItemClicked( SGS_CTX )
 static int sgsimgui_IsItemVisible( SGS_CTX )
 {
 	SGSFN( "ImGui_IsItemVisible" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsItemVisible() );
 	return 1;
 }
@@ -1957,6 +2321,7 @@ static int sgsimgui_IsItemVisible( SGS_CTX )
 static int sgsimgui_IsAnyItemHovered( SGS_CTX )
 {
 	SGSFN( "ImGui_IsAnyItemHovered" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsAnyItemHovered() );
 	return 1;
 }
@@ -1964,6 +2329,7 @@ static int sgsimgui_IsAnyItemHovered( SGS_CTX )
 static int sgsimgui_IsAnyItemActive( SGS_CTX )
 {
 	SGSFN( "ImGui_IsAnyItemActive" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsAnyItemActive() );
 	return 1;
 }
@@ -1971,6 +2337,7 @@ static int sgsimgui_IsAnyItemActive( SGS_CTX )
 static int sgsimgui_GetItemRectMin( SGS_CTX )
 {
 	SGSFN( "ImGui_GetItemRectMin" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetItemRectMin() );
 	return 2;
 }
@@ -1978,6 +2345,7 @@ static int sgsimgui_GetItemRectMin( SGS_CTX )
 static int sgsimgui_GetItemRectMax( SGS_CTX )
 {
 	SGSFN( "ImGui_GetItemRectMax" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetItemRectMax() );
 	return 2;
 }
@@ -1985,6 +2353,7 @@ static int sgsimgui_GetItemRectMax( SGS_CTX )
 static int sgsimgui_GetItemRectSize( SGS_CTX )
 {
 	SGSFN( "ImGui_GetItemRectSize" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetItemRectSize() );
 	return 2;
 }
@@ -1992,6 +2361,7 @@ static int sgsimgui_GetItemRectSize( SGS_CTX )
 static int sgsimgui_SetItemAllowOverlap( SGS_CTX )
 {
 	SGSFN( "ImGui_SetItemAllowOverlap" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetItemAllowOverlap();
 	return 0;
 }
@@ -1999,6 +2369,7 @@ static int sgsimgui_SetItemAllowOverlap( SGS_CTX )
 static int sgsimgui_IsWindowHovered( SGS_CTX )
 {
 	SGSFN( "ImGui_IsWindowHovered" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsWindowHovered() );
 	return 1;
 }
@@ -2006,6 +2377,7 @@ static int sgsimgui_IsWindowHovered( SGS_CTX )
 static int sgsimgui_IsWindowFocused( SGS_CTX )
 {
 	SGSFN( "ImGui_IsWindowFocused" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsWindowFocused() );
 	return 1;
 }
@@ -2013,6 +2385,7 @@ static int sgsimgui_IsWindowFocused( SGS_CTX )
 static int sgsimgui_IsRootWindowFocused( SGS_CTX )
 {
 	SGSFN( "ImGui_IsRootWindowFocused" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsRootWindowFocused() );
 	return 1;
 }
@@ -2020,6 +2393,7 @@ static int sgsimgui_IsRootWindowFocused( SGS_CTX )
 static int sgsimgui_IsRootWindowOrAnyChildFocused( SGS_CTX )
 {
 	SGSFN( "ImGui_IsRootWindowOrAnyChildFocused" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsRootWindowOrAnyChildFocused() );
 	return 1;
 }
@@ -2027,6 +2401,7 @@ static int sgsimgui_IsRootWindowOrAnyChildFocused( SGS_CTX )
 static int sgsimgui_IsRootWindowOrAnyChildHovered( SGS_CTX )
 {
 	SGSFN( "ImGui_IsRootWindowOrAnyChildHovered" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsRootWindowOrAnyChildHovered() );
 	return 1;
 }
@@ -2034,6 +2409,7 @@ static int sgsimgui_IsRootWindowOrAnyChildHovered( SGS_CTX )
 static int sgsimgui_IsRectVisible( SGS_CTX )
 {
 	SGSFN( "ImGui_IsRectVisible" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsRectVisible(
 		sgs_GetVar<ImVec2>()( C, 0 )
 	) );
@@ -2043,6 +2419,7 @@ static int sgsimgui_IsRectVisible( SGS_CTX )
 static int sgsimgui_IsRectVisibleScreen( SGS_CTX )
 {
 	SGSFN( "ImGui_IsRectVisibleScreen" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsRectVisible(
 		sgs_GetVar<ImVec2>()( C, 0 ),
 		sgs_GetVar<ImVec2>()( C, 2 )
@@ -2053,6 +2430,7 @@ static int sgsimgui_IsRectVisibleScreen( SGS_CTX )
 static int sgsimgui_IsPosHoveringAnyWindow( SGS_CTX )
 {
 	SGSFN( "ImGui_IsPosHoveringAnyWindow" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsPosHoveringAnyWindow(
 		sgs_GetVar<ImVec2>()( C, 0 )
 	) );
@@ -2062,6 +2440,7 @@ static int sgsimgui_IsPosHoveringAnyWindow( SGS_CTX )
 static int sgsimgui_GetTime( SGS_CTX )
 {
 	SGSFN( "ImGui_GetTime" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetTime() );
 	return 1;
 }
@@ -2069,6 +2448,7 @@ static int sgsimgui_GetTime( SGS_CTX )
 static int sgsimgui_GetFrameCount( SGS_CTX )
 {
 	SGSFN( "ImGui_GetFrameCount" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetFrameCount() );
 	return 1;
 }
@@ -2076,6 +2456,7 @@ static int sgsimgui_GetFrameCount( SGS_CTX )
 static int sgsimgui_GetStyleColName( SGS_CTX )
 {
 	SGSFN( "ImGui_GetStyleColName" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetStyleColName(
 		sgs_GetVar<ImGuiCol>()( C, 0 )
 	) );
@@ -2085,10 +2466,11 @@ static int sgsimgui_GetStyleColName( SGS_CTX )
 static int sgsimgui_CalcItemRectClosestPoint( SGS_CTX )
 {
 	SGSFN( "ImGui_CalcItemRectClosestPoint" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::CalcItemRectClosestPoint(
 		sgs_GetVar<ImVec2>()( C, 0 ),
-		sgs_GetVar<bool>()( C, 2 ),
-		sgs_GetVar<float>()( C, 3 )
+		3 <= ssz ? sgs_GetVar<bool>()( C, 2 ) : false,
+		4 <= ssz ? sgs_GetVar<float>()( C, 3 ) : + 0
 	) );
 	return 2;
 }
@@ -2096,11 +2478,12 @@ static int sgsimgui_CalcItemRectClosestPoint( SGS_CTX )
 static int sgsimgui_CalcTextSize( SGS_CTX )
 {
 	SGSFN( "ImGui_CalcTextSize" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::CalcTextSize(
 		sgs_GetVar<const char *>()( C, 0 ),
-		sgs_GetVar<const char *>()( C, 1 ),
-		sgs_GetVar<bool>()( C, 2 ),
-		sgs_GetVar<float>()( C, 3 )
+		2 <= ssz ? sgs_GetVar<const char *>()( C, 1 ) : NULL,
+		3 <= ssz ? sgs_GetVar<bool>()( C, 2 ) : false,
+		4 <= ssz ? sgs_GetVar<float>()( C, 3 ) : - 1
 	) );
 	return 2;
 }
@@ -2108,6 +2491,7 @@ static int sgsimgui_CalcTextSize( SGS_CTX )
 static int sgsimgui_CalcListClipping( SGS_CTX )
 {
 	SGSFN( "ImGui_CalcListClipping" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	int val2 = sgs_GetVar<int>()( C, 2 );
 	int val3 = sgs_GetVar<int>()( C, 3 );
 	ImGui::CalcListClipping(
@@ -2124,10 +2508,11 @@ static int sgsimgui_CalcListClipping( SGS_CTX )
 static int sgsimgui_BeginChildFrame( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginChildFrame" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::BeginChildFrame(
-		sgs_GetVar<ImGuiID>()( C, 0 ),
+		ImGui::GetID( sgs_GetPtr( C, 0 ) ),
 		sgs_GetVar<ImVec2>()( C, 1 ),
-		sgs_GetVar<ImGuiWindowFlags>()( C, 3 )
+		4 <= ssz ? sgs_GetVar<ImGuiWindowFlags>()( C, 3 ) : 0
 	) );
 	return 1;
 }
@@ -2135,6 +2520,7 @@ static int sgsimgui_BeginChildFrame( SGS_CTX )
 static int sgsimgui_EndChildFrame( SGS_CTX )
 {
 	SGSFN( "ImGui_EndChildFrame" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::EndChildFrame();
 	return 0;
 }
@@ -2142,6 +2528,7 @@ static int sgsimgui_EndChildFrame( SGS_CTX )
 static int sgsimgui_ColorConvertU32ToFloat4( SGS_CTX )
 {
 	SGSFN( "ImGui_ColorConvertU32ToFloat4" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::ColorConvertU32ToFloat4(
 		sgs_GetVar<ImU32>()( C, 0 )
 	) );
@@ -2151,6 +2538,7 @@ static int sgsimgui_ColorConvertU32ToFloat4( SGS_CTX )
 static int sgsimgui_ColorConvertFloat4ToU32( SGS_CTX )
 {
 	SGSFN( "ImGui_ColorConvertFloat4ToU32" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::ColorConvertFloat4ToU32(
 		sgs_GetVar<ImVec4>()( C, 0 )
 	) );
@@ -2160,6 +2548,7 @@ static int sgsimgui_ColorConvertFloat4ToU32( SGS_CTX )
 static int sgsimgui_ColorConvertRGBtoHSV( SGS_CTX )
 {
 	SGSFN( "ImGui_ColorConvertRGBtoHSV" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	float val3 = sgs_GetVar<float>()( C, 3 );
 	float val4 = sgs_GetVar<float>()( C, 4 );
 	float val5 = sgs_GetVar<float>()( C, 5 );
@@ -2180,6 +2569,7 @@ static int sgsimgui_ColorConvertRGBtoHSV( SGS_CTX )
 static int sgsimgui_ColorConvertHSVtoRGB( SGS_CTX )
 {
 	SGSFN( "ImGui_ColorConvertHSVtoRGB" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	float val3 = sgs_GetVar<float>()( C, 3 );
 	float val4 = sgs_GetVar<float>()( C, 4 );
 	float val5 = sgs_GetVar<float>()( C, 5 );
@@ -2200,6 +2590,7 @@ static int sgsimgui_ColorConvertHSVtoRGB( SGS_CTX )
 static int sgsimgui_GetKeyIndex( SGS_CTX )
 {
 	SGSFN( "ImGui_GetKeyIndex" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetKeyIndex(
 		sgs_GetVar<ImGuiKey>()( C, 0 )
 	) );
@@ -2209,6 +2600,7 @@ static int sgsimgui_GetKeyIndex( SGS_CTX )
 static int sgsimgui_IsKeyDown( SGS_CTX )
 {
 	SGSFN( "ImGui_IsKeyDown" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsKeyDown(
 		sgs_GetVar<int>()( C, 0 )
 	) );
@@ -2218,9 +2610,10 @@ static int sgsimgui_IsKeyDown( SGS_CTX )
 static int sgsimgui_IsKeyPressed( SGS_CTX )
 {
 	SGSFN( "ImGui_IsKeyPressed" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsKeyPressed(
 		sgs_GetVar<int>()( C, 0 ),
-		sgs_GetVar<bool>()( C, 1 )
+		2 <= ssz ? sgs_GetVar<bool>()( C, 1 ) : true
 	) );
 	return 1;
 }
@@ -2228,6 +2621,7 @@ static int sgsimgui_IsKeyPressed( SGS_CTX )
 static int sgsimgui_IsKeyReleased( SGS_CTX )
 {
 	SGSFN( "ImGui_IsKeyReleased" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsKeyReleased(
 		sgs_GetVar<int>()( C, 0 )
 	) );
@@ -2237,6 +2631,7 @@ static int sgsimgui_IsKeyReleased( SGS_CTX )
 static int sgsimgui_IsMouseDown( SGS_CTX )
 {
 	SGSFN( "ImGui_IsMouseDown" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsMouseDown(
 		sgs_GetVar<int>()( C, 0 )
 	) );
@@ -2246,9 +2641,10 @@ static int sgsimgui_IsMouseDown( SGS_CTX )
 static int sgsimgui_IsMouseClicked( SGS_CTX )
 {
 	SGSFN( "ImGui_IsMouseClicked" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsMouseClicked(
 		sgs_GetVar<int>()( C, 0 ),
-		sgs_GetVar<bool>()( C, 1 )
+		2 <= ssz ? sgs_GetVar<bool>()( C, 1 ) : false
 	) );
 	return 1;
 }
@@ -2256,6 +2652,7 @@ static int sgsimgui_IsMouseClicked( SGS_CTX )
 static int sgsimgui_IsMouseDoubleClicked( SGS_CTX )
 {
 	SGSFN( "ImGui_IsMouseDoubleClicked" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsMouseDoubleClicked(
 		sgs_GetVar<int>()( C, 0 )
 	) );
@@ -2265,6 +2662,7 @@ static int sgsimgui_IsMouseDoubleClicked( SGS_CTX )
 static int sgsimgui_IsMouseReleased( SGS_CTX )
 {
 	SGSFN( "ImGui_IsMouseReleased" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsMouseReleased(
 		sgs_GetVar<int>()( C, 0 )
 	) );
@@ -2274,6 +2672,7 @@ static int sgsimgui_IsMouseReleased( SGS_CTX )
 static int sgsimgui_IsMouseHoveringWindow( SGS_CTX )
 {
 	SGSFN( "ImGui_IsMouseHoveringWindow" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsMouseHoveringWindow() );
 	return 1;
 }
@@ -2281,6 +2680,7 @@ static int sgsimgui_IsMouseHoveringWindow( SGS_CTX )
 static int sgsimgui_IsMouseHoveringAnyWindow( SGS_CTX )
 {
 	SGSFN( "ImGui_IsMouseHoveringAnyWindow" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsMouseHoveringAnyWindow() );
 	return 1;
 }
@@ -2288,10 +2688,11 @@ static int sgsimgui_IsMouseHoveringAnyWindow( SGS_CTX )
 static int sgsimgui_IsMouseHoveringRect( SGS_CTX )
 {
 	SGSFN( "ImGui_IsMouseHoveringRect" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsMouseHoveringRect(
 		sgs_GetVar<ImVec2>()( C, 0 ),
 		sgs_GetVar<ImVec2>()( C, 2 ),
-		sgs_GetVar<bool>()( C, 4 )
+		5 <= ssz ? sgs_GetVar<bool>()( C, 4 ) : true
 	) );
 	return 1;
 }
@@ -2299,9 +2700,10 @@ static int sgsimgui_IsMouseHoveringRect( SGS_CTX )
 static int sgsimgui_IsMouseDragging( SGS_CTX )
 {
 	SGSFN( "ImGui_IsMouseDragging" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::IsMouseDragging(
-		sgs_GetVar<int>()( C, 0 ),
-		sgs_GetVar<float>()( C, 1 )
+		1 <= ssz ? sgs_GetVar<int>()( C, 0 ) : 0,
+		2 <= ssz ? sgs_GetVar<float>()( C, 1 ) : - 1
 	) );
 	return 1;
 }
@@ -2309,6 +2711,7 @@ static int sgsimgui_IsMouseDragging( SGS_CTX )
 static int sgsimgui_GetMousePos( SGS_CTX )
 {
 	SGSFN( "ImGui_GetMousePos" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetMousePos() );
 	return 2;
 }
@@ -2316,6 +2719,7 @@ static int sgsimgui_GetMousePos( SGS_CTX )
 static int sgsimgui_GetMousePosOnOpeningCurrentPopup( SGS_CTX )
 {
 	SGSFN( "ImGui_GetMousePosOnOpeningCurrentPopup" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetMousePosOnOpeningCurrentPopup() );
 	return 2;
 }
@@ -2323,9 +2727,10 @@ static int sgsimgui_GetMousePosOnOpeningCurrentPopup( SGS_CTX )
 static int sgsimgui_GetMouseDragDelta( SGS_CTX )
 {
 	SGSFN( "ImGui_GetMouseDragDelta" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetMouseDragDelta(
-		sgs_GetVar<int>()( C, 0 ),
-		sgs_GetVar<float>()( C, 1 )
+		1 <= ssz ? sgs_GetVar<int>()( C, 0 ) : 0,
+		2 <= ssz ? sgs_GetVar<float>()( C, 1 ) : - 1
 	) );
 	return 2;
 }
@@ -2333,8 +2738,9 @@ static int sgsimgui_GetMouseDragDelta( SGS_CTX )
 static int sgsimgui_ResetMouseDragDelta( SGS_CTX )
 {
 	SGSFN( "ImGui_ResetMouseDragDelta" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::ResetMouseDragDelta(
-		sgs_GetVar<int>()( C, 0 )
+		1 <= ssz ? sgs_GetVar<int>()( C, 0 ) : 0
 	);
 	return 0;
 }
@@ -2342,6 +2748,7 @@ static int sgsimgui_ResetMouseDragDelta( SGS_CTX )
 static int sgsimgui_GetMouseCursor( SGS_CTX )
 {
 	SGSFN( "ImGui_GetMouseCursor" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetMouseCursor() );
 	return 1;
 }
@@ -2349,6 +2756,7 @@ static int sgsimgui_GetMouseCursor( SGS_CTX )
 static int sgsimgui_SetMouseCursor( SGS_CTX )
 {
 	SGSFN( "ImGui_SetMouseCursor" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetMouseCursor(
 		sgs_GetVar<ImGuiMouseCursor>()( C, 0 )
 	);
@@ -2358,8 +2766,9 @@ static int sgsimgui_SetMouseCursor( SGS_CTX )
 static int sgsimgui_CaptureKeyboardFromApp( SGS_CTX )
 {
 	SGSFN( "ImGui_CaptureKeyboardFromApp" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::CaptureKeyboardFromApp(
-		sgs_GetVar<bool>()( C, 0 )
+		1 <= ssz ? sgs_GetVar<bool>()( C, 0 ) : true
 	);
 	return 0;
 }
@@ -2367,8 +2776,9 @@ static int sgsimgui_CaptureKeyboardFromApp( SGS_CTX )
 static int sgsimgui_CaptureMouseFromApp( SGS_CTX )
 {
 	SGSFN( "ImGui_CaptureMouseFromApp" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::CaptureMouseFromApp(
-		sgs_GetVar<bool>()( C, 0 )
+		1 <= ssz ? sgs_GetVar<bool>()( C, 0 ) : true
 	);
 	return 0;
 }
@@ -2376,6 +2786,7 @@ static int sgsimgui_CaptureMouseFromApp( SGS_CTX )
 static int sgsimgui_MemAlloc( SGS_CTX )
 {
 	SGSFN( "ImGui_MemAlloc" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::MemAlloc(
 		sgs_GetVar<size_t>()( C, 0 )
 	) );
@@ -2385,6 +2796,7 @@ static int sgsimgui_MemAlloc( SGS_CTX )
 static int sgsimgui_MemFree( SGS_CTX )
 {
 	SGSFN( "ImGui_MemFree" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::MemFree(
 		sgs_GetVar<void *>()( C, 0 )
 	);
@@ -2394,6 +2806,7 @@ static int sgsimgui_MemFree( SGS_CTX )
 static int sgsimgui_GetClipboardText( SGS_CTX )
 {
 	SGSFN( "ImGui_GetClipboardText" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetClipboardText() );
 	return 1;
 }
@@ -2401,6 +2814,7 @@ static int sgsimgui_GetClipboardText( SGS_CTX )
 static int sgsimgui_SetClipboardText( SGS_CTX )
 {
 	SGSFN( "ImGui_SetClipboardText" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::SetClipboardText(
 		sgs_GetVar<const char *>()( C, 0 )
 	);
@@ -2410,6 +2824,7 @@ static int sgsimgui_SetClipboardText( SGS_CTX )
 static int sgsimgui_GetVersion( SGS_CTX )
 {
 	SGSFN( "ImGui_GetVersion" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	sgs_PushVar( C, ImGui::GetVersion() );
 	return 1;
 }
@@ -2425,6 +2840,7 @@ static sgs_RegFuncConst imgui_fconsts[] =
 	{ "ImGui_ShowMetricsWindow", sgsimgui_ShowMetricsWindow },
 	{ "ImGui_Begin", sgsimgui_Begin },
 	{ "ImGui_End", sgsimgui_End },
+	{ "ImGui_BeginChild", sgsimgui_BeginChild },
 	{ "ImGui_EndChild", sgsimgui_EndChild },
 	{ "ImGui_GetContentRegionMax", sgsimgui_GetContentRegionMax },
 	{ "ImGui_GetContentRegionAvail", sgsimgui_GetContentRegionAvail },
@@ -2470,6 +2886,8 @@ static sgs_RegFuncConst imgui_fconsts[] =
 	{ "ImGui_PopStyleVar", sgsimgui_PopStyleVar },
 	{ "ImGui_GetFontSize", sgsimgui_GetFontSize },
 	{ "ImGui_GetFontTexUvWhitePixel", sgsimgui_GetFontTexUvWhitePixel },
+	{ "ImGui_GetStyleColorU32", sgsimgui_GetStyleColorU32 },
+	{ "ImGui_GetColorU32", sgsimgui_GetColorU32 },
 	{ "ImGui_PushItemWidth", sgsimgui_PushItemWidth },
 	{ "ImGui_PopItemWidth", sgsimgui_PopItemWidth },
 	{ "ImGui_CalcItemWidth", sgsimgui_CalcItemWidth },
@@ -2527,10 +2945,16 @@ static sgs_RegFuncConst imgui_fconsts[] =
 	{ "ImGui_Checkbox", sgsimgui_Checkbox },
 	{ "ImGui_CheckboxFlags", sgsimgui_CheckboxFlags },
 	{ "ImGui_RadioButton", sgsimgui_RadioButton },
+	{ "ImGui_Combo", sgsimgui_Combo },
+	{ "ImGui_ComboCb", sgsimgui_ComboCb },
 	{ "ImGui_ColorButton", sgsimgui_ColorButton },
 	{ "ImGui_ColorEdit3", sgsimgui_ColorEdit3 },
 	{ "ImGui_ColorEdit4", sgsimgui_ColorEdit4 },
 	{ "ImGui_ColorEditMode", sgsimgui_ColorEditMode },
+	{ "ImGui_PlotLines", sgsimgui_PlotLines },
+	{ "ImGui_PlotLinesCb", sgsimgui_PlotLinesCb },
+	{ "ImGui_PlotHistogram", sgsimgui_PlotHistogram },
+	{ "ImGui_PlotHistogramCb", sgsimgui_PlotHistogramCb },
 	{ "ImGui_ProgressBar", sgsimgui_ProgressBar },
 	{ "ImGui_DragFloat", sgsimgui_DragFloat },
 	{ "ImGui_DragFloat2", sgsimgui_DragFloat2 },
@@ -2542,6 +2966,8 @@ static sgs_RegFuncConst imgui_fconsts[] =
 	{ "ImGui_DragInt3", sgsimgui_DragInt3 },
 	{ "ImGui_DragInt4", sgsimgui_DragInt4 },
 	{ "ImGui_DragIntRange2", sgsimgui_DragIntRange2 },
+	{ "ImGui_InputText", sgsimgui_InputText },
+	{ "ImGui_InputTextMultiline", sgsimgui_InputTextMultiline },
 	{ "ImGui_InputFloat", sgsimgui_InputFloat },
 	{ "ImGui_InputFloat2", sgsimgui_InputFloat2 },
 	{ "ImGui_InputFloat3", sgsimgui_InputFloat3 },
@@ -2668,6 +3094,31 @@ static sgs_RegFuncConst imgui_fconsts[] =
 
 static sgs_RegIntConst imgui_iconsts[] =
 {
+	{ "ImGuiWindowFlags_NoTitleBar", 1 },
+	{ "ImGuiWindowFlags_NoResize", 2 },
+	{ "ImGuiWindowFlags_NoMove", 4 },
+	{ "ImGuiWindowFlags_NoScrollbar", 8 },
+	{ "ImGuiWindowFlags_NoScrollWithMouse", 16 },
+	{ "ImGuiWindowFlags_NoCollapse", 32 },
+	{ "ImGuiWindowFlags_AlwaysAutoResize", 64 },
+	{ "ImGuiWindowFlags_ShowBorders", 128 },
+	{ "ImGuiWindowFlags_NoSavedSettings", 256 },
+	{ "ImGuiWindowFlags_NoInputs", 512 },
+	{ "ImGuiWindowFlags_MenuBar", 1024 },
+	{ "ImGuiWindowFlags_HorizontalScrollbar", 2048 },
+	{ "ImGuiWindowFlags_NoFocusOnAppearing", 4096 },
+	{ "ImGuiWindowFlags_NoBringToFrontOnFocus", 8192 },
+	{ "ImGuiWindowFlags_AlwaysVerticalScrollbar", 16384 },
+	{ "ImGuiWindowFlags_AlwaysHorizontalScrollbar", 32768 },
+	{ "ImGuiWindowFlags_AlwaysUseWindowPadding", 65536 },
+	{ "ImGuiWindowFlags_ChildWindow", 1048576 },
+	{ "ImGuiWindowFlags_ChildWindowAutoFitX", 2097152 },
+	{ "ImGuiWindowFlags_ChildWindowAutoFitY", 4194304 },
+	{ "ImGuiWindowFlags_ComboBox", 8388608 },
+	{ "ImGuiWindowFlags_Tooltip", 16777216 },
+	{ "ImGuiWindowFlags_Popup", 33554432 },
+	{ "ImGuiWindowFlags_Modal", 67108864 },
+	{ "ImGuiWindowFlags_ChildMenu", 134217728 },
 	{ "ImGuiInputTextFlags_CharsDecimal", 1 },
 	{ "ImGuiInputTextFlags_CharsHexadecimal", 2 },
 	{ "ImGuiInputTextFlags_CharsUppercase", 4 },

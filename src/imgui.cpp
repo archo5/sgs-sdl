@@ -3,6 +3,46 @@
 #include "imgui.hpp"
 
 
+bool _imgui_TextArrayCallback( void* data, int idx, const char** out_text )
+{
+	/////////////////////////////
+	// ASSUMING IMPLEMENTATION:
+	// - out_text is used only before next call to this function
+	// > after each call, the previous value is invalid
+	imgui_TextArrayCallbackData* tacd = (imgui_TextArrayCallbackData*) data;
+	tacd->str = tacd->func.tcall<sgsString>( tacd->func.get_ctx(), idx );
+	if( tacd->str.not_null() )
+	{
+		*out_text = tacd->str.c_str();
+		return true;
+	}
+	return false;
+}
+
+float _imgui_FloatArrayCallback( void* data, int idx )
+{
+	sgsVariable* func = (sgsVariable*) data;
+	return func->tcall<float>( func->get_ctx(), idx );
+}
+
+imgui_FloatArrayParser::imgui_FloatArrayParser( SGS_CTX, sgs_StkIdx item )
+{
+	values = NULL;
+	sgs_Variable var = sgs_OptStackItem( C, item );
+	count = sgs_ArraySize( var );
+	if( count > 0 )
+	{
+		values = new float[ count ];
+		for( int i = 0; i < count; ++i )
+		{
+			sgs_PushNumIndex( C, var, i );
+			values[ i ] = sgs_GetReal( C, -1 );
+			sgs_Pop( C, 1 );
+		}
+	}
+}
+
+
 static int sgsimgui_SS_NewFrame( SGS_CTX )
 {
 	SGSFN( "ImGui_SS_NewFrame" );
@@ -36,6 +76,69 @@ static int sgsimgui_SS_NewFrame( SGS_CTX )
 	ImGui::NewFrame();
 	
 	return 0;
+}
+
+static void imgui_impl_RenderDrawLists( ImDrawData* draw_data )
+{
+	if( !GCurRI || !GCurRr )
+		return; /* cannot draw without active renderer */
+	
+	ImGuiIO& io = ImGui::GetIO();
+	int fb_width = int( io.DisplaySize.x * io.DisplayFramebufferScale.x );
+	int fb_height = int( io.DisplaySize.y * io.DisplayFramebufferScale.y );
+	if( fb_width == 0 || fb_height == 0 )
+		return;
+	draw_data->ScaleClipRects( io.DisplayFramebufferScale );
+	
+	for( int n = 0; n < draw_data->CmdListsCount; ++n )
+	{
+		const ImDrawList* cmd_list = draw_data->CmdLists[ n ];
+		const ImDrawVert* vtx_buffer = &cmd_list->VtxBuffer.front();
+		const ImDrawIdx* idx_buffer = &cmd_list->IdxBuffer.front();
+		
+		for( int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.size(); ++cmd_i )
+		{
+			const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[ cmd_i ];
+			if( pcmd->UserCallback )
+			{
+				pcmd->UserCallback( cmd_list, pcmd );
+			}
+			else
+			{
+				GCurRI->set_render_state( GCurRr, SS_RS_CLIPRECT, pcmd->ClipRect.x, pcmd->ClipRect.y, pcmd->ClipRect.z, pcmd->ClipRect.w );
+				GCurRI->set_render_state( GCurRr, SS_RS_CLIPENABLE, 1, 0,0,0 );
+				
+				GCurRI->apply_texture( GCurRr, (SS_Texture*) ((sgs_VarObj*)pcmd->TextureId)->data );
+				
+				SS_BasicVertex outverts[ 3 * 1024 ];
+				int outidx = 0;
+				
+				for( unsigned idx = 0; idx < pcmd->ElemCount; ++idx )
+				{
+					const ImDrawVert& v = vtx_buffer[ idx_buffer[ idx ] ];
+					SS_BasicVertex& outv = outverts[ outidx ];
+					outv.pos[0] = v.pos.x;
+					outv.pos[1] = v.pos.y;
+					outv.pos[2] = 0;
+					outv.col = v.col;
+					outv.tex[0] = v.uv.x;
+					outv.tex[1] = v.uv.y;
+					outidx++;
+					if( outidx == 3 * 1024 )
+					{
+						GCurRI->draw_basic_vertices( GCurRr, outverts, outidx, SS_PT_TRIANGLES );
+						outidx = 0;
+					}
+				}
+				
+				if( outidx >= 3 )
+					GCurRI->draw_basic_vertices( GCurRr, outverts, outidx, SS_PT_TRIANGLES );
+			}
+			idx_buffer += pcmd->ElemCount;
+		}
+	}
+	
+	GCurRI->set_render_state( GCurRr, SS_RS_CLIPENABLE, 0, 0,0,0 );
 }
 
 static const char* imgui_impl_GetClipboardText( void* user_data )
@@ -90,6 +193,7 @@ static int sgsimgui_SS_Init( SGS_CTX )
 	io.SetClipboardTextFn = imgui_impl_SetClipboardText;
 	io.GetClipboardTextFn = imgui_impl_GetClipboardText;
 	io.ClipboardUserData = C;
+	io.RenderDrawListsFn = imgui_impl_RenderDrawLists;
 	
 	return 0;
 }

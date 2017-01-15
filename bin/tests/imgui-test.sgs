@@ -7,24 +7,75 @@ function configure()
 
 function initialize()
 {
-	global Window = SS_CreateWindow( "SGS-SDL Game Framework", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 576, SDL_WINDOW_OPENGLMAYBE );
+	global Window = SS_CreateWindow( "SGS-SDL Game Framework", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 576, SDL_WINDOW_OPENGLMAYBE | SDL_WINDOW_RESIZABLE );
 	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
 	
 	ImGui_SS_Init( Window.width, Window.height );
 }
 
+function ImGui_MainWindow( w, h, cb )
+{
+	ImGui_PushStyleVarV2( ImGuiStyleVar_WindowPadding, 0, 0 );
+	ImGui_PushStyleVarF( ImGuiStyleVar_WindowRounding, 0 );
+	ImGui_SetNextWindowPos( 0, 0 );
+	ImGui_SetNextWindowSize( w, h );
+	if( ImGui_Begin( "main", null,
+		ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_MenuBar |
+		ImGuiWindowFlags_NoBringToFrontOnFocus ) )
+	{
+		ImGui_PushStyleVarV2( ImGuiStyleVar_WindowPadding, 4, 4 );
+		ImGui_PushStyleVarF( ImGuiStyleVar_WindowRounding, 4 );
+		
+		cb();
+		
+		ImGui_PopStyleVar( 2 );
+	}
+	ImGui_End();
+	ImGui_PopStyleVar( 2 );
+}
+
 global lasttime = ftime();
+global whichtest = 0;
 function update()
 {
+	global whichtest;
+	
 	curtime = ftime();
 	dt = curtime - lasttime;
 	global lasttime = curtime;
 	
 	SS_Clear( color(0.1,0.2,0.4) );
+	SS_SetCameraUI( 0, Window.width, 0, Window.height );
 	
 	ImGui_SS_NewFrame( dt );
 	
-	ImGui_ShowUserGuide();
+	if( ImGui_IsKeyDown( SDL_SCANCODE_F1 ) ) whichtest = 0;
+	if( ImGui_IsKeyDown( SDL_SCANCODE_F2 ) ) whichtest = 1;
+	
+	ImGui_Begin( "Info" );
+	ImGui_Text( "F1 - basic test, F2 - editor layout test" );
+	ImGui_End();
+	
+	if( whichtest == 0 )
+	{
+		ImGui_ShowTestWindow();
+	}
+	else if( whichtest == 1 )
+	{
+		ImGui_MainWindow( Window.width, Window.height, function()
+		{
+			ImGui_BeginMenuBar();
+			if( ImGui_BeginMenu( "Editor" ) )
+			{
+				if( ImGui_MenuItem( "Quit" ) ) _G.whichtest = 0;
+				ImGui_EndMenu();
+			}
+			ImGui_EndMenuBar();
+		});
+	}
 	
 	ImGui_Render();
 	

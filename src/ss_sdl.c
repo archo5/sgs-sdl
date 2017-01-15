@@ -2935,6 +2935,13 @@ static void ss_calc_cursor_pos( int* rcp_x, int* rcp_y, int x, int y, Uint32 wid
 		NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, \
 		ssp_##type_, }};
 
+static sgs_ObjProp ssp_CommonEvent[] =
+{
+	EVENT_COMMON_PROPS( CommonEvent )
+	SGS_OBJPROP_END(),
+};
+EVENT_IFACE( CommonEvent );
+
 static sgs_ObjProp ssp_WindowEvent[] =
 {
 	EVENT_WINDOW_PROPS( WindowEvent )
@@ -3258,6 +3265,6 @@ void ss_CreateSDLEvent( SGS_CTX, SDL_Event* event )
 		SS_CREATE_EVENT_FROM( WindowEvent, &event->window );
 		break;
 	case SDL_USEREVENT: SS_CREATE_EVENT_FROM( UserEvent, &event->user ); break;
-	default: sgs_PushNull( C ); break;
+	default: SS_CREATE_EVENT_FROM( CommonEvent, &event->common ); break;
 	}
 }
