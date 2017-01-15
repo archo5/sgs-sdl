@@ -60,4 +60,6 @@ struct imgui_FloatArrayParser
 	int count;
 };
 
+void imgui_DrawCallback( const ImDrawList* parent_list, const ImDrawCmd* cmd );
+
 

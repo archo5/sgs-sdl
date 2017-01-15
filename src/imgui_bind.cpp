@@ -2,7 +2,7 @@
 #include "imgui.hpp"
 
 
-static int sgsimgui_NewFrame( SGS_CTX )
+static int sgsImGui_NewFrame( SGS_CTX )
 {
 	SGSFN( "ImGui_NewFrame" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -10,7 +10,7 @@ static int sgsimgui_NewFrame( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_Render( SGS_CTX )
+static int sgsImGui_Render( SGS_CTX )
 {
 	SGSFN( "ImGui_Render" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -18,7 +18,7 @@ static int sgsimgui_Render( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_Shutdown( SGS_CTX )
+static int sgsImGui_Shutdown( SGS_CTX )
 {
 	SGSFN( "ImGui_Shutdown" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -26,7 +26,7 @@ static int sgsimgui_Shutdown( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_ShowUserGuide( SGS_CTX )
+static int sgsImGui_ShowUserGuide( SGS_CTX )
 {
 	SGSFN( "ImGui_ShowUserGuide" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -34,7 +34,7 @@ static int sgsimgui_ShowUserGuide( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_ShowTestWindow( SGS_CTX )
+static int sgsImGui_ShowTestWindow( SGS_CTX )
 {
 	SGSFN( "ImGui_ShowTestWindow" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -46,7 +46,7 @@ static int sgsimgui_ShowTestWindow( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_ShowMetricsWindow( SGS_CTX )
+static int sgsImGui_ShowMetricsWindow( SGS_CTX )
 {
 	SGSFN( "ImGui_ShowMetricsWindow" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -58,7 +58,7 @@ static int sgsimgui_ShowMetricsWindow( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_Begin( SGS_CTX )
+static int sgsImGui_Begin( SGS_CTX )
 {
 	SGSFN( "ImGui_Begin" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -72,7 +72,7 @@ static int sgsimgui_Begin( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_End( SGS_CTX )
+static int sgsImGui_End( SGS_CTX )
 {
 	SGSFN( "ImGui_End" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -80,7 +80,7 @@ static int sgsimgui_End( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_BeginChild( SGS_CTX )
+static int sgsImGui_BeginChild( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginChild" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -93,7 +93,7 @@ static int sgsimgui_BeginChild( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_EndChild( SGS_CTX )
+static int sgsImGui_EndChild( SGS_CTX )
 {
 	SGSFN( "ImGui_EndChild" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -101,7 +101,7 @@ static int sgsimgui_EndChild( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_GetContentRegionMax( SGS_CTX )
+static int sgsImGui_GetContentRegionMax( SGS_CTX )
 {
 	SGSFN( "ImGui_GetContentRegionMax" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -109,7 +109,7 @@ static int sgsimgui_GetContentRegionMax( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_GetContentRegionAvail( SGS_CTX )
+static int sgsImGui_GetContentRegionAvail( SGS_CTX )
 {
 	SGSFN( "ImGui_GetContentRegionAvail" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -117,7 +117,7 @@ static int sgsimgui_GetContentRegionAvail( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_GetContentRegionAvailWidth( SGS_CTX )
+static int sgsImGui_GetContentRegionAvailWidth( SGS_CTX )
 {
 	SGSFN( "ImGui_GetContentRegionAvailWidth" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -125,7 +125,7 @@ static int sgsimgui_GetContentRegionAvailWidth( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_GetWindowContentRegionMin( SGS_CTX )
+static int sgsImGui_GetWindowContentRegionMin( SGS_CTX )
 {
 	SGSFN( "ImGui_GetWindowContentRegionMin" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -133,7 +133,7 @@ static int sgsimgui_GetWindowContentRegionMin( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_GetWindowContentRegionMax( SGS_CTX )
+static int sgsImGui_GetWindowContentRegionMax( SGS_CTX )
 {
 	SGSFN( "ImGui_GetWindowContentRegionMax" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -141,7 +141,7 @@ static int sgsimgui_GetWindowContentRegionMax( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_GetWindowContentRegionWidth( SGS_CTX )
+static int sgsImGui_GetWindowContentRegionWidth( SGS_CTX )
 {
 	SGSFN( "ImGui_GetWindowContentRegionWidth" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -149,7 +149,7 @@ static int sgsimgui_GetWindowContentRegionWidth( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_GetWindowPos( SGS_CTX )
+static int sgsImGui_GetWindowPos( SGS_CTX )
 {
 	SGSFN( "ImGui_GetWindowPos" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -157,7 +157,7 @@ static int sgsimgui_GetWindowPos( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_GetWindowSize( SGS_CTX )
+static int sgsImGui_GetWindowSize( SGS_CTX )
 {
 	SGSFN( "ImGui_GetWindowSize" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -165,7 +165,7 @@ static int sgsimgui_GetWindowSize( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_GetWindowWidth( SGS_CTX )
+static int sgsImGui_GetWindowWidth( SGS_CTX )
 {
 	SGSFN( "ImGui_GetWindowWidth" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -173,7 +173,7 @@ static int sgsimgui_GetWindowWidth( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_GetWindowHeight( SGS_CTX )
+static int sgsImGui_GetWindowHeight( SGS_CTX )
 {
 	SGSFN( "ImGui_GetWindowHeight" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -181,7 +181,7 @@ static int sgsimgui_GetWindowHeight( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsWindowCollapsed( SGS_CTX )
+static int sgsImGui_IsWindowCollapsed( SGS_CTX )
 {
 	SGSFN( "ImGui_IsWindowCollapsed" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -189,7 +189,7 @@ static int sgsimgui_IsWindowCollapsed( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_SetWindowFontScale( SGS_CTX )
+static int sgsImGui_SetWindowFontScale( SGS_CTX )
 {
 	SGSFN( "ImGui_SetWindowFontScale" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -199,7 +199,7 @@ static int sgsimgui_SetWindowFontScale( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetNextWindowPos( SGS_CTX )
+static int sgsImGui_SetNextWindowPos( SGS_CTX )
 {
 	SGSFN( "ImGui_SetNextWindowPos" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -210,7 +210,7 @@ static int sgsimgui_SetNextWindowPos( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetNextWindowPosCenter( SGS_CTX )
+static int sgsImGui_SetNextWindowPosCenter( SGS_CTX )
 {
 	SGSFN( "ImGui_SetNextWindowPosCenter" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -220,7 +220,7 @@ static int sgsimgui_SetNextWindowPosCenter( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetNextWindowSize( SGS_CTX )
+static int sgsImGui_SetNextWindowSize( SGS_CTX )
 {
 	SGSFN( "ImGui_SetNextWindowSize" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -231,7 +231,7 @@ static int sgsimgui_SetNextWindowSize( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetNextWindowContentSize( SGS_CTX )
+static int sgsImGui_SetNextWindowContentSize( SGS_CTX )
 {
 	SGSFN( "ImGui_SetNextWindowContentSize" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -241,7 +241,7 @@ static int sgsimgui_SetNextWindowContentSize( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetNextWindowContentWidth( SGS_CTX )
+static int sgsImGui_SetNextWindowContentWidth( SGS_CTX )
 {
 	SGSFN( "ImGui_SetNextWindowContentWidth" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -251,7 +251,7 @@ static int sgsimgui_SetNextWindowContentWidth( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetNextWindowCollapsed( SGS_CTX )
+static int sgsImGui_SetNextWindowCollapsed( SGS_CTX )
 {
 	SGSFN( "ImGui_SetNextWindowCollapsed" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -262,7 +262,7 @@ static int sgsimgui_SetNextWindowCollapsed( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetNextWindowFocus( SGS_CTX )
+static int sgsImGui_SetNextWindowFocus( SGS_CTX )
 {
 	SGSFN( "ImGui_SetNextWindowFocus" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -270,7 +270,7 @@ static int sgsimgui_SetNextWindowFocus( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetCurrentWindowPos( SGS_CTX )
+static int sgsImGui_SetCurrentWindowPos( SGS_CTX )
 {
 	SGSFN( "ImGui_SetCurrentWindowPos" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -281,7 +281,7 @@ static int sgsimgui_SetCurrentWindowPos( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetCurrentWindowSize( SGS_CTX )
+static int sgsImGui_SetCurrentWindowSize( SGS_CTX )
 {
 	SGSFN( "ImGui_SetCurrentWindowSize" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -292,7 +292,7 @@ static int sgsimgui_SetCurrentWindowSize( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetCurrentWindowCollapsed( SGS_CTX )
+static int sgsImGui_SetCurrentWindowCollapsed( SGS_CTX )
 {
 	SGSFN( "ImGui_SetCurrentWindowCollapsed" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -303,7 +303,7 @@ static int sgsimgui_SetCurrentWindowCollapsed( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetCurrentWindowFocus( SGS_CTX )
+static int sgsImGui_SetCurrentWindowFocus( SGS_CTX )
 {
 	SGSFN( "ImGui_SetCurrentWindowFocus" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -311,7 +311,7 @@ static int sgsimgui_SetCurrentWindowFocus( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetWindowPos( SGS_CTX )
+static int sgsImGui_SetWindowPos( SGS_CTX )
 {
 	SGSFN( "ImGui_SetWindowPos" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -323,7 +323,7 @@ static int sgsimgui_SetWindowPos( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetWindowSize( SGS_CTX )
+static int sgsImGui_SetWindowSize( SGS_CTX )
 {
 	SGSFN( "ImGui_SetWindowSize" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -335,7 +335,7 @@ static int sgsimgui_SetWindowSize( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetWindowCollapsed( SGS_CTX )
+static int sgsImGui_SetWindowCollapsed( SGS_CTX )
 {
 	SGSFN( "ImGui_SetWindowCollapsed" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -347,7 +347,7 @@ static int sgsimgui_SetWindowCollapsed( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetWindowFocus( SGS_CTX )
+static int sgsImGui_SetWindowFocus( SGS_CTX )
 {
 	SGSFN( "ImGui_SetWindowFocus" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -357,7 +357,7 @@ static int sgsimgui_SetWindowFocus( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_GetScrollX( SGS_CTX )
+static int sgsImGui_GetScrollX( SGS_CTX )
 {
 	SGSFN( "ImGui_GetScrollX" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -365,7 +365,7 @@ static int sgsimgui_GetScrollX( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_GetScrollY( SGS_CTX )
+static int sgsImGui_GetScrollY( SGS_CTX )
 {
 	SGSFN( "ImGui_GetScrollY" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -373,7 +373,7 @@ static int sgsimgui_GetScrollY( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_GetScrollMaxX( SGS_CTX )
+static int sgsImGui_GetScrollMaxX( SGS_CTX )
 {
 	SGSFN( "ImGui_GetScrollMaxX" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -381,7 +381,7 @@ static int sgsimgui_GetScrollMaxX( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_GetScrollMaxY( SGS_CTX )
+static int sgsImGui_GetScrollMaxY( SGS_CTX )
 {
 	SGSFN( "ImGui_GetScrollMaxY" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -389,7 +389,7 @@ static int sgsimgui_GetScrollMaxY( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_SetScrollX( SGS_CTX )
+static int sgsImGui_SetScrollX( SGS_CTX )
 {
 	SGSFN( "ImGui_SetScrollX" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -399,7 +399,7 @@ static int sgsimgui_SetScrollX( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetScrollY( SGS_CTX )
+static int sgsImGui_SetScrollY( SGS_CTX )
 {
 	SGSFN( "ImGui_SetScrollY" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -409,7 +409,7 @@ static int sgsimgui_SetScrollY( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetScrollHere( SGS_CTX )
+static int sgsImGui_SetScrollHere( SGS_CTX )
 {
 	SGSFN( "ImGui_SetScrollHere" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -419,7 +419,7 @@ static int sgsimgui_SetScrollHere( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetScrollFromPosY( SGS_CTX )
+static int sgsImGui_SetScrollFromPosY( SGS_CTX )
 {
 	SGSFN( "ImGui_SetScrollFromPosY" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -430,7 +430,7 @@ static int sgsimgui_SetScrollFromPosY( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetKeyboardFocusHere( SGS_CTX )
+static int sgsImGui_SetKeyboardFocusHere( SGS_CTX )
 {
 	SGSFN( "ImGui_SetKeyboardFocusHere" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -440,7 +440,7 @@ static int sgsimgui_SetKeyboardFocusHere( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_PopFont( SGS_CTX )
+static int sgsImGui_PopFont( SGS_CTX )
 {
 	SGSFN( "ImGui_PopFont" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -448,7 +448,7 @@ static int sgsimgui_PopFont( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_PushStyleColor( SGS_CTX )
+static int sgsImGui_PushStyleColor( SGS_CTX )
 {
 	SGSFN( "ImGui_PushStyleColor" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -459,7 +459,7 @@ static int sgsimgui_PushStyleColor( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_PopStyleColor( SGS_CTX )
+static int sgsImGui_PopStyleColor( SGS_CTX )
 {
 	SGSFN( "ImGui_PopStyleColor" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -469,7 +469,7 @@ static int sgsimgui_PopStyleColor( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_PushStyleVarF( SGS_CTX )
+static int sgsImGui_PushStyleVarF( SGS_CTX )
 {
 	SGSFN( "ImGui_PushStyleVarF" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -480,7 +480,7 @@ static int sgsimgui_PushStyleVarF( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_PushStyleVarV2( SGS_CTX )
+static int sgsImGui_PushStyleVarV2( SGS_CTX )
 {
 	SGSFN( "ImGui_PushStyleVarV2" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -491,7 +491,7 @@ static int sgsimgui_PushStyleVarV2( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_PopStyleVar( SGS_CTX )
+static int sgsImGui_PopStyleVar( SGS_CTX )
 {
 	SGSFN( "ImGui_PopStyleVar" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -501,7 +501,7 @@ static int sgsimgui_PopStyleVar( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_GetFontSize( SGS_CTX )
+static int sgsImGui_GetFontSize( SGS_CTX )
 {
 	SGSFN( "ImGui_GetFontSize" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -509,7 +509,7 @@ static int sgsimgui_GetFontSize( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_GetFontTexUvWhitePixel( SGS_CTX )
+static int sgsImGui_GetFontTexUvWhitePixel( SGS_CTX )
 {
 	SGSFN( "ImGui_GetFontTexUvWhitePixel" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -517,7 +517,7 @@ static int sgsimgui_GetFontTexUvWhitePixel( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_GetStyleColorU32( SGS_CTX )
+static int sgsImGui_GetStyleColorU32( SGS_CTX )
 {
 	SGSFN( "ImGui_GetStyleColorU32" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -528,7 +528,7 @@ static int sgsimgui_GetStyleColorU32( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_GetColorU32( SGS_CTX )
+static int sgsImGui_GetColorU32( SGS_CTX )
 {
 	SGSFN( "ImGui_GetColorU32" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -538,7 +538,7 @@ static int sgsimgui_GetColorU32( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_PushItemWidth( SGS_CTX )
+static int sgsImGui_PushItemWidth( SGS_CTX )
 {
 	SGSFN( "ImGui_PushItemWidth" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -548,7 +548,7 @@ static int sgsimgui_PushItemWidth( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_PopItemWidth( SGS_CTX )
+static int sgsImGui_PopItemWidth( SGS_CTX )
 {
 	SGSFN( "ImGui_PopItemWidth" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -556,7 +556,7 @@ static int sgsimgui_PopItemWidth( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_CalcItemWidth( SGS_CTX )
+static int sgsImGui_CalcItemWidth( SGS_CTX )
 {
 	SGSFN( "ImGui_CalcItemWidth" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -564,7 +564,7 @@ static int sgsimgui_CalcItemWidth( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_PushTextWrapPos( SGS_CTX )
+static int sgsImGui_PushTextWrapPos( SGS_CTX )
 {
 	SGSFN( "ImGui_PushTextWrapPos" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -574,7 +574,7 @@ static int sgsimgui_PushTextWrapPos( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_PopTextWrapPos( SGS_CTX )
+static int sgsImGui_PopTextWrapPos( SGS_CTX )
 {
 	SGSFN( "ImGui_PopTextWrapPos" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -582,7 +582,7 @@ static int sgsimgui_PopTextWrapPos( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_PushAllowKeyboardFocus( SGS_CTX )
+static int sgsImGui_PushAllowKeyboardFocus( SGS_CTX )
 {
 	SGSFN( "ImGui_PushAllowKeyboardFocus" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -592,7 +592,7 @@ static int sgsimgui_PushAllowKeyboardFocus( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_PopAllowKeyboardFocus( SGS_CTX )
+static int sgsImGui_PopAllowKeyboardFocus( SGS_CTX )
 {
 	SGSFN( "ImGui_PopAllowKeyboardFocus" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -600,7 +600,7 @@ static int sgsimgui_PopAllowKeyboardFocus( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_PushButtonRepeat( SGS_CTX )
+static int sgsImGui_PushButtonRepeat( SGS_CTX )
 {
 	SGSFN( "ImGui_PushButtonRepeat" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -610,7 +610,7 @@ static int sgsimgui_PushButtonRepeat( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_PopButtonRepeat( SGS_CTX )
+static int sgsImGui_PopButtonRepeat( SGS_CTX )
 {
 	SGSFN( "ImGui_PopButtonRepeat" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -618,7 +618,7 @@ static int sgsimgui_PopButtonRepeat( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_Separator( SGS_CTX )
+static int sgsImGui_Separator( SGS_CTX )
 {
 	SGSFN( "ImGui_Separator" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -626,7 +626,7 @@ static int sgsimgui_Separator( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SameLine( SGS_CTX )
+static int sgsImGui_SameLine( SGS_CTX )
 {
 	SGSFN( "ImGui_SameLine" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -637,7 +637,7 @@ static int sgsimgui_SameLine( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_NewLine( SGS_CTX )
+static int sgsImGui_NewLine( SGS_CTX )
 {
 	SGSFN( "ImGui_NewLine" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -645,7 +645,7 @@ static int sgsimgui_NewLine( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_Spacing( SGS_CTX )
+static int sgsImGui_Spacing( SGS_CTX )
 {
 	SGSFN( "ImGui_Spacing" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -653,7 +653,7 @@ static int sgsimgui_Spacing( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_Dummy( SGS_CTX )
+static int sgsImGui_Dummy( SGS_CTX )
 {
 	SGSFN( "ImGui_Dummy" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -663,7 +663,7 @@ static int sgsimgui_Dummy( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_Indent( SGS_CTX )
+static int sgsImGui_Indent( SGS_CTX )
 {
 	SGSFN( "ImGui_Indent" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -673,7 +673,7 @@ static int sgsimgui_Indent( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_Unindent( SGS_CTX )
+static int sgsImGui_Unindent( SGS_CTX )
 {
 	SGSFN( "ImGui_Unindent" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -683,7 +683,7 @@ static int sgsimgui_Unindent( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_BeginGroup( SGS_CTX )
+static int sgsImGui_BeginGroup( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginGroup" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -691,7 +691,7 @@ static int sgsimgui_BeginGroup( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_EndGroup( SGS_CTX )
+static int sgsImGui_EndGroup( SGS_CTX )
 {
 	SGSFN( "ImGui_EndGroup" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -699,7 +699,7 @@ static int sgsimgui_EndGroup( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_GetCursorPos( SGS_CTX )
+static int sgsImGui_GetCursorPos( SGS_CTX )
 {
 	SGSFN( "ImGui_GetCursorPos" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -707,7 +707,7 @@ static int sgsimgui_GetCursorPos( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_GetCursorPosX( SGS_CTX )
+static int sgsImGui_GetCursorPosX( SGS_CTX )
 {
 	SGSFN( "ImGui_GetCursorPosX" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -715,7 +715,7 @@ static int sgsimgui_GetCursorPosX( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_GetCursorPosY( SGS_CTX )
+static int sgsImGui_GetCursorPosY( SGS_CTX )
 {
 	SGSFN( "ImGui_GetCursorPosY" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -723,7 +723,7 @@ static int sgsimgui_GetCursorPosY( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_SetCursorPos( SGS_CTX )
+static int sgsImGui_SetCursorPos( SGS_CTX )
 {
 	SGSFN( "ImGui_SetCursorPos" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -733,7 +733,7 @@ static int sgsimgui_SetCursorPos( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetCursorPosX( SGS_CTX )
+static int sgsImGui_SetCursorPosX( SGS_CTX )
 {
 	SGSFN( "ImGui_SetCursorPosX" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -743,7 +743,7 @@ static int sgsimgui_SetCursorPosX( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetCursorPosY( SGS_CTX )
+static int sgsImGui_SetCursorPosY( SGS_CTX )
 {
 	SGSFN( "ImGui_SetCursorPosY" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -753,7 +753,7 @@ static int sgsimgui_SetCursorPosY( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_GetCursorStartPos( SGS_CTX )
+static int sgsImGui_GetCursorStartPos( SGS_CTX )
 {
 	SGSFN( "ImGui_GetCursorStartPos" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -761,7 +761,7 @@ static int sgsimgui_GetCursorStartPos( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_GetCursorScreenPos( SGS_CTX )
+static int sgsImGui_GetCursorScreenPos( SGS_CTX )
 {
 	SGSFN( "ImGui_GetCursorScreenPos" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -769,7 +769,7 @@ static int sgsimgui_GetCursorScreenPos( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_SetCursorScreenPos( SGS_CTX )
+static int sgsImGui_SetCursorScreenPos( SGS_CTX )
 {
 	SGSFN( "ImGui_SetCursorScreenPos" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -779,7 +779,7 @@ static int sgsimgui_SetCursorScreenPos( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_AlignFirstTextHeightToWidgets( SGS_CTX )
+static int sgsImGui_AlignFirstTextHeightToWidgets( SGS_CTX )
 {
 	SGSFN( "ImGui_AlignFirstTextHeightToWidgets" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -787,7 +787,7 @@ static int sgsimgui_AlignFirstTextHeightToWidgets( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_GetTextLineHeight( SGS_CTX )
+static int sgsImGui_GetTextLineHeight( SGS_CTX )
 {
 	SGSFN( "ImGui_GetTextLineHeight" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -795,7 +795,7 @@ static int sgsimgui_GetTextLineHeight( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_GetTextLineHeightWithSpacing( SGS_CTX )
+static int sgsImGui_GetTextLineHeightWithSpacing( SGS_CTX )
 {
 	SGSFN( "ImGui_GetTextLineHeightWithSpacing" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -803,7 +803,7 @@ static int sgsimgui_GetTextLineHeightWithSpacing( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_GetItemsLineHeightWithSpacing( SGS_CTX )
+static int sgsImGui_GetItemsLineHeightWithSpacing( SGS_CTX )
 {
 	SGSFN( "ImGui_GetItemsLineHeightWithSpacing" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -811,7 +811,7 @@ static int sgsimgui_GetItemsLineHeightWithSpacing( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_Columns( SGS_CTX )
+static int sgsImGui_Columns( SGS_CTX )
 {
 	SGSFN( "ImGui_Columns" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -823,7 +823,7 @@ static int sgsimgui_Columns( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_NextColumn( SGS_CTX )
+static int sgsImGui_NextColumn( SGS_CTX )
 {
 	SGSFN( "ImGui_NextColumn" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -831,7 +831,7 @@ static int sgsimgui_NextColumn( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_GetColumnIndex( SGS_CTX )
+static int sgsImGui_GetColumnIndex( SGS_CTX )
 {
 	SGSFN( "ImGui_GetColumnIndex" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -839,7 +839,7 @@ static int sgsimgui_GetColumnIndex( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_GetColumnOffset( SGS_CTX )
+static int sgsImGui_GetColumnOffset( SGS_CTX )
 {
 	SGSFN( "ImGui_GetColumnOffset" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -849,7 +849,7 @@ static int sgsimgui_GetColumnOffset( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_SetColumnOffset( SGS_CTX )
+static int sgsImGui_SetColumnOffset( SGS_CTX )
 {
 	SGSFN( "ImGui_SetColumnOffset" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -860,7 +860,7 @@ static int sgsimgui_SetColumnOffset( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_GetColumnWidth( SGS_CTX )
+static int sgsImGui_GetColumnWidth( SGS_CTX )
 {
 	SGSFN( "ImGui_GetColumnWidth" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -870,7 +870,7 @@ static int sgsimgui_GetColumnWidth( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_GetColumnsCount( SGS_CTX )
+static int sgsImGui_GetColumnsCount( SGS_CTX )
 {
 	SGSFN( "ImGui_GetColumnsCount" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -885,7 +885,7 @@ static int sgsimgui_PushID( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_PopID( SGS_CTX )
+static int sgsImGui_PopID( SGS_CTX )
 {
 	SGSFN( "ImGui_PopID" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -900,7 +900,7 @@ static int sgsimgui_GetID( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_Text( SGS_CTX )
+static int sgsImGui_Text( SGS_CTX )
 {
 	SGSFN( "ImGui_Text" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -911,7 +911,7 @@ static int sgsimgui_Text( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_TextColored( SGS_CTX )
+static int sgsImGui_TextColored( SGS_CTX )
 {
 	SGSFN( "ImGui_TextColored" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -923,7 +923,7 @@ static int sgsimgui_TextColored( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_TextDisabled( SGS_CTX )
+static int sgsImGui_TextDisabled( SGS_CTX )
 {
 	SGSFN( "ImGui_TextDisabled" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -934,7 +934,7 @@ static int sgsimgui_TextDisabled( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_TextWrapped( SGS_CTX )
+static int sgsImGui_TextWrapped( SGS_CTX )
 {
 	SGSFN( "ImGui_TextWrapped" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -945,7 +945,7 @@ static int sgsimgui_TextWrapped( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_TextUnformatted( SGS_CTX )
+static int sgsImGui_TextUnformatted( SGS_CTX )
 {
 	SGSFN( "ImGui_TextUnformatted" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -956,7 +956,7 @@ static int sgsimgui_TextUnformatted( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_LabelText( SGS_CTX )
+static int sgsImGui_LabelText( SGS_CTX )
 {
 	SGSFN( "ImGui_LabelText" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -968,7 +968,7 @@ static int sgsimgui_LabelText( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_Bullet( SGS_CTX )
+static int sgsImGui_Bullet( SGS_CTX )
 {
 	SGSFN( "ImGui_Bullet" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -976,7 +976,7 @@ static int sgsimgui_Bullet( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_BulletText( SGS_CTX )
+static int sgsImGui_BulletText( SGS_CTX )
 {
 	SGSFN( "ImGui_BulletText" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -987,7 +987,7 @@ static int sgsimgui_BulletText( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_Button( SGS_CTX )
+static int sgsImGui_Button( SGS_CTX )
 {
 	SGSFN( "ImGui_Button" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -998,7 +998,7 @@ static int sgsimgui_Button( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_SmallButton( SGS_CTX )
+static int sgsImGui_SmallButton( SGS_CTX )
 {
 	SGSFN( "ImGui_SmallButton" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1008,7 +1008,7 @@ static int sgsimgui_SmallButton( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_InvisibleButton( SGS_CTX )
+static int sgsImGui_InvisibleButton( SGS_CTX )
 {
 	SGSFN( "ImGui_InvisibleButton" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1019,7 +1019,7 @@ static int sgsimgui_InvisibleButton( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_Image( SGS_CTX )
+static int sgsImGui_Image( SGS_CTX )
 {
 	SGSFN( "ImGui_Image" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1034,7 +1034,7 @@ static int sgsimgui_Image( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_ImageButton( SGS_CTX )
+static int sgsImGui_ImageButton( SGS_CTX )
 {
 	SGSFN( "ImGui_ImageButton" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1050,7 +1050,7 @@ static int sgsimgui_ImageButton( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_Checkbox( SGS_CTX )
+static int sgsImGui_Checkbox( SGS_CTX )
 {
 	SGSFN( "ImGui_Checkbox" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1063,7 +1063,7 @@ static int sgsimgui_Checkbox( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_CheckboxFlags( SGS_CTX )
+static int sgsImGui_CheckboxFlags( SGS_CTX )
 {
 	SGSFN( "ImGui_CheckboxFlags" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1092,7 +1092,7 @@ static int sgsimgui_RadioButton( SGS_CTX )
 	else return sgs_Msg( C, SGS_WARNING, "expected 2 or 3 arguments, got %d", ssz );
 }
 
-static int sgsimgui_Combo( SGS_CTX )
+static int sgsImGui_Combo( SGS_CTX )
 {
 	SGSFN( "ImGui_Combo" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1107,7 +1107,7 @@ static int sgsimgui_Combo( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_ComboCb( SGS_CTX )
+static int sgsImGui_ComboCb( SGS_CTX )
 {
 	SGSFN( "ImGui_ComboCb" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1126,7 +1126,7 @@ static int sgsimgui_ComboCb( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_ColorButton( SGS_CTX )
+static int sgsImGui_ColorButton( SGS_CTX )
 {
 	SGSFN( "ImGui_ColorButton" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1138,7 +1138,7 @@ static int sgsimgui_ColorButton( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_ColorEdit3( SGS_CTX )
+static int sgsImGui_ColorEdit3( SGS_CTX )
 {
 	SGSFN( "ImGui_ColorEdit3" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1153,7 +1153,7 @@ static int sgsimgui_ColorEdit3( SGS_CTX )
 	return 4;
 }
 
-static int sgsimgui_ColorEdit4( SGS_CTX )
+static int sgsImGui_ColorEdit4( SGS_CTX )
 {
 	SGSFN( "ImGui_ColorEdit4" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1170,7 +1170,7 @@ static int sgsimgui_ColorEdit4( SGS_CTX )
 	return 5;
 }
 
-static int sgsimgui_ColorEditMode( SGS_CTX )
+static int sgsImGui_ColorEditMode( SGS_CTX )
 {
 	SGSFN( "ImGui_ColorEditMode" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1180,7 +1180,7 @@ static int sgsimgui_ColorEditMode( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_PlotLines( SGS_CTX )
+static int sgsImGui_PlotLines( SGS_CTX )
 {
 	SGSFN( "ImGui_PlotLines" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1199,7 +1199,7 @@ static int sgsimgui_PlotLines( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_PlotLinesCb( SGS_CTX )
+static int sgsImGui_PlotLinesCb( SGS_CTX )
 {
 	SGSFN( "ImGui_PlotLinesCb" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1218,7 +1218,7 @@ static int sgsimgui_PlotLinesCb( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_PlotHistogram( SGS_CTX )
+static int sgsImGui_PlotHistogram( SGS_CTX )
 {
 	SGSFN( "ImGui_PlotHistogram" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1237,7 +1237,7 @@ static int sgsimgui_PlotHistogram( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_PlotHistogramCb( SGS_CTX )
+static int sgsImGui_PlotHistogramCb( SGS_CTX )
 {
 	SGSFN( "ImGui_PlotHistogramCb" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1256,7 +1256,7 @@ static int sgsimgui_PlotHistogramCb( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_ProgressBar( SGS_CTX )
+static int sgsImGui_ProgressBar( SGS_CTX )
 {
 	SGSFN( "ImGui_ProgressBar" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1268,7 +1268,7 @@ static int sgsimgui_ProgressBar( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_DragFloat( SGS_CTX )
+static int sgsImGui_DragFloat( SGS_CTX )
 {
 	SGSFN( "ImGui_DragFloat" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1286,7 +1286,7 @@ static int sgsimgui_DragFloat( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_DragFloat2( SGS_CTX )
+static int sgsImGui_DragFloat2( SGS_CTX )
 {
 	SGSFN( "ImGui_DragFloat2" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1305,7 +1305,7 @@ static int sgsimgui_DragFloat2( SGS_CTX )
 	return 3;
 }
 
-static int sgsimgui_DragFloat3( SGS_CTX )
+static int sgsImGui_DragFloat3( SGS_CTX )
 {
 	SGSFN( "ImGui_DragFloat3" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1325,7 +1325,7 @@ static int sgsimgui_DragFloat3( SGS_CTX )
 	return 4;
 }
 
-static int sgsimgui_DragFloat4( SGS_CTX )
+static int sgsImGui_DragFloat4( SGS_CTX )
 {
 	SGSFN( "ImGui_DragFloat4" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1346,7 +1346,7 @@ static int sgsimgui_DragFloat4( SGS_CTX )
 	return 5;
 }
 
-static int sgsimgui_DragFloatRange2( SGS_CTX )
+static int sgsImGui_DragFloatRange2( SGS_CTX )
 {
 	SGSFN( "ImGui_DragFloatRange2" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1368,7 +1368,7 @@ static int sgsimgui_DragFloatRange2( SGS_CTX )
 	return 3;
 }
 
-static int sgsimgui_DragInt( SGS_CTX )
+static int sgsImGui_DragInt( SGS_CTX )
 {
 	SGSFN( "ImGui_DragInt" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1385,7 +1385,7 @@ static int sgsimgui_DragInt( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_DragInt2( SGS_CTX )
+static int sgsImGui_DragInt2( SGS_CTX )
 {
 	SGSFN( "ImGui_DragInt2" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1403,7 +1403,7 @@ static int sgsimgui_DragInt2( SGS_CTX )
 	return 3;
 }
 
-static int sgsimgui_DragInt3( SGS_CTX )
+static int sgsImGui_DragInt3( SGS_CTX )
 {
 	SGSFN( "ImGui_DragInt3" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1422,7 +1422,7 @@ static int sgsimgui_DragInt3( SGS_CTX )
 	return 4;
 }
 
-static int sgsimgui_DragInt4( SGS_CTX )
+static int sgsImGui_DragInt4( SGS_CTX )
 {
 	SGSFN( "ImGui_DragInt4" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1442,7 +1442,7 @@ static int sgsimgui_DragInt4( SGS_CTX )
 	return 5;
 }
 
-static int sgsimgui_DragIntRange2( SGS_CTX )
+static int sgsImGui_DragIntRange2( SGS_CTX )
 {
 	SGSFN( "ImGui_DragIntRange2" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1463,7 +1463,7 @@ static int sgsimgui_DragIntRange2( SGS_CTX )
 	return 3;
 }
 
-static int sgsimgui_InputText( SGS_CTX )
+static int sgsImGui_InputText( SGS_CTX )
 {
 	SGSFN( "ImGui_InputText" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1478,7 +1478,7 @@ static int sgsimgui_InputText( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_InputTextMultiline( SGS_CTX )
+static int sgsImGui_InputTextMultiline( SGS_CTX )
 {
 	SGSFN( "ImGui_InputTextMultiline" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1494,7 +1494,7 @@ static int sgsimgui_InputTextMultiline( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_InputFloat( SGS_CTX )
+static int sgsImGui_InputFloat( SGS_CTX )
 {
 	SGSFN( "ImGui_InputFloat" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1511,7 +1511,7 @@ static int sgsimgui_InputFloat( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_InputFloat2( SGS_CTX )
+static int sgsImGui_InputFloat2( SGS_CTX )
 {
 	SGSFN( "ImGui_InputFloat2" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1527,7 +1527,7 @@ static int sgsimgui_InputFloat2( SGS_CTX )
 	return 3;
 }
 
-static int sgsimgui_InputFloat3( SGS_CTX )
+static int sgsImGui_InputFloat3( SGS_CTX )
 {
 	SGSFN( "ImGui_InputFloat3" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1544,7 +1544,7 @@ static int sgsimgui_InputFloat3( SGS_CTX )
 	return 4;
 }
 
-static int sgsimgui_InputFloat4( SGS_CTX )
+static int sgsImGui_InputFloat4( SGS_CTX )
 {
 	SGSFN( "ImGui_InputFloat4" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1562,7 +1562,7 @@ static int sgsimgui_InputFloat4( SGS_CTX )
 	return 5;
 }
 
-static int sgsimgui_InputInt( SGS_CTX )
+static int sgsImGui_InputInt( SGS_CTX )
 {
 	SGSFN( "ImGui_InputInt" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1578,7 +1578,7 @@ static int sgsimgui_InputInt( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_InputInt2( SGS_CTX )
+static int sgsImGui_InputInt2( SGS_CTX )
 {
 	SGSFN( "ImGui_InputInt2" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1593,7 +1593,7 @@ static int sgsimgui_InputInt2( SGS_CTX )
 	return 3;
 }
 
-static int sgsimgui_InputInt3( SGS_CTX )
+static int sgsImGui_InputInt3( SGS_CTX )
 {
 	SGSFN( "ImGui_InputInt3" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1609,7 +1609,7 @@ static int sgsimgui_InputInt3( SGS_CTX )
 	return 4;
 }
 
-static int sgsimgui_InputInt4( SGS_CTX )
+static int sgsImGui_InputInt4( SGS_CTX )
 {
 	SGSFN( "ImGui_InputInt4" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1626,7 +1626,7 @@ static int sgsimgui_InputInt4( SGS_CTX )
 	return 5;
 }
 
-static int sgsimgui_SliderFloat( SGS_CTX )
+static int sgsImGui_SliderFloat( SGS_CTX )
 {
 	SGSFN( "ImGui_SliderFloat" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1643,7 +1643,7 @@ static int sgsimgui_SliderFloat( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_SliderFloat2( SGS_CTX )
+static int sgsImGui_SliderFloat2( SGS_CTX )
 {
 	SGSFN( "ImGui_SliderFloat2" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1661,7 +1661,7 @@ static int sgsimgui_SliderFloat2( SGS_CTX )
 	return 3;
 }
 
-static int sgsimgui_SliderFloat3( SGS_CTX )
+static int sgsImGui_SliderFloat3( SGS_CTX )
 {
 	SGSFN( "ImGui_SliderFloat3" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1680,7 +1680,7 @@ static int sgsimgui_SliderFloat3( SGS_CTX )
 	return 4;
 }
 
-static int sgsimgui_SliderFloat4( SGS_CTX )
+static int sgsImGui_SliderFloat4( SGS_CTX )
 {
 	SGSFN( "ImGui_SliderFloat4" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1700,7 +1700,7 @@ static int sgsimgui_SliderFloat4( SGS_CTX )
 	return 5;
 }
 
-static int sgsimgui_SliderAngle( SGS_CTX )
+static int sgsImGui_SliderAngle( SGS_CTX )
 {
 	SGSFN( "ImGui_SliderAngle" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1715,7 +1715,7 @@ static int sgsimgui_SliderAngle( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_SliderInt( SGS_CTX )
+static int sgsImGui_SliderInt( SGS_CTX )
 {
 	SGSFN( "ImGui_SliderInt" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1731,7 +1731,7 @@ static int sgsimgui_SliderInt( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_SliderInt2( SGS_CTX )
+static int sgsImGui_SliderInt2( SGS_CTX )
 {
 	SGSFN( "ImGui_SliderInt2" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1748,7 +1748,7 @@ static int sgsimgui_SliderInt2( SGS_CTX )
 	return 3;
 }
 
-static int sgsimgui_SliderInt3( SGS_CTX )
+static int sgsImGui_SliderInt3( SGS_CTX )
 {
 	SGSFN( "ImGui_SliderInt3" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1766,7 +1766,7 @@ static int sgsimgui_SliderInt3( SGS_CTX )
 	return 4;
 }
 
-static int sgsimgui_SliderInt4( SGS_CTX )
+static int sgsImGui_SliderInt4( SGS_CTX )
 {
 	SGSFN( "ImGui_SliderInt4" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1785,7 +1785,7 @@ static int sgsimgui_SliderInt4( SGS_CTX )
 	return 5;
 }
 
-static int sgsimgui_VSliderFloat( SGS_CTX )
+static int sgsImGui_VSliderFloat( SGS_CTX )
 {
 	SGSFN( "ImGui_VSliderFloat" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1803,7 +1803,7 @@ static int sgsimgui_VSliderFloat( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_VSliderInt( SGS_CTX )
+static int sgsImGui_VSliderInt( SGS_CTX )
 {
 	SGSFN( "ImGui_VSliderInt" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1838,7 +1838,7 @@ static int sgsimgui_TreeNodeEx( SGS_CTX )
 	else return sgs_Msg( C, SGS_WARNING, "expected 1 or 2 arguments, got %d", ssz );
 }
 
-static int sgsimgui_TreePush( SGS_CTX )
+static int sgsImGui_TreePush( SGS_CTX )
 {
 	SGSFN( "ImGui_TreePush" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1848,7 +1848,7 @@ static int sgsimgui_TreePush( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_TreePop( SGS_CTX )
+static int sgsImGui_TreePop( SGS_CTX )
 {
 	SGSFN( "ImGui_TreePop" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1856,7 +1856,7 @@ static int sgsimgui_TreePop( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_TreeAdvanceToLabelPos( SGS_CTX )
+static int sgsImGui_TreeAdvanceToLabelPos( SGS_CTX )
 {
 	SGSFN( "ImGui_TreeAdvanceToLabelPos" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1864,7 +1864,7 @@ static int sgsimgui_TreeAdvanceToLabelPos( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_GetTreeNodeToLabelSpacing( SGS_CTX )
+static int sgsImGui_GetTreeNodeToLabelSpacing( SGS_CTX )
 {
 	SGSFN( "ImGui_GetTreeNodeToLabelSpacing" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1872,7 +1872,7 @@ static int sgsimgui_GetTreeNodeToLabelSpacing( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_SetNextTreeNodeOpen( SGS_CTX )
+static int sgsImGui_SetNextTreeNodeOpen( SGS_CTX )
 {
 	SGSFN( "ImGui_SetNextTreeNodeOpen" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1883,7 +1883,7 @@ static int sgsimgui_SetNextTreeNodeOpen( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_CollapsingHeader( SGS_CTX )
+static int sgsImGui_CollapsingHeader( SGS_CTX )
 {
 	SGSFN( "ImGui_CollapsingHeader" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1894,7 +1894,7 @@ static int sgsimgui_CollapsingHeader( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_CollapsingHeaderCloseable( SGS_CTX )
+static int sgsImGui_CollapsingHeaderCloseable( SGS_CTX )
 {
 	SGSFN( "ImGui_CollapsingHeaderCloseable" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1908,7 +1908,7 @@ static int sgsimgui_CollapsingHeaderCloseable( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_Selectable( SGS_CTX )
+static int sgsImGui_Selectable( SGS_CTX )
 {
 	SGSFN( "ImGui_Selectable" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1923,7 +1923,7 @@ static int sgsimgui_Selectable( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_ListBoxHeader( SGS_CTX )
+static int sgsImGui_ListBoxHeader( SGS_CTX )
 {
 	SGSFN( "ImGui_ListBoxHeader" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1934,7 +1934,7 @@ static int sgsimgui_ListBoxHeader( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_ListBoxHeader2( SGS_CTX )
+static int sgsImGui_ListBoxHeader2( SGS_CTX )
 {
 	SGSFN( "ImGui_ListBoxHeader2" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1946,7 +1946,7 @@ static int sgsimgui_ListBoxHeader2( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_ListBoxFooter( SGS_CTX )
+static int sgsImGui_ListBoxFooter( SGS_CTX )
 {
 	SGSFN( "ImGui_ListBoxFooter" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1954,7 +1954,7 @@ static int sgsimgui_ListBoxFooter( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_ValueB( SGS_CTX )
+static int sgsImGui_ValueB( SGS_CTX )
 {
 	SGSFN( "ImGui_ValueB" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1965,7 +1965,7 @@ static int sgsimgui_ValueB( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_ValueI( SGS_CTX )
+static int sgsImGui_ValueI( SGS_CTX )
 {
 	SGSFN( "ImGui_ValueI" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1976,7 +1976,7 @@ static int sgsimgui_ValueI( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_ValueU( SGS_CTX )
+static int sgsImGui_ValueU( SGS_CTX )
 {
 	SGSFN( "ImGui_ValueU" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1987,7 +1987,7 @@ static int sgsimgui_ValueU( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_ValueF( SGS_CTX )
+static int sgsImGui_ValueF( SGS_CTX )
 {
 	SGSFN( "ImGui_ValueF" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -1999,7 +1999,7 @@ static int sgsimgui_ValueF( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_ValueColorF( SGS_CTX )
+static int sgsImGui_ValueColorF( SGS_CTX )
 {
 	SGSFN( "ImGui_ValueColorF" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2010,7 +2010,7 @@ static int sgsimgui_ValueColorF( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_ValueColor( SGS_CTX )
+static int sgsImGui_ValueColor( SGS_CTX )
 {
 	SGSFN( "ImGui_ValueColor" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2021,7 +2021,7 @@ static int sgsimgui_ValueColor( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_SetTooltip( SGS_CTX )
+static int sgsImGui_SetTooltip( SGS_CTX )
 {
 	SGSFN( "ImGui_SetTooltip" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2032,7 +2032,7 @@ static int sgsimgui_SetTooltip( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_BeginTooltip( SGS_CTX )
+static int sgsImGui_BeginTooltip( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginTooltip" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2040,7 +2040,7 @@ static int sgsimgui_BeginTooltip( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_EndTooltip( SGS_CTX )
+static int sgsImGui_EndTooltip( SGS_CTX )
 {
 	SGSFN( "ImGui_EndTooltip" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2048,7 +2048,7 @@ static int sgsimgui_EndTooltip( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_BeginMainMenuBar( SGS_CTX )
+static int sgsImGui_BeginMainMenuBar( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginMainMenuBar" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2056,7 +2056,7 @@ static int sgsimgui_BeginMainMenuBar( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_EndMainMenuBar( SGS_CTX )
+static int sgsImGui_EndMainMenuBar( SGS_CTX )
 {
 	SGSFN( "ImGui_EndMainMenuBar" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2064,7 +2064,7 @@ static int sgsimgui_EndMainMenuBar( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_BeginMenuBar( SGS_CTX )
+static int sgsImGui_BeginMenuBar( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginMenuBar" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2072,7 +2072,7 @@ static int sgsimgui_BeginMenuBar( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_EndMenuBar( SGS_CTX )
+static int sgsImGui_EndMenuBar( SGS_CTX )
 {
 	SGSFN( "ImGui_EndMenuBar" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2080,7 +2080,7 @@ static int sgsimgui_EndMenuBar( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_BeginMenu( SGS_CTX )
+static int sgsImGui_BeginMenu( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginMenu" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2091,7 +2091,7 @@ static int sgsimgui_BeginMenu( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_EndMenu( SGS_CTX )
+static int sgsImGui_EndMenu( SGS_CTX )
 {
 	SGSFN( "ImGui_EndMenu" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2099,7 +2099,7 @@ static int sgsimgui_EndMenu( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_MenuItem( SGS_CTX )
+static int sgsImGui_MenuItem( SGS_CTX )
 {
 	SGSFN( "ImGui_MenuItem" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2114,7 +2114,7 @@ static int sgsimgui_MenuItem( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_OpenPopup( SGS_CTX )
+static int sgsImGui_OpenPopup( SGS_CTX )
 {
 	SGSFN( "ImGui_OpenPopup" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2124,7 +2124,7 @@ static int sgsimgui_OpenPopup( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_BeginPopup( SGS_CTX )
+static int sgsImGui_BeginPopup( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginPopup" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2134,7 +2134,7 @@ static int sgsimgui_BeginPopup( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_BeginPopupModal( SGS_CTX )
+static int sgsImGui_BeginPopupModal( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginPopupModal" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2148,7 +2148,7 @@ static int sgsimgui_BeginPopupModal( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_BeginPopupContextItem( SGS_CTX )
+static int sgsImGui_BeginPopupContextItem( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginPopupContextItem" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2159,7 +2159,7 @@ static int sgsimgui_BeginPopupContextItem( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_BeginPopupContextWindow( SGS_CTX )
+static int sgsImGui_BeginPopupContextWindow( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginPopupContextWindow" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2171,7 +2171,7 @@ static int sgsimgui_BeginPopupContextWindow( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_BeginPopupContextVoid( SGS_CTX )
+static int sgsImGui_BeginPopupContextVoid( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginPopupContextVoid" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2182,7 +2182,7 @@ static int sgsimgui_BeginPopupContextVoid( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_EndPopup( SGS_CTX )
+static int sgsImGui_EndPopup( SGS_CTX )
 {
 	SGSFN( "ImGui_EndPopup" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2190,7 +2190,7 @@ static int sgsimgui_EndPopup( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_CloseCurrentPopup( SGS_CTX )
+static int sgsImGui_CloseCurrentPopup( SGS_CTX )
 {
 	SGSFN( "ImGui_CloseCurrentPopup" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2198,7 +2198,7 @@ static int sgsimgui_CloseCurrentPopup( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_LogToTTY( SGS_CTX )
+static int sgsImGui_LogToTTY( SGS_CTX )
 {
 	SGSFN( "ImGui_LogToTTY" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2208,7 +2208,7 @@ static int sgsimgui_LogToTTY( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_LogToFile( SGS_CTX )
+static int sgsImGui_LogToFile( SGS_CTX )
 {
 	SGSFN( "ImGui_LogToFile" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2219,7 +2219,7 @@ static int sgsimgui_LogToFile( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_LogToClipboard( SGS_CTX )
+static int sgsImGui_LogToClipboard( SGS_CTX )
 {
 	SGSFN( "ImGui_LogToClipboard" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2229,7 +2229,7 @@ static int sgsimgui_LogToClipboard( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_LogFinish( SGS_CTX )
+static int sgsImGui_LogFinish( SGS_CTX )
 {
 	SGSFN( "ImGui_LogFinish" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2237,7 +2237,7 @@ static int sgsimgui_LogFinish( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_LogButtons( SGS_CTX )
+static int sgsImGui_LogButtons( SGS_CTX )
 {
 	SGSFN( "ImGui_LogButtons" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2245,7 +2245,7 @@ static int sgsimgui_LogButtons( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_LogText( SGS_CTX )
+static int sgsImGui_LogText( SGS_CTX )
 {
 	SGSFN( "ImGui_LogText" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2256,27 +2256,7 @@ static int sgsimgui_LogText( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_PushClipRect( SGS_CTX )
-{
-	SGSFN( "ImGui_PushClipRect" );
-	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
-	ImGui::PushClipRect(
-		sgs_GetVar<ImVec2>()( C, 0 ),
-		sgs_GetVar<ImVec2>()( C, 2 ),
-		sgs_GetVar<bool>()( C, 4 )
-	);
-	return 0;
-}
-
-static int sgsimgui_PopClipRect( SGS_CTX )
-{
-	SGSFN( "ImGui_PopClipRect" );
-	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
-	ImGui::PopClipRect();
-	return 0;
-}
-
-static int sgsimgui_IsItemHovered( SGS_CTX )
+static int sgsImGui_IsItemHovered( SGS_CTX )
 {
 	SGSFN( "ImGui_IsItemHovered" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2284,7 +2264,7 @@ static int sgsimgui_IsItemHovered( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsItemHoveredRect( SGS_CTX )
+static int sgsImGui_IsItemHoveredRect( SGS_CTX )
 {
 	SGSFN( "ImGui_IsItemHoveredRect" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2292,7 +2272,7 @@ static int sgsimgui_IsItemHoveredRect( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsItemActive( SGS_CTX )
+static int sgsImGui_IsItemActive( SGS_CTX )
 {
 	SGSFN( "ImGui_IsItemActive" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2300,7 +2280,7 @@ static int sgsimgui_IsItemActive( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsItemClicked( SGS_CTX )
+static int sgsImGui_IsItemClicked( SGS_CTX )
 {
 	SGSFN( "ImGui_IsItemClicked" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2310,7 +2290,7 @@ static int sgsimgui_IsItemClicked( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsItemVisible( SGS_CTX )
+static int sgsImGui_IsItemVisible( SGS_CTX )
 {
 	SGSFN( "ImGui_IsItemVisible" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2318,7 +2298,7 @@ static int sgsimgui_IsItemVisible( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsAnyItemHovered( SGS_CTX )
+static int sgsImGui_IsAnyItemHovered( SGS_CTX )
 {
 	SGSFN( "ImGui_IsAnyItemHovered" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2326,7 +2306,7 @@ static int sgsimgui_IsAnyItemHovered( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsAnyItemActive( SGS_CTX )
+static int sgsImGui_IsAnyItemActive( SGS_CTX )
 {
 	SGSFN( "ImGui_IsAnyItemActive" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2334,7 +2314,7 @@ static int sgsimgui_IsAnyItemActive( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_GetItemRectMin( SGS_CTX )
+static int sgsImGui_GetItemRectMin( SGS_CTX )
 {
 	SGSFN( "ImGui_GetItemRectMin" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2342,7 +2322,7 @@ static int sgsimgui_GetItemRectMin( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_GetItemRectMax( SGS_CTX )
+static int sgsImGui_GetItemRectMax( SGS_CTX )
 {
 	SGSFN( "ImGui_GetItemRectMax" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2350,7 +2330,7 @@ static int sgsimgui_GetItemRectMax( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_GetItemRectSize( SGS_CTX )
+static int sgsImGui_GetItemRectSize( SGS_CTX )
 {
 	SGSFN( "ImGui_GetItemRectSize" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2358,7 +2338,7 @@ static int sgsimgui_GetItemRectSize( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_SetItemAllowOverlap( SGS_CTX )
+static int sgsImGui_SetItemAllowOverlap( SGS_CTX )
 {
 	SGSFN( "ImGui_SetItemAllowOverlap" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2366,7 +2346,7 @@ static int sgsimgui_SetItemAllowOverlap( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_IsWindowHovered( SGS_CTX )
+static int sgsImGui_IsWindowHovered( SGS_CTX )
 {
 	SGSFN( "ImGui_IsWindowHovered" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2374,7 +2354,7 @@ static int sgsimgui_IsWindowHovered( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsWindowFocused( SGS_CTX )
+static int sgsImGui_IsWindowFocused( SGS_CTX )
 {
 	SGSFN( "ImGui_IsWindowFocused" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2382,7 +2362,7 @@ static int sgsimgui_IsWindowFocused( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsRootWindowFocused( SGS_CTX )
+static int sgsImGui_IsRootWindowFocused( SGS_CTX )
 {
 	SGSFN( "ImGui_IsRootWindowFocused" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2390,7 +2370,7 @@ static int sgsimgui_IsRootWindowFocused( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsRootWindowOrAnyChildFocused( SGS_CTX )
+static int sgsImGui_IsRootWindowOrAnyChildFocused( SGS_CTX )
 {
 	SGSFN( "ImGui_IsRootWindowOrAnyChildFocused" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2398,7 +2378,7 @@ static int sgsimgui_IsRootWindowOrAnyChildFocused( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsRootWindowOrAnyChildHovered( SGS_CTX )
+static int sgsImGui_IsRootWindowOrAnyChildHovered( SGS_CTX )
 {
 	SGSFN( "ImGui_IsRootWindowOrAnyChildHovered" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2406,7 +2386,7 @@ static int sgsimgui_IsRootWindowOrAnyChildHovered( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsRectVisible( SGS_CTX )
+static int sgsImGui_IsRectVisible( SGS_CTX )
 {
 	SGSFN( "ImGui_IsRectVisible" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2416,7 +2396,7 @@ static int sgsimgui_IsRectVisible( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsRectVisibleScreen( SGS_CTX )
+static int sgsImGui_IsRectVisibleScreen( SGS_CTX )
 {
 	SGSFN( "ImGui_IsRectVisibleScreen" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2427,7 +2407,7 @@ static int sgsimgui_IsRectVisibleScreen( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsPosHoveringAnyWindow( SGS_CTX )
+static int sgsImGui_IsPosHoveringAnyWindow( SGS_CTX )
 {
 	SGSFN( "ImGui_IsPosHoveringAnyWindow" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2437,7 +2417,7 @@ static int sgsimgui_IsPosHoveringAnyWindow( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_GetTime( SGS_CTX )
+static int sgsImGui_GetTime( SGS_CTX )
 {
 	SGSFN( "ImGui_GetTime" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2445,7 +2425,7 @@ static int sgsimgui_GetTime( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_GetFrameCount( SGS_CTX )
+static int sgsImGui_GetFrameCount( SGS_CTX )
 {
 	SGSFN( "ImGui_GetFrameCount" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2453,7 +2433,7 @@ static int sgsimgui_GetFrameCount( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_GetStyleColName( SGS_CTX )
+static int sgsImGui_GetStyleColName( SGS_CTX )
 {
 	SGSFN( "ImGui_GetStyleColName" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2463,7 +2443,7 @@ static int sgsimgui_GetStyleColName( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_CalcItemRectClosestPoint( SGS_CTX )
+static int sgsImGui_CalcItemRectClosestPoint( SGS_CTX )
 {
 	SGSFN( "ImGui_CalcItemRectClosestPoint" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2475,7 +2455,7 @@ static int sgsimgui_CalcItemRectClosestPoint( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_CalcTextSize( SGS_CTX )
+static int sgsImGui_CalcTextSize( SGS_CTX )
 {
 	SGSFN( "ImGui_CalcTextSize" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2488,7 +2468,7 @@ static int sgsimgui_CalcTextSize( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_CalcListClipping( SGS_CTX )
+static int sgsImGui_CalcListClipping( SGS_CTX )
 {
 	SGSFN( "ImGui_CalcListClipping" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2505,7 +2485,7 @@ static int sgsimgui_CalcListClipping( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_BeginChildFrame( SGS_CTX )
+static int sgsImGui_BeginChildFrame( SGS_CTX )
 {
 	SGSFN( "ImGui_BeginChildFrame" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2517,7 +2497,7 @@ static int sgsimgui_BeginChildFrame( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_EndChildFrame( SGS_CTX )
+static int sgsImGui_EndChildFrame( SGS_CTX )
 {
 	SGSFN( "ImGui_EndChildFrame" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2525,7 +2505,7 @@ static int sgsimgui_EndChildFrame( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_ColorConvertU32ToFloat4( SGS_CTX )
+static int sgsImGui_ColorConvertU32ToFloat4( SGS_CTX )
 {
 	SGSFN( "ImGui_ColorConvertU32ToFloat4" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2535,7 +2515,7 @@ static int sgsimgui_ColorConvertU32ToFloat4( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_ColorConvertFloat4ToU32( SGS_CTX )
+static int sgsImGui_ColorConvertFloat4ToU32( SGS_CTX )
 {
 	SGSFN( "ImGui_ColorConvertFloat4ToU32" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2545,7 +2525,7 @@ static int sgsimgui_ColorConvertFloat4ToU32( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_ColorConvertRGBtoHSV( SGS_CTX )
+static int sgsImGui_ColorConvertRGBtoHSV( SGS_CTX )
 {
 	SGSFN( "ImGui_ColorConvertRGBtoHSV" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2566,7 +2546,7 @@ static int sgsimgui_ColorConvertRGBtoHSV( SGS_CTX )
 	return 3;
 }
 
-static int sgsimgui_ColorConvertHSVtoRGB( SGS_CTX )
+static int sgsImGui_ColorConvertHSVtoRGB( SGS_CTX )
 {
 	SGSFN( "ImGui_ColorConvertHSVtoRGB" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2587,7 +2567,7 @@ static int sgsimgui_ColorConvertHSVtoRGB( SGS_CTX )
 	return 3;
 }
 
-static int sgsimgui_GetKeyIndex( SGS_CTX )
+static int sgsImGui_GetKeyIndex( SGS_CTX )
 {
 	SGSFN( "ImGui_GetKeyIndex" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2597,7 +2577,7 @@ static int sgsimgui_GetKeyIndex( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsKeyDown( SGS_CTX )
+static int sgsImGui_IsKeyDown( SGS_CTX )
 {
 	SGSFN( "ImGui_IsKeyDown" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2607,7 +2587,7 @@ static int sgsimgui_IsKeyDown( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsKeyPressed( SGS_CTX )
+static int sgsImGui_IsKeyPressed( SGS_CTX )
 {
 	SGSFN( "ImGui_IsKeyPressed" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2618,7 +2598,7 @@ static int sgsimgui_IsKeyPressed( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsKeyReleased( SGS_CTX )
+static int sgsImGui_IsKeyReleased( SGS_CTX )
 {
 	SGSFN( "ImGui_IsKeyReleased" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2628,7 +2608,7 @@ static int sgsimgui_IsKeyReleased( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsMouseDown( SGS_CTX )
+static int sgsImGui_IsMouseDown( SGS_CTX )
 {
 	SGSFN( "ImGui_IsMouseDown" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2638,7 +2618,7 @@ static int sgsimgui_IsMouseDown( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsMouseClicked( SGS_CTX )
+static int sgsImGui_IsMouseClicked( SGS_CTX )
 {
 	SGSFN( "ImGui_IsMouseClicked" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2649,7 +2629,7 @@ static int sgsimgui_IsMouseClicked( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsMouseDoubleClicked( SGS_CTX )
+static int sgsImGui_IsMouseDoubleClicked( SGS_CTX )
 {
 	SGSFN( "ImGui_IsMouseDoubleClicked" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2659,7 +2639,7 @@ static int sgsimgui_IsMouseDoubleClicked( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsMouseReleased( SGS_CTX )
+static int sgsImGui_IsMouseReleased( SGS_CTX )
 {
 	SGSFN( "ImGui_IsMouseReleased" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2669,7 +2649,7 @@ static int sgsimgui_IsMouseReleased( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsMouseHoveringWindow( SGS_CTX )
+static int sgsImGui_IsMouseHoveringWindow( SGS_CTX )
 {
 	SGSFN( "ImGui_IsMouseHoveringWindow" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2677,7 +2657,7 @@ static int sgsimgui_IsMouseHoveringWindow( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsMouseHoveringAnyWindow( SGS_CTX )
+static int sgsImGui_IsMouseHoveringAnyWindow( SGS_CTX )
 {
 	SGSFN( "ImGui_IsMouseHoveringAnyWindow" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2685,7 +2665,7 @@ static int sgsimgui_IsMouseHoveringAnyWindow( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsMouseHoveringRect( SGS_CTX )
+static int sgsImGui_IsMouseHoveringRect( SGS_CTX )
 {
 	SGSFN( "ImGui_IsMouseHoveringRect" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2697,7 +2677,7 @@ static int sgsimgui_IsMouseHoveringRect( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_IsMouseDragging( SGS_CTX )
+static int sgsImGui_IsMouseDragging( SGS_CTX )
 {
 	SGSFN( "ImGui_IsMouseDragging" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2708,7 +2688,7 @@ static int sgsimgui_IsMouseDragging( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_GetMousePos( SGS_CTX )
+static int sgsImGui_GetMousePos( SGS_CTX )
 {
 	SGSFN( "ImGui_GetMousePos" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2716,7 +2696,7 @@ static int sgsimgui_GetMousePos( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_GetMousePosOnOpeningCurrentPopup( SGS_CTX )
+static int sgsImGui_GetMousePosOnOpeningCurrentPopup( SGS_CTX )
 {
 	SGSFN( "ImGui_GetMousePosOnOpeningCurrentPopup" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2724,7 +2704,7 @@ static int sgsimgui_GetMousePosOnOpeningCurrentPopup( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_GetMouseDragDelta( SGS_CTX )
+static int sgsImGui_GetMouseDragDelta( SGS_CTX )
 {
 	SGSFN( "ImGui_GetMouseDragDelta" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2735,7 +2715,7 @@ static int sgsimgui_GetMouseDragDelta( SGS_CTX )
 	return 2;
 }
 
-static int sgsimgui_ResetMouseDragDelta( SGS_CTX )
+static int sgsImGui_ResetMouseDragDelta( SGS_CTX )
 {
 	SGSFN( "ImGui_ResetMouseDragDelta" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2745,7 +2725,7 @@ static int sgsimgui_ResetMouseDragDelta( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_GetMouseCursor( SGS_CTX )
+static int sgsImGui_GetMouseCursor( SGS_CTX )
 {
 	SGSFN( "ImGui_GetMouseCursor" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2753,7 +2733,7 @@ static int sgsimgui_GetMouseCursor( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_SetMouseCursor( SGS_CTX )
+static int sgsImGui_SetMouseCursor( SGS_CTX )
 {
 	SGSFN( "ImGui_SetMouseCursor" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2763,7 +2743,7 @@ static int sgsimgui_SetMouseCursor( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_CaptureKeyboardFromApp( SGS_CTX )
+static int sgsImGui_CaptureKeyboardFromApp( SGS_CTX )
 {
 	SGSFN( "ImGui_CaptureKeyboardFromApp" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2773,7 +2753,7 @@ static int sgsimgui_CaptureKeyboardFromApp( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_CaptureMouseFromApp( SGS_CTX )
+static int sgsImGui_CaptureMouseFromApp( SGS_CTX )
 {
 	SGSFN( "ImGui_CaptureMouseFromApp" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2783,7 +2763,7 @@ static int sgsimgui_CaptureMouseFromApp( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_MemAlloc( SGS_CTX )
+static int sgsImGui_MemAlloc( SGS_CTX )
 {
 	SGSFN( "ImGui_MemAlloc" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2793,7 +2773,7 @@ static int sgsimgui_MemAlloc( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_MemFree( SGS_CTX )
+static int sgsImGui_MemFree( SGS_CTX )
 {
 	SGSFN( "ImGui_MemFree" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2803,7 +2783,7 @@ static int sgsimgui_MemFree( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_GetClipboardText( SGS_CTX )
+static int sgsImGui_GetClipboardText( SGS_CTX )
 {
 	SGSFN( "ImGui_GetClipboardText" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2811,7 +2791,7 @@ static int sgsimgui_GetClipboardText( SGS_CTX )
 	return 1;
 }
 
-static int sgsimgui_SetClipboardText( SGS_CTX )
+static int sgsImGui_SetClipboardText( SGS_CTX )
 {
 	SGSFN( "ImGui_SetClipboardText" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2821,7 +2801,7 @@ static int sgsimgui_SetClipboardText( SGS_CTX )
 	return 0;
 }
 
-static int sgsimgui_GetVersion( SGS_CTX )
+static int sgsImGui_GetVersion( SGS_CTX )
 {
 	SGSFN( "ImGui_GetVersion" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
@@ -2829,265 +2809,761 @@ static int sgsimgui_GetVersion( SGS_CTX )
 	return 1;
 }
 
+static int sgsImDrawList_PushClipRectFullScreen( SGS_CTX )
+{
+	SGSFN( "ImDrawList_PushClipRectFullScreen" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->PushClipRectFullScreen();
+	return 0;
+}
+
+static int sgsImDrawList_PopTextureID( SGS_CTX )
+{
+	SGSFN( "ImDrawList_PopTextureID" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->PopTextureID();
+	return 0;
+}
+
+static int sgsImDrawList_AddLine( SGS_CTX )
+{
+	SGSFN( "ImDrawList_AddLine" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->AddLine(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 2 ),
+		sgs_GetVar<ImU32>()( C, 4 ),
+		6 <= ssz ? sgs_GetVar<float>()( C, 5 ) : 1
+	);
+	return 0;
+}
+
+static int sgsImDrawList_AddRect( SGS_CTX )
+{
+	SGSFN( "ImDrawList_AddRect" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->AddRect(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 2 ),
+		sgs_GetVar<ImU32>()( C, 4 ),
+		6 <= ssz ? sgs_GetVar<float>()( C, 5 ) : 0,
+		7 <= ssz ? sgs_GetVar<int>()( C, 6 ) : ~ 0,
+		8 <= ssz ? sgs_GetVar<float>()( C, 7 ) : 1
+	);
+	return 0;
+}
+
+static int sgsImDrawList_AddRectFilled( SGS_CTX )
+{
+	SGSFN( "ImDrawList_AddRectFilled" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->AddRectFilled(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 2 ),
+		sgs_GetVar<ImU32>()( C, 4 ),
+		6 <= ssz ? sgs_GetVar<float>()( C, 5 ) : 0,
+		7 <= ssz ? sgs_GetVar<int>()( C, 6 ) : ~ 0
+	);
+	return 0;
+}
+
+static int sgsImDrawList_AddRectFilledMultiColor( SGS_CTX )
+{
+	SGSFN( "ImDrawList_AddRectFilledMultiColor" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 2 ),
+		sgs_GetVar<ImU32>()( C, 4 ),
+		sgs_GetVar<ImU32>()( C, 5 ),
+		sgs_GetVar<ImU32>()( C, 6 ),
+		sgs_GetVar<ImU32>()( C, 7 )
+	);
+	return 0;
+}
+
+static int sgsImDrawList_AddQuad( SGS_CTX )
+{
+	SGSFN( "ImDrawList_AddQuad" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->AddQuad(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 2 ),
+		sgs_GetVar<ImVec2>()( C, 4 ),
+		sgs_GetVar<ImVec2>()( C, 6 ),
+		sgs_GetVar<ImU32>()( C, 8 ),
+		10 <= ssz ? sgs_GetVar<float>()( C, 9 ) : 1
+	);
+	return 0;
+}
+
+static int sgsImDrawList_AddQuadFilled( SGS_CTX )
+{
+	SGSFN( "ImDrawList_AddQuadFilled" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->AddQuadFilled(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 2 ),
+		sgs_GetVar<ImVec2>()( C, 4 ),
+		sgs_GetVar<ImVec2>()( C, 6 ),
+		sgs_GetVar<ImU32>()( C, 8 )
+	);
+	return 0;
+}
+
+static int sgsImDrawList_AddTriangle( SGS_CTX )
+{
+	SGSFN( "ImDrawList_AddTriangle" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->AddTriangle(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 2 ),
+		sgs_GetVar<ImVec2>()( C, 4 ),
+		sgs_GetVar<ImU32>()( C, 6 ),
+		8 <= ssz ? sgs_GetVar<float>()( C, 7 ) : 1
+	);
+	return 0;
+}
+
+static int sgsImDrawList_AddTriangleFilled( SGS_CTX )
+{
+	SGSFN( "ImDrawList_AddTriangleFilled" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->AddTriangleFilled(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 2 ),
+		sgs_GetVar<ImVec2>()( C, 4 ),
+		sgs_GetVar<ImU32>()( C, 6 )
+	);
+	return 0;
+}
+
+static int sgsImDrawList_AddCircle( SGS_CTX )
+{
+	SGSFN( "ImDrawList_AddCircle" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->AddCircle(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<float>()( C, 2 ),
+		sgs_GetVar<ImU32>()( C, 3 ),
+		5 <= ssz ? sgs_GetVar<int>()( C, 4 ) : 12,
+		6 <= ssz ? sgs_GetVar<float>()( C, 5 ) : 1
+	);
+	return 0;
+}
+
+static int sgsImDrawList_AddCircleFilled( SGS_CTX )
+{
+	SGSFN( "ImDrawList_AddCircleFilled" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->AddCircleFilled(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<float>()( C, 2 ),
+		sgs_GetVar<ImU32>()( C, 3 ),
+		5 <= ssz ? sgs_GetVar<int>()( C, 4 ) : 12
+	);
+	return 0;
+}
+
+static int sgsImDrawList_AddImage( SGS_CTX )
+{
+	SGSFN( "ImDrawList_AddImage" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->AddImage(
+		sgs_GetVar<ImTextureID>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 1 ),
+		sgs_GetVar<ImVec2>()( C, 3 ),
+		7 <= ssz ? sgs_GetVar<ImVec2>()( C, 5 ) : ImVec2 ( 0 , 0 ),
+		9 <= ssz ? sgs_GetVar<ImVec2>()( C, 7 ) : ImVec2 ( 1 , 1 ),
+		10 <= ssz ? sgs_GetVar<ImU32>()( C, 9 ) : 4294967295U
+	);
+	return 0;
+}
+
+static int sgsImDrawList_AddBezierCurve( SGS_CTX )
+{
+	SGSFN( "ImDrawList_AddBezierCurve" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->AddBezierCurve(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 2 ),
+		sgs_GetVar<ImVec2>()( C, 4 ),
+		sgs_GetVar<ImVec2>()( C, 6 ),
+		sgs_GetVar<ImU32>()( C, 8 ),
+		sgs_GetVar<float>()( C, 9 ),
+		11 <= ssz ? sgs_GetVar<int>()( C, 10 ) : 0
+	);
+	return 0;
+}
+
+static int sgsImDrawList_PathClear( SGS_CTX )
+{
+	SGSFN( "ImDrawList_PathClear" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->PathClear();
+	return 0;
+}
+
+static int sgsImDrawList_PathLineTo( SGS_CTX )
+{
+	SGSFN( "ImDrawList_PathLineTo" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->PathLineTo(
+		sgs_GetVar<ImVec2>()( C, 0 )
+	);
+	return 0;
+}
+
+static int sgsImDrawList_PathLineToMergeDuplicate( SGS_CTX )
+{
+	SGSFN( "ImDrawList_PathLineToMergeDuplicate" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->PathLineToMergeDuplicate(
+		sgs_GetVar<ImVec2>()( C, 0 )
+	);
+	return 0;
+}
+
+static int sgsImDrawList_PathFill( SGS_CTX )
+{
+	SGSFN( "ImDrawList_PathFill" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->PathFill(
+		sgs_GetVar<ImU32>()( C, 0 )
+	);
+	return 0;
+}
+
+static int sgsImDrawList_PathStroke( SGS_CTX )
+{
+	SGSFN( "ImDrawList_PathStroke" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->PathStroke(
+		sgs_GetVar<ImU32>()( C, 0 ),
+		sgs_GetVar<bool>()( C, 1 ),
+		3 <= ssz ? sgs_GetVar<float>()( C, 2 ) : 1
+	);
+	return 0;
+}
+
+static int sgsImDrawList_PathArcTo( SGS_CTX )
+{
+	SGSFN( "ImDrawList_PathArcTo" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->PathArcTo(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<float>()( C, 2 ),
+		sgs_GetVar<float>()( C, 3 ),
+		sgs_GetVar<float>()( C, 4 ),
+		6 <= ssz ? sgs_GetVar<int>()( C, 5 ) : 10
+	);
+	return 0;
+}
+
+static int sgsImDrawList_PathArcToFast( SGS_CTX )
+{
+	SGSFN( "ImDrawList_PathArcToFast" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->PathArcToFast(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<float>()( C, 2 ),
+		sgs_GetVar<int>()( C, 3 ),
+		sgs_GetVar<int>()( C, 4 )
+	);
+	return 0;
+}
+
+static int sgsImDrawList_PathBezierCurveTo( SGS_CTX )
+{
+	SGSFN( "ImDrawList_PathBezierCurveTo" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->PathBezierCurveTo(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 2 ),
+		sgs_GetVar<ImVec2>()( C, 4 ),
+		7 <= ssz ? sgs_GetVar<int>()( C, 6 ) : 0
+	);
+	return 0;
+}
+
+static int sgsImDrawList_PathRect( SGS_CTX )
+{
+	SGSFN( "ImDrawList_PathRect" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->PathRect(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 2 ),
+		5 <= ssz ? sgs_GetVar<float>()( C, 4 ) : 0,
+		6 <= ssz ? sgs_GetVar<int>()( C, 5 ) : ~ 0
+	);
+	return 0;
+}
+
+static int sgsImDrawList_ChannelsSplit( SGS_CTX )
+{
+	SGSFN( "ImDrawList_ChannelsSplit" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->ChannelsSplit(
+		sgs_GetVar<int>()( C, 0 )
+	);
+	return 0;
+}
+
+static int sgsImDrawList_ChannelsMerge( SGS_CTX )
+{
+	SGSFN( "ImDrawList_ChannelsMerge" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->ChannelsMerge();
+	return 0;
+}
+
+static int sgsImDrawList_ChannelsSetCurrent( SGS_CTX )
+{
+	SGSFN( "ImDrawList_ChannelsSetCurrent" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->ChannelsSetCurrent(
+		sgs_GetVar<int>()( C, 0 )
+	);
+	return 0;
+}
+
+static int sgsImDrawList_AddCallback( SGS_CTX )
+{
+	SGSFN( "ImDrawList_AddCallback" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	sgsVariable val0( C, 0 );
+	ImGui::GetWindowDrawList()->AddCallback(
+		imgui_DrawCallback,
+		new sgsVariable( val0 )
+	);
+	return 0;
+}
+
+static int sgsImDrawList_AddDrawCmd( SGS_CTX )
+{
+	SGSFN( "ImDrawList_AddDrawCmd" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->AddDrawCmd();
+	return 0;
+}
+
+static int sgsImDrawList_Clear( SGS_CTX )
+{
+	SGSFN( "ImDrawList_Clear" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->Clear();
+	return 0;
+}
+
+static int sgsImDrawList_ClearFreeMemory( SGS_CTX )
+{
+	SGSFN( "ImDrawList_ClearFreeMemory" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->ClearFreeMemory();
+	return 0;
+}
+
+static int sgsImDrawList_PrimReserve( SGS_CTX )
+{
+	SGSFN( "ImDrawList_PrimReserve" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->PrimReserve(
+		sgs_GetVar<int>()( C, 0 ),
+		sgs_GetVar<int>()( C, 1 )
+	);
+	return 0;
+}
+
+static int sgsImDrawList_PrimRect( SGS_CTX )
+{
+	SGSFN( "ImDrawList_PrimRect" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->PrimRect(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 2 ),
+		sgs_GetVar<ImU32>()( C, 4 )
+	);
+	return 0;
+}
+
+static int sgsImDrawList_PrimRectUV( SGS_CTX )
+{
+	SGSFN( "ImDrawList_PrimRectUV" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->PrimRectUV(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 2 ),
+		sgs_GetVar<ImVec2>()( C, 4 ),
+		sgs_GetVar<ImVec2>()( C, 6 ),
+		sgs_GetVar<ImU32>()( C, 8 )
+	);
+	return 0;
+}
+
+static int sgsImDrawList_PrimQuadUV( SGS_CTX )
+{
+	SGSFN( "ImDrawList_PrimQuadUV" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->PrimQuadUV(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 2 ),
+		sgs_GetVar<ImVec2>()( C, 4 ),
+		sgs_GetVar<ImVec2>()( C, 6 ),
+		sgs_GetVar<ImVec2>()( C, 8 ),
+		sgs_GetVar<ImVec2>()( C, 10 ),
+		sgs_GetVar<ImVec2>()( C, 12 ),
+		sgs_GetVar<ImVec2>()( C, 14 ),
+		sgs_GetVar<ImU32>()( C, 16 )
+	);
+	return 0;
+}
+
+static int sgsImDrawList_PrimWriteVtx( SGS_CTX )
+{
+	SGSFN( "ImDrawList_PrimWriteVtx" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->PrimWriteVtx(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 2 ),
+		sgs_GetVar<ImU32>()( C, 4 )
+	);
+	return 0;
+}
+
+static int sgsImDrawList_PrimWriteIdx( SGS_CTX )
+{
+	SGSFN( "ImDrawList_PrimWriteIdx" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->PrimWriteIdx(
+		sgs_GetVar<ImDrawIdx>()( C, 0 )
+	);
+	return 0;
+}
+
+static int sgsImDrawList_PrimVtx( SGS_CTX )
+{
+	SGSFN( "ImDrawList_PrimVtx" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->PrimVtx(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 2 ),
+		sgs_GetVar<ImU32>()( C, 4 )
+	);
+	return 0;
+}
+
+static int sgsImDrawList_UpdateClipRect( SGS_CTX )
+{
+	SGSFN( "ImDrawList_UpdateClipRect" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->UpdateClipRect();
+	return 0;
+}
+
+static int sgsImDrawList_UpdateTextureID( SGS_CTX )
+{
+	SGSFN( "ImDrawList_UpdateTextureID" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->UpdateTextureID();
+	return 0;
+}
+
 
 static sgs_RegFuncConst imgui_fconsts[] =
 {
-	{ "ImGui_NewFrame", sgsimgui_NewFrame },
-	{ "ImGui_Render", sgsimgui_Render },
-	{ "ImGui_Shutdown", sgsimgui_Shutdown },
-	{ "ImGui_ShowUserGuide", sgsimgui_ShowUserGuide },
-	{ "ImGui_ShowTestWindow", sgsimgui_ShowTestWindow },
-	{ "ImGui_ShowMetricsWindow", sgsimgui_ShowMetricsWindow },
-	{ "ImGui_Begin", sgsimgui_Begin },
-	{ "ImGui_End", sgsimgui_End },
-	{ "ImGui_BeginChild", sgsimgui_BeginChild },
-	{ "ImGui_EndChild", sgsimgui_EndChild },
-	{ "ImGui_GetContentRegionMax", sgsimgui_GetContentRegionMax },
-	{ "ImGui_GetContentRegionAvail", sgsimgui_GetContentRegionAvail },
-	{ "ImGui_GetContentRegionAvailWidth", sgsimgui_GetContentRegionAvailWidth },
-	{ "ImGui_GetWindowContentRegionMin", sgsimgui_GetWindowContentRegionMin },
-	{ "ImGui_GetWindowContentRegionMax", sgsimgui_GetWindowContentRegionMax },
-	{ "ImGui_GetWindowContentRegionWidth", sgsimgui_GetWindowContentRegionWidth },
-	{ "ImGui_GetWindowPos", sgsimgui_GetWindowPos },
-	{ "ImGui_GetWindowSize", sgsimgui_GetWindowSize },
-	{ "ImGui_GetWindowWidth", sgsimgui_GetWindowWidth },
-	{ "ImGui_GetWindowHeight", sgsimgui_GetWindowHeight },
-	{ "ImGui_IsWindowCollapsed", sgsimgui_IsWindowCollapsed },
-	{ "ImGui_SetWindowFontScale", sgsimgui_SetWindowFontScale },
-	{ "ImGui_SetNextWindowPos", sgsimgui_SetNextWindowPos },
-	{ "ImGui_SetNextWindowPosCenter", sgsimgui_SetNextWindowPosCenter },
-	{ "ImGui_SetNextWindowSize", sgsimgui_SetNextWindowSize },
-	{ "ImGui_SetNextWindowContentSize", sgsimgui_SetNextWindowContentSize },
-	{ "ImGui_SetNextWindowContentWidth", sgsimgui_SetNextWindowContentWidth },
-	{ "ImGui_SetNextWindowCollapsed", sgsimgui_SetNextWindowCollapsed },
-	{ "ImGui_SetNextWindowFocus", sgsimgui_SetNextWindowFocus },
-	{ "ImGui_SetCurrentWindowPos", sgsimgui_SetCurrentWindowPos },
-	{ "ImGui_SetCurrentWindowSize", sgsimgui_SetCurrentWindowSize },
-	{ "ImGui_SetCurrentWindowCollapsed", sgsimgui_SetCurrentWindowCollapsed },
-	{ "ImGui_SetCurrentWindowFocus", sgsimgui_SetCurrentWindowFocus },
-	{ "ImGui_SetWindowPos", sgsimgui_SetWindowPos },
-	{ "ImGui_SetWindowSize", sgsimgui_SetWindowSize },
-	{ "ImGui_SetWindowCollapsed", sgsimgui_SetWindowCollapsed },
-	{ "ImGui_SetWindowFocus", sgsimgui_SetWindowFocus },
-	{ "ImGui_GetScrollX", sgsimgui_GetScrollX },
-	{ "ImGui_GetScrollY", sgsimgui_GetScrollY },
-	{ "ImGui_GetScrollMaxX", sgsimgui_GetScrollMaxX },
-	{ "ImGui_GetScrollMaxY", sgsimgui_GetScrollMaxY },
-	{ "ImGui_SetScrollX", sgsimgui_SetScrollX },
-	{ "ImGui_SetScrollY", sgsimgui_SetScrollY },
-	{ "ImGui_SetScrollHere", sgsimgui_SetScrollHere },
-	{ "ImGui_SetScrollFromPosY", sgsimgui_SetScrollFromPosY },
-	{ "ImGui_SetKeyboardFocusHere", sgsimgui_SetKeyboardFocusHere },
-	{ "ImGui_PopFont", sgsimgui_PopFont },
-	{ "ImGui_PushStyleColor", sgsimgui_PushStyleColor },
-	{ "ImGui_PopStyleColor", sgsimgui_PopStyleColor },
-	{ "ImGui_PushStyleVarF", sgsimgui_PushStyleVarF },
-	{ "ImGui_PushStyleVarV2", sgsimgui_PushStyleVarV2 },
-	{ "ImGui_PopStyleVar", sgsimgui_PopStyleVar },
-	{ "ImGui_GetFontSize", sgsimgui_GetFontSize },
-	{ "ImGui_GetFontTexUvWhitePixel", sgsimgui_GetFontTexUvWhitePixel },
-	{ "ImGui_GetStyleColorU32", sgsimgui_GetStyleColorU32 },
-	{ "ImGui_GetColorU32", sgsimgui_GetColorU32 },
-	{ "ImGui_PushItemWidth", sgsimgui_PushItemWidth },
-	{ "ImGui_PopItemWidth", sgsimgui_PopItemWidth },
-	{ "ImGui_CalcItemWidth", sgsimgui_CalcItemWidth },
-	{ "ImGui_PushTextWrapPos", sgsimgui_PushTextWrapPos },
-	{ "ImGui_PopTextWrapPos", sgsimgui_PopTextWrapPos },
-	{ "ImGui_PushAllowKeyboardFocus", sgsimgui_PushAllowKeyboardFocus },
-	{ "ImGui_PopAllowKeyboardFocus", sgsimgui_PopAllowKeyboardFocus },
-	{ "ImGui_PushButtonRepeat", sgsimgui_PushButtonRepeat },
-	{ "ImGui_PopButtonRepeat", sgsimgui_PopButtonRepeat },
-	{ "ImGui_Separator", sgsimgui_Separator },
-	{ "ImGui_SameLine", sgsimgui_SameLine },
-	{ "ImGui_NewLine", sgsimgui_NewLine },
-	{ "ImGui_Spacing", sgsimgui_Spacing },
-	{ "ImGui_Dummy", sgsimgui_Dummy },
-	{ "ImGui_Indent", sgsimgui_Indent },
-	{ "ImGui_Unindent", sgsimgui_Unindent },
-	{ "ImGui_BeginGroup", sgsimgui_BeginGroup },
-	{ "ImGui_EndGroup", sgsimgui_EndGroup },
-	{ "ImGui_GetCursorPos", sgsimgui_GetCursorPos },
-	{ "ImGui_GetCursorPosX", sgsimgui_GetCursorPosX },
-	{ "ImGui_GetCursorPosY", sgsimgui_GetCursorPosY },
-	{ "ImGui_SetCursorPos", sgsimgui_SetCursorPos },
-	{ "ImGui_SetCursorPosX", sgsimgui_SetCursorPosX },
-	{ "ImGui_SetCursorPosY", sgsimgui_SetCursorPosY },
-	{ "ImGui_GetCursorStartPos", sgsimgui_GetCursorStartPos },
-	{ "ImGui_GetCursorScreenPos", sgsimgui_GetCursorScreenPos },
-	{ "ImGui_SetCursorScreenPos", sgsimgui_SetCursorScreenPos },
-	{ "ImGui_AlignFirstTextHeightToWidgets", sgsimgui_AlignFirstTextHeightToWidgets },
-	{ "ImGui_GetTextLineHeight", sgsimgui_GetTextLineHeight },
-	{ "ImGui_GetTextLineHeightWithSpacing", sgsimgui_GetTextLineHeightWithSpacing },
-	{ "ImGui_GetItemsLineHeightWithSpacing", sgsimgui_GetItemsLineHeightWithSpacing },
-	{ "ImGui_Columns", sgsimgui_Columns },
-	{ "ImGui_NextColumn", sgsimgui_NextColumn },
-	{ "ImGui_GetColumnIndex", sgsimgui_GetColumnIndex },
-	{ "ImGui_GetColumnOffset", sgsimgui_GetColumnOffset },
-	{ "ImGui_SetColumnOffset", sgsimgui_SetColumnOffset },
-	{ "ImGui_GetColumnWidth", sgsimgui_GetColumnWidth },
-	{ "ImGui_GetColumnsCount", sgsimgui_GetColumnsCount },
+	{ "ImGui_NewFrame", sgsImGui_NewFrame },
+	{ "ImGui_Render", sgsImGui_Render },
+	{ "ImGui_Shutdown", sgsImGui_Shutdown },
+	{ "ImGui_ShowUserGuide", sgsImGui_ShowUserGuide },
+	{ "ImGui_ShowTestWindow", sgsImGui_ShowTestWindow },
+	{ "ImGui_ShowMetricsWindow", sgsImGui_ShowMetricsWindow },
+	{ "ImGui_Begin", sgsImGui_Begin },
+	{ "ImGui_End", sgsImGui_End },
+	{ "ImGui_BeginChild", sgsImGui_BeginChild },
+	{ "ImGui_EndChild", sgsImGui_EndChild },
+	{ "ImGui_GetContentRegionMax", sgsImGui_GetContentRegionMax },
+	{ "ImGui_GetContentRegionAvail", sgsImGui_GetContentRegionAvail },
+	{ "ImGui_GetContentRegionAvailWidth", sgsImGui_GetContentRegionAvailWidth },
+	{ "ImGui_GetWindowContentRegionMin", sgsImGui_GetWindowContentRegionMin },
+	{ "ImGui_GetWindowContentRegionMax", sgsImGui_GetWindowContentRegionMax },
+	{ "ImGui_GetWindowContentRegionWidth", sgsImGui_GetWindowContentRegionWidth },
+	{ "ImGui_GetWindowPos", sgsImGui_GetWindowPos },
+	{ "ImGui_GetWindowSize", sgsImGui_GetWindowSize },
+	{ "ImGui_GetWindowWidth", sgsImGui_GetWindowWidth },
+	{ "ImGui_GetWindowHeight", sgsImGui_GetWindowHeight },
+	{ "ImGui_IsWindowCollapsed", sgsImGui_IsWindowCollapsed },
+	{ "ImGui_SetWindowFontScale", sgsImGui_SetWindowFontScale },
+	{ "ImGui_SetNextWindowPos", sgsImGui_SetNextWindowPos },
+	{ "ImGui_SetNextWindowPosCenter", sgsImGui_SetNextWindowPosCenter },
+	{ "ImGui_SetNextWindowSize", sgsImGui_SetNextWindowSize },
+	{ "ImGui_SetNextWindowContentSize", sgsImGui_SetNextWindowContentSize },
+	{ "ImGui_SetNextWindowContentWidth", sgsImGui_SetNextWindowContentWidth },
+	{ "ImGui_SetNextWindowCollapsed", sgsImGui_SetNextWindowCollapsed },
+	{ "ImGui_SetNextWindowFocus", sgsImGui_SetNextWindowFocus },
+	{ "ImGui_SetCurrentWindowPos", sgsImGui_SetCurrentWindowPos },
+	{ "ImGui_SetCurrentWindowSize", sgsImGui_SetCurrentWindowSize },
+	{ "ImGui_SetCurrentWindowCollapsed", sgsImGui_SetCurrentWindowCollapsed },
+	{ "ImGui_SetCurrentWindowFocus", sgsImGui_SetCurrentWindowFocus },
+	{ "ImGui_SetWindowPos", sgsImGui_SetWindowPos },
+	{ "ImGui_SetWindowSize", sgsImGui_SetWindowSize },
+	{ "ImGui_SetWindowCollapsed", sgsImGui_SetWindowCollapsed },
+	{ "ImGui_SetWindowFocus", sgsImGui_SetWindowFocus },
+	{ "ImGui_GetScrollX", sgsImGui_GetScrollX },
+	{ "ImGui_GetScrollY", sgsImGui_GetScrollY },
+	{ "ImGui_GetScrollMaxX", sgsImGui_GetScrollMaxX },
+	{ "ImGui_GetScrollMaxY", sgsImGui_GetScrollMaxY },
+	{ "ImGui_SetScrollX", sgsImGui_SetScrollX },
+	{ "ImGui_SetScrollY", sgsImGui_SetScrollY },
+	{ "ImGui_SetScrollHere", sgsImGui_SetScrollHere },
+	{ "ImGui_SetScrollFromPosY", sgsImGui_SetScrollFromPosY },
+	{ "ImGui_SetKeyboardFocusHere", sgsImGui_SetKeyboardFocusHere },
+	{ "ImGui_PopFont", sgsImGui_PopFont },
+	{ "ImGui_PushStyleColor", sgsImGui_PushStyleColor },
+	{ "ImGui_PopStyleColor", sgsImGui_PopStyleColor },
+	{ "ImGui_PushStyleVarF", sgsImGui_PushStyleVarF },
+	{ "ImGui_PushStyleVarV2", sgsImGui_PushStyleVarV2 },
+	{ "ImGui_PopStyleVar", sgsImGui_PopStyleVar },
+	{ "ImGui_GetFontSize", sgsImGui_GetFontSize },
+	{ "ImGui_GetFontTexUvWhitePixel", sgsImGui_GetFontTexUvWhitePixel },
+	{ "ImGui_GetStyleColorU32", sgsImGui_GetStyleColorU32 },
+	{ "ImGui_GetColorU32", sgsImGui_GetColorU32 },
+	{ "ImGui_PushItemWidth", sgsImGui_PushItemWidth },
+	{ "ImGui_PopItemWidth", sgsImGui_PopItemWidth },
+	{ "ImGui_CalcItemWidth", sgsImGui_CalcItemWidth },
+	{ "ImGui_PushTextWrapPos", sgsImGui_PushTextWrapPos },
+	{ "ImGui_PopTextWrapPos", sgsImGui_PopTextWrapPos },
+	{ "ImGui_PushAllowKeyboardFocus", sgsImGui_PushAllowKeyboardFocus },
+	{ "ImGui_PopAllowKeyboardFocus", sgsImGui_PopAllowKeyboardFocus },
+	{ "ImGui_PushButtonRepeat", sgsImGui_PushButtonRepeat },
+	{ "ImGui_PopButtonRepeat", sgsImGui_PopButtonRepeat },
+	{ "ImGui_Separator", sgsImGui_Separator },
+	{ "ImGui_SameLine", sgsImGui_SameLine },
+	{ "ImGui_NewLine", sgsImGui_NewLine },
+	{ "ImGui_Spacing", sgsImGui_Spacing },
+	{ "ImGui_Dummy", sgsImGui_Dummy },
+	{ "ImGui_Indent", sgsImGui_Indent },
+	{ "ImGui_Unindent", sgsImGui_Unindent },
+	{ "ImGui_BeginGroup", sgsImGui_BeginGroup },
+	{ "ImGui_EndGroup", sgsImGui_EndGroup },
+	{ "ImGui_GetCursorPos", sgsImGui_GetCursorPos },
+	{ "ImGui_GetCursorPosX", sgsImGui_GetCursorPosX },
+	{ "ImGui_GetCursorPosY", sgsImGui_GetCursorPosY },
+	{ "ImGui_SetCursorPos", sgsImGui_SetCursorPos },
+	{ "ImGui_SetCursorPosX", sgsImGui_SetCursorPosX },
+	{ "ImGui_SetCursorPosY", sgsImGui_SetCursorPosY },
+	{ "ImGui_GetCursorStartPos", sgsImGui_GetCursorStartPos },
+	{ "ImGui_GetCursorScreenPos", sgsImGui_GetCursorScreenPos },
+	{ "ImGui_SetCursorScreenPos", sgsImGui_SetCursorScreenPos },
+	{ "ImGui_AlignFirstTextHeightToWidgets", sgsImGui_AlignFirstTextHeightToWidgets },
+	{ "ImGui_GetTextLineHeight", sgsImGui_GetTextLineHeight },
+	{ "ImGui_GetTextLineHeightWithSpacing", sgsImGui_GetTextLineHeightWithSpacing },
+	{ "ImGui_GetItemsLineHeightWithSpacing", sgsImGui_GetItemsLineHeightWithSpacing },
+	{ "ImGui_Columns", sgsImGui_Columns },
+	{ "ImGui_NextColumn", sgsImGui_NextColumn },
+	{ "ImGui_GetColumnIndex", sgsImGui_GetColumnIndex },
+	{ "ImGui_GetColumnOffset", sgsImGui_GetColumnOffset },
+	{ "ImGui_SetColumnOffset", sgsImGui_SetColumnOffset },
+	{ "ImGui_GetColumnWidth", sgsImGui_GetColumnWidth },
+	{ "ImGui_GetColumnsCount", sgsImGui_GetColumnsCount },
 	{ "ImGui_PushID", sgsimgui_PushID },
-	{ "ImGui_PopID", sgsimgui_PopID },
+	{ "ImGui_PopID", sgsImGui_PopID },
 	{ "ImGui_GetID", sgsimgui_GetID },
-	{ "ImGui_Text", sgsimgui_Text },
-	{ "ImGui_TextColored", sgsimgui_TextColored },
-	{ "ImGui_TextDisabled", sgsimgui_TextDisabled },
-	{ "ImGui_TextWrapped", sgsimgui_TextWrapped },
-	{ "ImGui_TextUnformatted", sgsimgui_TextUnformatted },
-	{ "ImGui_LabelText", sgsimgui_LabelText },
-	{ "ImGui_Bullet", sgsimgui_Bullet },
-	{ "ImGui_BulletText", sgsimgui_BulletText },
-	{ "ImGui_Button", sgsimgui_Button },
-	{ "ImGui_SmallButton", sgsimgui_SmallButton },
-	{ "ImGui_InvisibleButton", sgsimgui_InvisibleButton },
-	{ "ImGui_Image", sgsimgui_Image },
-	{ "ImGui_ImageButton", sgsimgui_ImageButton },
-	{ "ImGui_Checkbox", sgsimgui_Checkbox },
-	{ "ImGui_CheckboxFlags", sgsimgui_CheckboxFlags },
+	{ "ImGui_Text", sgsImGui_Text },
+	{ "ImGui_TextColored", sgsImGui_TextColored },
+	{ "ImGui_TextDisabled", sgsImGui_TextDisabled },
+	{ "ImGui_TextWrapped", sgsImGui_TextWrapped },
+	{ "ImGui_TextUnformatted", sgsImGui_TextUnformatted },
+	{ "ImGui_LabelText", sgsImGui_LabelText },
+	{ "ImGui_Bullet", sgsImGui_Bullet },
+	{ "ImGui_BulletText", sgsImGui_BulletText },
+	{ "ImGui_Button", sgsImGui_Button },
+	{ "ImGui_SmallButton", sgsImGui_SmallButton },
+	{ "ImGui_InvisibleButton", sgsImGui_InvisibleButton },
+	{ "ImGui_Image", sgsImGui_Image },
+	{ "ImGui_ImageButton", sgsImGui_ImageButton },
+	{ "ImGui_Checkbox", sgsImGui_Checkbox },
+	{ "ImGui_CheckboxFlags", sgsImGui_CheckboxFlags },
 	{ "ImGui_RadioButton", sgsimgui_RadioButton },
-	{ "ImGui_Combo", sgsimgui_Combo },
-	{ "ImGui_ComboCb", sgsimgui_ComboCb },
-	{ "ImGui_ColorButton", sgsimgui_ColorButton },
-	{ "ImGui_ColorEdit3", sgsimgui_ColorEdit3 },
-	{ "ImGui_ColorEdit4", sgsimgui_ColorEdit4 },
-	{ "ImGui_ColorEditMode", sgsimgui_ColorEditMode },
-	{ "ImGui_PlotLines", sgsimgui_PlotLines },
-	{ "ImGui_PlotLinesCb", sgsimgui_PlotLinesCb },
-	{ "ImGui_PlotHistogram", sgsimgui_PlotHistogram },
-	{ "ImGui_PlotHistogramCb", sgsimgui_PlotHistogramCb },
-	{ "ImGui_ProgressBar", sgsimgui_ProgressBar },
-	{ "ImGui_DragFloat", sgsimgui_DragFloat },
-	{ "ImGui_DragFloat2", sgsimgui_DragFloat2 },
-	{ "ImGui_DragFloat3", sgsimgui_DragFloat3 },
-	{ "ImGui_DragFloat4", sgsimgui_DragFloat4 },
-	{ "ImGui_DragFloatRange2", sgsimgui_DragFloatRange2 },
-	{ "ImGui_DragInt", sgsimgui_DragInt },
-	{ "ImGui_DragInt2", sgsimgui_DragInt2 },
-	{ "ImGui_DragInt3", sgsimgui_DragInt3 },
-	{ "ImGui_DragInt4", sgsimgui_DragInt4 },
-	{ "ImGui_DragIntRange2", sgsimgui_DragIntRange2 },
-	{ "ImGui_InputText", sgsimgui_InputText },
-	{ "ImGui_InputTextMultiline", sgsimgui_InputTextMultiline },
-	{ "ImGui_InputFloat", sgsimgui_InputFloat },
-	{ "ImGui_InputFloat2", sgsimgui_InputFloat2 },
-	{ "ImGui_InputFloat3", sgsimgui_InputFloat3 },
-	{ "ImGui_InputFloat4", sgsimgui_InputFloat4 },
-	{ "ImGui_InputInt", sgsimgui_InputInt },
-	{ "ImGui_InputInt2", sgsimgui_InputInt2 },
-	{ "ImGui_InputInt3", sgsimgui_InputInt3 },
-	{ "ImGui_InputInt4", sgsimgui_InputInt4 },
-	{ "ImGui_SliderFloat", sgsimgui_SliderFloat },
-	{ "ImGui_SliderFloat2", sgsimgui_SliderFloat2 },
-	{ "ImGui_SliderFloat3", sgsimgui_SliderFloat3 },
-	{ "ImGui_SliderFloat4", sgsimgui_SliderFloat4 },
-	{ "ImGui_SliderAngle", sgsimgui_SliderAngle },
-	{ "ImGui_SliderInt", sgsimgui_SliderInt },
-	{ "ImGui_SliderInt2", sgsimgui_SliderInt2 },
-	{ "ImGui_SliderInt3", sgsimgui_SliderInt3 },
-	{ "ImGui_SliderInt4", sgsimgui_SliderInt4 },
-	{ "ImGui_VSliderFloat", sgsimgui_VSliderFloat },
-	{ "ImGui_VSliderInt", sgsimgui_VSliderInt },
+	{ "ImGui_Combo", sgsImGui_Combo },
+	{ "ImGui_ComboCb", sgsImGui_ComboCb },
+	{ "ImGui_ColorButton", sgsImGui_ColorButton },
+	{ "ImGui_ColorEdit3", sgsImGui_ColorEdit3 },
+	{ "ImGui_ColorEdit4", sgsImGui_ColorEdit4 },
+	{ "ImGui_ColorEditMode", sgsImGui_ColorEditMode },
+	{ "ImGui_PlotLines", sgsImGui_PlotLines },
+	{ "ImGui_PlotLinesCb", sgsImGui_PlotLinesCb },
+	{ "ImGui_PlotHistogram", sgsImGui_PlotHistogram },
+	{ "ImGui_PlotHistogramCb", sgsImGui_PlotHistogramCb },
+	{ "ImGui_ProgressBar", sgsImGui_ProgressBar },
+	{ "ImGui_DragFloat", sgsImGui_DragFloat },
+	{ "ImGui_DragFloat2", sgsImGui_DragFloat2 },
+	{ "ImGui_DragFloat3", sgsImGui_DragFloat3 },
+	{ "ImGui_DragFloat4", sgsImGui_DragFloat4 },
+	{ "ImGui_DragFloatRange2", sgsImGui_DragFloatRange2 },
+	{ "ImGui_DragInt", sgsImGui_DragInt },
+	{ "ImGui_DragInt2", sgsImGui_DragInt2 },
+	{ "ImGui_DragInt3", sgsImGui_DragInt3 },
+	{ "ImGui_DragInt4", sgsImGui_DragInt4 },
+	{ "ImGui_DragIntRange2", sgsImGui_DragIntRange2 },
+	{ "ImGui_InputText", sgsImGui_InputText },
+	{ "ImGui_InputTextMultiline", sgsImGui_InputTextMultiline },
+	{ "ImGui_InputFloat", sgsImGui_InputFloat },
+	{ "ImGui_InputFloat2", sgsImGui_InputFloat2 },
+	{ "ImGui_InputFloat3", sgsImGui_InputFloat3 },
+	{ "ImGui_InputFloat4", sgsImGui_InputFloat4 },
+	{ "ImGui_InputInt", sgsImGui_InputInt },
+	{ "ImGui_InputInt2", sgsImGui_InputInt2 },
+	{ "ImGui_InputInt3", sgsImGui_InputInt3 },
+	{ "ImGui_InputInt4", sgsImGui_InputInt4 },
+	{ "ImGui_SliderFloat", sgsImGui_SliderFloat },
+	{ "ImGui_SliderFloat2", sgsImGui_SliderFloat2 },
+	{ "ImGui_SliderFloat3", sgsImGui_SliderFloat3 },
+	{ "ImGui_SliderFloat4", sgsImGui_SliderFloat4 },
+	{ "ImGui_SliderAngle", sgsImGui_SliderAngle },
+	{ "ImGui_SliderInt", sgsImGui_SliderInt },
+	{ "ImGui_SliderInt2", sgsImGui_SliderInt2 },
+	{ "ImGui_SliderInt3", sgsImGui_SliderInt3 },
+	{ "ImGui_SliderInt4", sgsImGui_SliderInt4 },
+	{ "ImGui_VSliderFloat", sgsImGui_VSliderFloat },
+	{ "ImGui_VSliderInt", sgsImGui_VSliderInt },
 	{ "ImGui_TreeNode", sgsimgui_TreeNode },
 	{ "ImGui_TreeNodeEx", sgsimgui_TreeNodeEx },
-	{ "ImGui_TreePush", sgsimgui_TreePush },
-	{ "ImGui_TreePop", sgsimgui_TreePop },
-	{ "ImGui_TreeAdvanceToLabelPos", sgsimgui_TreeAdvanceToLabelPos },
-	{ "ImGui_GetTreeNodeToLabelSpacing", sgsimgui_GetTreeNodeToLabelSpacing },
-	{ "ImGui_SetNextTreeNodeOpen", sgsimgui_SetNextTreeNodeOpen },
-	{ "ImGui_CollapsingHeader", sgsimgui_CollapsingHeader },
-	{ "ImGui_CollapsingHeaderCloseable", sgsimgui_CollapsingHeaderCloseable },
-	{ "ImGui_Selectable", sgsimgui_Selectable },
-	{ "ImGui_ListBoxHeader", sgsimgui_ListBoxHeader },
-	{ "ImGui_ListBoxHeader2", sgsimgui_ListBoxHeader2 },
-	{ "ImGui_ListBoxFooter", sgsimgui_ListBoxFooter },
-	{ "ImGui_ValueB", sgsimgui_ValueB },
-	{ "ImGui_ValueI", sgsimgui_ValueI },
-	{ "ImGui_ValueU", sgsimgui_ValueU },
-	{ "ImGui_ValueF", sgsimgui_ValueF },
-	{ "ImGui_ValueColorF", sgsimgui_ValueColorF },
-	{ "ImGui_ValueColor", sgsimgui_ValueColor },
-	{ "ImGui_SetTooltip", sgsimgui_SetTooltip },
-	{ "ImGui_BeginTooltip", sgsimgui_BeginTooltip },
-	{ "ImGui_EndTooltip", sgsimgui_EndTooltip },
-	{ "ImGui_BeginMainMenuBar", sgsimgui_BeginMainMenuBar },
-	{ "ImGui_EndMainMenuBar", sgsimgui_EndMainMenuBar },
-	{ "ImGui_BeginMenuBar", sgsimgui_BeginMenuBar },
-	{ "ImGui_EndMenuBar", sgsimgui_EndMenuBar },
-	{ "ImGui_BeginMenu", sgsimgui_BeginMenu },
-	{ "ImGui_EndMenu", sgsimgui_EndMenu },
-	{ "ImGui_MenuItem", sgsimgui_MenuItem },
-	{ "ImGui_OpenPopup", sgsimgui_OpenPopup },
-	{ "ImGui_BeginPopup", sgsimgui_BeginPopup },
-	{ "ImGui_BeginPopupModal", sgsimgui_BeginPopupModal },
-	{ "ImGui_BeginPopupContextItem", sgsimgui_BeginPopupContextItem },
-	{ "ImGui_BeginPopupContextWindow", sgsimgui_BeginPopupContextWindow },
-	{ "ImGui_BeginPopupContextVoid", sgsimgui_BeginPopupContextVoid },
-	{ "ImGui_EndPopup", sgsimgui_EndPopup },
-	{ "ImGui_CloseCurrentPopup", sgsimgui_CloseCurrentPopup },
-	{ "ImGui_LogToTTY", sgsimgui_LogToTTY },
-	{ "ImGui_LogToFile", sgsimgui_LogToFile },
-	{ "ImGui_LogToClipboard", sgsimgui_LogToClipboard },
-	{ "ImGui_LogFinish", sgsimgui_LogFinish },
-	{ "ImGui_LogButtons", sgsimgui_LogButtons },
-	{ "ImGui_LogText", sgsimgui_LogText },
-	{ "ImGui_PushClipRect", sgsimgui_PushClipRect },
-	{ "ImGui_PopClipRect", sgsimgui_PopClipRect },
-	{ "ImGui_IsItemHovered", sgsimgui_IsItemHovered },
-	{ "ImGui_IsItemHoveredRect", sgsimgui_IsItemHoveredRect },
-	{ "ImGui_IsItemActive", sgsimgui_IsItemActive },
-	{ "ImGui_IsItemClicked", sgsimgui_IsItemClicked },
-	{ "ImGui_IsItemVisible", sgsimgui_IsItemVisible },
-	{ "ImGui_IsAnyItemHovered", sgsimgui_IsAnyItemHovered },
-	{ "ImGui_IsAnyItemActive", sgsimgui_IsAnyItemActive },
-	{ "ImGui_GetItemRectMin", sgsimgui_GetItemRectMin },
-	{ "ImGui_GetItemRectMax", sgsimgui_GetItemRectMax },
-	{ "ImGui_GetItemRectSize", sgsimgui_GetItemRectSize },
-	{ "ImGui_SetItemAllowOverlap", sgsimgui_SetItemAllowOverlap },
-	{ "ImGui_IsWindowHovered", sgsimgui_IsWindowHovered },
-	{ "ImGui_IsWindowFocused", sgsimgui_IsWindowFocused },
-	{ "ImGui_IsRootWindowFocused", sgsimgui_IsRootWindowFocused },
-	{ "ImGui_IsRootWindowOrAnyChildFocused", sgsimgui_IsRootWindowOrAnyChildFocused },
-	{ "ImGui_IsRootWindowOrAnyChildHovered", sgsimgui_IsRootWindowOrAnyChildHovered },
-	{ "ImGui_IsRectVisible", sgsimgui_IsRectVisible },
-	{ "ImGui_IsRectVisibleScreen", sgsimgui_IsRectVisibleScreen },
-	{ "ImGui_IsPosHoveringAnyWindow", sgsimgui_IsPosHoveringAnyWindow },
-	{ "ImGui_GetTime", sgsimgui_GetTime },
-	{ "ImGui_GetFrameCount", sgsimgui_GetFrameCount },
-	{ "ImGui_GetStyleColName", sgsimgui_GetStyleColName },
-	{ "ImGui_CalcItemRectClosestPoint", sgsimgui_CalcItemRectClosestPoint },
-	{ "ImGui_CalcTextSize", sgsimgui_CalcTextSize },
-	{ "ImGui_CalcListClipping", sgsimgui_CalcListClipping },
-	{ "ImGui_BeginChildFrame", sgsimgui_BeginChildFrame },
-	{ "ImGui_EndChildFrame", sgsimgui_EndChildFrame },
-	{ "ImGui_ColorConvertU32ToFloat4", sgsimgui_ColorConvertU32ToFloat4 },
-	{ "ImGui_ColorConvertFloat4ToU32", sgsimgui_ColorConvertFloat4ToU32 },
-	{ "ImGui_ColorConvertRGBtoHSV", sgsimgui_ColorConvertRGBtoHSV },
-	{ "ImGui_ColorConvertHSVtoRGB", sgsimgui_ColorConvertHSVtoRGB },
-	{ "ImGui_GetKeyIndex", sgsimgui_GetKeyIndex },
-	{ "ImGui_IsKeyDown", sgsimgui_IsKeyDown },
-	{ "ImGui_IsKeyPressed", sgsimgui_IsKeyPressed },
-	{ "ImGui_IsKeyReleased", sgsimgui_IsKeyReleased },
-	{ "ImGui_IsMouseDown", sgsimgui_IsMouseDown },
-	{ "ImGui_IsMouseClicked", sgsimgui_IsMouseClicked },
-	{ "ImGui_IsMouseDoubleClicked", sgsimgui_IsMouseDoubleClicked },
-	{ "ImGui_IsMouseReleased", sgsimgui_IsMouseReleased },
-	{ "ImGui_IsMouseHoveringWindow", sgsimgui_IsMouseHoveringWindow },
-	{ "ImGui_IsMouseHoveringAnyWindow", sgsimgui_IsMouseHoveringAnyWindow },
-	{ "ImGui_IsMouseHoveringRect", sgsimgui_IsMouseHoveringRect },
-	{ "ImGui_IsMouseDragging", sgsimgui_IsMouseDragging },
-	{ "ImGui_GetMousePos", sgsimgui_GetMousePos },
-	{ "ImGui_GetMousePosOnOpeningCurrentPopup", sgsimgui_GetMousePosOnOpeningCurrentPopup },
-	{ "ImGui_GetMouseDragDelta", sgsimgui_GetMouseDragDelta },
-	{ "ImGui_ResetMouseDragDelta", sgsimgui_ResetMouseDragDelta },
-	{ "ImGui_GetMouseCursor", sgsimgui_GetMouseCursor },
-	{ "ImGui_SetMouseCursor", sgsimgui_SetMouseCursor },
-	{ "ImGui_CaptureKeyboardFromApp", sgsimgui_CaptureKeyboardFromApp },
-	{ "ImGui_CaptureMouseFromApp", sgsimgui_CaptureMouseFromApp },
-	{ "ImGui_MemAlloc", sgsimgui_MemAlloc },
-	{ "ImGui_MemFree", sgsimgui_MemFree },
-	{ "ImGui_GetClipboardText", sgsimgui_GetClipboardText },
-	{ "ImGui_SetClipboardText", sgsimgui_SetClipboardText },
-	{ "ImGui_GetVersion", sgsimgui_GetVersion },
+	{ "ImGui_TreePush", sgsImGui_TreePush },
+	{ "ImGui_TreePop", sgsImGui_TreePop },
+	{ "ImGui_TreeAdvanceToLabelPos", sgsImGui_TreeAdvanceToLabelPos },
+	{ "ImGui_GetTreeNodeToLabelSpacing", sgsImGui_GetTreeNodeToLabelSpacing },
+	{ "ImGui_SetNextTreeNodeOpen", sgsImGui_SetNextTreeNodeOpen },
+	{ "ImGui_CollapsingHeader", sgsImGui_CollapsingHeader },
+	{ "ImGui_CollapsingHeaderCloseable", sgsImGui_CollapsingHeaderCloseable },
+	{ "ImGui_Selectable", sgsImGui_Selectable },
+	{ "ImGui_ListBoxHeader", sgsImGui_ListBoxHeader },
+	{ "ImGui_ListBoxHeader2", sgsImGui_ListBoxHeader2 },
+	{ "ImGui_ListBoxFooter", sgsImGui_ListBoxFooter },
+	{ "ImGui_ValueB", sgsImGui_ValueB },
+	{ "ImGui_ValueI", sgsImGui_ValueI },
+	{ "ImGui_ValueU", sgsImGui_ValueU },
+	{ "ImGui_ValueF", sgsImGui_ValueF },
+	{ "ImGui_ValueColorF", sgsImGui_ValueColorF },
+	{ "ImGui_ValueColor", sgsImGui_ValueColor },
+	{ "ImGui_SetTooltip", sgsImGui_SetTooltip },
+	{ "ImGui_BeginTooltip", sgsImGui_BeginTooltip },
+	{ "ImGui_EndTooltip", sgsImGui_EndTooltip },
+	{ "ImGui_BeginMainMenuBar", sgsImGui_BeginMainMenuBar },
+	{ "ImGui_EndMainMenuBar", sgsImGui_EndMainMenuBar },
+	{ "ImGui_BeginMenuBar", sgsImGui_BeginMenuBar },
+	{ "ImGui_EndMenuBar", sgsImGui_EndMenuBar },
+	{ "ImGui_BeginMenu", sgsImGui_BeginMenu },
+	{ "ImGui_EndMenu", sgsImGui_EndMenu },
+	{ "ImGui_MenuItem", sgsImGui_MenuItem },
+	{ "ImGui_OpenPopup", sgsImGui_OpenPopup },
+	{ "ImGui_BeginPopup", sgsImGui_BeginPopup },
+	{ "ImGui_BeginPopupModal", sgsImGui_BeginPopupModal },
+	{ "ImGui_BeginPopupContextItem", sgsImGui_BeginPopupContextItem },
+	{ "ImGui_BeginPopupContextWindow", sgsImGui_BeginPopupContextWindow },
+	{ "ImGui_BeginPopupContextVoid", sgsImGui_BeginPopupContextVoid },
+	{ "ImGui_EndPopup", sgsImGui_EndPopup },
+	{ "ImGui_CloseCurrentPopup", sgsImGui_CloseCurrentPopup },
+	{ "ImGui_LogToTTY", sgsImGui_LogToTTY },
+	{ "ImGui_LogToFile", sgsImGui_LogToFile },
+	{ "ImGui_LogToClipboard", sgsImGui_LogToClipboard },
+	{ "ImGui_LogFinish", sgsImGui_LogFinish },
+	{ "ImGui_LogButtons", sgsImGui_LogButtons },
+	{ "ImGui_LogText", sgsImGui_LogText },
+	{ "ImGui_IsItemHovered", sgsImGui_IsItemHovered },
+	{ "ImGui_IsItemHoveredRect", sgsImGui_IsItemHoveredRect },
+	{ "ImGui_IsItemActive", sgsImGui_IsItemActive },
+	{ "ImGui_IsItemClicked", sgsImGui_IsItemClicked },
+	{ "ImGui_IsItemVisible", sgsImGui_IsItemVisible },
+	{ "ImGui_IsAnyItemHovered", sgsImGui_IsAnyItemHovered },
+	{ "ImGui_IsAnyItemActive", sgsImGui_IsAnyItemActive },
+	{ "ImGui_GetItemRectMin", sgsImGui_GetItemRectMin },
+	{ "ImGui_GetItemRectMax", sgsImGui_GetItemRectMax },
+	{ "ImGui_GetItemRectSize", sgsImGui_GetItemRectSize },
+	{ "ImGui_SetItemAllowOverlap", sgsImGui_SetItemAllowOverlap },
+	{ "ImGui_IsWindowHovered", sgsImGui_IsWindowHovered },
+	{ "ImGui_IsWindowFocused", sgsImGui_IsWindowFocused },
+	{ "ImGui_IsRootWindowFocused", sgsImGui_IsRootWindowFocused },
+	{ "ImGui_IsRootWindowOrAnyChildFocused", sgsImGui_IsRootWindowOrAnyChildFocused },
+	{ "ImGui_IsRootWindowOrAnyChildHovered", sgsImGui_IsRootWindowOrAnyChildHovered },
+	{ "ImGui_IsRectVisible", sgsImGui_IsRectVisible },
+	{ "ImGui_IsRectVisibleScreen", sgsImGui_IsRectVisibleScreen },
+	{ "ImGui_IsPosHoveringAnyWindow", sgsImGui_IsPosHoveringAnyWindow },
+	{ "ImGui_GetTime", sgsImGui_GetTime },
+	{ "ImGui_GetFrameCount", sgsImGui_GetFrameCount },
+	{ "ImGui_GetStyleColName", sgsImGui_GetStyleColName },
+	{ "ImGui_CalcItemRectClosestPoint", sgsImGui_CalcItemRectClosestPoint },
+	{ "ImGui_CalcTextSize", sgsImGui_CalcTextSize },
+	{ "ImGui_CalcListClipping", sgsImGui_CalcListClipping },
+	{ "ImGui_BeginChildFrame", sgsImGui_BeginChildFrame },
+	{ "ImGui_EndChildFrame", sgsImGui_EndChildFrame },
+	{ "ImGui_ColorConvertU32ToFloat4", sgsImGui_ColorConvertU32ToFloat4 },
+	{ "ImGui_ColorConvertFloat4ToU32", sgsImGui_ColorConvertFloat4ToU32 },
+	{ "ImGui_ColorConvertRGBtoHSV", sgsImGui_ColorConvertRGBtoHSV },
+	{ "ImGui_ColorConvertHSVtoRGB", sgsImGui_ColorConvertHSVtoRGB },
+	{ "ImGui_GetKeyIndex", sgsImGui_GetKeyIndex },
+	{ "ImGui_IsKeyDown", sgsImGui_IsKeyDown },
+	{ "ImGui_IsKeyPressed", sgsImGui_IsKeyPressed },
+	{ "ImGui_IsKeyReleased", sgsImGui_IsKeyReleased },
+	{ "ImGui_IsMouseDown", sgsImGui_IsMouseDown },
+	{ "ImGui_IsMouseClicked", sgsImGui_IsMouseClicked },
+	{ "ImGui_IsMouseDoubleClicked", sgsImGui_IsMouseDoubleClicked },
+	{ "ImGui_IsMouseReleased", sgsImGui_IsMouseReleased },
+	{ "ImGui_IsMouseHoveringWindow", sgsImGui_IsMouseHoveringWindow },
+	{ "ImGui_IsMouseHoveringAnyWindow", sgsImGui_IsMouseHoveringAnyWindow },
+	{ "ImGui_IsMouseHoveringRect", sgsImGui_IsMouseHoveringRect },
+	{ "ImGui_IsMouseDragging", sgsImGui_IsMouseDragging },
+	{ "ImGui_GetMousePos", sgsImGui_GetMousePos },
+	{ "ImGui_GetMousePosOnOpeningCurrentPopup", sgsImGui_GetMousePosOnOpeningCurrentPopup },
+	{ "ImGui_GetMouseDragDelta", sgsImGui_GetMouseDragDelta },
+	{ "ImGui_ResetMouseDragDelta", sgsImGui_ResetMouseDragDelta },
+	{ "ImGui_GetMouseCursor", sgsImGui_GetMouseCursor },
+	{ "ImGui_SetMouseCursor", sgsImGui_SetMouseCursor },
+	{ "ImGui_CaptureKeyboardFromApp", sgsImGui_CaptureKeyboardFromApp },
+	{ "ImGui_CaptureMouseFromApp", sgsImGui_CaptureMouseFromApp },
+	{ "ImGui_MemAlloc", sgsImGui_MemAlloc },
+	{ "ImGui_MemFree", sgsImGui_MemFree },
+	{ "ImGui_GetClipboardText", sgsImGui_GetClipboardText },
+	{ "ImGui_SetClipboardText", sgsImGui_SetClipboardText },
+	{ "ImGui_GetVersion", sgsImGui_GetVersion },
+	{ "ImDrawList_PushClipRectFullScreen", sgsImDrawList_PushClipRectFullScreen },
+	{ "ImDrawList_PopTextureID", sgsImDrawList_PopTextureID },
+	{ "ImDrawList_AddLine", sgsImDrawList_AddLine },
+	{ "ImDrawList_AddRect", sgsImDrawList_AddRect },
+	{ "ImDrawList_AddRectFilled", sgsImDrawList_AddRectFilled },
+	{ "ImDrawList_AddRectFilledMultiColor", sgsImDrawList_AddRectFilledMultiColor },
+	{ "ImDrawList_AddQuad", sgsImDrawList_AddQuad },
+	{ "ImDrawList_AddQuadFilled", sgsImDrawList_AddQuadFilled },
+	{ "ImDrawList_AddTriangle", sgsImDrawList_AddTriangle },
+	{ "ImDrawList_AddTriangleFilled", sgsImDrawList_AddTriangleFilled },
+	{ "ImDrawList_AddCircle", sgsImDrawList_AddCircle },
+	{ "ImDrawList_AddCircleFilled", sgsImDrawList_AddCircleFilled },
+	{ "ImDrawList_AddImage", sgsImDrawList_AddImage },
+	{ "ImDrawList_AddBezierCurve", sgsImDrawList_AddBezierCurve },
+	{ "ImDrawList_PathClear", sgsImDrawList_PathClear },
+	{ "ImDrawList_PathLineTo", sgsImDrawList_PathLineTo },
+	{ "ImDrawList_PathLineToMergeDuplicate", sgsImDrawList_PathLineToMergeDuplicate },
+	{ "ImDrawList_PathFill", sgsImDrawList_PathFill },
+	{ "ImDrawList_PathStroke", sgsImDrawList_PathStroke },
+	{ "ImDrawList_PathArcTo", sgsImDrawList_PathArcTo },
+	{ "ImDrawList_PathArcToFast", sgsImDrawList_PathArcToFast },
+	{ "ImDrawList_PathBezierCurveTo", sgsImDrawList_PathBezierCurveTo },
+	{ "ImDrawList_PathRect", sgsImDrawList_PathRect },
+	{ "ImDrawList_ChannelsSplit", sgsImDrawList_ChannelsSplit },
+	{ "ImDrawList_ChannelsMerge", sgsImDrawList_ChannelsMerge },
+	{ "ImDrawList_ChannelsSetCurrent", sgsImDrawList_ChannelsSetCurrent },
+	{ "ImDrawList_AddCallback", sgsImDrawList_AddCallback },
+	{ "ImDrawList_AddDrawCmd", sgsImDrawList_AddDrawCmd },
+	{ "ImDrawList_Clear", sgsImDrawList_Clear },
+	{ "ImDrawList_ClearFreeMemory", sgsImDrawList_ClearFreeMemory },
+	{ "ImDrawList_PrimReserve", sgsImDrawList_PrimReserve },
+	{ "ImDrawList_PrimRect", sgsImDrawList_PrimRect },
+	{ "ImDrawList_PrimRectUV", sgsImDrawList_PrimRectUV },
+	{ "ImDrawList_PrimQuadUV", sgsImDrawList_PrimQuadUV },
+	{ "ImDrawList_PrimWriteVtx", sgsImDrawList_PrimWriteVtx },
+	{ "ImDrawList_PrimWriteIdx", sgsImDrawList_PrimWriteIdx },
+	{ "ImDrawList_PrimVtx", sgsImDrawList_PrimVtx },
+	{ "ImDrawList_UpdateClipRect", sgsImDrawList_UpdateClipRect },
+	{ "ImDrawList_UpdateTextureID", sgsImDrawList_UpdateTextureID },
 	{ NULL, NULL }
 };
 

@@ -83,12 +83,12 @@ function skip_until_brace_aware( tokens, i, check )
 			assert( stack.last == "{" );
 			stack.pop();
 		}
-		else if( t.type == ">" )
-		{
-			assert( stack.size != 0 );
-			assert( stack.last == "<" );
-			stack.pop();
-		}
+	//	else if( t.type == ">" )
+	//	{
+	//		assert( stack.size != 0 );
+	//		assert( stack.last == "<" );
+	//		stack.pop();
+	//	}
 	}
 	assert( false );
 }
@@ -104,15 +104,28 @@ for( i = 0; i < tokens.size; ++i )
 {
 	t = tokens[ i ];
 	
-	if( t.type == "ident" && t.value == "namespace" )
+	if( t.type == "ident" && ( t.value == "namespace" || t.value == "struct" ) )
 	{
 		i++;
 		assert( @tokens[i].type == "ident" );
-		println( "Found namespace: ", tokens[i].value );
-		assert( @tokens[i].value == "ImGui" );
+		
+		objtype = t.value;
+		objname = tokens[i].value;
+		
 		i++;
+		if( tokens[i].type == ";" )
+			continue; // declaration
 		assert( @tokens[i].type == "{" );
 		i++;
+		
+		print( "Found ", objtype, ": ", objname );
+		if( objname != "ImGui" &&
+			objname != "ImDrawList" )
+		{
+			println( " ..skipping.." );
+			continue;
+		}
+		println( " ..processing..\n\n" );
 		
 		for( ; i < tokens.size; ++i )
 		{
@@ -133,7 +146,7 @@ for( i = 0; i < tokens.size; ++i )
 				i++;
 				assert( i < tokens.size );
 				
-				newfunc = { name, ret_type, args = [] };
+				newfunc = { name, ret_type, objtype, objname, args = [] };
 				GLOBALFUNCS.push( newfunc );
 				@(NUMOVERLOADS[ name ] += 1);
 				
@@ -196,7 +209,7 @@ for( i = 0; i < tokens.size; ++i )
 					}
 				}
 				
-				ovrname = name .. "(";
+				ovrname = objname .. "::" .. name .. "(";
 				foreach( arg : newfunc.args )
 				{
 					if( arg !== newfunc.args.first )
@@ -264,153 +277,172 @@ foreach( func : GLOBALFUNCS )
 	if( @func.args.last.type[0].value == "va_list" ) continue;
 	// obsolete functions (as noted in comments of imgui.h)
 	func.procstate = 1;
-	if( fn == "Begin" && func.args.size == 5 ) continue;
-	if( fn == "CollapsingHeader" && func.args.size == 4 ) continue;
-	if( fn == "GetWindowFont" ) continue;
-	if( fn == "GetWindowFontSize" ) continue;
-	if( fn == "SetScrollPosHere" ) continue;
-	if( fn == "GetWindowCollapsed" ) continue;
-	if( fn == "IsRectClipped" ) continue;
+	if( func.objname == "ImGui" )
+	{
+		if( fn == "Begin" && func.args.size == 5 ) continue;
+		if( fn == "CollapsingHeader" && func.args.size == 4 ) continue;
+		if( fn == "GetWindowFont" ) continue;
+		if( fn == "GetWindowFontSize" ) continue;
+		if( fn == "SetScrollPosHere" ) continue;
+		if( fn == "GetWindowCollapsed" ) continue;
+		if( fn == "IsRectClipped" ) continue;
+	}
 	// these functions are not done yet (cannot handle arguments or return values)
 	func.procstate = 2;
-	if( fn == "GetIO" ) continue;
-	if( fn == "GetStyle" ) continue;
-	if( fn == "GetDrawData" ) continue;
-	if( fn == "ShowStyleEditor" ) continue;
-	if( fn == "SetNextWindowSizeConstraints" ) continue;
-	if( fn == "PushFont" ) continue;
-	if( fn == "GetFont" ) continue;
-	if( fn == "GetWindowDrawList" ) continue;
-	if( fn == "GetStateStorage" ) continue;
-	if( fn == "SetStateStorage" ) continue;
-	if( fn == "CreateContext" ) continue;
-	if( fn == "DestroyContext" ) continue;
-	if( fn == "GetCurrentContext" ) continue;
-	if( fn == "SetCurrentContext" ) continue;
+	if( func.objname == "ImGui" )
+	{
+		if( fn == "GetIO" ) continue;
+		if( fn == "GetStyle" ) continue;
+		if( fn == "GetDrawData" ) continue;
+		if( fn == "ShowStyleEditor" ) continue;
+		if( fn == "SetNextWindowSizeConstraints" ) continue;
+		if( fn == "PushFont" ) continue;
+		if( fn == "GetFont" ) continue;
+		if( fn == "GetWindowDrawList" ) continue;
+		if( fn == "GetStateStorage" ) continue;
+		if( fn == "SetStateStorage" ) continue;
+		if( fn == "CreateContext" ) continue;
+		if( fn == "DestroyContext" ) continue;
+		if( fn == "GetCurrentContext" ) continue;
+		if( fn == "SetCurrentContext" ) continue;
+	}
+	else if( func.objname == "ImDrawList" )
+	{
+		if( fn == "PushTextureID" ) continue;
+		if( fn == "AddPolyline" ) continue;
+		if( fn == "AddConvexPolyFilled" ) continue;
+	}
 	
 	func.procstate = 3;
 	if( NUMOVERLOADS[ fn ] > 1 )
 	{
 		// special overload processing
-		// - separate by changing name
-		if( fn == "Begin" ){ /* other version is obsolete */ }
-		else if( fn == "SetWindowPos" ){ if( func.args.size == 2 ) fn = "SetCurrentWindowPos"; }
-		else if( fn == "SetWindowSize" ){ if( func.args.size == 2 ) fn = "SetCurrentWindowSize"; }
-		else if( fn == "SetWindowCollapsed" ){ if( func.args.size == 2 ) fn = "SetCurrentWindowCollapsed"; }
-		else if( fn == "SetWindowFocus" ){ if( func.args.size == 0 ) fn = "SetCurrentWindowFocus"; }
-		else if( fn == "CollapsingHeader" ){ if( func.args.size == 3 ) fn ..= "Closeable"; }
-		else if( fn == "Value" )
+		if( func.objname == "ImGui" )
 		{
-			t = func.args[1].typestr;
-			if( t == "bool" ) fn ..= "B";
-			else if( t == "int" ) fn ..= "I";
-			else if( t == "unsigned int" ) fn ..= "U";
-			else if( t == "float" ) fn ..= "F";
-			else continue;
-		}
-		else if( fn == "ValueColor" ){ if( func.args[1].typestr != "ImU32" ) fn = "ValueColorF"; }
-		else if( fn == "PushStyleVar" ){ fn ..= if( func.args[1].typestr == "float", "F", "V2" ); }
-		else if( fn == "GetColorU32" ){ if( func.args[0].typestr == "ImGuiCol" ) fn = "GetStyleColorU32"; }
-		else if( fn == "ListBoxHeader" ){ if( func.args[1].typestr == "int" ) fn ..= "2"; }
-		else if( fn == "PlotLines" ){ if( func.args[1].typestr == "float ( * ) ( void * data , int idx )" ) fn ..= "Cb"; }
-		else if( fn == "PlotHistogram" ){ if( func.args[1].typestr == "float ( * ) ( void * data , int idx )" ) fn ..= "Cb"; }
-		else if( fn == "IsRectVisible" ){ if( func.args.size == 2 ) fn ..= "Screen"; }
-		// - one implementation includes another
-		else if( fn == "BeginChild" ){ if( func.args[0].typestr == "const char *" ){ func.procstate = 4; continue; } }
-		else if( fn == "TreePush" ){ if( func.args[0].typestr == "const char *" ){ func.procstate = 4; continue; } }
-		else if( fn == "Selectable" ){ if( func.args[1].typestr == "bool" ){ func.procstate = 4; continue; } }
-		else if( fn == "MenuItem" ){ if( func.args[2].typestr == "bool" ){ func.procstate = 4; continue; } }
-		// - mixed processing
-		else if( fn == "Combo" )
-		{
-			if( func.args[2].typestr == "bool ( * ) ( void * data , int idx , const char * * out_text )" ) fn ..= "Cb";
-			else if( func.args[2].typestr == "const char * const *" ){ func.procstate = 4; continue; }
-		}
-		// - custom coalescing implementation
-		else if( fn == "PushID" )
-		{
-			if( !pushid_handled )
+			// - separate by changing name
+			if( fn == "Begin" ){ /* other version is obsolete */ }
+			else if( fn == "SetWindowPos" ){ if( func.args.size == 2 ) fn = "SetCurrentWindowPos"; }
+			else if( fn == "SetWindowSize" ){ if( func.args.size == 2 ) fn = "SetCurrentWindowSize"; }
+			else if( fn == "SetWindowCollapsed" ){ if( func.args.size == 2 ) fn = "SetCurrentWindowCollapsed"; }
+			else if( fn == "SetWindowFocus" ){ if( func.args.size == 0 ) fn = "SetCurrentWindowFocus"; }
+			else if( fn == "CollapsingHeader" ){ if( func.args.size == 3 ) fn ..= "Closeable"; }
+			else if( fn == "Value" )
 			{
-				out ..= "static int sgsimgui_PushID( SGS_CTX )\n{";
-				out ..= "\n\tSGSFN( \"ImGui_PushID\" );";
-				out ..= "\n\tImGui::PushID( sgs_GetPtr( C, 0 ) );"; // strings are interned, so can save time by not hashing contents and using unique pointer instead
-				out ..= "\n\treturn 0;";
-				out ..= "\n}\n\n";
-				FUNCLIST[ "ImGui_PushID" ] = "sgsimgui_PushID";
-				pushid_handled = true;
+				t = func.args[1].typestr;
+				if( t == "bool" ) fn ..= "B";
+				else if( t == "int" ) fn ..= "I";
+				else if( t == "unsigned int" ) fn ..= "U";
+				else if( t == "float" ) fn ..= "F";
+				else continue;
 			}
-			func.procstate = 4;
-			continue;
-		}
-		else if( fn == "GetID" )
-		{
-			if( !getid_handled )
+			else if( fn == "ValueColor" ){ if( func.args[1].typestr != "ImU32" ) fn = "ValueColorF"; }
+			else if( fn == "PushStyleVar" ){ fn ..= if( func.args[1].typestr == "float", "F", "V2" ); }
+			else if( fn == "GetColorU32" ){ if( func.args[0].typestr == "ImGuiCol" ) fn = "GetStyleColorU32"; }
+			else if( fn == "ListBoxHeader" ){ if( func.args[1].typestr == "int" ) fn ..= "2"; }
+			else if( fn == "PlotLines" ){ if( func.args[1].typestr == "float ( * ) ( void * data , int idx )" ) fn ..= "Cb"; }
+			else if( fn == "PlotHistogram" ){ if( func.args[1].typestr == "float ( * ) ( void * data , int idx )" ) fn ..= "Cb"; }
+			else if( fn == "IsRectVisible" ){ if( func.args.size == 2 ) fn ..= "Screen"; }
+			// - one implementation includes another
+			else if( fn == "BeginChild" ){ if( func.args[0].typestr == "const char *" ){ func.procstate = 4; continue; } }
+			else if( fn == "TreePush" ){ if( func.args[0].typestr == "const char *" ){ func.procstate = 4; continue; } }
+			else if( fn == "Selectable" ){ if( func.args[1].typestr == "bool" ){ func.procstate = 4; continue; } }
+			else if( fn == "MenuItem" ){ if( func.args[2].typestr == "bool" ){ func.procstate = 4; continue; } }
+			// - mixed processing
+			else if( fn == "Combo" )
 			{
-				out ..= "static int sgsimgui_GetID( SGS_CTX )\n{";
-				out ..= "\n\tSGSFN( \"ImGui_GetID\" );";
-				out ..= "\n\tsgs_PushInt( C, ImGui::GetID( sgs_GetPtr( C, 0 ) ) );"; // strings are interned, so can save time by not hashing contents and using unique pointer instead
-				out ..= "\n\treturn 1;";
-				out ..= "\n}\n\n";
-				FUNCLIST[ "ImGui_GetID" ] = "sgsimgui_GetID";
-				getid_handled = true;
+				if( func.args[2].typestr == "bool ( * ) ( void * data , int idx , const char * * out_text )" ) fn ..= "Cb";
+				else if( func.args[2].typestr == "const char * const *" ){ func.procstate = 4; continue; }
 			}
-			func.procstate = 4;
-			continue;
-		}
-		else if( fn == "RadioButton" )
-		{
-			if( !radiobutton_handled )
+			// - custom coalescing implementation
+			else if( fn == "PushID" )
 			{
-				out ..= "static int sgsimgui_RadioButton( SGS_CTX )\n{";
-				out ..= "\n\tSGSFN( \"ImGui_RadioButton\" );";
-				out ..= "\n\tsgs_SizeVal ssz = sgs_StackSize( C );";
-				out ..= "\n\tif( ssz == 2 ){ sgs_PushBool( C, ImGui::RadioButton( sgs_GetVar<const char*>()( C, 0 ), sgs_GetInt( C, 1 ) ) ); return 1; }";
-				out ..= "\n\telse if( ssz == 3 )\n\t{";
-				out ..= "\n\t\tint val = sgs_GetInt( C, 1 );";
-				out ..= "\n\t\tsgs_PushBool( C, ImGui::RadioButton( sgs_GetVar<const char*>()( C, 0 ), &val, sgs_GetInt( C, 2 ) ) );";
-				out ..= "\n\t\tsgs_PushInt( C, val );";
-				out ..= "\n\t\treturn 2;\n\t}";
-				out ..= "\n\telse return sgs_Msg( C, SGS_WARNING, \"expected 2 or 3 arguments, got %d\", ssz );";
-				out ..= "\n}\n\n";
-				FUNCLIST[ "ImGui_RadioButton" ] = "sgsimgui_RadioButton";
-				radiobutton_handled = true;
+				if( !pushid_handled )
+				{
+					out ..= "static int sgsimgui_PushID( SGS_CTX )\n{";
+					out ..= "\n\tSGSFN( \"ImGui_PushID\" );";
+					out ..= "\n\tImGui::PushID( sgs_GetPtr( C, 0 ) );"; // strings are interned, so can save time by not hashing contents and using unique pointer instead
+					out ..= "\n\treturn 0;";
+					out ..= "\n}\n\n";
+					FUNCLIST[ "ImGui_PushID" ] = "sgsimgui_PushID";
+					pushid_handled = true;
+				}
+				func.procstate = 4;
+				continue;
 			}
-			func.procstate = 4;
-			continue;
-		}
-		else if( fn == "TreeNode" )
-		{
-			if( !treenode_handled )
+			else if( fn == "GetID" )
 			{
-				out ..= "static int sgsimgui_TreeNode( SGS_CTX )\n{";
-				out ..= "\n\tSGSFN( \"ImGui_TreeNode\" );";
-				out ..= "\n\tsgs_SizeVal ssz = sgs_StackSize( C );";
-				out ..= "\n\tif( ssz == 1 ){ sgs_PushBool( C, ImGui::TreeNode( sgs_GetVar<const char*>()( C, 0 ) ) ); return 1; }";
-				out ..= "\n\telse if( ssz == 2 ){ sgs_PushBool( C, ImGui::TreeNode( sgs_GetVar<void*>()( C, 0 ), \"%s\", sgs_GetVar<const char*>()( C, 1 ) ) ); return 1; }";
-				out ..= "\n\telse return sgs_Msg( C, SGS_WARNING, \"expected 1 or 2 arguments, got %d\", ssz );";
-				out ..= "\n}\n\n";
-				FUNCLIST[ "ImGui_TreeNode" ] = "sgsimgui_TreeNode";
-				treenode_handled = true;
+				if( !getid_handled )
+				{
+					out ..= "static int sgsimgui_GetID( SGS_CTX )\n{";
+					out ..= "\n\tSGSFN( \"ImGui_GetID\" );";
+					out ..= "\n\tsgs_PushInt( C, ImGui::GetID( sgs_GetPtr( C, 0 ) ) );"; // strings are interned, so can save time by not hashing contents and using unique pointer instead
+					out ..= "\n\treturn 1;";
+					out ..= "\n}\n\n";
+					FUNCLIST[ "ImGui_GetID" ] = "sgsimgui_GetID";
+					getid_handled = true;
+				}
+				func.procstate = 4;
+				continue;
 			}
-			func.procstate = 4;
-			continue;
-		}
-		else if( fn == "TreeNodeEx" )
-		{
-			if( !treenodeex_handled )
+			else if( fn == "RadioButton" )
 			{
-				out ..= "static int sgsimgui_TreeNodeEx( SGS_CTX )\n{";
-				out ..= "\n\tSGSFN( \"ImGui_TreeNodeEx\" );";
-				out ..= "\n\tsgs_SizeVal ssz = sgs_StackSize( C );";
-				out ..= "\n\tif( ssz == 2 ){ sgs_PushBool( C, ImGui::TreeNodeEx( sgs_GetVar<const char*>()( C, 0 ), sgs_GetInt( C, 1 ) ) ); return 1; }";
-				out ..= "\n\telse if( ssz == 3 ){ sgs_PushBool( C, ImGui::TreeNodeEx( sgs_GetVar<void*>()( C, 0 ), sgs_GetInt( C, 1 ), \"%s\", sgs_GetVar<const char*>()( C, 2 ) ) ); return 1; }";
-				out ..= "\n\telse return sgs_Msg( C, SGS_WARNING, \"expected 1 or 2 arguments, got %d\", ssz );";
-				out ..= "\n}\n\n";
-				FUNCLIST[ "ImGui_TreeNodeEx" ] = "sgsimgui_TreeNodeEx";
-				treenodeex_handled = true;
+				if( !radiobutton_handled )
+				{
+					out ..= "static int sgsimgui_RadioButton( SGS_CTX )\n{";
+					out ..= "\n\tSGSFN( \"ImGui_RadioButton\" );";
+					out ..= "\n\tsgs_SizeVal ssz = sgs_StackSize( C );";
+					out ..= "\n\tif( ssz == 2 ){ sgs_PushBool( C, ImGui::RadioButton( sgs_GetVar<const char*>()( C, 0 ), sgs_GetInt( C, 1 ) ) ); return 1; }";
+					out ..= "\n\telse if( ssz == 3 )\n\t{";
+					out ..= "\n\t\tint val = sgs_GetInt( C, 1 );";
+					out ..= "\n\t\tsgs_PushBool( C, ImGui::RadioButton( sgs_GetVar<const char*>()( C, 0 ), &val, sgs_GetInt( C, 2 ) ) );";
+					out ..= "\n\t\tsgs_PushInt( C, val );";
+					out ..= "\n\t\treturn 2;\n\t}";
+					out ..= "\n\telse return sgs_Msg( C, SGS_WARNING, \"expected 2 or 3 arguments, got %d\", ssz );";
+					out ..= "\n}\n\n";
+					FUNCLIST[ "ImGui_RadioButton" ] = "sgsimgui_RadioButton";
+					radiobutton_handled = true;
+				}
+				func.procstate = 4;
+				continue;
 			}
-			func.procstate = 4;
-			continue;
+			else if( fn == "TreeNode" )
+			{
+				if( !treenode_handled )
+				{
+					out ..= "static int sgsimgui_TreeNode( SGS_CTX )\n{";
+					out ..= "\n\tSGSFN( \"ImGui_TreeNode\" );";
+					out ..= "\n\tsgs_SizeVal ssz = sgs_StackSize( C );";
+					out ..= "\n\tif( ssz == 1 ){ sgs_PushBool( C, ImGui::TreeNode( sgs_GetVar<const char*>()( C, 0 ) ) ); return 1; }";
+					out ..= "\n\telse if( ssz == 2 ){ sgs_PushBool( C, ImGui::TreeNode( sgs_GetVar<void*>()( C, 0 ), \"%s\", sgs_GetVar<const char*>()( C, 1 ) ) ); return 1; }";
+					out ..= "\n\telse return sgs_Msg( C, SGS_WARNING, \"expected 1 or 2 arguments, got %d\", ssz );";
+					out ..= "\n}\n\n";
+					FUNCLIST[ "ImGui_TreeNode" ] = "sgsimgui_TreeNode";
+					treenode_handled = true;
+				}
+				func.procstate = 4;
+				continue;
+			}
+			else if( fn == "TreeNodeEx" )
+			{
+				if( !treenodeex_handled )
+				{
+					out ..= "static int sgsimgui_TreeNodeEx( SGS_CTX )\n{";
+					out ..= "\n\tSGSFN( \"ImGui_TreeNodeEx\" );";
+					out ..= "\n\tsgs_SizeVal ssz = sgs_StackSize( C );";
+					out ..= "\n\tif( ssz == 2 ){ sgs_PushBool( C, ImGui::TreeNodeEx( sgs_GetVar<const char*>()( C, 0 ), sgs_GetInt( C, 1 ) ) ); return 1; }";
+					out ..= "\n\telse if( ssz == 3 ){ sgs_PushBool( C, ImGui::TreeNodeEx( sgs_GetVar<void*>()( C, 0 ), sgs_GetInt( C, 1 ), \"%s\", sgs_GetVar<const char*>()( C, 2 ) ) ); return 1; }";
+					out ..= "\n\telse return sgs_Msg( C, SGS_WARNING, \"expected 1 or 2 arguments, got %d\", ssz );";
+					out ..= "\n}\n\n";
+					FUNCLIST[ "ImGui_TreeNodeEx" ] = "sgsimgui_TreeNodeEx";
+					treenodeex_handled = true;
+				}
+				func.procstate = 4;
+				continue;
+			}
+			else
+			{
+				continue;
+			}
 		}
 		else
 		{
@@ -419,16 +451,16 @@ foreach( func : GLOBALFUNCS )
 	}
 	
 	func.procstate = 4;
-	Cname = "sgsimgui_" .. fn;
-	SGSname = "ImGui_" .. fn;
+	Cname = "sgs" .. func.objname .. "_" .. fn;
+	SGSname = func.objname .. "_" .. fn;
 	FUNCLIST[ SGSname ] = Cname;
 	
 	out ..= "static int " .. Cname .. "( SGS_CTX )\n{";
 	out ..= "\n\tSGSFN( " .. sgson_encode( SGSname ) .. " );";
 	out ..= "\n\tsgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;";
 	
+	// special argument rendering
 	preret = "";
-	
 	rvcount = 0;
 	loadidx = 0;
 	for( idx = 0; idx < func.args.size; ++idx )
@@ -579,6 +611,13 @@ foreach( func : GLOBALFUNCS )
 			arg.loader = "NULL";
 			func.procstate = 5;
 		}
+		else if( arg.typestr == "ImDrawCallback" )
+		{
+			out ..= "\n\tsgsVariable "..tmpnm.."( C, " .. loadidx++ .. " );";
+			arg.loader = "imgui_DrawCallback";
+			idx++;
+			func.args[ idx ].loader = "new sgsVariable( "..tmpnm.." )";
+		}
 		else if( @func.args[ idx + 1 ].name == "<vararg>" )
 		{
 			arg.loader = "\"%s\"";
@@ -591,6 +630,7 @@ foreach( func : GLOBALFUNCS )
 		arg.minsize = loadidx;
 	}
 	
+	// return value
 	out ..= "\n\t";
 	if( ret_type != "void" )
 	{
@@ -599,22 +639,38 @@ foreach( func : GLOBALFUNCS )
 		if( ret_type == "ImVec2" )
 			rvcount++;
 	}
-	out ..= "ImGui::" .. func.name .. "(";
+	
+	// function calling prefix (namespace/instance) and name
+	if( func.objname == "ImDrawList" )
+		out ..= "ImGui::GetWindowDrawList()->";
+	else
+		out ..= func.objname .. "::";
+	out ..= func.name .. "(";
+	
+	// arguments
 	foreach( idx, arg : func.args )
 	{
 		if( idx > 0 )
 			out ..= ",";
 		if( arg.value )
-			out ..= "\n\t\t" .. arg.minsize .. " <= ssz ? " .. arg.loader .. " : " .. dump_tokens( arg.value );
+		{
+			v = dump_tokens( arg.value );
+			if( toint( v ) == v && toint( v ) > 0x7fffffff )
+				v ..= "U";
+			out ..= "\n\t\t" .. arg.minsize .. " <= ssz ? " .. arg.loader .. " : " .. v;
+		}
 		else
 			out ..= "\n\t\t" .. arg.loader;
 	}
+	
+	// closing braces
 	if( loadidx != 0 )
 		out ..= "\n\t";
 	if( ret_type != "void" )
 		out ..= ") ";
 	out ..= ");";
 	
+	// pre-return code (pushing edited values)
 	out ..= preret;
 	
 	out ..= "\n\treturn " .. rvcount .. ";";
@@ -660,7 +716,7 @@ foreach( func : GLOBALFUNCS )
 {
 	if( !isset( fn_printed_set, func.ovrname ) )
 	{
-		if( func.procstate == 3 && func.args.last.typestr == "va_list" )
+		if( func.procstate == 0 && func.args.last.typestr == "va_list" )
 			continue; // we don't care about va_list and that's unlikely to change
 		
 		if( func.procstate != 4 )

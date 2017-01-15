@@ -42,6 +42,13 @@ imgui_FloatArrayParser::imgui_FloatArrayParser( SGS_CTX, sgs_StkIdx item )
 	}
 }
 
+void imgui_DrawCallback( const ImDrawList* parent_list, const ImDrawCmd* cmd )
+{
+	sgsVariable* cb = (sgsVariable*) cmd->UserCallbackData;
+	cb->tcall<void>( cb->get_ctx() );
+	delete cb;
+}
+
 
 static int sgsimgui_SS_NewFrame( SGS_CTX )
 {

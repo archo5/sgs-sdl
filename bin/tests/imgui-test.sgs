@@ -1,16 +1,47 @@
 
 include "sgsimgui";
 
-function configure()
+function ImGui_HSplit( at, left, right )
 {
+	(w,h) = ImGui_GetContentRegionAvail();
+	if( ImGui_BeginChild( "hs:lft", w * at, h, true ) )
+	{
+		left();
+	}
+	ImGui_EndChild();
+	ImGui_SameLine( w * at );
+	if( ImGui_BeginChild( "hs:rgt", ImGui_GetContentRegionAvailWidth(), h, true ) )
+	{
+		right();
+	}
+	ImGui_EndChild();
 }
 
-function initialize()
+function ImGui_HSplit3( spl12, spl23, left, mid, right )
 {
-	global Window = SS_CreateWindow( "SGS-SDL Game Framework", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 576, SDL_WINDOW_OPENGLMAYBE | SDL_WINDOW_RESIZABLE );
-	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
+	acc = 0;
+	(w,h) = ImGui_GetContentRegionAvail();
+	acc += toint( w * spl12 );
+	if( ImGui_BeginChild( "hs:lft", w * spl12, h, true ) )
+	{
+		left();
+	}
+	ImGui_EndChild();
+	ImGui_SameLine( acc );
 	
-	ImGui_SS_Init( Window.width, Window.height );
+	acc += toint( w * ( spl23 - spl12 ) );
+	if( ImGui_BeginChild( "hs:mid", w * ( spl23 - spl12 ), h, true ) )
+	{
+		mid();
+	}
+	ImGui_EndChild();
+	ImGui_SameLine( acc );
+	
+	if( ImGui_BeginChild( "hs:rgt", ImGui_GetContentRegionAvailWidth(), h, true ) )
+	{
+		right();
+	}
+	ImGui_EndChild();
 }
 
 function ImGui_MainWindow( w, h, cb )
@@ -35,6 +66,20 @@ function ImGui_MainWindow( w, h, cb )
 	}
 	ImGui_End();
 	ImGui_PopStyleVar( 2 );
+}
+
+function configure()
+{
+}
+
+function initialize()
+{
+	global Window = SS_CreateWindow( "SGS-SDL Game Framework", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 576, SDL_WINDOW_OPENGLMAYBE | SDL_WINDOW_RESIZABLE );
+	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
+	global Font = SS_CreateFont( "fonts/lato-regular.ttf", 12 );
+	SS_InitDrawFunctions();
+	
+	ImGui_SS_Init( Window.width, Window.height );
 }
 
 global lasttime = ftime();
@@ -74,6 +119,21 @@ function update()
 				ImGui_EndMenu();
 			}
 			ImGui_EndMenuBar();
+			
+			ImGui_HSplit3( 0.2, 0.8,
+				function(){ ImGui_Text( "part 1" ); },
+				function()
+				{
+					ImGui_Text( "part 2" );
+					(x,y) = ImGui_GetCursorScreenPos();
+					ImDrawList_AddCallback(function() use(x,y)
+					{
+						SS_DrawColorCircle( x + 32, y + 48, 24, 12, 1, 0, 0, 0.5 );
+						SS_DrawTextLine_VC( "custom", Font, x + 16, y + 48, color(1,1,1) );
+					});
+					ImDrawList_AddCircle( x + 32, y + 48, 32, ImGui_GetColorU32( 1, 1, 1, 0.5 ), 32, 5 );
+				},
+				function(){ ImGui_Text( "part 3" ); } );
 		});
 	}
 	
