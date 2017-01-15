@@ -440,6 +440,16 @@ static int sgsImGui_SetKeyboardFocusHere( SGS_CTX )
 	return 0;
 }
 
+static int sgsImGui_PushFont( SGS_CTX )
+{
+	SGSFN( "ImGui_PushFont" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::PushFont(
+		sgs_GetVar<ImFont *>()( C, 0 )
+	);
+	return 0;
+}
+
 static int sgsImGui_PopFont( SGS_CTX )
 {
 	SGSFN( "ImGui_PopFont" );
@@ -499,6 +509,14 @@ static int sgsImGui_PopStyleVar( SGS_CTX )
 		1 <= ssz ? sgs_GetVar<int>()( C, 0 ) : 1
 	);
 	return 0;
+}
+
+static int sgsImGui_GetFont( SGS_CTX )
+{
+	SGSFN( "ImGui_GetFont" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	sgs_PushVar( C, ImGui::GetFont() );
+	return 1;
 }
 
 static int sgsImGui_GetFontSize( SGS_CTX )
@@ -2256,6 +2274,26 @@ static int sgsImGui_LogText( SGS_CTX )
 	return 0;
 }
 
+static int sgsImGui_PushClipRect( SGS_CTX )
+{
+	SGSFN( "ImGui_PushClipRect" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::PushClipRect(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 2 ),
+		sgs_GetVar<bool>()( C, 4 )
+	);
+	return 0;
+}
+
+static int sgsImGui_PopClipRect( SGS_CTX )
+{
+	SGSFN( "ImGui_PopClipRect" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::PopClipRect();
+	return 0;
+}
+
 static int sgsImGui_IsItemHovered( SGS_CTX )
 {
 	SGSFN( "ImGui_IsItemHovered" );
@@ -2809,11 +2847,31 @@ static int sgsImGui_GetVersion( SGS_CTX )
 	return 1;
 }
 
+static int sgsImDrawList_PushClipRect( SGS_CTX )
+{
+	SGSFN( "ImDrawList_PushClipRect" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->PushClipRect(
+		sgs_GetVar<ImVec2>()( C, 0 ),
+		sgs_GetVar<ImVec2>()( C, 1 ),
+		3 <= ssz ? sgs_GetVar<bool>()( C, 2 ) : false
+	);
+	return 0;
+}
+
 static int sgsImDrawList_PushClipRectFullScreen( SGS_CTX )
 {
 	SGSFN( "ImDrawList_PushClipRectFullScreen" );
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::GetWindowDrawList()->PushClipRectFullScreen();
+	return 0;
+}
+
+static int sgsImDrawList_PopClipRect( SGS_CTX )
+{
+	SGSFN( "ImDrawList_PopClipRect" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetWindowDrawList()->PopClipRect();
 	return 0;
 }
 
@@ -3268,6 +3326,139 @@ static int sgsImDrawList_UpdateTextureID( SGS_CTX )
 	return 0;
 }
 
+static int sgsImFontAtlas_AddFont( SGS_CTX )
+{
+	SGSFN( "ImFontAtlas_AddFont" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	sgs_PushVar( C, ImGui::GetIO().Fonts->AddFont(
+		NULL) );
+	return 1;
+}
+
+static int sgsImFontAtlas_AddFontDefault( SGS_CTX )
+{
+	SGSFN( "ImFontAtlas_AddFontDefault" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	sgs_PushVar( C, ImGui::GetIO().Fonts->AddFontDefault(
+		0 <= ssz ? NULL : NULL) );
+	return 1;
+}
+
+static int sgsImFontAtlas_AddFontFromFileTTF( SGS_CTX )
+{
+	SGSFN( "ImFontAtlas_AddFontFromFileTTF" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	sgs_PushVar( C, ImGui::GetIO().Fonts->AddFontFromFileTTF(
+		sgs_GetVar<const char *>()( C, 0 ),
+		sgs_GetVar<float>()( C, 1 ),
+		2 <= ssz ? NULL : NULL,
+		2 <= ssz ? NULL : NULL
+	) );
+	return 1;
+}
+
+static int sgsImFontAtlas_AddFontFromMemoryTTF( SGS_CTX )
+{
+	SGSFN( "ImFontAtlas_AddFontFromMemoryTTF" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	sgs_PushVar( C, ImGui::GetIO().Fonts->AddFontFromMemoryTTF(
+		sgs_GetVar<void *>()( C, 0 ),
+		sgs_GetVar<int>()( C, 1 ),
+		sgs_GetVar<float>()( C, 2 ),
+		3 <= ssz ? NULL : NULL,
+		3 <= ssz ? NULL : NULL
+	) );
+	return 1;
+}
+
+static int sgsImFontAtlas_AddFontFromMemoryCompressedTTF( SGS_CTX )
+{
+	SGSFN( "ImFontAtlas_AddFontFromMemoryCompressedTTF" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	sgs_PushVar( C, ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF(
+		sgs_GetVar<const void *>()( C, 0 ),
+		sgs_GetVar<int>()( C, 1 ),
+		sgs_GetVar<float>()( C, 2 ),
+		3 <= ssz ? NULL : NULL,
+		3 <= ssz ? NULL : NULL
+	) );
+	return 1;
+}
+
+static int sgsImFontAtlas_AddFontFromMemoryCompressedBase85TTF( SGS_CTX )
+{
+	SGSFN( "ImFontAtlas_AddFontFromMemoryCompressedBase85TTF" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	sgs_PushVar( C, ImGui::GetIO().Fonts->AddFontFromMemoryCompressedBase85TTF(
+		sgs_GetVar<const char *>()( C, 0 ),
+		sgs_GetVar<float>()( C, 1 ),
+		2 <= ssz ? NULL : NULL,
+		2 <= ssz ? NULL : NULL
+	) );
+	return 1;
+}
+
+static int sgsImFontAtlas_ClearTexData( SGS_CTX )
+{
+	SGSFN( "ImFontAtlas_ClearTexData" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetIO().Fonts->ClearTexData();
+	return 0;
+}
+
+static int sgsImFontAtlas_ClearInputData( SGS_CTX )
+{
+	SGSFN( "ImFontAtlas_ClearInputData" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetIO().Fonts->ClearInputData();
+	return 0;
+}
+
+static int sgsImFontAtlas_ClearFonts( SGS_CTX )
+{
+	SGSFN( "ImFontAtlas_ClearFonts" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetIO().Fonts->ClearFonts();
+	return 0;
+}
+
+static int sgsImFontAtlas_Clear( SGS_CTX )
+{
+	SGSFN( "ImFontAtlas_Clear" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetIO().Fonts->Clear();
+	return 0;
+}
+
+static int sgsImFontAtlas_SetTexID( SGS_CTX )
+{
+	SGSFN( "ImFontAtlas_SetTexID" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetIO().Fonts->SetTexID(
+		sgs_GetVar<void *>()( C, 0 )
+	);
+	return 0;
+}
+
+static int sgsImFontAtlas_Build( SGS_CTX )
+{
+	SGSFN( "ImFontAtlas_Build" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	sgs_PushVar( C, ImGui::GetIO().Fonts->Build() );
+	return 1;
+}
+
+static int sgsImFontAtlas_RenderCustomTexData( SGS_CTX )
+{
+	SGSFN( "ImFontAtlas_RenderCustomTexData" );
+	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
+	ImGui::GetIO().Fonts->RenderCustomTexData(
+		sgs_GetVar<int>()( C, 0 ),
+		sgs_GetVar<void *>()( C, 1 )
+	);
+	return 0;
+}
+
 
 static sgs_RegFuncConst imgui_fconsts[] =
 {
@@ -3317,12 +3508,14 @@ static sgs_RegFuncConst imgui_fconsts[] =
 	{ "ImGui_SetScrollHere", sgsImGui_SetScrollHere },
 	{ "ImGui_SetScrollFromPosY", sgsImGui_SetScrollFromPosY },
 	{ "ImGui_SetKeyboardFocusHere", sgsImGui_SetKeyboardFocusHere },
+	{ "ImGui_PushFont", sgsImGui_PushFont },
 	{ "ImGui_PopFont", sgsImGui_PopFont },
 	{ "ImGui_PushStyleColor", sgsImGui_PushStyleColor },
 	{ "ImGui_PopStyleColor", sgsImGui_PopStyleColor },
 	{ "ImGui_PushStyleVarF", sgsImGui_PushStyleVarF },
 	{ "ImGui_PushStyleVarV2", sgsImGui_PushStyleVarV2 },
 	{ "ImGui_PopStyleVar", sgsImGui_PopStyleVar },
+	{ "ImGui_GetFont", sgsImGui_GetFont },
 	{ "ImGui_GetFontSize", sgsImGui_GetFontSize },
 	{ "ImGui_GetFontTexUvWhitePixel", sgsImGui_GetFontTexUvWhitePixel },
 	{ "ImGui_GetStyleColorU32", sgsImGui_GetStyleColorU32 },
@@ -3469,6 +3662,8 @@ static sgs_RegFuncConst imgui_fconsts[] =
 	{ "ImGui_LogFinish", sgsImGui_LogFinish },
 	{ "ImGui_LogButtons", sgsImGui_LogButtons },
 	{ "ImGui_LogText", sgsImGui_LogText },
+	{ "ImGui_PushClipRect", sgsImGui_PushClipRect },
+	{ "ImGui_PopClipRect", sgsImGui_PopClipRect },
 	{ "ImGui_IsItemHovered", sgsImGui_IsItemHovered },
 	{ "ImGui_IsItemHoveredRect", sgsImGui_IsItemHoveredRect },
 	{ "ImGui_IsItemActive", sgsImGui_IsItemActive },
@@ -3525,7 +3720,9 @@ static sgs_RegFuncConst imgui_fconsts[] =
 	{ "ImGui_GetClipboardText", sgsImGui_GetClipboardText },
 	{ "ImGui_SetClipboardText", sgsImGui_SetClipboardText },
 	{ "ImGui_GetVersion", sgsImGui_GetVersion },
+	{ "ImDrawList_PushClipRect", sgsImDrawList_PushClipRect },
 	{ "ImDrawList_PushClipRectFullScreen", sgsImDrawList_PushClipRectFullScreen },
+	{ "ImDrawList_PopClipRect", sgsImDrawList_PopClipRect },
 	{ "ImDrawList_PopTextureID", sgsImDrawList_PopTextureID },
 	{ "ImDrawList_AddLine", sgsImDrawList_AddLine },
 	{ "ImDrawList_AddRect", sgsImDrawList_AddRect },
@@ -3564,6 +3761,19 @@ static sgs_RegFuncConst imgui_fconsts[] =
 	{ "ImDrawList_PrimVtx", sgsImDrawList_PrimVtx },
 	{ "ImDrawList_UpdateClipRect", sgsImDrawList_UpdateClipRect },
 	{ "ImDrawList_UpdateTextureID", sgsImDrawList_UpdateTextureID },
+	{ "ImFontAtlas_AddFont", sgsImFontAtlas_AddFont },
+	{ "ImFontAtlas_AddFontDefault", sgsImFontAtlas_AddFontDefault },
+	{ "ImFontAtlas_AddFontFromFileTTF", sgsImFontAtlas_AddFontFromFileTTF },
+	{ "ImFontAtlas_AddFontFromMemoryTTF", sgsImFontAtlas_AddFontFromMemoryTTF },
+	{ "ImFontAtlas_AddFontFromMemoryCompressedTTF", sgsImFontAtlas_AddFontFromMemoryCompressedTTF },
+	{ "ImFontAtlas_AddFontFromMemoryCompressedBase85TTF", sgsImFontAtlas_AddFontFromMemoryCompressedBase85TTF },
+	{ "ImFontAtlas_ClearTexData", sgsImFontAtlas_ClearTexData },
+	{ "ImFontAtlas_ClearInputData", sgsImFontAtlas_ClearInputData },
+	{ "ImFontAtlas_ClearFonts", sgsImFontAtlas_ClearFonts },
+	{ "ImFontAtlas_Clear", sgsImFontAtlas_Clear },
+	{ "ImFontAtlas_SetTexID", sgsImFontAtlas_SetTexID },
+	{ "ImFontAtlas_Build", sgsImFontAtlas_Build },
+	{ "ImFontAtlas_RenderCustomTexData", sgsImFontAtlas_RenderCustomTexData },
 	{ NULL, NULL }
 };
 

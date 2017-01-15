@@ -43,6 +43,21 @@ template<> struct sgs_GetVar<ImVec4>
 	}
 };
 
+template<> inline void sgs_PushVar( SGS_CTX, ImFont* v )
+{
+	sgs_PushPtr( C, v );
+}
+template<> struct sgs_GetVar<ImFont*>
+{
+	ImFont* operator () ( SGS_CTX, sgs_StkIdx item )
+	{
+		void* v;
+		if( sgs_ParsePtr( C, item, &v ) )
+			return (ImFont*) v;
+		return NULL;
+	}
+};
+
 struct imgui_TextArrayCallbackData
 {
 	sgsVariable func;

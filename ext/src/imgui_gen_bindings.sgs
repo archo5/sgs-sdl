@@ -120,7 +120,8 @@ for( i = 0; i < tokens.size; ++i )
 		
 		print( "Found ", objtype, ": ", objname );
 		if( objname != "ImGui" &&
-			objname != "ImDrawList" )
+			objname != "ImDrawList" &&
+			objname != "ImFontAtlas" )
 		{
 			println( " ..skipping.." );
 			continue;
@@ -148,7 +149,7 @@ for( i = 0; i < tokens.size; ++i )
 				
 				newfunc = { name, ret_type, objtype, objname, args = [] };
 				GLOBALFUNCS.push( newfunc );
-				@(NUMOVERLOADS[ name ] += 1);
+				@(NUMOVERLOADS[ objname .. "::" .. name ] += 1);
 				
 				for(;;)
 				{
@@ -275,6 +276,7 @@ foreach( func : GLOBALFUNCS )
 	// these functions are not needed for us (100% replaceable with different ones)
 	func.procstate = 0;
 	if( @func.args.last.type[0].value == "va_list" ) continue;
+	if( func.objname == "ImGui" && fn == "GetWindowDrawList" ) continue;
 	// obsolete functions (as noted in comments of imgui.h)
 	func.procstate = 1;
 	if( func.objname == "ImGui" )
@@ -296,9 +298,6 @@ foreach( func : GLOBALFUNCS )
 		if( fn == "GetDrawData" ) continue;
 		if( fn == "ShowStyleEditor" ) continue;
 		if( fn == "SetNextWindowSizeConstraints" ) continue;
-		if( fn == "PushFont" ) continue;
-		if( fn == "GetFont" ) continue;
-		if( fn == "GetWindowDrawList" ) continue;
 		if( fn == "GetStateStorage" ) continue;
 		if( fn == "SetStateStorage" ) continue;
 		if( fn == "CreateContext" ) continue;
@@ -312,9 +311,20 @@ foreach( func : GLOBALFUNCS )
 		if( fn == "AddPolyline" ) continue;
 		if( fn == "AddConvexPolyFilled" ) continue;
 	}
+	else if( func.objname == "ImFontAtlas" )
+	{
+		if( fn == "GetTexDataAsAlpha8" ) continue;
+		if( fn == "GetTexDataAsRGBA32" ) continue;
+		if( fn == "GetGlyphRangesDefault" ) continue;
+		if( fn == "GetGlyphRangesKorean" ) continue;
+		if( fn == "GetGlyphRangesJapanese" ) continue;
+		if( fn == "GetGlyphRangesChinese" ) continue;
+		if( fn == "GetGlyphRangesCyrillic" ) continue;
+		if( fn == "GetGlyphRangesThai" ) continue;
+	}
 	
 	func.procstate = 3;
-	if( NUMOVERLOADS[ fn ] > 1 )
+	if( NUMOVERLOADS[ func.objname .. "::" .. fn ] > 1 )
 	{
 		// special overload processing
 		if( func.objname == "ImGui" )
@@ -605,7 +615,7 @@ foreach( func : GLOBALFUNCS )
 			idx++;
 			func.args[ idx ].loader = "&"..tmpnm;
 		}
-		else if( arg.typestr == "ImGuiTextEditCallback" )
+		else if( arg.typestr == "ImGuiTextEditCallback" || arg.typestr == "const ImFontConfig *" || arg.typestr == "const ImWchar *" )
 		{
 			// TODO
 			arg.loader = "NULL";
@@ -643,6 +653,8 @@ foreach( func : GLOBALFUNCS )
 	// function calling prefix (namespace/instance) and name
 	if( func.objname == "ImDrawList" )
 		out ..= "ImGui::GetWindowDrawList()->";
+	else if( func.objname == "ImFontAtlas" )
+		out ..= "ImGui::GetIO().Fonts->";
 	else
 		out ..= func.objname .. "::";
 	out ..= func.name .. "(";
@@ -716,12 +728,14 @@ foreach( func : GLOBALFUNCS )
 {
 	if( !isset( fn_printed_set, func.ovrname ) )
 	{
-		if( func.procstate == 0 && func.args.last.typestr == "va_list" )
-			continue; // we don't care about va_list and that's unlikely to change
-		
-		if( func.procstate != 4 )
-			println( "[", ifnum++, "] ", fn_stat_names[ func.procstate ], ": ", func.ovrname );
-		fn_printed_set[ func.ovrname ] = true;
+		if( func.procstate == 0 && @func.args.last.typestr == "va_list" )
+			; // we don't care about va_list and that's unlikely to change
+		else
+		{
+			if( func.procstate != 4 )
+				println( "[", ifnum++, "] ", fn_stat_names[ func.procstate ], ": ", func.ovrname );
+			fn_printed_set[ func.ovrname ] = true;
+		}
 	}
 	fn_stat_values[ func.procstate ]++;
 }

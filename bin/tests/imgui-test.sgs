@@ -1,72 +1,5 @@
 
-include "sgsimgui";
-
-function ImGui_HSplit( at, left, right )
-{
-	(w,h) = ImGui_GetContentRegionAvail();
-	if( ImGui_BeginChild( "hs:lft", w * at, h, true ) )
-	{
-		left();
-	}
-	ImGui_EndChild();
-	ImGui_SameLine( w * at );
-	if( ImGui_BeginChild( "hs:rgt", ImGui_GetContentRegionAvailWidth(), h, true ) )
-	{
-		right();
-	}
-	ImGui_EndChild();
-}
-
-function ImGui_HSplit3( spl12, spl23, left, mid, right )
-{
-	acc = 0;
-	(w,h) = ImGui_GetContentRegionAvail();
-	acc += toint( w * spl12 );
-	if( ImGui_BeginChild( "hs:lft", w * spl12, h, true ) )
-	{
-		left();
-	}
-	ImGui_EndChild();
-	ImGui_SameLine( acc );
-	
-	acc += toint( w * ( spl23 - spl12 ) );
-	if( ImGui_BeginChild( "hs:mid", w * ( spl23 - spl12 ), h, true ) )
-	{
-		mid();
-	}
-	ImGui_EndChild();
-	ImGui_SameLine( acc );
-	
-	if( ImGui_BeginChild( "hs:rgt", ImGui_GetContentRegionAvailWidth(), h, true ) )
-	{
-		right();
-	}
-	ImGui_EndChild();
-}
-
-function ImGui_MainWindow( w, h, cb )
-{
-	ImGui_PushStyleVarV2( ImGuiStyleVar_WindowPadding, 0, 0 );
-	ImGui_PushStyleVarF( ImGuiStyleVar_WindowRounding, 0 );
-	ImGui_SetNextWindowPos( 0, 0 );
-	ImGui_SetNextWindowSize( w, h );
-	if( ImGui_Begin( "main", null,
-		ImGuiWindowFlags_NoTitleBar |
-		ImGuiWindowFlags_NoResize |
-		ImGuiWindowFlags_NoMove |
-		ImGuiWindowFlags_MenuBar |
-		ImGuiWindowFlags_NoBringToFrontOnFocus ) )
-	{
-		ImGui_PushStyleVarV2( ImGuiStyleVar_WindowPadding, 4, 4 );
-		ImGui_PushStyleVarF( ImGuiStyleVar_WindowRounding, 4 );
-		
-		cb();
-		
-		ImGui_PopStyleVar( 2 );
-	}
-	ImGui_End();
-	ImGui_PopStyleVar( 2 );
-}
+include "sgsimgui", "core/ext_imgui";
 
 function configure()
 {
@@ -79,11 +12,28 @@ function initialize()
 	global Font = SS_CreateFont( "fonts/lato-regular.ttf", 12 );
 	SS_InitDrawFunctions();
 	
+	ImFontAtlas_AddFontFromFileTTF( "fonts/lato-regular.ttf", 14 );
 	ImGui_SS_Init( Window.width, Window.height );
+}
+
+class ExampleItem
+{
+	function __construct()
+	{
+		this.intval = 5;
+		this.realval = 3.14;
+	}
+	function OnGUI()
+	{
+		(c,this.intval) = ImGui_SliderInt( "Int value", this.intval, 0, 10 );
+		(c,this.realval) = ImGui_SliderFloat( "Real value", this.realval, 0, 10, "%.2f", 1 );
+	}
 }
 
 global lasttime = ftime();
 global whichtest = 0;
+global testnum = 1.5;
+global testarr = [];
 function update()
 {
 	global whichtest;
@@ -120,8 +70,12 @@ function update()
 			}
 			ImGui_EndMenuBar();
 			
-			ImGui_HSplit3( 0.2, 0.8,
-				function(){ ImGui_Text( "part 1" ); },
+			ImGui_HSplit3( 0.3, 0.7,
+				function()
+				{
+					ImGui_Text( "part 1" );
+					ImGui_EditArray( testarr, function(e){ e.OnGUI(); }, function(){ return new ExampleItem(); } );
+				},
 				function()
 				{
 					ImGui_Text( "part 2" );
@@ -133,7 +87,12 @@ function update()
 					});
 					ImDrawList_AddCircle( x + 32, y + 48, 32, ImGui_GetColorU32( 1, 1, 1, 0.5 ), 32, 5 );
 				},
-				function(){ ImGui_Text( "part 3" ); } );
+				function()
+				{
+					ImGui_Text( "part 3" );
+					(chg,_G.testnum) = ImGui_SliderFloat( "test number", _G.testnum, 0, 10, "%.2f", 2 );
+				}
+			);
 		});
 	}
 	

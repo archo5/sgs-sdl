@@ -1,0 +1,138 @@
+
+
+function ImGui_HSplit( at, left, right )
+{
+	(w,h) = ImGui_GetContentRegionAvail();
+	if( ImGui_BeginChild( "hs:lft", w * at, h, true ) )
+	{
+		left();
+	}
+	ImGui_EndChild();
+	ImGui_SameLine( w * at );
+	if( ImGui_BeginChild( "hs:rgt", ImGui_GetContentRegionAvailWidth(), h, true ) )
+	{
+		right();
+	}
+	ImGui_EndChild();
+}
+
+function ImGui_HSplit3( spl12, spl23, left, mid, right )
+{
+	acc = 0;
+	(w,h) = ImGui_GetContentRegionAvail();
+	acc += toint( w * spl12 );
+	if( ImGui_BeginChild( "hs:lft", w * spl12, h, true ) )
+	{
+		left();
+	}
+	ImGui_EndChild();
+	ImGui_SameLine( acc );
+	
+	acc += toint( w * ( spl23 - spl12 ) );
+	if( ImGui_BeginChild( "hs:mid", w * ( spl23 - spl12 ), h, true ) )
+	{
+		mid();
+	}
+	ImGui_EndChild();
+	ImGui_SameLine( acc );
+	
+	if( ImGui_BeginChild( "hs:rgt", ImGui_GetContentRegionAvailWidth(), h, true ) )
+	{
+		right();
+	}
+	ImGui_EndChild();
+}
+
+function ImGui_MainWindow( w, h, cb )
+{
+	ImGui_PushStyleVarV2( ImGuiStyleVar_WindowPadding, 0, 0 );
+	ImGui_PushStyleVarF( ImGuiStyleVar_WindowRounding, 0 );
+	ImGui_SetNextWindowPos( 0, 0 );
+	ImGui_SetNextWindowSize( w, h );
+	if( ImGui_Begin( "main", null,
+		ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_MenuBar |
+		ImGuiWindowFlags_NoBringToFrontOnFocus ) )
+	{
+		ImGui_PushStyleVarV2( ImGuiStyleVar_WindowPadding, 4, 4 );
+		ImGui_PushStyleVarF( ImGuiStyleVar_WindowRounding, 4 );
+		
+		cb();
+		
+		ImGui_PopStyleVar( 2 );
+	}
+	ImGui_End();
+	ImGui_PopStyleVar( 2 );
+}
+
+function ImGui_EditArray_Buttons( arr, i, cp_before_x, cp_before_y, width )
+{
+	chg = false;
+	(cp_after_x, cp_after_y) = ImGui_GetCursorPos();
+	
+	if( i > 0 )
+	{
+		ImGui_SetCursorPos( cp_before_x + width - 90, cp_before_y );
+		if( ImGui_Button( "[up]", 30, 18 ) )
+		{
+			tmp = arr[ i - 1 ];
+			arr[ i - 1 ] = arr[ i ];
+			arr[ i ] = tmp;
+			chg = true;
+		}
+	}
+	
+	if( i < arr.size - 1 )
+	{
+		ImGui_SetCursorPos( cp_before_x + width - 60, cp_before_y );
+		if( ImGui_Button( "[dn]", 30, 18 ) )
+		{
+			tmp = arr[ i + 1 ];
+			arr[ i + 1 ] = arr[ i ];
+			arr[ i ] = tmp;
+			chg = true;
+		}
+	}
+	
+	ImGui_SetCursorPos( cp_before_x + width - 30, cp_before_y );
+	if( ImGui_Button( "[del]", 30, 18 ) )
+	{
+		arr.erase( i );
+		chg = true;
+	}
+	ImGui_SetCursorPos( cp_after_x, cp_after_y );
+}
+
+function ImGui_EditArray_AddBtn( arr, newfn, text )
+{
+	if( newfn && ImGui_Button( text ?? "Add", ImGui_GetContentRegionAvail(), 24 ) )
+	{
+		arr.push( newfn() );
+		return true;
+	}
+	return false;
+}
+
+function ImGui_EditArray( arr, editfn, newfn, addtext )
+{
+	chg = false;
+	width = ImGui_GetContentRegionAvailWidth();
+	// i < arr.size must be constantly rechecked because of possible item removal
+	for( i = 0; i < arr.size; ++i )
+	{
+		ImGui_PushID( i );
+		
+		(cp_before_x, cp_before_y) = ImGui_GetCursorPos();
+		if( editfn( arr[ i ], i, arr ) ||
+			ImGui_EditArray_Buttons( arr, i, cp_before_x, cp_before_y, width ) )
+			chg = true;
+		
+		ImGui_PopID();
+	}
+	if( ImGui_EditArray_AddBtn( arr, newfn, addtext ) )
+		chg = true;
+	return chg;
+}
+
