@@ -28,6 +28,7 @@ function initialize()
 	force_opengl = false;
 	
 	println( "SGS-SDL Framework Test suite" );
+	println( "test guid: " .. SS_GenerateGUID() );
 	println( "initialization started at: " $ ftime() );
 	
 	global Window = SS_CreateWindow( "SGS-SDL Framework Test suite",

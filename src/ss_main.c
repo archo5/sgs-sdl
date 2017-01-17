@@ -1,4 +1,10 @@
 
+#ifdef _WIN32
+#  include <rpc.h>
+#else
+#  include <uuid/uuid.h>
+#endif
+
 #include "ss_main.h"
 
 #include <sgs_idbg.h>
@@ -41,9 +47,59 @@ static int SS_EnableProfiler( SGS_CTX )
 	return 0;
 }
 
-static int ss_InitDebug( SGS_CTX )
+static int SS_GenerateGUID( SGS_CTX )
 {
-	sgs_SetGlobalByName( C, "SS_EnableProfiler", sgs_MakeCFunc( SS_EnableProfiler ) );
+	SGSFN( "SS_GenerateGUID" );
+	static const char* hex = "0123456789abcdef";
+	char bfr[ 36 ], *p, sep = '-';
+	uint8_t out[ 16 ], *bp;
+#ifdef _WIN32
+	UUID uuid;
+	UuidCreate( &uuid );
+	memcpy( out, &uuid, sizeof(out) );
+#else
+	uuid_t uuid;
+	uuid_generate( uuid );
+	memcpy( out, uuid, sizeof(out) );
+#endif
+	
+	p = bfr;
+	bp = out;
+	*p++ = hex[ *bp >> 4 ]; *p++ = hex[ *bp++ & 0xf ];
+	*p++ = hex[ *bp >> 4 ]; *p++ = hex[ *bp++ & 0xf ];
+	*p++ = hex[ *bp >> 4 ]; *p++ = hex[ *bp++ & 0xf ];
+	*p++ = hex[ *bp >> 4 ]; *p++ = hex[ *bp++ & 0xf ];
+	*p++ = sep;
+	*p++ = hex[ *bp >> 4 ]; *p++ = hex[ *bp++ & 0xf ];
+	*p++ = hex[ *bp >> 4 ]; *p++ = hex[ *bp++ & 0xf ];
+	*p++ = sep;
+	*p++ = hex[ *bp >> 4 ]; *p++ = hex[ *bp++ & 0xf ];
+	*p++ = hex[ *bp >> 4 ]; *p++ = hex[ *bp++ & 0xf ];
+	*p++ = sep;
+	*p++ = hex[ *bp >> 4 ]; *p++ = hex[ *bp++ & 0xf ];
+	*p++ = hex[ *bp >> 4 ]; *p++ = hex[ *bp++ & 0xf ];
+	*p++ = sep;
+	*p++ = hex[ *bp >> 4 ]; *p++ = hex[ *bp++ & 0xf ];
+	*p++ = hex[ *bp >> 4 ]; *p++ = hex[ *bp++ & 0xf ];
+	*p++ = hex[ *bp >> 4 ]; *p++ = hex[ *bp++ & 0xf ];
+	*p++ = hex[ *bp >> 4 ]; *p++ = hex[ *bp++ & 0xf ];
+	*p++ = hex[ *bp >> 4 ]; *p++ = hex[ *bp++ & 0xf ];
+	*p++ = hex[ *bp >> 4 ]; *p++ = hex[ *bp++ & 0xf ];
+	
+	sgs_PushStringBuf( C, bfr, 36 );
+	return 1;
+}
+
+static const sgs_RegFuncConst rfc_helpers[] =
+{
+	{ "SS_EnableProfiler", SS_EnableProfiler },
+	{ "SS_GenerateGUID", SS_GenerateGUID },
+	{ NULL, NULL },
+};
+
+static int ss_InitHelpers( SGS_CTX )
+{
+	sgs_RegFuncConsts( C, rfc_helpers, -1 );
 	return SGS_SUCCESS;
 }
 
@@ -112,7 +168,7 @@ int ss_Initialize( int argc, char* argv[], int debug )
 	printf( "SGS libraries loaded: %f\n", sgs_GetTime() );
 #endif
 	
-	ss_InitDebug( C );
+	ss_InitHelpers( C );
 	ss_InitExtMath( C );
 	ss_InitImage( C );
 	

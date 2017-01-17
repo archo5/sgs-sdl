@@ -184,7 +184,7 @@ $(P_SGSSDL): $(SS_OBJ) $(SGS_SDL_DEPS) $(P_SGSXGMATH)
 	$(call fnIF_OS,windows,$(fnCOPY_FILE) $(call fnFIX_PATH,ext/bin-win32/SDL2.dll bin),)
 	$(call fnIF_OS,osx,$(fnCOPY_FILE) /usr/local/lib/libSDL2.dylib bin,)
 # build
-	$(CC) -o $@ $(SS_OBJ) $(CFLAGS) $(SGS_LIBS) $(SDL2_LIBS) $(D3D9_LIBS) $(FT2_LIBS) $(LIBFLAGS)
+	$(CC) -o $@ $(SS_OBJ) $(CFLAGS) $(SGS_LIBS) $(SDL2_LIBS) $(D3D9_LIBS) $(FT2_LIBS) $(LIBFLAGS) $(call fnIF_OS,windows,-lrpcrt4,-luuid)
 # adjust built projects
 	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libfreetype.so @rpath/libfreetype.so $@,)
 	$(call fnIF_OS,osx,install_name_tool -change $(OUTDIR)/libsgscript.so @rpath/libsgscript.so $@,)
