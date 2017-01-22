@@ -2,10 +2,38 @@
 include "string", "io";
 
 
-function string_match_loose( str, what )
+function string_match_loose( str, substr )
 {
-	// TODO
-	return true;
+	if( substr.length == 0 )
+		return true;
+	
+	matchstack = [];
+	for off : ( str.length )
+	{
+		chpos = off;
+		matchstack.clear();
+		for(;;)
+		{
+			if( chpos >= str.length )
+			{
+				// reached end of string, backtrack
+				if( matchstack.size <= 0 )
+					break; // nowhere to backtrack
+				chpos = matchstack.pop();
+				continue;
+			}
+			if( string_tolower( substr[ matchstack.size ] ) == string_tolower( str[ chpos ] ) )
+			{
+				// enter the stack
+				matchstack.push( ++chpos );
+				if( matchstack.size == substr.length )
+					return true; // matched last char, success
+				continue;
+			}
+			chpos++;
+		}
+	}
+	return false;
 }
 
 
