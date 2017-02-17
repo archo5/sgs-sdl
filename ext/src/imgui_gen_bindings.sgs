@@ -597,7 +597,7 @@ foreach( func : GLOBALFUNCS )
 			idx++;
 			func.args[ idx ].loader = tmpnm.."_size";
 		}
-		else if( arg.typestr == "const ImVec2 &" )
+		else if( arg.typestr == "const ImVec2 &" || arg.typestr == "ImVec2" )
 		{
 			arg.loader = "sgs_GetVar<ImVec2>()( C, " .. loadidx .. " )";
 			loadidx += 2;

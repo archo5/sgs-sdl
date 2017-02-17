@@ -1211,8 +1211,8 @@ static int sgsImGui_PlotLines( SGS_CTX )
 		4 <= ssz ? sgs_GetVar<const char *>()( C, 3 ) : NULL,
 		5 <= ssz ? sgs_GetVar<float>()( C, 4 ) : FLT_MAX,
 		6 <= ssz ? sgs_GetVar<float>()( C, 5 ) : FLT_MAX,
-		7 <= ssz ? sgs_GetVar<ImVec2>()( C, 6 ) : ImVec2 ( 0 , 0 ),
-		8 <= ssz ? sgs_GetVar<int>()( C, 7 ) : sizeof ( float )
+		8 <= ssz ? sgs_GetVar<ImVec2>()( C, 6 ) : ImVec2 ( 0 , 0 ),
+		9 <= ssz ? sgs_GetVar<int>()( C, 8 ) : sizeof ( float )
 	);
 	return 0;
 }
@@ -1231,7 +1231,7 @@ static int sgsImGui_PlotLinesCb( SGS_CTX )
 		5 <= ssz ? sgs_GetVar<const char *>()( C, 4 ) : NULL,
 		6 <= ssz ? sgs_GetVar<float>()( C, 5 ) : FLT_MAX,
 		7 <= ssz ? sgs_GetVar<float>()( C, 6 ) : FLT_MAX,
-		8 <= ssz ? sgs_GetVar<ImVec2>()( C, 7 ) : ImVec2 ( 0 , 0 )
+		9 <= ssz ? sgs_GetVar<ImVec2>()( C, 7 ) : ImVec2 ( 0 , 0 )
 	);
 	return 0;
 }
@@ -1249,8 +1249,8 @@ static int sgsImGui_PlotHistogram( SGS_CTX )
 		4 <= ssz ? sgs_GetVar<const char *>()( C, 3 ) : NULL,
 		5 <= ssz ? sgs_GetVar<float>()( C, 4 ) : FLT_MAX,
 		6 <= ssz ? sgs_GetVar<float>()( C, 5 ) : FLT_MAX,
-		7 <= ssz ? sgs_GetVar<ImVec2>()( C, 6 ) : ImVec2 ( 0 , 0 ),
-		8 <= ssz ? sgs_GetVar<int>()( C, 7 ) : sizeof ( float )
+		8 <= ssz ? sgs_GetVar<ImVec2>()( C, 6 ) : ImVec2 ( 0 , 0 ),
+		9 <= ssz ? sgs_GetVar<int>()( C, 8 ) : sizeof ( float )
 	);
 	return 0;
 }
@@ -1269,7 +1269,7 @@ static int sgsImGui_PlotHistogramCb( SGS_CTX )
 		5 <= ssz ? sgs_GetVar<const char *>()( C, 4 ) : NULL,
 		6 <= ssz ? sgs_GetVar<float>()( C, 5 ) : FLT_MAX,
 		7 <= ssz ? sgs_GetVar<float>()( C, 6 ) : FLT_MAX,
-		8 <= ssz ? sgs_GetVar<ImVec2>()( C, 7 ) : ImVec2 ( 0 , 0 )
+		9 <= ssz ? sgs_GetVar<ImVec2>()( C, 7 ) : ImVec2 ( 0 , 0 )
 	);
 	return 0;
 }
@@ -2869,8 +2869,8 @@ static int sgsImDrawList_PushClipRect( SGS_CTX )
 	sgs_StkIdx ssz = sgs_StackSize( C ); (void) ssz;
 	ImGui::GetWindowDrawList()->PushClipRect(
 		sgs_GetVar<ImVec2>()( C, 0 ),
-		sgs_GetVar<ImVec2>()( C, 1 ),
-		3 <= ssz ? sgs_GetVar<bool>()( C, 2 ) : false
+		sgs_GetVar<ImVec2>()( C, 2 ),
+		5 <= ssz ? sgs_GetVar<bool>()( C, 4 ) : false
 	);
 	return 0;
 }

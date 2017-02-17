@@ -1,0 +1,185 @@
+
+include "sgsimgui", "core/ext_imgui";
+
+
+class SEQ
+{
+	global classes = [];
+	
+	global viewRangeMid = 0.5;
+	global viewRangeWidth = 0.5;
+	
+	function __inherited( name )
+	{
+		this.classes.push( sym_get( name ) );
+	}
+	function CallAll( fn )
+	{
+		foreach( cls : this.classes )
+			cls.(fn)();
+	}
+	
+	function GetViewRangeMin(){ return this.viewRangeMid - this.viewRangeWidth; }
+	function GetViewRangeMax(){ return this.viewRangeMid + this.viewRangeWidth; }
+	function ViewGUI()
+	{
+		(chg,this.viewRangeMid) = ImGui_SliderFloat( "View range center", this.viewRangeMid, 0, 1 );
+		(chg,this.viewRangeWidth) = ImGui_SliderFloat( "View range width", this.viewRangeWidth, 0.001, 0.5 );
+	}
+	
+	function Init()
+	{
+		this.Recalc();
+	}
+	function GUI()
+	{
+		ImGui_SetNextTreeNodeOpen( true, ImGuiSetCond_Once );
+		if( ImGui_TreeNode( this.NAME ) )
+		{
+			ImGui_PlotHistogram( "Numbers", this.numbers, 0, null, this.GetViewRangeMin(), this.GetViewRangeMax(), 0, 50 );
+			this.Properties();
+			ImGui_TreePop();
+		}
+	}
+	function Properties()
+	{
+	}
+}
+
+
+class ShuffledSequence : SEQ
+{
+	global NAME = "Shuffled numbers (0.5 ..[+1].. 99.5)";
+	
+	function Recalc()
+	{
+		numbers = [];
+		for i : ( 100 )
+			numbers.push( ( i + 0.5 ) / 100 );
+		numbers.shuffle();
+		this.{ numbers };
+	}
+	
+	function Properties()
+	{
+		if( ImGui_Button( "Reshuffle" ) )
+			this.numbers.shuffle();
+	}
+}
+
+
+class AdditiveRecurrence : SEQ
+{
+	global NAME = "Additive recurrence";
+	global start = 0;
+	global add = 0.387;
+	
+	function Recalc()
+	{
+		numbers = [];
+		f = this.start;
+		for i : ( 100 )
+		{
+			numbers.push( f );
+			f = ( f + this.add ) % 1;
+		}
+		this.{ numbers };
+	}
+	
+	function Properties()
+	{
+		chg = false;
+		(c,this.start) = ImGui_SliderFloat( "Start", this.start, 0, 1 );
+		chg ||= c;
+		(c,this.add) = ImGui_SliderFloat( "Add", this.add, 0, 1 );
+		chg ||= c;
+		if( chg )
+			this.Recalc();
+	}
+}
+
+
+class VanDerCorputSequence : SEQ
+{
+	global NAME = "Van der Corput sequence";
+	global base = 2;
+	
+	function GetNth( n )
+	{
+		vdc = 0;
+		denom = 1;
+		while( n )
+		{
+			vdc += ( n % this.base ) / ( denom *= this.base );
+			n = toint( floor( n / this.base ) );
+		}
+		return vdc;
+	}
+	
+	function Recalc()
+	{
+		numbers = [];
+		for i : ( 100 )
+			numbers.push( this.GetNth( i ) );
+		this.{ numbers };
+	}
+	
+	function Properties()
+	{
+		(chg,this.base) = ImGui_SliderInt( "Base", this.base, 2, 10 );
+		if( chg )
+			this.Recalc();
+	}
+}
+
+
+function configure()
+{
+}
+
+function initialize()
+{
+	global Window = SS_CreateWindow( "Random & low-discrepancy sequences", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_OPENGLMAYBE | SDL_WINDOW_RESIZABLE );
+	Window.initRenderer( SS_RENDERER_DONTCARE, SS_RENDERER_VSYNC );
+	global Font = SS_CreateFont( "fonts/lato-regular.ttf", 12 );
+	SS_InitDrawFunctions();
+	
+	ImFontAtlas_AddFontFromFileTTF( "fonts/lato-regular.ttf", 14 );
+	ImGui_SS_Init( Window.width, Window.height );
+	
+	SEQ.CallAll( "Init" );
+}
+
+global lasttime = ftime();
+function update()
+{
+	curtime = ftime();
+	dt = curtime - lasttime;
+	global lasttime = curtime;
+	
+	SS_Clear( color(0.1,0.2,0.4) );
+	SS_SetCameraUI( 0, Window.width, 0, Window.height );
+	
+	ImGui_SS_NewFrame( dt );
+	
+	ImGui_SetNextWindowSize( 700, 500, ImGuiSetCond_Once );
+	ImGui_Begin( "Random & low-discrepancy sequences" );
+	SEQ.ViewGUI();
+	SEQ.CallAll( "GUI" );
+	ImGui_End();
+	
+	ImGui_Render();
+	
+	SS_Present();
+}
+
+function on_event( e )
+{
+	if( e.type == SDL_QUIT )
+		global sys_exit = true;
+	ImGui_SS_Event( e );
+}
+
+function cleanup()
+{
+}
